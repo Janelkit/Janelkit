@@ -1,0 +1,11 @@
+module Flux
+FxWindow 1.0 FxWindow.qml
+FxColumn 1.0 FxColumn.qml
+FxRow 1.0 FxRow.qml
+FxScroll 1.0 FxScroll.qml
+FxText 1.0 FxText.qml
+FxButton 1.0 FxButton.qml
+FxTextField 1.0 FxTextField.qml
+FxTextArea 1.0 FxTextArea.qml
+FxCheckBox 1.0 FxCheckBox.qml
+FxSpacer 1.0 FxSpacer.qml

@@ -36,6 +36,6 @@ def decrement():
 .page { padding: 24px; gap: 16px; }
 .heading { font-size: 24px; font-weight: 600; }
 .actions { gap: 8px; }
-.success { color: #2e7d32; }
-.muted { color: #757575; }
+.success { color: var(--success); }
+.muted { color: var(--text-muted); }
 </style>

@@ -1,4 +1,4 @@
-# Estilos soportados (subconjunto CSS)
+# Estilos, disposición y temas
 
 Qt Quick no es un navegador y FluxUI **no implementa CSS**. `<style>` admite una lista corta de propiedades que se traducen a propiedades de Qt Quick. Todo lo demás produce una **advertencia** con su ubicación y se ignora.
 
@@ -7,24 +7,102 @@ Qt Quick no es un navegador y FluxUI **no implementa CSS**. `<style>` admite una
 - De clase: `.titulo { … }` → elementos con `class="titulo"`.
 - De elemento: `Button { … }` → todos los `<Button>` del componente.
 - Varios selectores separados por comas: `.a, .b { … }`.
+- Clases condicionales: `class:activa={cond}` en el elemento aplica `.activa` mientras `cond` sea verdadera.
 
-Sin descendientes, pseudo-clases ni combinadores. Los estilos son **locales al componente**.
+Sin descendientes, pseudo-clases ni combinadores. Los estilos son **locales al componente**: las clases de un componente no afectan a sus hijos.
 
-**Precedencia:** reglas de elemento, después reglas de clase (en orden del archivo; la última gana) y, por encima de todo, los atributos escritos en el elemento (`gap={4}` gana a `.page { gap: 20px }`).
+**Precedencia:** reglas de elemento, después reglas de clase (en orden del archivo; la última gana), después los atributos escritos en el elemento (`gap={4}` gana a `.page { gap: 20px }`) y, por encima de todo, las clases condicionales activas (si varias fijan lo mismo, gana la última declarada en el elemento).
+
+## Valores
+
+- Números: `16px` o `16`.
+- Colores: `#rgb`, `#rrggbb`, `#aarrggbb`, nombres (`red`), `rgb(…)`, `rgba(…)`.
+- **Tokens del tema:** `var(--primary)`, `var(--space-4)`… Se enlazan al tema activo y cambian al cambiar de tema.
 
 ## Propiedades
 
-| CSS | Qt Quick | Aplica a | Valores |
-|---|---|---|---|
-| `padding` | `padding` | Column, Row, Text, Button, TextField, Checkbox | `24px` o `24` |
-| `gap` | `spacing` | Column, Row | `16px` |
-| `font-size` | `font.pixelSize` | Text, Button, TextField, Checkbox | `18px` |
-| `font-weight` | `font.weight` | ídem | `100`–`1000`, `normal`, `bold`, `lighter`, `bolder` |
-| `font-family` | `font.family` | ídem | `"Inter"` |
-| `font-style` | `font.italic` | ídem | `italic`, `normal` |
-| `color` | `color` | Text, TextField | `#rgb`, `#rrggbb`, `#aarrggbb`, nombres, `rgb()`, `rgba()` |
-| `background` / `background-color` | `color` | Window | colores |
-| `width`, `height` | `width`, `height` | todos | `px` |
-| `opacity` | `opacity` | todos | `0`–`1` |
+| CSS | Aplica a | Notas |
+|---|---|---|
+| `color` | Text, Button, TextField, TextArea, Checkbox | color del texto |
+| `background`, `background-color` | Window, Column, Row, Scroll, Button, TextField, TextArea | |
+| `border` | Column, Row, Scroll, Button, TextField, TextArea | `1px solid #ccc`, `1px solid var(--border)`, `none` |
+| `border-color`, `border-width` | ídem | |
+| `border-radius` | ídem | |
+| `padding` | contenedores y controles con texto | 1 a 4 valores, como en CSS |
+| `padding-top`, `-right`, `-bottom`, `-left` | ídem | |
+| `gap` | Column, Row, Scroll | separación entre hijos |
+| `font-size` | Window y controles con texto | en Window se hereda en toda la ventana |
+| `font-weight` | ídem | `100`–`1000`, `normal`, `bold`, `lighter`, `bolder` |
+| `font-family` | ídem | `"Inter"` o un token |
+| `font-style` | ídem | `italic`, `normal` |
+| `letter-spacing` | controles con texto | px |
+| `text-transform` | controles con texto | `uppercase`, `lowercase`, `capitalize`, `none` |
+| `text-align` | Text, TextField, TextArea | `left`, `center`, `right`, `justify` |
+| `line-height` | Text | factor sin unidades (`1.4`) |
+| `align-items` | Column, Row, Scroll | `start`, `center`, `end`, `stretch` |
+| `justify-content` | Column, Row, Scroll | `start`, `center`, `end` |
+| `flex`, `flex-grow` | todos salvo Window | entero: crecer en el eje del contenedor |
+| `align-self` | todos salvo Window | `start`, `center`, `end`, `stretch` |
+| `width`, `height` | todos | px, o `100%` (ocupar el espacio disponible) |
+| `min-width`, `max-width`, `min-height`, `max-height` | todos | px |
+| `opacity` | todos | `0`–`1` |
 
-Pendiente para el Incremento 6: bordes, radios, fondos de controles, alineación, tokens de tema y temas claro/oscuro.
+No soportado (advertencia): márgenes, sombras, posiciones absolutas, `space-between`, porcentajes distintos de 100%, selectores complejos, animaciones.
+
+## Disposición
+
+`Column` y `Row` se comportan como un contenedor flex de CSS en una dirección:
+
+- Los hijos se colocan en orden, separados por `gap`. El espacio sobrante **no** se reparte entre ellos: queda al final, salvo que `justify-content` diga otra cosa.
+- `flex: 1` (o el atributo `flex={1}`) hace que un hijo ocupe el espacio libre del eje principal (alto en una `Column`, ancho en una `Row`). Si varios tienen `flex`, se lo reparten.
+- En una `Column`, `Text`, `TextField`, `TextArea`, `Column`, `Row` y `Scroll` ocupan todo el ancho por defecto (como bloques); botones y casillas conservan su tamaño. `align-items` en el contenedor (o `align-self` en el hijo) cambia ese comportamiento.
+- En una `Row`, los hijos se centran verticalmente por defecto.
+- `width`/`height` en px fijan el tamaño preferido; `100%` ocupa el espacio disponible en ese eje.
+- La raíz de la ventana ocupa la ventana entera.
+
+```html
+<Row class="app">
+  <Column class="sidebar">…</Column>      <!-- ancho fijo, alto completo -->
+  <Column class="main">…</Column>         <!-- ocupa el resto -->
+</Row>
+<style>
+.sidebar { width: 260px; align-self: stretch; background: var(--surface-alt); }
+.main { flex: 1; align-self: stretch; padding: 24px; }
+</style>
+```
+
+## Controles base y temas
+
+Los elementos se dibujan con un conjunto propio de controles (módulo QML interno `Flux`) que usa los tokens del tema: el mismo código se ve coherente en Windows, macOS y Linux, y cambia de aspecto al cambiar de tema.
+
+`Button` tiene variantes: `variant="primary"`, `"danger"`, `"ghost"` (sin fondo) y `"default"`.
+
+### Tokens
+
+| Token | Uso |
+|---|---|
+| `--bg`, `--surface`, `--surface-alt` | fondos: ventana, tarjetas/campos, zonas secundarias |
+| `--text`, `--text-muted` | texto principal y secundario |
+| `--border` | bordes |
+| `--primary`, `--on-primary` | color de acento y texto sobre él |
+| `--danger`, `--on-danger`, `--success`, `--warning` | estados |
+| `--hover`, `--pressed` | capas semitransparentes para interacción |
+| `--radius-sm`, `--radius`, `--radius-lg` | radios (4, 8, 14) |
+| `--font-family`, `--font-size-sm`, `--font-size`, `--font-size-lg`, `--font-size-xl` | tipografía (12, 14, 18, 24) |
+| `--space-1` … `--space-6` | espacios (4, 8, 12, 16, 24, 32) |
+
+Un `var(--x)` que no existe en el tema activo produce una advertencia al arrancar, con su ubicación.
+
+### API de temas
+
+```python
+from fluxui import theme
+
+theme.set("dark")                      # "light" (por defecto) o "dark"
+theme.toggle()                         # alterna claro/oscuro
+theme.extend("light", brand="#7048e8") # añade/cambia tokens (sin nombre: en todos los temas)
+theme.define("sepia", base="light", bg="#f4ecd8", text="#433422")
+theme.name                             # reactivo: {theme.name} en la plantilla se actualiza
+```
+
+En CSS, los nombres con guiones bajos se escriben con guiones: `brand_dark` → `var(--brand-dark)`.

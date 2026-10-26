@@ -4,11 +4,12 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from .reactivity import Computed, State, batch, computed, state
+from .reactivity import Computed, State, batch, computed, event, prop, state
+from .styling.theme import theme
 
 __version__ = "0.0.1.dev0"
 
-__all__ = ["Computed", "State", "__version__", "batch", "computed", "run", "state"]
+__all__ = ["Computed", "State", "__version__", "batch", "computed", "event", "prop", "run", "state", "theme"]
 
 if TYPE_CHECKING:
     from .qt_backend.application import run

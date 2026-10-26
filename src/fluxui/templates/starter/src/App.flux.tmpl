@@ -1,38 +1,43 @@
 <script lang="python">
-from fluxui import state, computed
+from fluxui import state, computed, theme
 from services.users import display_name
+from components.Counter import Counter
 
-count = state(0)
 name = state("")
+message = state("")
+
 
 @computed
 def greeting():
     return f"Hola, {display_name(name.value)}"
 
-def increment():
-    count.value += 1
 
-def reset():
-    count.value = 0
+def on_reached(total):
+    message.value = f"Llegaste a {total} clicks."
+
+
+def toggle_theme():
+    theme.toggle()
 </script>
 
-<Window title="{{project_name}}" width={480} height={320}>
+<Window title="{{project_name}}" width={520} height={340}>
   <Column class="page">
-    <Text class="title">{greeting}</Text>
-    <TextField bind:value={name} placeholder="Escribe tu nombre" width={280} />
-    <Row class="actions">
-      <Button on:click={increment}>Clicks: {count}</Button>
-      <Button on:click={reset} enabled={count > 0} flat>Reiniciar</Button>
+    <Row class="header">
+      <Text class="title">{greeting}</Text>
+      <Spacer />
+      <Button variant="ghost" on:click={toggle_theme}>{"Tema oscuro" if theme.name == "light" else "Tema claro"}</Button>
     </Row>
-    {#if count >= 5}
-      <Text class="note">¡Llegaste a cinco clicks!</Text>
+    <TextField bind:value={name} placeholder="Escribe tu nombre" />
+    <Counter goal={5} on:reached={on_reached} />
+    {#if message}
+      <Text class="note">{message}</Text>
     {/if}
   </Column>
 </Window>
 
 <style>
 .page { padding: 32px; gap: 16px; }
-.title { font-size: 26px; font-weight: 600; }
-.actions { gap: 8px; }
-.note { color: #2e7d32; }
+.header { align-items: center; }
+.title { font-size: var(--font-size-xl); font-weight: 600; }
+.note { color: var(--success); }
 </style>

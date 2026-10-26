@@ -76,9 +76,19 @@ class EachBlock:
     key: Expression | None
     children: list["Node"]
     loc: SourceLocation
+    else_children: list["Node"] | None = None  # {:else}: se muestra si la lista está vacía
 
 
-Node = Union[Element, Text, Interpolation, IfBlock, EachBlock]
+@dataclass
+class KeyBlock:
+    """`{#key expr}...{/key}`: recrea el contenido cuando cambia `expr`."""
+
+    expression: Expression
+    children: list["Node"]
+    loc: SourceLocation
+
+
+Node = Union[Element, Text, Interpolation, IfBlock, EachBlock, KeyBlock]
 
 
 @dataclass
@@ -149,12 +159,20 @@ def _dump_node(node: Node, depth: int, out: list[str]) -> None:
             out.append(f"{pad}{{{label}}} @{_lc(branch.loc)}")
             for child in branch.children:
                 _dump_node(child, depth + 1, out)
+    elif isinstance(node, KeyBlock):
+        out.append(f"{pad}{{#key {node.expression.code.strip()}}} @{_lc(node.loc)}")
+        for child in node.children:
+            _dump_node(child, depth + 1, out)
     elif isinstance(node, EachBlock):
         key = f" ({node.key.code.strip()})" if node.key else ""
         idx = f", {node.index}" if node.index else ""
         out.append(f"{pad}{{#each {node.iterable.code.strip()} as {node.item}{idx}{key}}} @{_lc(node.loc)}")
         for child in node.children:
             _dump_node(child, depth + 1, out)
+        if node.else_children is not None:
+            out.append(f"{pad}{{:else}}")
+            for child in node.else_children:
+                _dump_node(child, depth + 1, out)
 
 
 def _fmt_attr(attr: Attribute) -> str:

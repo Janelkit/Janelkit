@@ -1,4 +1,5 @@
-"""Los ejemplos del repositorio deben seguir compilando sin advertencias."""
+"""Los ejemplos del repositorio deben compilar sin advertencias y montarse como lo hace run()."""
+import sys
 from pathlib import Path
 
 import pytest
@@ -8,18 +9,109 @@ from fluxui.compiler import compile_file
 EXAMPLES = sorted((Path(__file__).parent.parent / "examples").glob("*/src/App.flux"))
 
 
-@pytest.mark.parametrize("app", EXAMPLES, ids=lambda p: p.parent.parent.name)
-def test_example_compiles(app):
-    assert compile_file(app).warnings == []
+@pytest.fixture
+def app_path(monkeypatch):
+    """Reproduce run(): la carpeta src/ del ejemplo entra en sys.path; sus módulos no se comparten."""
+    before = set(sys.modules)
+
+    def use(app: Path) -> Path:
+        monkeypatch.syspath_prepend(str(app.parent))
+        return app
+
+    yield use
+    for name in set(sys.modules) - before:
+        if name.split(".")[0] in ("services", "components", "pages"):
+            del sys.modules[name]
 
 
 @pytest.mark.parametrize("app", EXAMPLES, ids=lambda p: p.parent.parent.name)
-def test_example_mounts(app, flux_app):
-    from fluxui.compiler import compile_file
+def test_example_compiles_without_warnings(app):
+    compiled = compile_file(app)
+    assert compiled.all_warnings == []
 
-    m = flux_app.mount(compile_file(app))
+
+@pytest.mark.parametrize("app", EXAMPLES, ids=lambda p: p.parent.parent.name)
+def test_example_mounts(app, flux_app, app_path, caplog):
+    compiled = compile_file(app_path(app))
+    assert flux_app.check_tokens(compiled) == []
+    m = flux_app.mount(compiled)
+    flux_app.qt_app.processEvents()
     flux_app.unmount(m)
+    assert "error" not in caplog.text.lower()
 
 
 def test_there_are_examples():
-    assert EXAMPLES
+    names = {p.parent.parent.name for p in EXAMPLES}
+    assert {"counter", "todo", "todo-components"} <= names
+
+
+def test_notes_example_flow(flux_app, app_path):
+    """Recorrido de la app de notas: seleccionar, editar, guardar, crear, borrar y cambiar de tema."""
+    from conftest import texts, visual_items
+    from PySide6.QtCore import QMetaObject
+
+    from fluxui import theme
+
+    app = next(p for p in EXAMPLES if p.parent.parent.name == "notes")
+    m = flux_app.mount(compile_file(app_path(app)))
+    flux_app.qt_app.processEvents()
+    ns = m.instance.namespace
+
+    def items(kind):
+        return [i for i in visual_items(m) if kind in i.metaObject().className() and i.isVisible()]
+
+    def button(text):
+        return next(b for b in items("FxButton") if b.property("text") == text)
+
+    def press(item, method="click"):
+        assert QMetaObject.invokeMethod(item, method)
+        flux_app.qt_app.processEvents()
+
+    try:
+        cards = items("NoteCard")
+        assert len(cards) == 3
+        press(cards[1], "clicked")  # seleccionar la segunda tarjeta
+        assert ns["current"].value["title"] == "Componentes"
+        title_field = next(f for f in items("FxTextField") if f.property("text") == "Componentes")
+
+        assert button("Guardar").property("enabled") is False
+        title_field.setProperty("text", "Componentes .flux")
+        assert QMetaObject.invokeMethod(title_field, "textEdited")
+        assert "Cambios sin guardar" in texts(m)
+        press(button("Guardar"))
+        assert ns["notes"].value[0]["title"] == "Componentes .flux"  # la editada sube
+        assert "Componentes .flux" in texts(m)
+        assert "Cambios sin guardar" not in texts(m)
+
+        press(button("Nueva"))
+        assert len(ns["notes"].value) == 4 and ns["current"].value["title"] == ""
+        press(button("Eliminar"))
+        assert len(ns["notes"].value) == 3
+
+        search = next(f for f in items("FxTextField") if f.property("placeholderText") == "Buscar en las notas")
+        search.setProperty("text", "tokens")
+        assert QMetaObject.invokeMethod(search, "textEdited")
+        assert len(items("NoteCard")) == 1 and "1 de 3 notas" in texts(m)
+        search.setProperty("text", "zzz")
+        assert QMetaObject.invokeMethod(search, "textEdited")
+        assert items("NoteCard") == [] and "Sin resultados para «zzz»" in texts(m)
+
+        press(button("Tema oscuro"))
+        assert theme.name == "dark" and button("Tema claro")
+    finally:
+        flux_app.unmount(m)
+
+
+@pytest.mark.parametrize("app", EXAMPLES, ids=lambda p: p.parent.parent.name)
+def test_example_runs_with_python_main(app):
+    """`python main.py` arranca el ejemplo y termina limpio, sin errores ni avisos de QML."""
+    import os
+    import subprocess
+
+    env = {**os.environ, "QT_QPA_PLATFORM": "offscreen", "FLUXUI_EXIT_AFTER_MS": "500"}
+    proc = subprocess.run(
+        [sys.executable, "main.py"], cwd=app.parent.parent, env=env, capture_output=True, text=True, timeout=60
+    )
+    assert proc.returncode == 0, proc.stderr
+    noise = [line for line in proc.stderr.splitlines() if line.strip() and not line.startswith("qt.qpa")]
+    assert noise == []

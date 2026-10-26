@@ -2,6 +2,7 @@
 import logging
 
 import pytest
+from conftest import find, find_all, texts, visual_items
 from PySide6.QtCore import QMetaObject, QObject
 
 from fluxui.compiler import compile_source
@@ -36,12 +37,6 @@ def increment():
 """
 
 
-def find(mounted, name: str) -> QObject:
-    obj = mounted.root.findChild(QObject, name)
-    assert obj is not None, f"no se encontró id={name}"
-    return obj
-
-
 def click(button: QObject) -> None:
     assert QMetaObject.invokeMethod(button, "click")
 
@@ -68,15 +63,20 @@ def test_python_state_change_updates_view(mount):
     assert find(m, "inc").property("text") == "Clicks: 41"
 
 
-def test_dynamic_property_and_conditionals(mount):
+def test_if_mounts_and_unmounts_branches(mount):
     m = mount(COUNTER)
-    button, many, few = find(m, "inc"), find(m, "many"), find(m, "few")
-    assert (many.property("visible"), few.property("visible")) == (False, True)
-    assert few.property("text") == "Pocos: 2"
+    assert find_all(m, "many") == []
+    assert find(m, "few").property("text") == "Pocos: 2"
+    count = m.instance.namespace["count"]
+    subscribers = count.subscriber_count
     for _ in range(3):
-        click(button)
-    assert (many.property("visible"), few.property("visible")) == (True, False)
-    assert button.property("enabled") is False
+        click(find(m, "inc"))
+    m.root.contentItem().polish()
+    assert find_all(m, "few") == []  # la rama inactiva se destruye
+    assert find(m, "many").property("text") == "Muchos"
+    assert find(m, "inc").property("enabled") is False
+    # el binding "Pocos: {2 - count}" se liberó con su rama
+    assert count.subscriber_count == subscribers - 1
 
 
 def test_two_way_binding_without_loops(mount):
@@ -149,22 +149,28 @@ def submitted(text):
     assert find(m, "out").property("text") == "hola"
 
 
-def test_checkbox_two_way(mount):
+def test_checkbox_and_textarea_two_way(mount):
     m = mount(
         """<script>
 from fluxui import state
 done = state(False)
+notes = state("a")
 </script>
 <Column>
   <Checkbox id="c" bind:checked={done}>Hecho</Checkbox>
-  <Text id="out">{"sí" if done else "no"}</Text>
+  <TextArea id="t" bind:value={notes} />
+  <Text id="out">{"sí" if done else "no"} {len(notes)}</Text>
 </Column>"""
     )
     box = find(m, "c")
     box.setProperty("checked", True)
     assert QMetaObject.invokeMethod(box, "toggled")
     assert m.instance.namespace["done"].value is True
-    assert find(m, "out").property("text") == "sí"
+    find(m, "t").setProperty("text", "hola\nmundo")
+    assert m.instance.namespace["notes"].value == "hola\nmundo"
+    assert find(m, "out").property("text") == "sí 10"
+    m.instance.namespace["notes"].value = "x"
+    assert find(m, "t").property("text") == "x"
 
 
 def test_runtime_error_in_binding_is_reported_with_location(mount, caplog):
@@ -204,12 +210,191 @@ def test_handler_must_be_callable(mount, caplog):
     assert "debe recibir una función" in caplog.text
 
 
-def test_qt_rejection_is_mapped_to_flux_location(flux_app, monkeypatch):
+def test_mutating_unwrapped_state_in_template_gives_a_hint(mount, caplog):
+    m = mount("<script>\nfrom fluxui import state\nn = state(0)\n</script>\n<Button id=\"b\" on:click={lambda: n.set(1)}>x</Button>")
+    with caplog.at_level(logging.ERROR, logger="fluxui"):
+        click(find(m, "b"))
+    assert "desenvueltos" in caplog.text
+
+
+def test_qt_rejection_is_mapped_to_flux_location(flux_app):
     c = compile_source("<Window>\n  <Column>\n    <Text>x</Text>\n  </Column>\n</Window>", "Bad.flux")
-    # Simular un fallo de Qt corrompiendo el QML del Label.
-    c.qml = c.qml.replace("Label {", "Label { noExiste: 1;")
+    # Simular un fallo de Qt corrompiendo el QML del texto.
+    c.qml = c.qml.replace("FxText {", "FxText { noExiste: 1;")
     with pytest.raises(FluxError) as info:
         flux_app.mount(c)
     d = info.value.first
     assert "Qt rechazó el QML generado" in d.message
     assert d.location is not None and d.location.line == 3
+
+
+# -- listas ------------------------------------------------------------------------
+
+TODOS = """<script>
+from fluxui import state
+todos = state([{"id": 1, "t": "a"}, {"id": 2, "t": "b"}, {"id": 3, "t": "c"}])
+removed = state([])
+def remove(i):
+    removed.value = [*removed.value, i]
+    todos.value = [t for t in todos.value if t["id"] != i]
+</script>
+<Column>
+  {#each todos as todo, i (todo["id"])}
+    <Row id="row">
+      <Text>{i}:{todo["t"]}</Text>
+      <Button id="del" on:click={lambda: remove(todo["id"])}>x</Button>
+    </Row>
+  {:else}
+    <Text id="empty">Sin tareas</Text>
+  {/each}
+</Column>"""
+
+
+def test_each_renders_inserts_updates_and_removes(mount):
+    m = mount(TODOS)
+    todos = m.instance.namespace["todos"]
+    assert texts(m) == ["0:a", "1:b", "2:c"]
+    todos.value = [*todos.value, {"id": 4, "t": "d"}]
+    assert texts(m) == ["0:a", "1:b", "2:c", "3:d"]
+    todos.value = [{"id": 1, "t": "A"}, *todos.value[1:]]
+    assert texts(m) == ["0:A", "1:b", "2:c", "3:d"]
+    todos.value = [t for t in todos.value if t["id"] != 2]
+    assert texts(m) == ["0:A", "1:c", "2:d"]
+    todos.value = []
+    assert texts(m) == ["Sin tareas"]
+    todos.value = [{"id": 9, "t": "z"}]
+    assert texts(m) == ["0:z"]
+
+
+def test_keys_preserve_row_identity_when_reordering(mount):
+    m = mount(TODOS)
+    a, b, c = find_all(m, "row")
+    todos = m.instance.namespace["todos"]
+    todos.value = list(reversed(todos.value))
+    assert texts(m) == ["0:c", "1:b", "2:a"]
+    # los mismos objetos visuales, en otro orden: no se recrean
+    assert find_all(m, "row") == [c, b, a]
+
+
+def test_row_handlers_use_the_current_item(mount):
+    m = mount(TODOS)
+    todos = m.instance.namespace["todos"]
+    todos.value = list(reversed(todos.value))
+    click(find_all(m, "del")[0])  # primera fila tras invertir: id 3
+    assert m.instance.namespace["removed"].value == [3]
+    assert texts(m) == ["0:b", "1:a"]
+
+
+def test_removed_rows_release_their_subscriptions(mount):
+    m = mount(
+        """<script>
+from fluxui import state
+items = state([1, 2, 3])
+suffix = state("!")
+</script>
+<Column>{#each items as x (x)}<Text>{x}{suffix}</Text>{/each}</Column>"""
+    )
+    suffix, items = m.instance.namespace["suffix"], m.instance.namespace["items"]
+    assert suffix.subscriber_count == 3
+    items.value = [1]
+    assert suffix.subscriber_count == 1
+    suffix.value = "?"
+    assert texts(m) == ["1?"]
+
+
+def test_duplicate_keys_are_reported_and_still_render(mount, caplog):
+    with caplog.at_level(logging.ERROR, logger="fluxui"):
+        m = mount(
+            """<script>
+from fluxui import state
+items = state([1, 1, 2])
+</script>
+<Column>{#each items as x (x)}<Text>{x}</Text>{/each}</Column>""",
+            "Dup.flux",
+        )
+    assert "clave repetida" in caplog.text and "Dup.flux:5:" in caplog.text
+    assert texts(m) == ["1", "1", "2"]
+
+
+def test_nested_each_and_if(mount):
+    m = mount(
+        """<script>
+from fluxui import state
+groups = state([{"n": "A", "xs": [1, 2]}, {"n": "B", "xs": []}])
+show = state(True)
+</script>
+<Column>
+  {#each groups as g (g["n"])}
+    <Column>
+      <Text>{g["n"]}</Text>
+      {#if show}
+        {#each g["xs"] as x (x)}<Text>{g["n"]}{x}</Text>{:else}<Text>{g["n"]} vacío</Text>{/each}
+      {/if}
+    </Column>
+  {/each}
+</Column>"""
+    )
+    assert texts(m) == ["A", "A1", "A2", "B", "B vacío"]
+    m.instance.namespace["show"].value = False
+    assert texts(m) == ["A", "B"]
+    groups = m.instance.namespace["groups"]
+    m.instance.namespace["show"].value = True
+    groups.value = [{"n": "B", "xs": [7]}, {"n": "A", "xs": [1]}]
+    assert texts(m) == ["B", "B7", "A", "A1"]
+
+
+def test_each_over_non_iterable_reports_error(mount, caplog):
+    with caplog.at_level(logging.ERROR, logger="fluxui"):
+        mount("<script>\nfrom fluxui import state\nn = state(3)\n</script>\n<Column>{#each n as x}<Text>{x}</Text>{/each}</Column>")
+    assert "error en {#each}" in caplog.text and "TypeError" in caplog.text
+
+
+def test_layout_positions_rows_in_order(mount):
+    m = mount(TODOS)
+    m.root.setProperty("width", 300)
+    m.root.setProperty("height", 300)
+    m.root.contentItem().update()
+    from PySide6.QtGui import QGuiApplication
+
+    QGuiApplication.processEvents()
+    rows = find_all(m, "row")
+    ys = [r.property("y") for r in rows]
+    assert ys == sorted(ys) and len(set(ys)) == 3
+    assert all(isinstance(i, QObject) for i in visual_items(m))
+
+
+def test_conditional_class_toggles_style(mount):
+    from PySide6.QtGui import QColor
+
+    m = mount(
+        """<script>
+from fluxui import state
+sel = state(False)
+</script>
+<Column><Text id="t" class="base" class:sel={sel}>x</Text></Column>
+<style>.base { color: #00ff00; }\n.sel { color: #ff0000; font-size: 30px; }</style>"""
+    )
+    t = find(m, "t")
+    assert t.property("fxColor") == QColor("#00ff00")
+    m.instance.namespace["sel"].value = True
+    assert t.property("fxColor") == QColor("#ff0000") and t.property("font").pixelSize() == 30
+    m.instance.namespace["sel"].value = False
+    assert t.property("fxColor") == QColor("#00ff00")
+
+
+def test_key_block_recreates_content(mount):
+    m = mount(
+        """<script>
+from fluxui import state
+k = state(1)
+other = state("a")
+</script>
+<Column>{#key k}<TextField id="f" value={other} />{/key}</Column>"""
+    )
+    first = find(m, "f")
+    first.setProperty("text", "escrito a mano")
+    m.instance.namespace["other"].value = "b"  # misma clave: se actualiza, no se recrea
+    assert find(m, "f") == first
+    m.instance.namespace["k"].value = 2
+    second = find(m, "f")
+    assert second != first and second.property("text") == "b"

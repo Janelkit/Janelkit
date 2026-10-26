@@ -1,0 +1,32 @@
+<script lang="python">
+from fluxui import prop, event, state
+
+# Props: valores que pasa el componente padre.
+goal = prop(5)
+# Eventos: avisos hacia el padre (<Counter on:reached={...} />).
+reached = event()
+
+# Estado local: cada <Counter> tiene el suyo.
+count = state(0)
+
+
+def increment():
+    count.value += 1
+    if count.value == goal.value:
+        reached.emit(count.value)
+
+
+def reset():
+    count.value = 0
+</script>
+
+<Row class="counter">
+  <Button variant="primary" on:click={increment}>Clicks: {count}</Button>
+  <Button variant="ghost" on:click={reset} enabled={count > 0}>Reiniciar</Button>
+  <Text class="hint">{f"faltan {goal - count}" if count < goal else "¡meta cumplida!"}</Text>
+</Row>
+
+<style>
+.counter { gap: 8px; align-items: center; }
+.hint { color: var(--text-muted); }
+</style>

@@ -14,7 +14,7 @@ EXPECTED_FILES = {
     "main.py",
     "src/App.flux",
     "src/services/users.py",
-    "src/components/.gitkeep",
+    "src/components/Counter.flux",
     "src/pages/.gitkeep",
     "assets/.gitkeep",
     "pyproject.toml",
@@ -73,7 +73,7 @@ def test_cli_parse_and_compile(tmp_path, capsys):
     assert main(["parse", str(app)]) == 0
     assert "<Window title=\"x\"> @1:1" in capsys.readouterr().out
     assert main(["compile", str(app)]) == 0
-    assert "ApplicationWindow {" in capsys.readouterr().out
+    assert "FxWindow {" in capsys.readouterr().out
 
 
 def test_cli_parse_error_exit_code(tmp_path, capsys):

@@ -4,9 +4,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..diagnostics import SourceLocation
-from .ir import Bound, IRComponent, IRElement, Literal
+from .ir import Bound, IRComponent, IRElement, IRNode, IRRepeater, Literal
 
-BRIDGE_NAME = "fx"  # propiedad de contexto con el puente de cada instancia
+BRIDGE_NAME = "fx"  # puente de la instancia (propiedad de contexto o rol del modelo)
 
 SourceMap = list[tuple[int, SourceLocation]]
 
@@ -22,13 +22,26 @@ def generate_qml(component: IRComponent) -> tuple[str, SourceMap]:
     return "\n".join(lines) + "\n", source_map
 
 
-def _emit(el: IRElement, depth: int, lines: list[str], source_map: SourceMap) -> None:
+def _emit(node: IRNode, depth: int, lines: list[str], source_map: SourceMap, prefix: str = "") -> None:
     pad = "    " * depth
     inner = "    " * (depth + 1)
-    source_map.append((len(lines) + 1, el.loc))
-    lines.append(f"{pad}{el.qml_type} {{")
+    source_map.append((len(lines) + 1, node.loc))
+    if isinstance(node, IRRepeater):
+        lines.append(f"{pad}{prefix}Repeater {{")
+        lines.append(f"{inner}model: {BRIDGE_NAME}.{node.model_id}")
+        if node.delegate is None:
+            lines.append(f"{inner}delegate: {BRIDGE_NAME}.{node.model_id}.delegate")
+        else:
+            # Dentro del delegado, `fx` es el rol del modelo: el puente de esa fila.
+            _emit(node.delegate, depth + 1, lines, source_map, prefix="delegate: ")
+        lines.append(f"{pad}}}")
+        return
+    el: IRElement = node
+    lines.append(f"{pad}{prefix}{el.qml_type} {{")
     for prop, value in el.props.items():
         lines.append(f"{inner}{prop}: {_value(value)}")
+    for prop, value, when in el.conditional:
+        lines.append(f"{inner}Binding on {prop} {{ when: {when}; value: {value} }}")
     for handler, statements in el.handlers.items():
         body = statements[0] if len(statements) == 1 else "{ " + "; ".join(statements) + " }"
         lines.append(f"{inner}{handler}: {body}")

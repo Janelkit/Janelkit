@@ -15,13 +15,15 @@ def flux_app():
 
 @pytest.fixture
 def mount(flux_app):
-    """Monta componentes desde código fuente y los desmonta al terminar la prueba."""
-    from fluxui.compiler import compile_source
+    """Monta componentes desde código fuente (o un archivo) y los desmonta al terminar la prueba."""
+    from fluxui.compiler import compile_file, compile_source
 
     mounted = []
 
-    def _mount(source: str, file: str = "App.flux"):
-        m = flux_app.mount(compile_source(source, file))
+    def _mount(source, file: str = "App.flux"):
+        compiled = compile_file(source) if hasattr(source, "read_text") else compile_source(source, file)
+        m = flux_app.mount(compiled)
+        flux_app.qt_app.processEvents()
         mounted.append(m)
         return m
 
@@ -30,3 +32,43 @@ def mount(flux_app):
         if m in flux_app.mounted:
             flux_app.unmount(m)
     flux_app.qt_app.processEvents()
+
+
+@pytest.fixture(autouse=True)
+def _reset_theme():
+    from fluxui import theme
+
+    yield
+    theme.reset()
+
+
+# -- recorrer la vista ---------------------------------------------------------------
+def visual_items(mounted):
+    """Todos los elementos visuales de la vista en orden de árbol (incluidos los de Repeater)."""
+    root = mounted.root
+    start = root.contentItem() if hasattr(root, "contentItem") else root
+    out = []
+
+    def walk(item):
+        for child in item.childItems():
+            out.append(child)
+            walk(child)
+
+    walk(start)
+    return out
+
+
+def find(mounted, name: str):
+    for item in visual_items(mounted):
+        if item.objectName() == name:
+            return item
+    raise AssertionError(f"no se encontró id={name}")
+
+
+def find_all(mounted, name: str):
+    return [i for i in visual_items(mounted) if i.objectName() == name]
+
+
+def texts(mounted):
+    """Textos visibles de los elementos <Text> (FxText es un Label), en orden."""
+    return [i.property("text") for i in visual_items(mounted) if i.inherits("QQuickLabel") and i.isVisible()]

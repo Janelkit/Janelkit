@@ -1,0 +1,32 @@
+{
+  "name": "fluxui-flux",
+  "displayName": "FluxUI (.flux)",
+  "description": "Resaltado de sintaxis para componentes .flux de FluxUI: Python en <script> y {expresiones}, CSS en <style>.",
+  "version": "0.0.1",
+  "publisher": "fluxui",
+  "license": "UNLICENSED",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "flux",
+        "aliases": ["FluxUI", "flux"],
+        "extensions": [".flux"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "flux",
+        "scopeName": "source.flux",
+        "path": "./syntaxes/flux.tmLanguage.json",
+        "embeddedLanguages": {
+          "source.python.embedded.flux": "python",
+          "meta.embedded.expression.flux": "python",
+          "source.css.embedded.flux": "css"
+        }
+      }
+    ]
+  }
+}

@@ -1,8 +1,9 @@
-"""Puente QObject entre una instancia de componente y su vista QML.
+"""Puente QObject entre una instancia de plantilla y su vista QML.
 
-Cada componente compilado obtiene una clase puente propia, creada
-dinámicamente, con una propiedad notificable por binding (`b0`, `b1`, ...).
-Así QML solo reevalúa las propiedades cuyo valor cambió.
+Cada plantilla compilada obtiene una clase puente propia, creada
+dinámicamente, con una propiedad notificable por binding (`b0`, `b1`, ...)
+y una propiedad constante por región dinámica (`m0`, `m1`, ...: el modelo
+de su `Repeater`). Así QML solo reevalúa las propiedades cuyo valor cambió.
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ InvokeFn = Callable[[str, list], None]
 WriteFn = Callable[[str, Any], None]
 
 
-def make_bridge_class(binding_ids: list[str], name: str = "FluxBridge") -> type[QObject]:
+def make_bridge_class(binding_ids: list[str], model_ids: list[str] = (), name: str = "FluxBridge") -> type[QObject]:
     attrs: dict[str, Any] = {}
     for bid in binding_ids:
         signal = Signal()
@@ -27,9 +28,17 @@ def make_bridge_class(binding_ids: list[str], name: str = "FluxBridge") -> type[
 
         attrs[bid] = Property("QVariant", getter, notify=signal)
 
-    def __init__(self, on_invoke: InvokeFn, on_write: WriteFn):
-        QObject.__init__(self)
+    for mid in model_ids:
+
+        def model_getter(self, _mid=mid):
+            return self._models.get(_mid)
+
+        attrs[mid] = Property(QObject, model_getter, constant=True)
+
+    def __init__(self, on_invoke: InvokeFn, on_write: WriteFn, parent: QObject | None = None):
+        QObject.__init__(self, parent)
         self._values: dict[str, Any] = {}
+        self._models: dict[str, QObject] = {}
         self._on_invoke = on_invoke
         self._on_write = on_write
 
@@ -44,6 +53,13 @@ def make_bridge_class(binding_ids: list[str], name: str = "FluxBridge") -> type[
     def value(self, bid: str) -> Any:
         return self._values.get(bid)
 
+    def set_model(self, mid: str, model: QObject) -> None:
+        """Debe llamarse antes de que QML lea la propiedad (es constante)."""
+        self._models[mid] = model
+
+    def model(self, mid: str) -> QObject | None:
+        return self._models.get(mid)
+
     # Qt registra los slots por __name__: deben ser funciones con nombre, no lambdas.
     def invoke(self, handler_id: str, args: list) -> None:
         self._on_invoke(handler_id, list(args or []))
@@ -55,6 +71,8 @@ def make_bridge_class(binding_ids: list[str], name: str = "FluxBridge") -> type[
         __init__=__init__,
         set_value=set_value,
         value=value,
+        set_model=set_model,
+        model=model,
         invoke=Slot(str, "QVariantList")(invoke),
         write=Slot(str, "QVariant")(write),
     )

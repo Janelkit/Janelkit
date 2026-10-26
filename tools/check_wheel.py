@@ -29,6 +29,10 @@ REQUIRED = [
     "fluxui/templates/starter/main.py.tmpl",
     "fluxui/templates/starter/src/App.flux.tmpl",
     "fluxui/templates/starter/dot-gitignore.tmpl",
+    "fluxui/qml/Flux/qmldir",
+    "fluxui/qml/Flux/fx.js",
+    "fluxui/qml/Flux/FxWindow.qml",
+    "fluxui/qml/Flux/FxButton.qml",
 ]
 
 
@@ -105,8 +109,17 @@ def main() -> int:
         print("   main.py y src/App.flux creados")
 
         step("python main.py")
-        run([str(py), "main.py"], cwd=demo, env=env)
-        print("   la ventana se abrió y la aplicación terminó con código 0")
+        proc = run([str(py), "main.py"], cwd=demo, env=env)
+        noise = [ln for ln in proc.stderr.splitlines() if ln.strip() and not ln.startswith("qt.qpa")]
+        if noise:
+            raise SystemExit("la aplicación emitió avisos o errores:\n" + "\n".join(noise))
+        print("   la ventana se abrió (controles del módulo Flux incluidos) y terminó con código 0, sin avisos")
+
+        step("flux build")
+        run([str(flux), "build"], cwd=demo, env=env)
+        if not (demo / "build" / "qml" / "App.qml").is_file():
+            raise SystemExit("flux build no generó build/qml/App.qml")
+        print("   todos los componentes compilan; QML en build/qml")
 
         print("\nOK: el recorrido pip install -> flux new -> python main.py funciona fuera del repositorio.")
         return 0

@@ -108,14 +108,23 @@ class Effect(Observer):
 
 
 class Scope:
-    """Conjunto de observadores que se liberan juntos."""
+    """Conjunto de observadores (y ámbitos hijos) que se liberan juntos."""
 
     def __init__(self) -> None:
-        self._observers: list[Observer] = []
+        self._observers: dict[Observer | Scope, None] = {}
         self.disposed = False
 
-    def add(self, observer: Observer) -> None:
-        self._observers.append(observer)
+    def add(self, observer: Observer | Scope) -> None:
+        if self.disposed:
+            observer.dispose()
+        else:
+            self._observers[observer] = None
+
+    def discard(self, observer: Observer | Scope) -> None:
+        self._observers.pop(observer, None)
+
+    def __len__(self) -> int:
+        return len(self._observers)
 
     @contextmanager
     def active(self) -> Iterator["Scope"]:
@@ -126,10 +135,11 @@ class Scope:
             _scope_stack.pop()
 
     def dispose(self) -> None:
-        for observer in self._observers:
-            observer.dispose()
-        self._observers.clear()
         self.disposed = True
+        observers = list(self._observers)
+        self._observers.clear()
+        for observer in reversed(observers):  # lo creado después se libera antes
+            observer.dispose()
 
 
 def _flush() -> None:

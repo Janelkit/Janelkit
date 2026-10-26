@@ -1,0 +1,72 @@
+<script lang="python">
+from fluxui import state, computed, theme
+from components.Sidebar import Sidebar
+from components.NoteEditor import NoteEditor
+from services import notes as store
+
+notes = state(store.samples())
+selected_id = state(notes.value[0]["id"])
+
+
+@computed
+def current():
+    return next((n for n in notes.value if n["id"] == selected_id.value), None)
+
+
+def select(note_id):
+    selected_id.value = note_id
+
+
+def create():
+    note = store.new_note()
+    notes.value = [note, *notes.value]
+    selected_id.value = note["id"]
+
+
+def save(note_id, **fields):
+    notes.value = store.save(notes.value, note_id, **fields)
+
+
+def delete(note_id):
+    notes.value = store.delete(notes.value, note_id)
+    selected_id.value = notes.value[0]["id"] if notes.value else None
+
+
+def toggle_theme():
+    theme.toggle()
+</script>
+
+<Window title="Notas — FluxUI" width={960} height={620} minWidth={720} minHeight={420}>
+  <Row class="app">
+    <Sidebar notes={notes} selected={selected_id} on:chosen={select} on:created={create} />
+    <Column class="main">
+      <Row class="toolbar">
+        <Text class="crumb">{current["title"] or "Sin título" if current else "Ninguna nota seleccionada"}</Text>
+        <Spacer />
+        <Button variant="ghost" on:click={toggle_theme}>
+          {"Tema oscuro" if theme.name == "light" else "Tema claro"}
+        </Button>
+      </Row>
+      {#if current}
+        {#key selected_id}
+          <NoteEditor note={current} on:saved={save} on:deleted={delete} />
+        {/key}
+      {:else}
+        <Column class="empty">
+          <Text class="empty-title">No hay ninguna nota abierta</Text>
+          <Text class="muted">Crea una con el botón «Nueva» de la barra lateral.</Text>
+          <Button variant="primary" on:click={create}>Crear nota</Button>
+        </Column>
+      {/if}
+    </Column>
+  </Row>
+</Window>
+
+<style>
+.main { flex: 1; padding: 20px 28px; gap: 16px; align-self: stretch; }
+.toolbar { align-items: center; }
+.crumb { color: var(--text-muted); }
+.empty { flex: 1; gap: 8px; align-items: center; justify-content: center; }
+.empty-title { font-size: var(--font-size-lg); font-weight: 600; }
+.muted { color: var(--text-muted); }
+</style>

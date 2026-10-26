@@ -1,7 +1,9 @@
-"""Catálogo de elementos .flux y su equivalencia en Qt Quick / Qt Quick Controls.
+"""Catálogo de elementos .flux y su equivalencia en Qt Quick.
 
 Es la única tabla que conoce los nombres QML; el resto del compilador trabaja
-con estas especificaciones.
+con estas especificaciones. Los tipos `Fx*` pertenecen al módulo QML interno
+`Flux` (`fluxui/qml/Flux`), que se distribuye con el paquete: aplican el tema
+y las reglas de disposición. El usuario nunca escribe QML.
 """
 from __future__ import annotations
 
@@ -18,6 +20,7 @@ class PropSpec:
 class EventSpec:
     qml_handler: str  # p. ej. "onClicked"
     args: tuple[str, ...] = ()  # expresiones QML que se pasan al manejador Python
+    enables: str | None = None  # propiedad booleana que el control necesita activar para emitirlo
 
 
 @dataclass(frozen=True)
@@ -34,25 +37,29 @@ class ControlSpec:
     two_way: dict[str, TwoWaySpec] = field(default_factory=dict)
     text_prop: str | None = None  # propiedad que recibe el contenido textual
     container: bool = False
-    defaults: dict[str, str] = field(default_factory=dict)  # literales QML
+    horizontal: bool = False  # contenedores: eje principal horizontal
 
 
+# Propiedades de disposición comunes a todos los elementos salvo Window.
 COMMON_PROPS: dict[str, PropSpec] = {
-    "width": PropSpec("width", "number"),
-    "height": PropSpec("height", "number"),
+    "width": PropSpec("Layout.preferredWidth", "number"),
+    "height": PropSpec("Layout.preferredHeight", "number"),
+    "flex": PropSpec("fxFlex", "number"),
     "visible": PropSpec("visible", "bool"),
     "enabled": PropSpec("enabled", "bool"),
     "opacity": PropSpec("opacity", "number"),
 }
 
-_LAYOUT_PROPS = {
-    "gap": PropSpec("spacing", "number"),
+_BOX_PROPS = {
+    "gap": PropSpec("gap", "number"),
     "padding": PropSpec("padding", "number"),
 }
 
+_BOX_EVENTS = {"click": EventSpec("onClicked", enables="fxClickable")}
+
 CONTROLS: dict[str, ControlSpec] = {
     "Window": ControlSpec(
-        "ApplicationWindow",
+        "FxWindow",
         props={
             "title": PropSpec("title", "string"),
             "width": PropSpec("width", "number"),
@@ -62,23 +69,31 @@ CONTROLS: dict[str, ControlSpec] = {
             "background": PropSpec("color", "color"),
         },
         container=True,
-        defaults={"visible": "true", "width": "640", "height": "480"},
     ),
-    "Column": ControlSpec("Column", props=dict(_LAYOUT_PROPS), container=True),
-    "Row": ControlSpec("Row", props=dict(_LAYOUT_PROPS), container=True),
+    "Column": ControlSpec("FxColumn", props=dict(_BOX_PROPS), events=dict(_BOX_EVENTS), container=True),
+    "Row": ControlSpec("FxRow", props=dict(_BOX_PROPS), events=dict(_BOX_EVENTS), container=True, horizontal=True),
+    "Scroll": ControlSpec(
+        "FxScroll",
+        props={"gap": PropSpec("gap", "number"), "padding": PropSpec("innerPadding", "number")},
+        container=True,
+    ),
     "Text": ControlSpec(
-        "Label",
-        props={"text": PropSpec("text", "string"), "color": PropSpec("color", "color")},
+        "FxText",
+        props={"text": PropSpec("text", "string"), "color": PropSpec("fxColor", "color")},
         text_prop="text",
     ),
     "Button": ControlSpec(
-        "Button",
-        props={"text": PropSpec("text", "string"), "flat": PropSpec("flat", "bool")},
+        "FxButton",
+        props={
+            "text": PropSpec("text", "string"),
+            "flat": PropSpec("flat", "bool"),
+            "variant": PropSpec("variant", "string"),
+        },
         events={"click": EventSpec("onClicked")},
         text_prop="text",
     ),
     "TextField": ControlSpec(
-        "TextField",
+        "FxTextField",
         props={
             "value": PropSpec("text", "string"),
             "placeholder": PropSpec("placeholderText", "string"),
@@ -90,21 +105,41 @@ CONTROLS: dict[str, ControlSpec] = {
         },
         two_way={"value": TwoWaySpec("text", "onTextEdited")},
     ),
+    "TextArea": ControlSpec(
+        "FxTextArea",
+        props={
+            "value": PropSpec("text", "string"),
+            "placeholder": PropSpec("placeholderText", "string"),
+            "readonly": PropSpec("readOnly", "bool"),
+        },
+        # TextArea no distingue cambios del usuario de los programáticos; escribir
+        # el mismo valor de vuelta no notifica, así que no hay bucles.
+        two_way={"value": TwoWaySpec("text", "onTextChanged")},
+    ),
     "Checkbox": ControlSpec(
-        "CheckBox",
+        "FxCheckBox",
         props={"checked": PropSpec("checked", "bool"), "text": PropSpec("text", "string")},
         events={"change": EventSpec("onToggled", ("checked",))},
         two_way={"checked": TwoWaySpec("checked", "onToggled")},
         text_prop="text",
     ),
+    "Spacer": ControlSpec("FxSpacer"),
 }
 
-QML_IMPORTS = ("QtQuick", "QtQuick.Controls")
+QML_IMPORTS = ("QtQuick", "QtQuick.Controls", "QtQuick.Layouts", "Flux")
+
+
+def tag_of(spec: ControlSpec) -> str:
+    return next(tag for tag, s in CONTROLS.items() if s is spec)
 
 
 def prop_spec(spec: ControlSpec, name: str) -> PropSpec | None:
+    if spec.qml_type == "FxWindow":
+        return spec.props.get(name)
     return spec.props.get(name) or COMMON_PROPS.get(name)
 
 
 def all_props(spec: ControlSpec) -> list[str]:
+    if spec.qml_type == "FxWindow":
+        return sorted(spec.props)
     return sorted({*spec.props, *COMMON_PROPS})

@@ -1,8 +1,8 @@
 """Parser de la plantilla: elementos, atributos, texto, `{expresiones}` y bloques.
 
 No es un parser XML: admite expresiones Python entre llaves (con cadenas que
-pueden contener llaves) y las directivas `{#if}`/`{:else}`/`{/if}` y
-`{#each}`/`{/each}`.
+pueden contener llaves) y los bloques `{#if}`/`{:else}`/`{/if}`,
+`{#each}`/`{:else}`/`{/each}` y `{#key}`/`{/key}`.
 """
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from .ast_nodes import (
     IfBlock,
     IfBranch,
     Interpolation,
+    KeyBlock,
     Node,
     Text,
 )
@@ -291,7 +292,26 @@ class _TemplateParser:
             return self.parse_if(start, cond)
         if keyword == "each":
             return self.parse_each(start, rest, rest_loc)
-        raise self.error(f"bloque desconocido '{{#{keyword}}}'", start, "los bloques disponibles son {#if} y {#each}")
+        if keyword == "key":
+            expr = self._expr(rest, rest_loc, "{#key expresión}")
+            return self.parse_key(start, expr)
+        raise self.error(
+            f"bloque desconocido '{{#{keyword}}}'", start, "los bloques disponibles son {#if}, {#each} y {#key}"
+        )
+
+    def parse_key(self, start: int, expr: Expression) -> KeyBlock:
+        block = KeyBlock(expr, [], self.loc(start))
+        try:
+            self.parse_children(closing=None, block=("key", start))
+        except _Stop as stop:
+            block.children = stop.nodes
+        else:
+            raise self.error("el bloque {#key} no está cerrado", start, "añade {/key}")
+        dstart = self.pos
+        directive = self.read_braced(validate=False).code.strip()
+        if directive != "/key":
+            raise self.error(f"directiva {{{directive}}} inesperada dentro de {{#key}}", dstart, "cierra el bloque con {/key}")
+        return block
 
     def _expr(self, code: str, loc: SourceLocation, form: str) -> Expression:
         if not code.strip():
@@ -358,6 +378,15 @@ class _TemplateParser:
             raise self.error("el bloque {#each} no está cerrado", start, "añade {/each}")
         dstart = self.pos
         directive = self.read_braced(validate=False).code.strip()
+        if directive == ":else":
+            try:
+                self.parse_children(closing=None, block=("each", start))
+            except _Stop as stop:
+                block.else_children = stop.nodes
+            else:
+                raise self.error("el bloque {#each} no está cerrado", start, "añade {/each}")
+            dstart = self.pos
+            directive = self.read_braced(validate=False).code.strip()
         if directive != "/each":
             raise self.error(f"directiva {{{directive}}} inesperada dentro de {{#each}}", dstart, "cierra el bloque con {/each}")
         return block

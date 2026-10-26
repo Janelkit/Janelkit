@@ -1,0 +1,21 @@
+# {{project_name}}
+
+Aplicación de escritorio creada con FluxUI {{fluxui_version}}.
+
+## Ejecutar
+
+```bash
+python main.py
+```
+
+Usa el mismo entorno de Python en el que está instalado FluxUI.
+
+## Estructura
+
+- `main.py`: punto de entrada; inicia FluxUI y carga `src/App.flux`.
+- `src/App.flux`: componente raíz de la interfaz (script Python, plantilla y estilos).
+- `src/services/`: lógica Python sin interfaz que los componentes pueden importar.
+- `src/components/`, `src/pages/`: reservados para componentes reutilizables (la composición llega en una versión posterior).
+- `assets/`: imágenes y otros recursos.
+
+Para ver el QML generado a partir de un componente: `flux compile src/App.flux`.

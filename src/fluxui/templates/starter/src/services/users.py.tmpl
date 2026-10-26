@@ -1,0 +1,6 @@
+"""Lógica Python sin interfaz: se importa desde los componentes .flux."""
+
+
+def display_name(raw: str) -> str:
+    cleaned = " ".join(raw.split())
+    return cleaned.title() if cleaned else "invitado"

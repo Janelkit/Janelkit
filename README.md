@@ -105,6 +105,8 @@ Las expresiones de la plantilla se evalúan en **Python**; cuando cambia un `sta
 - [docs/estilos.md](docs/estilos.md) — CSS soportado, disposición (flex), tokens y temas.
 - [docs/desarrollo.md](docs/desarrollo.md) — `flux dev`, `flux build`, errores y editor.
 - [docs/estado.md](docs/estado.md) — avance frente al plan, decisiones provisionales, rendimiento y limitaciones.
+- [docs/alcance.md](docs/alcance.md) — qué es el framework, qué queda fuera y proyectos paralelos.
+- [docs/lanzamiento.md](docs/lanzamiento.md) — pendientes priorizados antes de la primera versión pública.
 - [spikes/qt_bridge_counter/NOTES.md](spikes/qt_bridge_counter/NOTES.md) — validación técnica del puente Python ↔ Qt Quick.
 
 ## Desarrollo de FluxUI

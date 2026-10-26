@@ -103,6 +103,8 @@ Las filas se crean todas (no hay virtualización): para miles de elementos hará
 
 ## Siguientes pasos recomendados (Incremento 8)
 
+> La priorización completa de lo pendiente antes del lanzamiento está en [lanzamiento.md](lanzamiento.md); el alcance del framework frente a proyectos paralelos, en [alcance.md](alcance.md).
+
 1. Inicializar el repositorio git y CI con la matriz Python/PySide6 (y Linux/macOS).
 2. Probar en Linux y macOS (fuentes, escalado, estilo Basic).
 3. Verificar nombres en PyPI, elegir licencia y publicar en TestPyPI.

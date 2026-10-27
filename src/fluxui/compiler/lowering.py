@@ -8,6 +8,7 @@ from __future__ import annotations
 import ast
 import builtins
 import difflib
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -18,6 +19,9 @@ from ..qt_backend.controls import (
     BASE_ELEMENTS,
     CHOICES,
     CONTROLS,
+    ROUTED_EVENTS,
+    INTERACTIVE_ROLES,
+    ROUTE,
     QML_IMPORTS,
     ControlSpec,
     PropSpec,
@@ -25,8 +29,9 @@ from ..qt_backend.controls import (
     prop_spec,
     tag_of,
 )
-from ..styling.compiler import BEHAVIOR, compile_declarations, matching_declarations
-from ..styling.parser import Rule, parse_stylesheet
+from ..styling.compiler import BEHAVIOR, INHERITED, SUPPORTED, TEXT_PREFIX, VAR_PREFIX, compile_declarations, token_key
+from ..styling.parser import Declaration, Rule, parse_stylesheet
+from .cascade import ALWAYS, Cascade, StyleNode
 from .ast_nodes import SFC, Attribute, EachBlock, Element, Expression, IfBlock, Interpolation, KeyBlock, Node, Text
 from .qml_interface import QmlImport, read_interface
 from .expressions import EVENT_NAME, free_names, handler_names, is_inline_handler
@@ -82,6 +87,11 @@ _FLEX_ITEM_EXTRAS = {
     "fxWidthPct": ("real", "0"),
     "fxHeightPct": ("real", "0"),
     "fxAutoMargin": ("int", "0"),
+    "fxPosition": ("string", '""'),
+    "fxTop": ("var", "undefined"),
+    "fxRight": ("var", "undefined"),
+    "fxBottom": ("var", "undefined"),
+    "fxLeft": ("var", "undefined"),
 }
 # Lo que un elemento .qml propio comunica a su contenedor <flex> (ver flex.js).
 _TOUCH_DEPS = (
@@ -99,11 +109,17 @@ class ComponentInterface:
     props: dict[str, PropDecl] = field(default_factory=dict)
     events: dict[str, EventDecl] = field(default_factory=dict)
     slots: frozenset[str] | None = None  # nombres de <Slot>; None = desconocido (no se valida)
+    root_box: bool = False  # su raíz es una caja y hereda atributos: van a ella (FxRemote)
+    inherit_attrs: bool = True
 
 
 # Atributos de la etiqueta de un componente que no son props: se aplican a una
 # caja exterior que envuelve al componente (clases, id, tamaño y flex).
 _WRAPPER_ATTRS = frozenset({"class", "id", "flex", "width", "height", "visible"})
+# Si la raíz del componente es una caja, además pasan a ella estos y los eventos nativos.
+_PASSED_ATTRS = _WRAPPER_ATTRS | {"style", "label", "title", "tabindex", "disabled", "ref", "as"}
+# Lo que en una caja se lee de sí misma sin id; en un FxRemote se lee de la raíz.
+_BARE = re.compile(r"(?<![\w.])(hovered|ToolTip\.text|enabled|activeFocus)\b")
 
 
 InterfaceLookup = Callable[[Path], ComponentInterface]
@@ -150,6 +166,13 @@ class _Lowerer:
         self.use_counts: dict[str, int] = {}  # etiqueta de componente -> usos vistos
         self.qml_specs: dict[str, ControlSpec] = {}
         self._reported: set[tuple] = set()
+        self.cascade = Cascade(self.rules, lambda: self.next_id("fxs"), self.style_warning)
+        self.style_stack: list[StyleNode] = []  # antecesores en la plantilla (selectores de descendiente)
+        self.doc = 0  # documento QML actual: el contenido de cada slot es otro
+        self.docs = 0
+        self.local_vars: frozenset[str] = frozenset()
+        self.passed_root: Element | None = None  # raíz que recibe los atributos de la etiqueta
+        self.last_node: StyleNode | None = None
 
     # -- utilidades ----------------------------------------------------------
     def error(self, msg: str, loc: SourceLocation, hint: str | None = None) -> None:
@@ -230,9 +253,21 @@ class _Lowerer:
         sfc = self.sfc
         if sfc.style:
             self.rules = parse_stylesheet(sfc.style.content, sfc.style.loc, sfc.source)
+            self.cascade.rules = self.rules
+        # Variables propias (--x) que define este componente, en <style> o en style=:
+        # var(--x) las busca en los antecesores en vez de en el tema.
+        self.local_vars = frozenset(
+            {token_key(d.prop[2:]) for r in self.rules for d in r.declarations if d.prop.startswith("--")}
+            | _inline_vars(sfc.root_elements)
+        )
 
         root_tpl = self.tpl
         roots = sfc.root_elements
+        if (
+            not self.as_window and len(roots) == 1 and isinstance(roots[0], Element)
+            and roots[0].tag in ("flex", "Column", "Row") and self.info.inherit_attrs
+        ):  # fmt: skip
+            self.passed_root = roots[0]
         root_ir: IRElement | None = None
         if not roots:
             self.error("la plantilla está vacía", SourceLocation(sfc.file, 1, 1), "añade un elemento raíz, por ejemplo <Window>")
@@ -307,7 +342,92 @@ class _Lowerer:
         return box
 
     # -- elementos -----------------------------------------------------------
-    def element(self, el: Element, allow_window: bool = False) -> IRElement | None:
+    def inline_style(self, attr: Attribute, el: Element, ir: IRElement) -> None:
+        """`style="gap: 4px"` o `style={{"background": color, "--acento": c}}`: gana a las reglas y a los estados."""
+        if isinstance(attr.value, str):
+            decls = []
+            for chunk in attr.value.split(";"):
+                if not chunk.strip():
+                    continue
+                if ":" not in chunk:
+                    self.error(f"style: declaración no válida {chunk.strip()!r}", attr.loc, 'usa style="propiedad: valor; ..."')
+                    return
+                prop, value = chunk.split(":", 1)
+                decls.append(Declaration(prop.strip().lower(), value.strip(), attr.loc))
+            props = compile_declarations(decls, el.tag, self.sfc.source, self.warnings, self.tokens, self.local_vars)
+            for key in [k for k in props if k.startswith(BEHAVIOR)]:
+                ir.behaviors[key[len(BEHAVIOR):]] = props.pop(key)
+            self.override(ir, {k: Literal(v) for k, v in props.items()})
+            return
+        try:
+            node = ast.parse(attr.value.code.strip(), mode="eval").body
+        except SyntaxError:
+            node = None
+        if not isinstance(node, ast.Dict) or not all(isinstance(k, ast.Constant) and isinstance(k.value, str) for k in node.keys):
+            self.error(
+                "style={...} espera un diccionario con nombres de propiedad fijos",
+                attr.loc,
+                'p. ej. style={{"background": color, "width": f"{pct}%", "--acento": acento}}; para clases usa class={...}',
+            )
+            return
+        box = el.tag in ("flex", "Column", "Row")
+        values: dict[str, Literal] = {}
+        for key_node, value_node in zip(node.keys, node.values):
+            name = key_node.value.strip().lower()
+            expr = Expression(ast.get_source_segment(attr.value.code.strip(), value_node) or "None", attr.loc)
+            if name.startswith("--"):
+                if not box:
+                    self.error(f"las variables propias ({name}) se definen en <flex>, Column o Row", attr.loc)
+                    continue
+                values[VAR_PREFIX + token_key(name[2:])] = Literal(f"fx.{self.add_expr_binding(expr, attr.loc)}")
+                continue
+            targets = _INLINE.get(name)
+            entry = SUPPORTED.get(name)
+            if targets is None or entry is None or (el.tag in CONTROLS and el.tag not in entry[0]):
+                where = "" if targets is None else f" en <{el.tag}>"
+                self.error(
+                    f"style={{...}} no admite '{name}'{where}",
+                    attr.loc,
+                    "con valores de Python: " + ", ".join(sorted(_INLINE)) + " y variables (--x); el resto, en <style> o con class",
+                )
+                continue
+            bid = self.add_expr_binding(expr, attr.loc)
+            for qml_prop, template in targets:
+                if box and qml_prop in INHERITED:
+                    qml_prop = TEXT_PREFIX + INHERITED[qml_prop]
+                values[qml_prop] = Literal(template.format(f"fx.{bid}"))
+        self.override(ir, values)
+
+    @staticmethod
+    def override(ir: IRElement, values: dict[str, Literal]) -> None:
+        """Valores en línea: sustituyen a los de las reglas, también a los de los estados."""
+        ir.props.update(values)
+        ir.conditional[:] = [c for c in ir.conditional if c[0] not in values or c[2] == "true"]
+
+    def check_role(self, el: Element, ir: IRElement) -> None:
+        """`<flex as="button">` sin texto ni label: el lector de pantalla no tendría qué leer."""
+        role = ir.props.get("fxRole")
+        interactive = role is not None and role.qml.strip('"') in INTERACTIVE_ROLES
+        if not interactive and not (role is None and "fxClickable" in ir.props and el.tag == "flex"):
+            return
+        if "Accessible.name" in ir.props or _has_text(el.children):
+            return
+        what = f'as={role.qml}' if role is not None else "on:click"
+        self.warnings.append(
+            Diagnostic(
+                f"<{el.tag} {what}> no tiene texto ni label: un lector de pantalla no sabría qué es",
+                el.loc,
+                'añade label="..." (p. ej. label="Cerrar") o un texto dentro',
+                severity="warning",
+                source=self.sfc.source,
+            )
+        )
+
+    def style_warning(self, msg: str, rule: Rule) -> None:
+        self.warnings.append(Diagnostic(msg, rule.loc, severity="warning", source=self.sfc.source))
+
+    def element(self, el: Element, allow_window: bool = False, match_tag: str | None = None) -> IRElement | None:
+        """`match_tag`: etiqueta para los selectores (la caja exterior de un componente usa la suya)."""
         spec = self.spec_for(el.tag)
         if spec is None:
             self.unknown_element(el)
@@ -317,17 +437,16 @@ class _Lowerer:
             return None
         ir = IRElement(spec.qml_type, el.loc)
         ir.props.update({k: Literal(v) for k, v in spec.fixed.items()})
-        conditional: list[Attribute] = []
-
-        decls = matching_declarations(self.rules, el.tag, self.classes(el))
-        for qml_prop, value in compile_declarations(decls, el.tag, self.sfc.source, self.warnings, self.tokens).items():
-            if qml_prop.startswith(BEHAVIOR):
-                ir.behaviors[qml_prop[len(BEHAVIOR):]] = value
-            else:
-                ir.props[qml_prop] = Literal(value)
+        node = self.style_node(el, ir, match_tag)
+        node.passed = el is self.passed_root
+        self.last_node = node
+        self.apply_styles(self.style_stack + [node], el.tag, ir)
 
         for attr in el.attributes:
-            if attr.name == "class":
+            if attr.name == "class" or attr.directive == "class":
+                continue
+            if attr.name == "style" and attr.directive is None:
+                self.inline_style(attr, el, ir)
                 continue
             if attr.name == "id":
                 if isinstance(attr.value, str) and attr.value:
@@ -340,8 +459,6 @@ class _Lowerer:
                 self.event(attr, spec, ir)
             elif attr.directive == "bind":
                 self.two_way(attr, el, spec, ir)
-            elif attr.directive == "class":
-                conditional.append(attr)
             elif attr.directive in ("transition", "in", "out"):
                 self.transition(attr, ir)
             elif attr.directive is not None:
@@ -353,8 +470,18 @@ class _Lowerer:
             else:
                 self.prop(attr, el, spec, ir)
 
+        if "ToolTip.text" in ir.props:  # title: descripción emergente y para lectores de pantalla
+            ir.props["fxTrackHover"] = Literal("true")
+            ir.props["ToolTip.visible"] = Literal('hovered && ToolTip.text !== ""')
+            ir.props["ToolTip.delay"] = Literal("700")
+            ir.props["Accessible.description"] = Literal("ToolTip.text")
+        if match_tag is None:  # en la etiqueta de un componente, el papel es el de su raíz
+            self.check_role(el, ir)
+        _accessible_states(ir)
+        _context_extras(ir, self.cascade)
         if spec.tag is not None and "fxFlex" in ir.props:
             _custom_flex(ir)
+        _style_extras(ir, self.cascade)
         _flex_item_extras(ir, custom=spec.tag is not None, new_id=lambda: self.next_id("fxi"))
 
         # Un tamaño fijo desactiva el estiramiento por defecto (texto y campos en columnas).
@@ -362,10 +489,11 @@ class _Lowerer:
             if f"Layout.preferred{axis}" in ir.props:
                 ir.props.setdefault(f"Layout.fill{axis}", Literal("false"))
 
-        class_attr = el.attribute("class")
-        dynamic = class_attr if class_attr is not None and isinstance(class_attr.value, Expression) else None
-        self.conditional_classes(el, conditional, ir, dynamic)
-        self.content(el, spec, ir)
+        self.style_stack.append(node)
+        try:
+            self.content(el, spec, ir)
+        finally:
+            self.style_stack.pop()
         return ir
 
     def transition(self, attr: Attribute, ir: IRElement) -> None:
@@ -419,54 +547,62 @@ class _Lowerer:
         ir.handlers.setdefault("Component.onCompleted", []).append(f'fx.setRef("{use.id}", this, true)')
 
     def class_names(self) -> list[str]:
-        """Clases con reglas en <style>, en orden de aparición."""
-        names = [s[1:] for r in self.rules for s in r.selectors if s.startswith(".")]
-        return list(dict.fromkeys(names))
+        """Clases que aparecen en algún selector de <style>, en orden de aparición."""
+        return list(dict.fromkeys(c for r in self.rules for c in r.class_names()))
 
-    def conditional_classes(
-        self, el: Element, attrs: list[Attribute], ir: IRElement, dynamic: Attribute | None = None
-    ) -> None:
-        """`class:activa={cond}` y `class={expr}`: estilos de clase que se activan y desactivan."""
-        layers: list[tuple[str, dict[str, str]]] = []
-        if dynamic is not None:
-            # class={expr}: una capa por cada clase del <style>; el binding vale " a b ".
-            self.check_expr(dynamic.value)
-            bid = self.next_id("b")
-            self.tpl.bindings.append(ExprBinding(bid, dynamic.value, dynamic.loc, classes=True))
-            for name in self.class_names():
-                decls = [d for r in self.rules if f".{name}" in r.selectors for d in r.declarations]
-                # No se sabe qué clases dará la expresión: las que no aplican a este elemento
-                # (p. ej. reglas de texto) se ignoran sin avisar.
-                props = compile_declarations(decls, el.tag, self.sfc.source, [], self.tokens)
-                for key in [k for k in props if k.startswith(BEHAVIOR)]:
-                    ir.behaviors[key[len(BEHAVIOR):]] = props.pop(key)
-                if props:
-                    layers.append((f'(fx.{bid} || "").indexOf(" {name} ") >= 0', props))
-        for attr in attrs:
-            name = attr.argument
-            expr = attr.value
-            if expr is True:  # class:activa  ==  class:activa={activa}
-                expr = Expression(name, attr.loc)
-            if not isinstance(expr, Expression):
-                self.error(f"class:{name} espera una condición entre llaves", attr.loc, f"usa class:{name}={{condicion}}")
-                continue
-            decls = [d for r in self.rules if f".{name}" in r.selectors for d in r.declarations]
-            if not decls:
-                self.warnings.append(
-                    Diagnostic(f"la clase '{name}' no tiene reglas en <style>", attr.loc, severity="warning", source=self.sfc.source)
-                )
-                continue
-            props = compile_declarations(decls, el.tag, self.sfc.source, self.warnings, self.tokens)
-            for key in [k for k in props if k.startswith(BEHAVIOR)]:  # la animación pertenece al elemento
+    def style_node(self, el: Element, ir: IRElement | None, match_tag: str | None = None) -> StyleNode:
+        """Clases del elemento: fijas, `class:x={cond}` y `class={expr}` (con sus bindings)."""
+        toggles: dict[str, str] = {}
+        dynamic: str | None = None
+        known = set(self.class_names())
+        for attr in el.attributes:
+            if attr.directive == "class" and ir is not None:
+                name = attr.argument
+                expr = attr.value
+                if expr is True:  # class:activa  ==  class:activa={activa}
+                    expr = Expression(name, attr.loc)
+                if not isinstance(expr, Expression):
+                    self.error(f"class:{name} espera una condición entre llaves", attr.loc, f"usa class:{name}={{condicion}}")
+                    continue
+                if name not in known:
+                    self.warnings.append(
+                        Diagnostic(f"la clase '{name}' no tiene reglas en <style>", attr.loc, severity="warning", source=self.sfc.source)
+                    )
+                    continue
+                toggles[name] = self.add_expr_binding(expr, attr.loc)
+            elif attr.name == "class" and isinstance(attr.value, Expression) and ir is not None:
+                # class={expr}: el binding vale " a b " (ver runtime/component.py).
+                self.check_expr(attr.value)
+                dynamic = self.next_id("b")
+                self.tpl.bindings.append(ExprBinding(dynamic, attr.value, attr.loc, classes=True))
+        return StyleNode(match_tag or el.tag, frozenset(self.classes(el)), toggles, dynamic, ir, self.doc)
+
+    def apply_styles(self, chain: list[StyleNode], tag: str, ir: IRElement) -> None:
+        """Propiedades de las reglas que aplican: fijas, o con la condición de su estado."""
+        compiled: list[tuple[str, dict[str, str]]] = []
+        for m in self.cascade.matches(chain):
+            props = compile_declarations(
+                m.decls, tag, self.sfc.source, [] if m.quiet else self.warnings, self.tokens, self.local_vars
+            )
+            for key in [k for k in props if k.startswith(BEHAVIOR)]:  # la animación es del elemento
                 ir.behaviors[key[len(BEHAVIOR):]] = props.pop(key)
-            when = f"!!fx.{self.add_expr_binding(expr, attr.loc)}"
-            layers.append((when, props))
-        # Si varias clases activas fijan la misma propiedad, gana la última.
-        for i, (when, props) in enumerate(layers):
+            compiled.append((m.cond, props))
+        if ir.qml_type in _BOXES and any(k.startswith("fxOutline") for _, p in compiled for k in p):
+            ir.props["fxCustomOutline"] = Literal("true")
+        layers: list[tuple[str, dict[str, str]]] = []
+        for i, (cond, props) in enumerate(compiled):
+            if cond == ALWAYS:
+                ir.props.update({k: Literal(v) for k, v in props.items()})
+                continue
+            # Una regla fija posterior gana a esta (la última gana).
+            later = {k for c, p in compiled[i + 1:] if c == ALWAYS for k in p}
+            props = {k: v for k, v in props.items() if k not in later}
+            if props:
+                layers.append((cond, props))
+        # En orden de precedencia: si varias fijan lo mismo, gana la última activa (qml_generator).
+        for when, props in layers:
             for prop, value in props.items():
-                later = [w for w, p in layers[i + 1:] if prop in p]
-                cond = " && ".join([when, *(f"!{w}" for w in later)])
-                ir.conditional.append((prop, value, cond))
+                ir.conditional.append((prop, value, when))
 
     def unknown_element(self, el: Element) -> None:
         if el.tag[:1].islower():
@@ -492,7 +628,7 @@ class _Lowerer:
         if attr is None:
             return []
         if not isinstance(attr.value, str):
-            return []  # class={expr}: lo resuelve conditional_classes
+            return []  # class={expr}: lo resuelve style_node
         return attr.value.split()
 
     def prop(self, attr: Attribute, el: Element, spec: ControlSpec, ir: IRElement) -> None:
@@ -570,7 +706,17 @@ class _Lowerer:
             self.error(f"evento desconocido 'on:{name}' en <{tag_of(spec)}>", attr.loc, f"eventos disponibles: {available}")
             return
         handler = self.handler(attr, name)
-        if handler is not None:
+        if handler is not None and ev.qml_handler == ROUTE:
+            # Eventos de las cajas: los entrega events.py (propagación, prevent, stop).
+            routes = dict(_routes(ir))
+            routes[name] = handler.id
+            ir.props["fxOn"] = Literal("({" + ", ".join(f'"{k}": "{v}"' for k, v in routes.items()) + "})")
+            ir.props["fxBridge"] = Literal("fx")
+            if name != "click":
+                ir.props["fxListen"] = Literal("true")
+            if ev.enables:
+                ir.props[ev.enables] = Literal("true")
+        elif handler is not None:
             args = ", ".join(ev.args)
             call = f'fx.invoke("{handler.id}", [{args}])'
             ir.handlers.setdefault(ev.qml_handler, []).append(f"if ({ev.when}) {call}" if ev.when else call)
@@ -759,7 +905,7 @@ class _Lowerer:
         try:
             meaningful = [n for n in nodes if not (isinstance(n, Text) and not n.value.strip())]
             only = meaningful[0] if len(meaningful) == 1 else None
-            if component_root and isinstance(only, Element) and self.is_component(only.tag) and not self.wrapper_attrs(only):
+            if component_root and isinstance(only, Element) and self.is_component(only.tag) and not self.tag_attrs(only):
                 return Fragment(tpl, component=self.component_use(only))
             items = self.children(nodes, horizontal)
             if not items:
@@ -879,7 +1025,15 @@ class _Lowerer:
                     f"slots de <{el.tag}>: {available}" if available else f"<{el.tag}> no declara ningún <Slot />",
                 )
                 continue
-            frag = self.fragment(nodes, False, (), loc)
+            saved_doc = self.doc
+            self.docs += 1
+            self.doc = self.docs
+            self.style_stack.append(self.style_node(el, None))
+            try:
+                frag = self.fragment(nodes, False, (), loc)
+            finally:
+                self.style_stack.pop()
+                self.doc = saved_doc
             if frag.root is not None:
                 self.slot_fragments.append(frag)
             if not frag.empty:
@@ -887,36 +1041,113 @@ class _Lowerer:
         return slots
 
     # -- componentes hijos ---------------------------------------------------
-    def wrapper_attrs(self, el: Element) -> list[Attribute]:
+    def iface_of(self, el: Element) -> ComponentInterface:
         imp = self.info.components[el.tag]
-        iface = self.interface(imp.path) if self.interface else ComponentInterface()
-        return [
-            a for a in el.attributes
-            if a.name not in iface.props and (a.name in _WRAPPER_ATTRS or a.directive == "class")
-        ]  # fmt: skip
+        return self.interface(imp.path) if self.interface else ComponentInterface()
+
+    def tag_attrs(self, el: Element) -> list[Attribute]:
+        """Atributos de la etiqueta de un componente que no son props: van a su raíz (o a una caja exterior)."""
+        iface = self.iface_of(el)
+        names = _PASSED_ATTRS if iface.root_box else _WRAPPER_ATTRS
+        out = []
+        for a in el.attributes:
+            if a.name in iface.props:
+                continue
+            if a.directive == "class" or (a.directive is None and a.name in names):
+                out.append(a)
+            elif iface.root_box and a.directive == "on" and a.argument not in iface.events and a.argument in ROUTED_EVENTS:
+                out.append(a)  # on:click, on:keydown…: eventos nativos de la raíz
+        return out
 
     def component_slot(self, el: Element) -> IRNode:
         model_id = self.next_id("m")
         use = self.component_use(el)
         self.tpl.slots.append(ComponentSlot(model_id, use, el.loc))
         repeater = IRRepeater(model_id, el.loc)
-        attrs = self.wrapper_attrs(el)
+        attrs = self.tag_attrs(el)
         if not attrs:
             return repeater
-        # Caja exterior con los estilos de la etiqueta: <Tarjeta class="ancha" flex={1} />
-        box = self.element(Element("Column", attrs, [], el.loc))
-        if box is None:
-            return repeater
+        if self.iface_of(el).root_box:
+            # La raíz es una caja: los atributos se le aplican a ella (FxRemote.qml).
+            ir = self.element(Element("flex", attrs, [], el.loc), match_tag=el.tag)
+            if ir is None:
+                return repeater
+            remote = self.remote(ir, model_id, self.last_node)
+            if remote is not None:
+                return remote
+            ir.qml_type = "FxColumn"  # lo que no se puede aplicar desde fuera: caja exterior
+            box = ir
+        else:
+            # Caja exterior con los estilos de la etiqueta: <Tarjeta class="ancha" flex={1} />
+            box = self.element(Element("Column", attrs, [], el.loc), match_tag=el.tag)
+            if box is None:
+                return repeater
         box.props["fxFill"] = Literal("true")  # la raíz del componente ocupa toda la caja
         box.children.append(repeater)
         return box
+
+    def remote(self, ir: IRElement, model_id: str, node: StyleNode | None) -> IRElement | None:
+        """Los atributos de la etiqueta como Binding sobre la raíz del componente, o None si
+        algo no se puede fijar desde fuera (transiciones, texto heredado, variables…)."""
+        if ir.children or ir.behaviors or ir.delegate is not None or ir.transitions:
+            return None
+        handlers = dict(ir.handlers)
+        refs = handlers.pop("Component.onCompleted", [])
+        if handlers or any("fx.setRef(" not in s for s in refs):
+            return None
+        if any(when == "true" for _, _, when in ir.conditional):
+            return None
+        props = {k: (f"fx.{v.binding_id}" if isinstance(v, Bound) else v.qml) for k, v in ir.props.items()}
+        rid = props.pop("id", None) or self.next_id("fxr")
+        props.pop("readonly property bool fxTouchExtras", None)
+        if any(k.startswith(("property ", "readonly property ")) for k in props):
+            return None
+        root = f"{rid}.fxRoot"
+
+        def fix(expr: str) -> str:
+            expr = _BARE.sub(lambda m: f"{rid}.{m.group(1)}", expr)
+            expr = re.sub(rf"\b{rid}\b(?!\.fxRoot)", root, expr)
+            return expr.replace(root + ".", root + "?.")
+
+        remote = IRElement("FxRemote", ir.loc)
+        remote.props.update({"id": Literal(rid), "model": Literal(f"fx.{model_id}"), "delegate": Literal(f"fx.{model_id}.delegate")})
+        styled: dict[str, list[tuple[str, str]]] = {}
+        for prop, value, when in ir.conditional:
+            styled.setdefault(prop, []).append((fix(value), fix(when)))
+        if node is not None and (node.classes or node.toggles or node.dynamic):
+            parts = [qml_string(" " + " ".join(sorted(node.classes)) + " ")] if node.classes else []
+            parts += [f'(fx.{bid} ? " {name} " : "")' for name, bid in node.toggles.items()]
+            parts += [f'(fx.{node.dynamic} || "")'] if node.dynamic else []
+            props["fxInClass"] = " + ".join(parts)
+        for prop in dict.fromkeys([*props, *styled]):
+            entries = styled.get(prop, [])
+            if prop in props:
+                value, when = fix(props[prop]), "true"
+            else:
+                (value, when), entries = entries[0], entries[1:]
+            for v, w in entries:
+                value = f"({w}) ? {v} : ({value})"
+                when = "true" if when == "true" else f"({when}) || ({w})"
+            b = IRElement("Binding", ir.loc)
+            b.props.update({"target": Literal(root), "property": Literal(qml_string(prop)), "value": Literal(value)})
+            if when != "true":
+                b.props["when"] = Literal(f"!!({when})")  # undefined mientras no hay raíz
+            remote.children.append(b)
+        used = [n for n in _FLEX_ITEM_EXTRAS if n in props or n in styled]
+        if used:  # el motor no ve estos cambios por sí solo (ver _flex_item_extras)
+            deps = ", ".join([*(f"fxRoot.{n}" for n in used), *(["Fx.positionDeps(fxRoot)"] if "fxPosition" in used else [])])
+            remote.props["readonly property bool fxTouchExtras"] = Literal(f"fxRoot ? Fx.touch(fxRoot.parent, fxRoot, {deps}) : false")
+        if refs:
+            calls = "; ".join(s.replace(", this,", ", fxRoot,") for s in refs)
+            remote.handlers["onFxRootChanged"] = [f"if (fxRoot) {{ {calls} }}"]
+        return remote
 
     def component_use(self, el: Element) -> ComponentUse:
         imp = self.info.components[el.tag]
         iface = self.interface(imp.path) if self.interface else ComponentInterface()
         props: dict[str, PropArg] = {}
         events: dict[str, Handler] = {}
-        wrapper = self.wrapper_attrs(el)
+        wrapper = self.tag_attrs(el)
         for attr in el.attributes:
             if any(attr is w for w in wrapper):
                 continue
@@ -1011,11 +1242,137 @@ def _custom_flex(ir: IRElement) -> None:
     ir.props.setdefault("Layout.preferredHeight", Literal("Fx.basis(parent, fxFlex, false)"))
 
 
+# style={{...}}: propiedad CSS -> [(propiedad QML, expresión con {} = el valor de Python)].
+_INLINE = {
+    "background": [("fxBackground", "Fx.cssColor({})")],
+    "background-color": [("fxBackground", "Fx.cssColor({})")],
+    "color": [("fxColor", "Fx.cssColor({})")],
+    "border-color": [("fxBorderColor", "Fx.cssColor({})")],
+    "border-width": [("fxBorderWidth", "Fx.cssPx({}, 0)")],
+    "border-radius": [("fxRadius", "Fx.cssPx({}, 0)")],
+    "opacity": [("opacity", "Fx.cssPx({}, 1)")],
+    "gap": [("gap", "Fx.cssPx({}, 0)")],
+    "padding": [("padding", "Fx.cssPx({}, 0)")],
+    "font-size": [("font.pixelSize", "Fx.cssPx({}, 14)")],
+    "top": [("fxTop", "{}")],
+    "right": [("fxRight", "{}")],
+    "bottom": [("fxBottom", "{}")],
+    "left": [("fxLeft", "{}")],
+    "z-index": [("z", "Fx.cssPx({}, 0)")],
+    "width": [("Layout.preferredWidth", "Fx.cssPx({}, -1)"), ("fxWidthPct", "Fx.cssPct({})"), ("Layout.fillWidth", "false")],
+    "height": [("Layout.preferredHeight", "Fx.cssPx({}, -1)"), ("fxHeightPct", "Fx.cssPct({})"), ("Layout.fillHeight", "false")],
+}  # fmt: skip
+
+
+def _inline_vars(nodes: list[Node]) -> set[str]:
+    """Variables propias definidas en atributos style= de la plantilla."""
+    out: set[str] = set()
+    for node in nodes:
+        children: list[Node] = []
+        if isinstance(node, Element):
+            attr = node.attribute("style")
+            if attr is not None:
+                text = attr.value if isinstance(attr.value, str) else attr.value.code
+                out |= {token_key(m) for m in re.findall(r"--([A-Za-z][\w-]*)", text)}
+            children = node.children
+        elif isinstance(node, IfBlock):
+            children = [c for b in node.branches for c in b.children]
+        elif isinstance(node, EachBlock):
+            children = node.children + (node.else_children or [])
+        elif isinstance(node, KeyBlock):
+            children = node.children
+        out |= _inline_vars(children)
+    return out
+
+
+def _context_extras(ir: IRElement, cascade: Cascade) -> None:
+    """Texto heredado y variables propias: lo que declara cada elemento (fase 4 de docs/flex.md)."""
+    keys = {*ir.props, *ir.behaviors, *(c[0] for c in ir.conditional)}
+    own = sorted(k for k in keys if k.startswith((TEXT_PREFIX, VAR_PREFIX)))
+    if own and ir.qml_type in _BOXES:
+        for name in own:
+            ir.props[f"property var {name}"] = ir.props.pop(name, Literal("undefined"))
+        i = cascade.ensure_id(ir)
+        ctx = IRElement("FxContext", ir.loc)
+        names = [n[len(VAR_PREFIX):] for n in own if n.startswith(VAR_PREFIX)]
+        ctx.props.update({"id": Literal(f"{i}_ctx"), "box": Literal(i), "names": Literal(json.dumps(names))})
+        ir.children.insert(0, ctx)
+        ir.props["fxOwnCtx"] = Literal(f"{i}_ctx")
+    if ir.qml_type == "FxText":
+        fixed = sorted({INHERITED[k] for k in keys if k in INHERITED} | ({"capitalization"} if "font.capitalization" in keys else set()))
+        if fixed:
+            ir.props["fxOwn"] = Literal(qml_string(" " + " ".join(fixed) + " "))
+    uses_vars = any("Fx.cssVar(" in v.qml for v in ir.props.values() if isinstance(v, Literal)) or any(
+        "Fx.cssVar(" in c[1] for c in ir.conditional
+    )
+    if uses_vars and ir.qml_type not in (*_BOXES, "FxText"):
+        ir.props["readonly property QtObject fxCtx"] = Literal(f"Fx.ctxOf({cascade.ensure_id(ir)})")
+
+
+def _accessible_states(ir: IRElement) -> None:
+    """Estados de una caja para los lectores de pantalla, solo donde se usan."""
+    if ir.qml_type not in _BOXES:
+        return
+    role = ir.props.get("fxRole")
+    role = role.qml.strip('"') if role is not None else ""
+    if role in ("checkbox", "switch"):
+        ir.props["Accessible.checkable"] = Literal("true")
+        ir.props["Accessible.checked"] = Literal("checked")
+    if "selected" in ir.props or role in ("tab", "menuitem", "option", "listitem"):
+        ir.props["Accessible.selected"] = Literal("selected")
+    if "fxTabIndex" in ir.props or role:
+        ir.props["Accessible.focusable"] = Literal("activeFocusOnTab")
+
+
+def _routes(ir: IRElement) -> dict[str, str]:
+    current = ir.props.get("fxOn")
+    if current is None:
+        return {}
+    return dict(re.findall(r'"(\w+)": "(\w+)"', current.qml))
+
+
+def _has_text(nodes: list[Node]) -> bool:
+    """¿Hay texto (o una interpolación, o un slot) en el contenido?"""
+    for node in nodes:
+        if isinstance(node, Text) and node.value.strip():
+            return True
+        if isinstance(node, Interpolation):
+            return True
+        if isinstance(node, Element):
+            if node.tag == "Slot" or node.attribute("text") is not None or node.attribute("label") is not None:
+                return True
+            if _has_text(node.children):
+                return True
+        elif isinstance(node, (IfBlock, EachBlock, KeyBlock)):
+            return True  # contenido dinámico: no se sabe
+    return False
+
+
+def _style_extras(ir: IRElement, cascade: Cascade) -> None:
+    """`cursor` y `translate()` en elementos que no son cajas: declara lo que necesitan."""
+    if ir.qml_type in _BOXES:
+        return
+
+    def used(name: str) -> bool:
+        return name in ir.props or name in ir.behaviors or any(c[0] == name for c in ir.conditional)
+
+    if used("fxCursor"):
+        ir.props["property int fxCursor"] = ir.props.pop("fxCursor", Literal("Qt.ArrowCursor"))
+        hid = cascade.handler(ir, "HoverHandler")
+        handler = next(c for c in ir.children if isinstance(c, IRElement) and c.props.get("id") == Literal(hid))
+        handler.props["cursorShape"] = Literal(f"{cascade.ensure_id(ir)}.fxCursor")
+    if used("fxTx") or used("fxTy"):
+        for name in ("fxTx", "fxTy"):
+            ir.props[f"property real {name}"] = ir.props.pop(name, Literal("0"))
+        i = cascade.ensure_id(ir)
+        ir.props["transform"] = Literal(f"Translate {{ x: {i}.fxTx; y: {i}.fxTy }}")
+
+
 def _flex_item_extras(ir: IRElement, custom: bool, new_id: Callable[[], str]) -> None:
     """Declara en el elemento las propiedades de hijo de <flex> que usa (order, flex-shrink,
     flex-basis, %, margin: auto) y avisa a su contenedor cuando cambian."""
     used = [n for n in _FLEX_ITEM_EXTRAS if n in ir.props or any(c[0] == n for c in ir.conditional)]
-    for name in used:
+    for name in used if ir.qml_type not in _BOXES else ():  # las cajas ya las declaran (FxFlex.qml)
         kind, default = _FLEX_ITEM_EXTRAS[name]
         value = ir.props.pop(name, Literal(default))
         ir.props[f"property {kind} {name}"] = value
@@ -1029,6 +1386,8 @@ def _flex_item_extras(ir: IRElement, custom: bool, new_id: Callable[[], str]) ->
         if "id" not in ir.props:
             ir.props["id"] = Literal(new_id())
         item = ir.props["id"].qml
+        if "fxPosition" in used:  # absolute/fixed: se recoloca si su bloque contenedor cambia
+            deps.append(f"Fx.positionDeps({item})")
         ir.props[f"readonly property bool {name}"] = Literal(f"Fx.touch(parent, {item}, {', '.join(deps)})")
     if custom:
         ir.props["property var fxHints"] = Literal("null")

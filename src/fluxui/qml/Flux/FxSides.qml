@@ -4,8 +4,10 @@ import QtQuick
 
 Item {
     property Item box: null
+    readonly property bool fxDecoration: true  // events.py: no es destino del puntero
     anchors.fill: parent
     z: 1
+    visible: box !== null && !box.fxHidden
 
     Rectangle {
         visible: width > 0 && height > 0

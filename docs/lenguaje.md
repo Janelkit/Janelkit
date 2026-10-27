@@ -300,13 +300,21 @@ Un componente puede recibir contenido del padre. En el hijo, `<Slot />` marca d�
 
 ### Estilos en la etiqueta del componente
 
-`class`, `class:x={...}`, `id`, `flex`, `width`, `height` y `visible` en la etiqueta de un componente (si el hijo no declara una prop con ese nombre) se aplican a una **caja exterior** que lo envuelve:
+Lo que la etiqueta lleva y el componente no declara como prop o evento se aplica a su **raíz**, si esta es una caja (`<flex>`, `Column` o `Row`): así un componente se usa como un elemento más.
 
 ```html
-<Card class="destacada" flex={1} title="..." />
+<Boton text="Guardar" class="primary" on:click={guardar} disabled={ocupado} ref={boton} />
+<Tarjeta class="celda" title="..." />
 ```
 
-Sirve para la disposición (tamaño, `flex`, márgenes interiores, fondo, borde). Los estilos de texto no se heredan hacia dentro del componente.
+- Pasan a la raíz: `class` y `class:x={...}`, `style`, `id`, `label`, `title`, `tabindex`, `disabled`, `as`, `flex`, `width`, `height`, `visible`, `ref` y los eventos nativos (`on:click`, `on:keydown`, `on:contextmenu`…).
+- Las reglas de `<style>` del padre se aplican a la raíz, también sus estados: `.celda:hover` en el padre reacciona al ratón sobre la raíz del componente. Lo que fija la etiqueta gana a los estilos propios del componente.
+- Las clases de la etiqueta activan además las reglas del componente que las combinan con la clase de su raíz: con `<Boton class="primary">`, la regla `.boton.primary` de `Boton.flux` se aplica.
+- `ref` en la etiqueta apunta a la raíz (`boton.focus()` enfoca el `<flex>` del botón); `disabled` activa `:disabled` en la raíz.
+- Si el componente declara una prop o un evento con ese nombre, gana lo declarado.
+- `inherit_attrs = False` en el script del componente lo desactiva: la etiqueta solo admite sus props y eventos, y `class`, `id`, `flex`, `width`, `height` y `visible` van a una caja exterior que lo envuelve, como cuando la raíz no es una caja.
+- Si la raíz no es una caja (un `<Button>`, varios elementos, un `{#if}`), esos seis atributos van a una **caja exterior** que lo envuelve, y un evento sin declarar es un error de compilación.
+- Algunas cosas no se pueden fijar desde fuera en la raíz: una `transition` o el texto heredado (`color`, la fuente) y las variables (`--x`) puestos desde el padre. Con ellas el componente lleva también una caja exterior, que se encarga de eso; el resultado se ve igual.
 
 ### Ciclo de vida
 
@@ -562,9 +570,48 @@ Ejemplo: `examples/counter` (`src/widgets/Meter.qml`).
 
 | Elemento base | Qt Quick | Propiedades | Eventos |
 |---|---|---|---|
-| `flex` | caja propia con el motor flexbox (`FxFlex`) | `direction` (`row` por defecto, `column`, `row-reverse`, `column-reverse`), `wrap`, `gap`, `padding`, `align` (`align-items`), `justify` (`justify-content`) | `on:click` |
+| `flex` | caja propia con el motor flexbox (`FxFlex`) | `direction` (`row` por defecto, `column`, `row-reverse`, `column-reverse`), `wrap`, `gap`, `padding`, `align` (`align-items`), `justify` (`justify-content`), `as`, `tabindex`, `disabled`, `title`, `checked`, `selected`, `expanded`, `style` | `on:click`, `on:dblclick`, `on:contextmenu`, `on:pointerdown`, `on:pointerup`, `on:pointermove`, `on:pointerenter`, `on:pointerleave`, `on:wheel`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur`, `on:resize` |
 
-`<flex>` es la caja de la web: fila por defecto, `align-items: stretch` y el resto del flexbox de CSS en `<style>` (`flex-wrap`, márgenes y `margin: auto`, `space-between`, `order`, `%`, bordes por lado, radio por esquina, `overflow`). Ver [estilos.md](estilos.md) y el diseño completo, con lo que llegará en las fases siguientes, en [flex.md](flex.md). Los atributos de texto se comprueban al compilar: `<flex direction="diagonal">` es un error.
+`<flex>` es la caja de la web: fila por defecto, `align-items: stretch` y el resto del flexbox de CSS en `<style>` (`flex-wrap`, márgenes y `margin: auto`, `space-between`, `order`, `%`, bordes por lado, radio por esquina, `overflow`), con estados (`:hover`, `:pressed`, `:focus-visible`…), selectores de descendiente (`.tarjeta:hover .acciones`), sombra, `outline`, `transform` y `cursor`. Ver [estilos.md](estilos.md) y el diseño completo, con lo que llegará en las fases siguientes, en [flex.md](flex.md). Los atributos de texto se comprueban al compilar: `<flex direction="diagonal">` es un error.
+
+### Eventos de las cajas
+
+`<flex>`, `Column` y `Row` reciben los eventos de la tabla. Como en la web, un evento **sube** desde el elemento más profundo bajo el puntero (o desde el que tiene el foco, para las teclas) hacia sus contenedores. El manejador recibe un objeto con lo ocurrido (`PointerEvent`, `KeyEvent`, `WheelEvent`, `FocusEvent`, `ResizeEvent`; ver [api.md](api.md)) y dos métodos:
+
+- `event.stop()`: los contenedores de fuera no lo reciben (el ✕ de un chip no elige el chip).
+- `event.prevent()`: Qt no hace lo que haría (escribir la tecla en un campo, desplazar con la rueda, pulsar con Espacio).
+
+```python
+def tecla(event):
+    if event.key == "ArrowDown":
+        siguiente()
+        event.prevent()
+```
+
+- `on:pointerenter` y `on:pointerleave` no suben (como en la web). `on:focus`/`on:blur` tampoco; `event.reason` dice si llegó con Tab, con un clic o por código.
+- `on:click` sigue siendo el de siempre: si un control de Qt (un `<Button>`) se queda el clic, la caja que lo contiene no lo recibe. Entre cajas, sí sube (y se corta con `stop()`). Desde el teclado (Espacio o Intro) llega con `event.pointer == "keyboard"`.
+- `on:contextmenu`: clic derecho o tecla de menú.
+- `prevent()` y `stop()` solo cuentan antes del primer `await` de un manejador `async def`. `prevent()` no impide que se dispare un `<Shortcut>`.
+
+### Papel, teclado y accesibilidad: `as`
+
+`as` dice qué es la caja para el teclado y los lectores de pantalla. No cambia el aspecto.
+
+| `as` | Tab | Teclado | Para el lector de pantalla |
+|---|---|---|---|
+| (sin `as`) | con `on:click`, como `button` | ídem | ídem |
+| `box` | no | — | se ignora |
+| `button` | sí | Espacio (al soltar) o Intro → `on:click` | botón (`:pressed`, `:disabled`) |
+| `link` | sí | Intro | enlace |
+| `checkbox`, `switch` | sí | Espacio | casilla, con `checked` |
+| `tab`, `menuitem`, `option` | con `tabindex` | Espacio o Intro; las flechas las programa el componente con `on:keydown` | con `selected` |
+| `listitem`, `list`, `menu`, `tablist`, `dialog`, `heading`, `region` | no | — | su papel |
+
+- `tabindex={0}` mete la caja en el orden de Tab; `tabindex={-1}` la saca (sigue pudiendo recibir el foco con `ref.focus()`).
+- `disabled={True}`: no recibe eventos, sale del orden de Tab y activa `:disabled`.
+- `title="..."`: descripción emergente al dejar el ratón encima, también para los lectores de pantalla.
+- Una caja con papel de botón (o con `on:click`) sin texto ni `label` produce una advertencia: el lector de pantalla no sabría qué es.
+- El anillo de foco por defecto (un borde del color `--primary`) se sustituye con una regla `outline` (`.boton:focus-visible { outline: 2px solid var(--primary) }`) o se quita con `outline: none`.
 
 Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`, `enabled`, `opacity` y `label` (nombre para lectores de pantalla; ver [Accesibilidad](#accesibilidad)).
 

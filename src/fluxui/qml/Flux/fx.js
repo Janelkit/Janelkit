@@ -118,9 +118,12 @@ function alignFlags(align, horizontal) {
     return 0
 }
 
-// Bordes por lado y desplazamiento (overflow: auto) solo se crean si se usan.
+// Bordes por lado, sombra, contorno y desplazamiento (overflow: auto) solo se crean si se usan.
 let sidesComponent = null
 let scrollerComponent = null
+let shadowComponent = null
+let outlineComponent = null
+let blockerComponent = null
 
 function component(cached, file) {
     if (cached) return cached
@@ -134,10 +137,99 @@ function flexDecorations(box) {
         sidesComponent = component(sidesComponent, "FxSides.qml")
         box.fxSideItem = sidesComponent.createObject(box, { box: box })
     }
+    if (box.fxShadow && !box.fxShadowItem) {
+        shadowComponent = component(shadowComponent, "FxShadow.qml")
+        box.fxShadowItem = shadowComponent.createObject(box, { box: box })
+    }
+    if (box.fxOutlineWidth > 0 && !box.fxOutlineItem) {
+        outlineComponent = component(outlineComponent, "FxOutline.qml")
+        box.fxOutlineItem = outlineComponent.createObject(box, { box: box })
+    }
+    if ((box.fxPosition === "absolute" || box.fxPosition === "fixed") && !box.fxBlocker) {
+        blockerComponent = component(blockerComponent, "FxBlocker.qml")
+        box.fxBlocker = blockerComponent.createObject(box, { box: box })
+    }
     if (box.fxScrollable && !box.fxScroller) {
         scrollerComponent = component(scrollerComponent, "FxScroller.qml")
         const s = scrollerComponent.createObject(box, { box: box })
         box.fxLay.parent = s.contentItem
         box.fxScroller = s
     }
+}
+
+// :focus-within: ¿`focused` (el elemento con el foco de la ventana) es `item` o está dentro?
+function within(item, focused) {
+    for (let p = focused; p; p = p.parent)
+        if (p === item) return true
+    return false
+}
+
+// -- position: absolute y fixed (flex.js) --------------------------------------------
+// Lee lo que decide dónde va un elemento con position absolute o fixed: la posición de
+// sus antecesores hasta su bloque contenedor y el tamaño de este. Al usarse en un
+// binding, el elemento se vuelve a colocar cuando algo de eso cambia.
+function positionDeps(item) {
+    const pos = item.fxPosition
+    if (pos !== "absolute" && pos !== "fixed") return 0
+    let s = 0
+    for (let p = item.parent; p; p = p.parent) {
+        s += p.x + p.y
+        if (pos === "absolute" && p.fxLay && p.fxPosition && p.fxPosition !== "static") return s + p.width + p.height
+        if (!p.parent) return s + p.width + p.height
+    }
+    return s
+}
+
+// -- contexto de estilo: texto heredado y variables propias (FxContext.qml) ---------
+// El contexto más cercano por encima de `item` (el de su caja), o null.
+function ctxOf(item) {
+    for (let p = item.parent; p; p = p.parent) {
+        if (p.fxBox) return p.fxBox.fxCtx
+        if (p.fxCtx !== undefined) return p.fxCtx
+    }
+    return null
+}
+
+// Variables visibles en una caja: las de fuera más las suyas (fxV_<nombre>).
+function vars(up, box, names) {
+    if (!box || !names || names.length === 0) return up
+    const out = {}
+    if (up) for (const k in up) out[k] = up[k]
+    for (let i = 0; i < names.length; ++i) {
+        const v = box["fxV_" + names[i]]
+        if (v !== undefined) out[names[i]] = v
+    }
+    return out
+}
+
+// var(--nombre, otro): la variable más cercana; si no hay, `fallback` y, si tampoco, `dflt`.
+function cssVar(ctx, name, fallback, dflt) {
+    const vs = ctx ? ctx.rVars : null
+    const v = vs ? vs[name] : undefined
+    if (v !== undefined) return v
+    return fallback === undefined ? dflt : fallback
+}
+
+let inheritComponent = null
+// Un <Text> con contexto recibe el texto heredado (FxTextInherit.qml), solo entonces.
+function textInherit(label) {
+    if (!label.fxCtx || label.fxInherit) return
+    inheritComponent = component(inheritComponent, "FxTextInherit.qml")
+    label.fxInherit = inheritComponent.createObject(label, { target: label })
+}
+
+// style={{...}}: valores que llegan de Python como texto CSS o números.
+function cssPx(v, dflt) {
+    if (typeof v === "number") return v
+    if (typeof v !== "string" || v.trim().endsWith("%") || v.trim() === "") return dflt
+    const n = parseFloat(v)
+    return isNaN(n) ? dflt : n
+}
+function cssPct(v) {
+    if (typeof v !== "string" || !v.trim().endsWith("%")) return 0
+    const n = parseFloat(v)
+    return isNaN(n) ? 0 : n
+}
+function cssColor(v) {
+    return v === undefined || v === null || v === "" ? "transparent" : v
 }

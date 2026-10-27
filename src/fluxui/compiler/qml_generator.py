@@ -45,7 +45,19 @@ def _emit(node: IRNode, depth: int, lines: list[str], source_map: SourceMap, pre
         lines.append(f"{inner}{prop}: {_value(value)}")
     for prop, animation in el.behaviors.items():
         lines.append(f"{inner}Behavior on {prop} {{ {animation} }}")
+    # Un solo Binding por propiedad: con varios, al cambiar dos a la vez, el valor que
+    # se restaura depende del orden en que Qt los procese. Gana la última condición activa.
+    styled: dict[str, list[tuple[str, str]]] = {}
     for prop, value, when in el.conditional:
+        if when == "true":  # bind: (se reafirma tras cada edición del usuario)
+            lines.append(f"{inner}Binding on {prop} {{ when: true; value: {value} }}")
+        else:
+            styled.setdefault(prop, []).append((value, when))
+    for prop, entries in styled.items():
+        value = entries[0][0]
+        for v, w in entries[1:]:
+            value = f"{_paren(w)} ? {v} : {_paren(value)}"
+        when = " || ".join(_paren(w) for _, w in entries) if len(entries) > 1 else entries[0][1]
         lines.append(f"{inner}Binding on {prop} {{ when: {when}; value: {value} }}")
     for handler, statements in el.handlers.items():
         params = el.handler_params.get(handler)
@@ -59,6 +71,10 @@ def _emit(node: IRNode, depth: int, lines: list[str], source_map: SourceMap, pre
     for child in el.children:
         _emit(child, depth + 1, lines, source_map)
     lines.append(f"{pad}}}")
+
+
+def _paren(expr: str) -> str:
+    return f"({expr})" if " " in expr else expr
 
 
 def _value(value: Literal | Bound) -> str:

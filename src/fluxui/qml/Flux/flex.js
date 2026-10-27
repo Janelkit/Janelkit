@@ -166,6 +166,10 @@ function hintsOf(c, box) {
         scrollable: c.fxScrollable === true,
         isFlex: c.fxIsFlex === true,
         wraps: c.fxWraps === true,
+        // Usa :first-child o :last-child (el compilador declara fxFirst y fxLast).
+        marks: typeof c.fxFirst === "boolean",
+        // position: "" (en el flujo), "relative", "absolute" o "fixed"
+        pos: c.fxPosition === undefined || c.fxPosition === "static" ? "" : c.fxPosition,
     }
     if (h !== undefined && c.fxHints !== undefined) c.fxHints = h
     return h
@@ -282,15 +286,40 @@ function arrange(box, lay, out) {
     const kids = lay.children
     const items = []
     let ordered = false
+    let outside = null  // position absolute o fixed: fuera del flujo
+    let relative = false
     for (let i = 0; i < kids.length; ++i) {
-        const c = kids[i]
-        const h = hintsOf(c, box)
-        if (h.skip || !c.visible) continue
+        let c = kids[i]
+        let h = hintsOf(c, box)
+        if (h.skip) {
+            // FxRemote (componente con atributos en su etiqueta): su raíz va en su sitio.
+            // Al reordenar filas, Qt mueve el Repeater de cada fila pero no lo que este creó.
+            const r = c.fxRoot
+            if (!r || r.parent !== lay) continue
+            c = r
+            h = hintsOf(c, box)
+        } else if (c.fxRemote && c.fxRemote.parent === lay) {
+            continue  // se coloca donde está su FxRemote
+        }
+        if (!c.visible) continue
+        if (h.pos === "absolute" || h.pos === "fixed") {
+            (outside || (outside = [])).push(c)
+            continue
+        }
+        if (h.pos === "relative") relative = true
         if (h.isFlex && (horiz || !crossDefinite)) measure(c)  // se lee su ancho natural
         const it = itemOf(c, h, box, horiz, innerW, innerH)
         it.index = i
         if (it.order !== 0) ordered = true
         items.push(it)
+    }
+    // :first-child y :last-child: en el orden del documento, entre los hijos visibles.
+    for (let k = 0; k < items.length; ++k) {
+        const it = items[k]
+        if (!it.h.marks) continue
+        const first = k === 0, last = k === items.length - 1
+        if (it.c.fxFirst !== first) it.c.fxFirst = first
+        if (it.c.fxLast !== last) it.c.fxLast = last
     }
     if (ordered) items.sort((a, b) => a.order - b.order || a.index - b.index)
 
@@ -471,6 +500,18 @@ function arrange(box, lay, out) {
         it.c.x = padL + x
         it.c.y = padT + y
     }
+    // position: relative: se desplaza desde su sitio sin mover a los demás.
+    if (relative) {
+        for (let k = 0; k < items.length; ++k) {
+            const it = items[k]
+            if (it.h.pos !== "relative") continue
+            const l = edge(it.c.fxLeft, innerW), r = edge(it.c.fxRight, innerW)
+            const t = edge(it.c.fxTop, innerH), b = edge(it.c.fxBottom, innerH)
+            it.c.x += !isNaN(l) ? l : !isNaN(r) ? -r : 0
+            it.c.y += !isNaN(t) ? t : !isNaN(b) ? -b : 0
+        }
+    }
+    if (outside) for (let k = 0; k < outside.length; ++k) placeOutside(outside[k], box, lay, padL, padT)
 
     // Tamaño natural del contenedor y del contenido.
     let natCross = 0
@@ -512,6 +553,57 @@ function arrange(box, lay, out) {
     out.minW = scroll ? padL + padR : minContent + padL + padR
     out.grows = grows
     return out
+}
+
+// -- position: absolute y fixed ------------------------------------------------
+// top/left…: número (px) o texto "50%" (del tamaño del bloque contenedor); NaN si no se fija.
+function edge(v, size) {
+    if (v === undefined || v === null || v === "") return NaN
+    if (typeof v === "number") return v
+    const s = String(v).trim()
+    const n = parseFloat(s)
+    if (isNaN(n)) return NaN
+    return s.endsWith("%") ? size * n / 100 : n
+}
+
+// Bloque contenedor: la caja antecesora más cercana con position (su interior, dentro
+// del borde) o, si no hay, o con position: fixed, toda la ventana.
+function containingBlock(c) {
+    let top = c
+    if (c.fxPosition === "absolute") {
+        for (let p = c.parent; p; p = p.parent) {
+            if (p.fxLay && p.fxPosition && p.fxPosition !== "static") {
+                const bl = p.fxBorderLeftW, bt = p.fxBorderTopW
+                return { item: p, x: bl, y: bt, w: p.width - bl - p.fxBorderRightW, h: p.height - bt - p.fxBorderBottomW }
+            }
+        }
+    }
+    while (top.parent) top = top.parent
+    return { item: top, x: 0, y: 0, w: top.width, h: top.height }
+}
+
+// Coloca un hijo fuera del flujo: tamaño propio o el que dejan left y right (top y
+// bottom), y posición respecto a su bloque contenedor. Sin top/left/right/bottom se
+// queda al principio del contenedor (su sitio "estático", simplificado).
+function placeOutside(c, box, lay, padL, padT) {
+    const h = hintsOf(c, box)
+    const cb = containingBlock(c)
+    const l = edge(c.fxLeft, cb.w), r = edge(c.fxRight, cb.w)
+    const t = edge(c.fxTop, cb.h), b = edge(c.fxBottom, cb.h)
+    if (h.isFlex) measure(c)
+    let w = h.wp > 0 ? cb.w * h.wp / 100 : h.pw
+    if (w < 0) w = !isNaN(l) && !isNaN(r) ? cb.w - l - r - h.ml - h.mr : c.implicitWidth
+    place(c, clamp(w, h.minW, h.maxW), null)
+    let ht = h.hp > 0 ? cb.h * h.hp / 100 : h.ph
+    if (ht < 0) ht = !isNaN(t) && !isNaN(b) ? cb.h - t - b - h.mt - h.mb : c.implicitHeight
+    place(c, null, clamp(ht, h.minH, h.maxH))
+    const o = cb.item.mapToItem(lay, cb.x, cb.y)
+    if (!isNaN(l)) c.x = o.x + l + h.ml
+    else if (!isNaN(r)) c.x = o.x + cb.w - r - c.width - h.mr
+    else c.x = padL + h.ml
+    if (!isNaN(t)) c.y = o.y + t + h.mt
+    else if (!isNaN(b)) c.y = o.y + cb.h - b - c.height - h.mb
+    else c.y = padT + h.mt
 }
 
 // Un hijo flex pendiente se coloca antes de leer su tamaño natural.

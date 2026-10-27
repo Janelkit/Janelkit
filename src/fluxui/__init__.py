@@ -20,6 +20,7 @@ from .reactivity import (
     untracked,
 )
 from . import dialogs
+from .events import FocusEvent, KeyEvent, PointerEvent, ResizeEvent, WheelEvent
 from .i18n import i18n, t
 from .lifecycle import Ref, inject, on_destroy, on_mount, provide, ref
 from .notifications import notify
@@ -37,13 +38,18 @@ __all__ = [
     "Computed",
     "Effect",
     "Event",
+    "FocusEvent",
+    "KeyEvent",
     "Prop",
     "PageStack",
+    "PointerEvent",
     "PropError",
     "Ref",
+    "ResizeEvent",
     "State",
     "Task",
     "Timer",
+    "WheelEvent",
     "__version__",
     "background",
     "batch",

@@ -37,7 +37,13 @@ _TAGS = {
     "FxShortcut": "Shortcut", "FxSpacer": "Spacer", "FxFlex": "flex",
 }  # fmt: skip
 # Piezas internas de FluxUI que no son elementos de la plantilla.
-_INTERNAL = ("FxPolisher", "FxSides", "FxScroller")
+_INTERNAL = ("FxPolisher", "FxSides", "FxScroller", "FxShadow", "FxOutline", "FxTextInherit", "FxRemote", "FxBlocker")
+
+
+def _move_pointer(window: Any, pos: Any) -> None:
+    from PySide6.QtTest import QTest
+
+    QTest.mouseMove(window, pos)
 
 
 class InspectError(AssertionError):
@@ -198,6 +204,44 @@ class Element:
     def focus(self) -> "Element":
         self.item.forceActiveFocus()
         return self._settle()
+
+    def hover(self) -> "Element":
+        """Pone el puntero del ratón sobre el centro del elemento (activa sus estilos :hover)."""
+        from PySide6.QtCore import QPoint
+
+        center = self._center()
+        _move_pointer(self._app.window, center + QPoint(1, 1))  # ver unhover()
+        _move_pointer(self._app.window, center)
+        return self._settle()
+
+    def unhover(self) -> "Element":
+        """Saca el puntero del ratón de la ventana."""
+        from PySide6.QtCore import QPoint
+
+        # Dos puntos distintos: un movimiento al mismo sitio que el anterior no genera evento.
+        _move_pointer(self._app.window, QPoint(-50, -50))
+        _move_pointer(self._app.window, QPoint(-60, -60))
+        return self._settle()
+
+    def press(self) -> "Element":
+        """Mantiene pulsado el botón del ratón sobre el elemento (estilos :pressed) hasta release()."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+
+        QTest.mousePress(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center())
+        return self._settle()
+
+    def release(self) -> "Element":
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+
+        QTest.mouseRelease(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center())
+        return self._settle()
+
+    def _center(self) -> Any:
+        from PySide6.QtCore import QPointF
+
+        return self.item.mapToScene(QPointF(self.item.width() / 2, self.item.height() / 2)).toPoint()
 
     # -- utilidades -----------------------------------------------------------
     def _tab_value(self) -> Any:

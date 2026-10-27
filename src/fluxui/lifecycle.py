@@ -129,6 +129,19 @@ class Ref:
 
         return item if Shiboken.isValid(item) else None
 
+    @property
+    def focused(self) -> bool:
+        """¿Tiene el elemento (o algo dentro de él) el foco del teclado? No es reactivo: léelo en un manejador."""
+        item = self._live()
+        if item is None:
+            return False
+        focus = item.window().activeFocusItem() if item.window() is not None else None
+        while focus is not None:
+            if focus is item:
+                return True
+            focus = focus.parentItem()
+        return False
+
     def focus(self) -> None:
         """Da el foco del teclado al elemento."""
         item = self._live()

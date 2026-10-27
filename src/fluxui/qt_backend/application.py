@@ -28,6 +28,7 @@ from ..reactivity import Effect, Scope
 from ..runtime.component import ComponentInstance, flush_mounts
 from ..styling.compiler import THEME_OBJECT
 from ..styling.theme import theme
+from .events import router as event_router
 from .polish import register_types
 
 log = logging.getLogger("fluxui")
@@ -102,6 +103,8 @@ class Application:
             warnings.simplefilter("ignore", DeprecationWarning)
             self.i18n_map = QQmlPropertyMap(self.engine)
         self.engine.rootContext().setContextProperty("fxi18n", self.i18n_map)
+        # Eventos de <flex> con propagación (events.py); uno para todas las ventanas.
+        self.engine.rootContext().setContextProperty("fxevents", event_router)
 
     # -- tema ------------------------------------------------------------------
     def _sync_theme(self) -> None:

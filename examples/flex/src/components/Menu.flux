@@ -1,0 +1,48 @@
+<script lang="python">
+# Menú hecho con <flex>: el menú tiene el foco y las flechas mueven la opción activa
+# (on:keydown, con event.prevent() para que no las use nadie más). Intro elige y
+# Escape cierra. El ratón también activa la opción que tiene encima (on:pointerenter).
+from fluxui import event, on_mount, prop, ref, state
+
+items = prop([])
+choose = event()
+close = event()
+active = state(0)
+menu = ref()
+on_mount(lambda: menu.focus())  # al abrirse, el teclado va al menú
+
+
+def tecla(event):
+    n = len(items.value)
+    if event.key == "ArrowDown":
+        active.set((active.value + 1) % n)
+    elif event.key == "ArrowUp":
+        active.set((active.value - 1) % n)
+    elif event.key in ("Enter", " "):
+        choose.emit(items.value[active.value])
+    elif event.key == "Escape":
+        close.emit()
+    else:
+        return
+    event.prevent()
+</script>
+
+<flex as="menu" class="menu" tabindex={0} label="Menú" ref={menu} on:keydown={tecla}>
+  {#each items as item, i}
+    <flex as="menuitem" class="opcion" selected={i == active} label={item}
+          on:pointerenter={active = i} on:click={choose.emit(item)}>
+      <Text>{item}</Text>
+    </flex>
+  {/each}
+</flex>
+
+<style>
+.menu {
+  direction: column; padding: 4px; min-width: 160px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); outline: none;
+}
+.menu:focus-visible { border-color: var(--primary); }
+.opcion { padding: 6px 10px; border-radius: 5px; cursor: pointer; }
+.opcion:selected { background: var(--surface-alt); }
+</style>

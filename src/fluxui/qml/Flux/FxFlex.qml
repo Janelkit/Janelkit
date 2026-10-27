@@ -44,6 +44,33 @@ Rectangle {
     property color fxBorderBottomColor: fxBorderColor
     property color fxBorderLeftColor: fxBorderColor
     property string fxOverflow: "visible"   // visible | hidden | auto | scroll
+    // box-shadow (una sombra) y outline: decoraciones que no ocupan sitio.
+    property bool fxShadow: false
+    property real fxShadowX: 0
+    property real fxShadowY: 0
+    property real fxShadowBlur: 0
+    property real fxShadowSpread: 0
+    property color fxShadowColor: "transparent"
+    property real fxOutlineWidth: 0
+    property color fxOutlineColor: "transparent"
+    property real fxOutlineOffset: 0
+    // Alguna regla fija outline: sustituye al anillo de foco por defecto (el borde).
+    property bool fxCustomOutline: false
+    // transform: translate() (scale y rotate son scale y rotation de Qt; no afectan a la disposición)
+    property real fxTx: 0
+    property real fxTy: 0
+    transform: Translate { x: box.fxTx; y: box.fxTy }
+    property int fxCursor: -1               // cursor (Qt.CursorShape); -1: el de siempre
+
+    // -- estados (pseudo-clases) --------------------------------------------
+    property bool checked: false
+    property bool selected: false
+    property bool expanded: false
+    // El compilador los activa cuando una regla usa :hover o :pressed.
+    property bool fxTrackHover: false
+    property bool fxTrackPress: false
+    property bool fxKeyDown: false
+    readonly property bool fxPressed: tap.pressed || fxKeyDown || (fxBlocker !== null && fxBlocker.pressed)
     readonly property bool fxSides: fxBorderTop >= 0 || fxBorderRight >= 0 || fxBorderBottom >= 0 || fxBorderLeft >= 0
     readonly property real fxBorderTopW: fxBorderTop >= 0 ? fxBorderTop : fxBorderWidth
     readonly property real fxBorderRightW: fxBorderRight >= 0 ? fxBorderRight : fxBorderWidth
@@ -71,11 +98,66 @@ Rectangle {
     property real fxMinW: 0
     property Item fxScroller: null
     property Item fxSideItem: null
+    property Item fxShadowItem: null
+    property Item fxBlocker: null
+    // Texto heredado y variables propias: el contexto propio (si la caja fija algo de eso)
+    // o el de su contenedor (FxContext.qml).
+    property QtObject fxOwnCtx: null
+    // Componente cuya raíz es esta caja: clases puestas en la etiqueta (" a b "), que
+    // activan las reglas del componente que las combinan con su clase (.boton.primary).
+    property string fxInClass: ""
+    property Item fxRemote: null  // su FxRemote: flex.js la coloca donde está él
+    // Propiedades de hijo de <flex> poco usadas; las cajas las tienen declaradas para que
+    // se puedan fijar desde la etiqueta de un componente (FxRemote.qml).
+    property int fxOrder: 0
+    property real fxShrink: NaN
+    property real fxBasis: -2
+    property real fxBasisPct: 0
+    property real fxWidthPct: 0
+    property real fxHeightPct: 0
+    property int fxAutoMargin: 0
+    property string fxPosition: ""   // position: "", "relative", "absolute", "fixed"
+    property var fxTop
+    property var fxRight
+    property var fxBottom
+    property var fxLeft
+    readonly property QtObject fxCtx: fxOwnCtx ? fxOwnCtx : Fx.ctxOf(box)
+    property Item fxOutlineItem: null
 
     // on:click: el contenedor entero se puede pulsar (tarjetas, filas de lista)
     property bool fxClickable: false
     readonly property bool hovered: hover.hovered
+    // Activación: clic, Espacio/Intro según el papel, lector de pantalla o pruebas. Avisa a
+    // on:click (events.py) con la posición del clic (x < 0: sin puntero, desde el teclado).
     signal clicked()
+    property real fxClickX: -1
+    property real fxClickY: -1
+    property int fxClickButton: Qt.LeftButton
+    function fxActivate(x, y, button) {
+        fxClickX = x
+        fxClickY = y
+        fxClickButton = button
+        clicked()
+        fxClickX = -1
+    }
+    onClicked: if (fxOn && fxOn.click !== undefined) fxevents.click(box, fxClickX, fxClickY, fxClickButton)
+
+    // -- eventos y accesibilidad (fase 3 de docs/flex.md) ---------------------
+    // Eventos con propagación: {tipo: id del manejador} y el puente de la plantilla (events.py).
+    property var fxOn: null
+    property QtObject fxBridge: null
+    property string fxRole: ""            // as: "" = automático (button con on:click, si no box)
+    readonly property string fxAs: fxRole !== "" ? fxRole : fxClickable ? "button" : "box"
+    property int fxTabIndex: -2           // tabindex: 0 en el orden de Tab, -1 solo por código; -2 sin fijar
+    property bool disabled: false
+    enabled: !disabled
+    property bool fxPointerEvents: true   // pointer-events: none -> false
+    property bool fxHidden: false         // visibility: hidden (ocupa su sitio sin verse)
+    // Eventos que no son on:click (esos se leen de fxOn al hacer clic): el compilador lo activa.
+    property bool fxListen: false
+    // Las listas solo se evalúan si la caja tiene un papel (la mayoría son "box").
+    readonly property bool fxSpaceActivates: fxAs !== "box" && ["button", "checkbox", "switch", "tab", "menuitem", "option"].indexOf(fxAs) >= 0
+    readonly property bool fxEnterActivates: fxAs !== "box" && ["button", "link", "tab", "menuitem", "option"].indexOf(fxAs) >= 0
 
     Layout.fillWidth: Fx.fillWidth(parent, fxFlex, fxSelfStretch, true)
     Layout.fillHeight: Fx.fillHeight(parent, fxFlex, fxSelfStretch)
@@ -103,23 +185,45 @@ Rectangle {
         fxBorderTopW, fxBorderRightW, fxBorderBottomW, fxBorderLeftW, fxLegacy, fxScrollable, fxFill,
         LayoutMirroring.enabled)
 
-    color: fxClickable && hover.hovered ? Qt.tint(fxBackground, fxtheme.hover) : fxBackground
+    // Resaltado por defecto al pasar el ratón, salvo que una regla :hover diga cómo se ve.
+    color: fxHidden ? "transparent" : fxClickable && !fxTrackHover && hover.hovered ? Qt.tint(fxBackground, fxtheme.hover) : fxBackground
     radius: fxRadius
-    // Con on:click se puede usar con el teclado: Tab para llegar, Espacio o Intro para pulsar.
-    readonly property bool fxKeyFocus: fxClickable && activeFocus
-    border.color: fxKeyFocus ? fxtheme.primary : fxBorderColor
-    border.width: fxKeyFocus ? 2 : fxSides ? 0 : fxBorderWidth
+    // Con un papel interactivo (o on:click) se usa con el teclado: Tab para llegar, Espacio o Intro para pulsar.
+    readonly property bool fxKeyFocus: fxAs !== "box" && activeFocus
+    readonly property bool fxFocusRing: fxKeyFocus && !fxCustomOutline
+    border.color: fxFocusRing ? fxtheme.primary : fxBorderColor
+    border.width: fxHidden ? 0 : fxFocusRing ? 2 : fxSides ? 0 : fxBorderWidth
     clip: fxOverflow === "hidden"
-    activeFocusOnTab: fxClickable
+    activeFocusOnTab: fxTabIndex >= 0 || (fxTabIndex === -2 && fxAs !== "box" && ["button", "link", "checkbox", "switch"].indexOf(fxAs) >= 0)
+    // Como un botón: Intro pulsa al momento; Espacio, al soltarlo (mientras tanto, :pressed).
     Keys.onPressed: (event) => {
-        if (fxClickable && [Qt.Key_Space, Qt.Key_Return, Qt.Key_Enter].includes(event.key)) {
-            box.clicked()
+        if (event.key === Qt.Key_Space && fxSpaceActivates) {
+            if (!event.isAutoRepeat) fxKeyDown = true
+            event.accepted = true
+        } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && fxEnterActivates) {
+            box.fxActivate(-1, -1, Qt.LeftButton)
             event.accepted = true
         }
     }
-    Accessible.role: Accessible.Button
-    Accessible.ignored: !fxClickable
-    Accessible.onPressAction: if (fxClickable) box.clicked()
+    Keys.onReleased: (event) => {
+        if (event.key === Qt.Key_Space && fxKeyDown && !event.isAutoRepeat) {
+            fxKeyDown = false
+            box.fxActivate(-1, -1, Qt.LeftButton)
+            event.accepted = true
+        }
+    }
+    onActiveFocusChanged: if (!activeFocus) fxKeyDown = false
+    Accessible.role: fxAs === "box" || fxAs === "button" ? Accessible.Button : ({
+        "button": Accessible.Button, "link": Accessible.Link, "checkbox": Accessible.CheckBox,
+        "switch": Accessible.CheckBox, "tab": Accessible.PageTab, "menuitem": Accessible.MenuItem,
+        "option": Accessible.ListItem, "listitem": Accessible.ListItem, "list": Accessible.List,
+        "menu": Accessible.PopupMenu, "tablist": Accessible.PageTabList, "dialog": Accessible.Dialog,
+        "heading": Accessible.Heading, "region": Accessible.Pane,
+    })[fxAs] || Accessible.Grouping
+    Accessible.ignored: fxAs === "box"
+    // checkable, checked y selected los añade el compilador solo a las cajas que los usan.
+    Accessible.onPressAction: if (fxAs !== "box") box.fxActivate(-1, -1, Qt.LeftButton)
+    Accessible.onToggleAction: if (Accessible.checkable) box.fxActivate(-1, -1, Qt.LeftButton)
 
     // flex.js es una biblioteca sin imports: los objetos adjuntos (Layout.*, LayoutMirroring)
     // se leen desde aquí.
@@ -128,19 +232,32 @@ Rectangle {
 
     onFxSidesChanged: Fx.flexDecorations(box)
     onFxScrollableChanged: Fx.flexDecorations(box)
+    onFxShadowChanged: Fx.flexDecorations(box)
+    onFxPositionChanged: Fx.flexDecorations(box)
+    onFxOutlineWidthChanged: Fx.flexDecorations(box)
+    // fxListen fijado desde la etiqueta de un componente (FxRemote): cuando ya están fxOn y fxBridge.
+    function fxRegister() { if (fxListen) fxevents.listen(box) }
+    onFxListenChanged: Qt.callLater(fxRegister)
     Component.onCompleted: {
         Fx.flexDecorations(box)
         Flex.layoutNow(box)
+        if (fxListen) fxevents.listen(box)
     }
 
     HoverHandler {
         id: hover
-        enabled: box.fxClickable
-        cursorShape: Qt.PointingHandCursor
+        enabled: box.fxPointerEvents && (box.fxClickable || box.fxTrackHover || box.fxCursor >= 0)
+        cursorShape: box.fxCursor >= 0 ? box.fxCursor : box.fxClickable ? Qt.PointingHandCursor : undefined
     }
     TapHandler {
-        enabled: box.fxClickable
-        onTapped: box.clicked()
+        id: tap
+        // Con FxBlocker (position absolute o fixed), el clic y el pulsado los lleva él: con
+        // los dos, Qt deja pasar la pulsación a lo que hay debajo.
+        enabled: box.fxPointerEvents && (box.fxClickable || box.fxTrackPress) && box.fxBlocker === null
+        acceptedButtons: Qt.LeftButton
+        onTapped: (eventPoint, button) => {
+            if (box.fxClickable) box.fxActivate(eventPoint.position.x, eventPoint.position.y, button)
+        }
     }
 
     Item {
@@ -159,6 +276,9 @@ Rectangle {
         readonly property bool fxLegacy: box.fxLegacy
         width: box.width
         height: box.height
+        // visibility: hidden: el contenido sigue ocupando su sitio (visible no cambia).
+        opacity: box.fxHidden ? 0 : 1
+        enabled: !box.fxHidden
         onChildrenChanged: Flex.schedule(box)
     }
 }

@@ -62,7 +62,28 @@ _BOX_PROPS = {
     "padding": PropSpec("padding", "number"),
 }
 
-_BOX_EVENTS = {"click": EventSpec("onClicked", enables="fxClickable")}
+# Cajas (<flex>, Column, Row): las propiedades de comportamiento y accesibilidad de flex.md.
+_BOX_PROPS.update({
+    "as": PropSpec("fxRole", "string"),  # papel accesible y teclado (ver ROLES)
+    "tabindex": PropSpec("fxTabIndex", "number"),  # 0: en el orden de Tab; -1: solo por código
+    "disabled": PropSpec("disabled", "bool"),
+    "title": PropSpec("ToolTip.text", "string"),  # descripción emergente
+})  # fmt: skip
+
+# Los eventos de las cajas los entrega FluxUI (qt_backend/events.py) con propagación,
+# event.prevent() y event.stop(): no son señales de Qt.
+ROUTE = "@route"
+ROUTED_EVENTS = (
+    "click", "dblclick", "contextmenu", "pointerdown", "pointerup", "pointermove",
+    "pointerenter", "pointerleave", "wheel", "keydown", "keyup", "focus", "blur", "resize",
+)  # fmt: skip
+_BOX_EVENTS = {
+    name: EventSpec(ROUTE, enables="fxClickable" if name == "click" else None) for name in ROUTED_EVENTS
+}
+# Papeles de `as`: los interactivos entran en el orden de Tab y se activan con el teclado.
+ROLES = ("box", "button", "link", "checkbox", "switch", "tab", "menuitem", "option",
+         "listitem", "list", "menu", "tablist", "dialog", "heading", "region")  # fmt: skip
+INTERACTIVE_ROLES = ("button", "link", "checkbox", "switch")
 
 CONTROLS: dict[str, ControlSpec] = {
     "Window": ControlSpec(
@@ -90,6 +111,10 @@ CONTROLS: dict[str, ControlSpec] = {
             "wrap": PropSpec("wrap", "bool"),
             "align": PropSpec("alignItems", "string"),
             "justify": PropSpec("justifyContent", "string"),
+            # Estados para :checked, :selected y :expanded (y, más adelante, la accesibilidad).
+            "checked": PropSpec("checked", "bool"),
+            "selected": PropSpec("selected", "bool"),
+            "expanded": PropSpec("expanded", "bool"),
         },
         events=dict(_BOX_EVENTS),
         container=True,
@@ -245,6 +270,7 @@ CHOICES: dict[tuple[str, str], tuple[str, ...]] = {
     ("flex", "direction"): ("row", "column", "row-reverse", "column-reverse"),
     ("flex", "align"): ("start", "center", "end", "stretch", "baseline"),
     ("flex", "justify"): ("start", "center", "end", "space-between", "space-around", "space-evenly"),
+    **{(tag, "as"): ROLES for tag in ("flex", "Column", "Row")},
 }
 
 

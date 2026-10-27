@@ -13,7 +13,7 @@ from typing import Callable
 from ..compiler.ir import TokenUse, qml_string
 from ..diagnostics import Diagnostic
 from ..qt_backend.controls import CONTROLS
-from .parser import Declaration, Rule
+from .parser import Declaration
 
 THEME_OBJECT = "fxtheme"  # propiedad de contexto QML con los tokens del tema activo
 
@@ -25,7 +25,17 @@ ITEMS = set(CONTROLS) - {"Window"}
 ALL = set(CONTROLS)
 
 _NUM_RE = re.compile(r"^(-?\d+(?:\.\d+)?)(px)?$")
-_VAR_RE = re.compile(r"^var\(\s*--([A-Za-z][\w-]*)\s*\)$")
+_VAR_RE = re.compile(r"^var\(\s*--([A-Za-z][\w-]*)\s*(?:,\s*(.+))?\)$")
+
+# Texto que heredan los <Text> de dentro de una caja (fase 4 de docs/flex.md):
+# propiedad QML del texto -> nombre en el contexto de estilo (FxContext.qml).
+INHERITED = {
+    "fxColor": "color", "font.family": "family", "font.pixelSize": "size", "font.weight": "weight",
+    "font.italic": "italic", "font.letterSpacing": "letterSpacing", "font.capitalization": "capitalization",
+    "horizontalAlignment": "align", "lineHeight": "lineHeight", "wrapMode": "wrap", "elide": "elide",
+}  # fmt: skip
+VAR_PREFIX = "fxV_"  # variable propia `--x` en una caja: propiedad fxV_x
+TEXT_PREFIX = "fxT_"  # texto heredable fijado en una caja: fxT_color, fxT_size…
 _WEIGHTS = {"normal": 400, "bold": 700, "lighter": 300, "bolder": 800}
 _SIDES = ("top", "right", "bottom", "left")
 
@@ -42,21 +52,35 @@ def token_key(css_name: str) -> str:
 class _Context:
     """Estado de la compilación de una declaración: tokens usados y elemento destino."""
 
-    def __init__(self, tag: str, decl: Declaration, tokens: list[TokenUse]):
+    def __init__(self, tag: str, decl: Declaration, tokens: list[TokenUse], local_vars: frozenset[str] = frozenset()):
         self.tag = tag
         self.decl = decl
         self.tokens = tokens
+        self.local_vars = local_vars  # variables propias (--x) definidas en este componente
+        self.notes: list[str] = []  # avisos que no impiden aplicar la declaración
 
-    def token(self, value: str) -> str | None:
+    def token(self, value: str, convert: Callable[[str], str] | None = None, default: str = "undefined") -> str | None:
+        """`var(--x)`: un token del tema, o una variable propia que se busca en los antecesores.
+
+        Es propia si este componente la define o si lleva valor por defecto (`var(--x, 8px)`);
+        si no, es un token del tema, como siempre.
+        """
         m = _VAR_RE.match(value.strip())
         if not m:
             return None
         key = token_key(m.group(1))
-        self.tokens.append(TokenUse(key, self.decl.loc))
-        return f"{THEME_OBJECT}.{key}"
+        fallback = m.group(2)
+        if fallback is None and key not in self.local_vars:
+            self.tokens.append(TokenUse(key, self.decl.loc))
+            return f"{THEME_OBJECT}.{key}"
+        if fallback is not None:
+            other = (convert or (lambda v: self.token(v) or qml_string(v.strip())))(fallback.strip())
+        else:
+            other = f"{THEME_OBJECT}.{key}"
+        return f'Fx.cssVar(fxCtx, "{key}", {other}, {default})'
 
     def number(self, value: str) -> str:
-        if (tok := self.token(value)) is not None:
+        if (tok := self.token(value, self.number, "0")) is not None:
             return tok
         m = _NUM_RE.match(value.strip())
         if not m:
@@ -64,7 +88,7 @@ class _Context:
         return m.group(1)
 
     def color(self, value: str) -> str:
-        if (tok := self.token(value)) is not None:
+        if (tok := self.token(value, self.color, '"transparent"')) is not None:
             return tok
         v = value.strip()
         m = re.match(r"^rgba?\(([^)]*)\)$", v)
@@ -88,17 +112,28 @@ Converter = Callable[[str, _Context], dict[str, str]]
 # Clave especial que devuelven los conversores: `Behavior on <prop>` (lo coloca el compilador).
 BEHAVIOR = "@behavior "
 
-# transition: <propiedad CSS> -> (propiedad QML, animación)
+_NUMBER_ANIM = "NumberAnimation"
+_COLOR_ANIM = "ColorAnimation"
+# transition: <propiedad CSS> -> [(propiedad QML, animación)]
 _ANIMATABLE = {
-    "color": ("fxColor", "ColorAnimation"),
-    "background": ("fxBackground", "ColorAnimation"),
-    "background-color": ("fxBackground", "ColorAnimation"),
-    "border-color": ("fxBorderColor", "ColorAnimation"),
-    "opacity": ("opacity", "NumberAnimation"),
-    "width": ("Layout.preferredWidth", "NumberAnimation"),
-    "height": ("Layout.preferredHeight", "NumberAnimation"),
-    "border-radius": ("fxRadius", "NumberAnimation"),
-}
+    "color": [("fxColor", _COLOR_ANIM)],
+    "background": [("fxBackground", _COLOR_ANIM)],
+    "background-color": [("fxBackground", _COLOR_ANIM)],
+    "border-color": [("fxBorderColor", _COLOR_ANIM)],
+    "opacity": [("opacity", _NUMBER_ANIM)],
+    "width": [("Layout.preferredWidth", _NUMBER_ANIM)],
+    "height": [("Layout.preferredHeight", _NUMBER_ANIM)],
+    "border-radius": [("fxRadius", _NUMBER_ANIM)],
+    "transform": [("scale", _NUMBER_ANIM), ("rotation", _NUMBER_ANIM), ("fxTx", _NUMBER_ANIM), ("fxTy", _NUMBER_ANIM)],
+    "box-shadow": [
+        ("fxShadowX", _NUMBER_ANIM), ("fxShadowY", _NUMBER_ANIM), ("fxShadowBlur", _NUMBER_ANIM),
+        ("fxShadowSpread", _NUMBER_ANIM), ("fxShadowColor", _COLOR_ANIM),
+    ],
+    "outline": [("fxOutlineColor", _COLOR_ANIM), ("fxOutlineWidth", _NUMBER_ANIM), ("fxOutlineOffset", _NUMBER_ANIM)],
+    "outline-color": [("fxOutlineColor", _COLOR_ANIM)],
+}  # fmt: skip
+# Solo existen en las cajas (<flex>, Column, Row).
+_FLEX_ONLY_ANIM = {"box-shadow", "outline", "outline-color"}
 _DURATION_RE = re.compile(r"^(\d+(?:\.\d+)?)(ms|s)$")
 
 
@@ -114,14 +149,20 @@ def _transition(value: str, ctx: _Context) -> dict[str, str]:
         if not m:
             raise StyleValueError(f"duración no válida en transition: {duration!r} (usa 200ms o 0.2s)")
         ms = float(m.group(1)) * (1000 if m.group(2) == "s" else 1)
-        props = list(_ANIMATABLE) if prop == "all" else [prop]
+        flex = ctx.tag in FLEXES
+        if prop == "all":
+            props = [n for n in _ANIMATABLE if flex or n not in _FLEX_ONLY_ANIM]
+        else:
+            props = [prop]
         for name in props:
             if name not in _ANIMATABLE:
                 raise StyleValueError(
                     f"transition no puede animar {name!r}; se admiten: {', '.join(_ANIMATABLE)} y all"
                 )
-            qml_prop, animation = _ANIMATABLE[name]
-            out[BEHAVIOR + qml_prop] = f"{animation} {{ duration: {ms:.0f}; easing.type: Easing.OutCubic }}"
+            if name in _FLEX_ONLY_ANIM and not flex:
+                raise StyleValueError(f"{name} solo existe en <flex>, Column y Row")
+            for qml_prop, animation in _ANIMATABLE[name]:
+                out[BEHAVIOR + qml_prop] = f"{animation} {{ duration: {ms:.0f}; easing.type: Easing.OutCubic }}"
     return out
 
 
@@ -181,6 +222,121 @@ def _border(value: str, ctx: _Context) -> dict[str, str]:
     return out
 
 
+def _split_top(value: str, sep: str = ",") -> list[str]:
+    """Separa por `sep` fuera de paréntesis: `0 2px 8px rgba(0,0,0,.1), 0 1px 2px #000`."""
+    parts, depth, cur = [], 0, ""
+    for ch in value:
+        depth += ch == "("
+        depth -= ch == ")"
+        if ch == sep and depth == 0:
+            parts.append(cur.strip())
+            cur = ""
+        else:
+            cur += ch
+    parts.append(cur.strip())
+    return [p for p in parts if p]
+
+
+def _words_of(value: str) -> list[str]:
+    """Palabras separadas por espacios, respetando paréntesis: `1px solid rgba(0, 0, 0, .1)`."""
+    return re.findall(r"[^\s(]+(?:\([^)]*\))?", value.strip())
+
+
+def _box_shadow(value: str, ctx: _Context) -> dict[str, str]:
+    v = value.strip()
+    if v == "none":
+        return {"fxShadow": "false"}
+    shadows = _split_top(v)
+    if len(shadows) > 1:
+        ctx.notes.append("solo se dibuja la primera sombra de box-shadow")
+    lengths: list[str] = []
+    color = None
+    for part in _words_of(shadows[0]):
+        if part == "inset":
+            raise StyleValueError("box-shadow: inset no está soportado")
+        if _NUM_RE.match(part):
+            lengths.append(ctx.number(part))
+        elif color is None:
+            color = ctx.color(part)
+        else:
+            raise StyleValueError(f"box-shadow no válido: {value!r}; usa p. ej. 0 2px 8px rgba(0, 0, 0, .15)")
+    if not 2 <= len(lengths) <= 4:
+        raise StyleValueError(f"box-shadow necesita de 2 a 4 medidas (x, y, desenfoque, extensión): {value!r}")
+    lengths += ["0"] * (4 - len(lengths))
+    return {
+        "fxShadow": "true",
+        "fxShadowX": lengths[0],
+        "fxShadowY": lengths[1],
+        "fxShadowBlur": lengths[2],
+        "fxShadowSpread": lengths[3],
+        "fxShadowColor": color or "Qt.rgba(0, 0, 0, 0.25)",
+    }
+
+
+def _outline(value: str, ctx: _Context) -> dict[str, str]:
+    v = value.strip()
+    if v in ("none", "0"):
+        return {"fxOutlineWidth": "0"}
+    width = color = None
+    for part in _words_of(v):
+        if part in ("solid", "none", "auto"):
+            continue
+        if width is None and _NUM_RE.match(part):
+            width = ctx.number(part)
+        elif color is None:
+            color = ctx.color(part)
+        else:
+            raise StyleValueError(f"outline no válido: {value!r}; usa p. ej. 2px solid var(--primary)")
+    out = {"fxOutlineWidth": width or "2"}
+    if color is not None:
+        out["fxOutlineColor"] = color
+    return out
+
+
+_CURSORS = {
+    "default": "Qt.ArrowCursor", "auto": "Qt.ArrowCursor", "pointer": "Qt.PointingHandCursor",
+    "text": "Qt.IBeamCursor", "move": "Qt.SizeAllCursor", "grab": "Qt.OpenHandCursor",
+    "grabbing": "Qt.ClosedHandCursor", "not-allowed": "Qt.ForbiddenCursor", "wait": "Qt.WaitCursor",
+    "progress": "Qt.BusyCursor", "crosshair": "Qt.CrossCursor", "help": "Qt.WhatsThisCursor",
+    "ew-resize": "Qt.SizeHorCursor", "ns-resize": "Qt.SizeVerCursor", "nesw-resize": "Qt.SizeBDiagCursor",
+    "nwse-resize": "Qt.SizeFDiagCursor", "col-resize": "Qt.SplitHCursor", "row-resize": "Qt.SplitVCursor",
+}  # fmt: skip
+
+
+def _cursor(value: str, ctx: _Context) -> dict[str, str]:
+    return {"fxCursor": _keyword(value, _CURSORS, "cursor")}
+
+
+_ANGLE_RE = re.compile(r"^(-?\d+(?:\.\d+)?)(deg|turn)?$")
+
+
+def _box_transform(value: str, ctx: _Context) -> dict[str, str]:
+    """`scale(1.05) rotate(5deg) translate(0, -2px)`; reemplaza la transformación entera, como en CSS."""
+    out = {"scale": "1", "rotation": "0", "fxTx": "0", "fxTy": "0"}
+    v = value.strip()
+    if v == "none":
+        return out
+    funcs = re.findall(r"([a-zA-Z]+)\(([^)]*)\)", v)
+    if not funcs or re.sub(r"[a-zA-Z]+\([^)]*\)", "", v).strip():
+        raise StyleValueError(f"transform no válido: {value!r}; usa scale(), rotate() y translate()")
+    for name, args_text in funcs:
+        args = [a.strip() for a in args_text.split(",") if a.strip()]
+        if name == "scale" and (len(args) == 1 or (len(args) == 2 and args[0] == args[1])):
+            out["scale"] = ctx.number(args[0])
+        elif name == "rotate" and len(args) == 1 and (m := _ANGLE_RE.match(args[0])):
+            out["rotation"] = f"{float(m.group(1)) * (360 if m.group(2) == 'turn' else 1):g}"
+        elif name == "translate" and len(args) in (1, 2):
+            out["fxTx"] = ctx.number(args[0])
+            out["fxTy"] = ctx.number(args[1]) if len(args) == 2 else "0"
+        elif name in ("translateX", "translateY") and len(args) == 1:
+            out["fxTx" if name == "translateX" else "fxTy"] = ctx.number(args[0])
+        else:
+            raise StyleValueError(
+                f"transform: {name}({args_text}) no está soportado; usa scale(n), rotate(Ndeg) y translate(x, y)"
+            )
+    return out
+
+
 def _weight(value: str, ctx: _Context) -> dict[str, str]:
     v = value.strip().lower()
     if v in _WEIGHTS:
@@ -191,7 +347,29 @@ def _weight(value: str, ctx: _Context) -> dict[str, str]:
 
 
 def _family(value: str, ctx: _Context) -> dict[str, str]:
-    return {"font.family": ctx.token(value) or qml_string(value.strip().strip("\"'"))}
+    plain = lambda v: qml_string(v.strip().strip("\"'"))  # noqa: E731
+    return {"font.family": ctx.token(value, plain, '""') or plain(value)}
+
+
+def _white_space(value: str, ctx: _Context) -> dict[str, str]:
+    return {"wrapMode": _keyword(value, {"normal": "Text.Wrap", "nowrap": "Text.NoWrap", "pre-wrap": "Text.Wrap"}, "white-space")}
+
+
+def _text_overflow(value: str, ctx: _Context) -> dict[str, str]:
+    return {"elide": _keyword(value, {"ellipsis": "Text.ElideRight", "clip": "Text.ElideNone"}, "text-overflow")}
+
+
+def _variable(value: str, ctx: _Context) -> str:
+    """Valor de `--x: …`: color, medida o texto."""
+    v = value.strip()
+    if _VAR_RE.match(v):
+        return ctx.token(v) or "undefined"
+    if _NUM_RE.match(v):
+        return ctx.number(v)
+    try:
+        return ctx.color(v)
+    except StyleValueError:
+        return qml_string(v.strip("\"'"))
 
 
 def _italic(value: str, ctx: _Context) -> dict[str, str]:
@@ -356,6 +534,45 @@ def _margin_side(side: str, v: str, ctx: _Context) -> dict[str, str]:
     return {key: ctx.number(v), AUTO_MARGIN + side: "0"}
 
 
+def _position(value: str, ctx: _Context) -> dict[str, str]:
+    v = _keyword(value, {k: k for k in ("static", "relative", "absolute", "fixed")}, "position")
+    return {"fxPosition": qml_string(v)}
+
+
+_EDGE_PROPS = {"top": "fxTop", "right": "fxRight", "bottom": "fxBottom", "left": "fxLeft"}
+
+
+def _edge_value(v: str, ctx: _Context) -> str:
+    """top/left…: px (número) o porcentaje del bloque contenedor (texto "50%"); `auto`: sin fijar."""
+    v = v.strip()
+    if v == "auto":
+        return "undefined"
+    if re.fullmatch(r"-?\d+(?:\.\d+)?%", v):
+        return qml_string(v)
+    return ctx.number(v)
+
+
+def _edge(side: str) -> Converter:
+    return lambda value, ctx: {_EDGE_PROPS[side]: _edge_value(value, ctx)}
+
+
+def _inset(value: str, ctx: _Context) -> dict[str, str]:
+    parts = value.split()
+    if not 1 <= len(parts) <= 4:
+        raise StyleValueError(f"inset admite de 1 a 4 valores, se recibió {value!r}")
+    order = {1: (0, 0, 0, 0), 2: (0, 1, 0, 1), 3: (0, 1, 2, 1), 4: (0, 1, 2, 3)}[len(parts)]
+    return {_EDGE_PROPS[side]: _edge_value(parts[i], ctx) for side, i in zip(_SIDES, order)}
+
+
+def _z_index(value: str, ctx: _Context) -> dict[str, str]:
+    v = value.strip()
+    if v == "auto":
+        return {"z": "0"}
+    if not re.fullmatch(r"-?\d+", v):
+        raise StyleValueError(f"z-index admite un número entero, se recibió {value!r}")
+    return {"z": v}
+
+
 def _margin(value: str, ctx: _Context) -> dict[str, str]:
     parts = value.split()
     if not 1 <= len(parts) <= 4:
@@ -444,7 +661,7 @@ def _limit(kind: str, axis: str) -> Converter:
 
 # propiedad CSS -> (elementos donde aplica, conversor)
 SUPPORTED: dict[str, tuple[set[str], Converter]] = {
-    "color": (TEXTUAL, _single("fxColor", "color")),
+    "color": (TEXTUAL | FLEXES, _single("fxColor", "color")),
     "background": (BOXES | FIELDS | {"Text"}, _single("fxBackground", "color")),
     "background-color": (BOXES | FIELDS | {"Text"}, _single("fxBackground", "color")),
     "border": (BOXES | FIELDS | {"Text"}, _border),
@@ -466,20 +683,29 @@ SUPPORTED: dict[str, tuple[set[str], Converter]] = {
     "align-items": (FLEXES | {"Scroll"}, _align_items),
     "justify-content": (FLEXES | {"Scroll"}, _justify),
     "align-content": (FLEXES, _align_content),
-    "font-size": (TEXTUAL | {"Window"}, _single("font.pixelSize", "number")),
-    "font-weight": (TEXTUAL | {"Window"}, _weight),
-    "font-family": (TEXTUAL | {"Window"}, _family),
-    "font-style": (TEXTUAL | {"Window"}, _italic),
-    "letter-spacing": (TEXTUAL, _single("font.letterSpacing", "number")),
-    "text-transform": (TEXTUAL, _transform),
-    "text-align": ({"Text", "TextField", "TextArea"}, _text_align),
-    "line-height": ({"Text"}, _line_height),
+    "font-size": (TEXTUAL | FLEXES | {"Window"}, _single("font.pixelSize", "number")),
+    "font-weight": (TEXTUAL | FLEXES | {"Window"}, _weight),
+    "font-family": (TEXTUAL | FLEXES | {"Window"}, _family),
+    "font-style": (TEXTUAL | FLEXES | {"Window"}, _italic),
+    "letter-spacing": (TEXTUAL | FLEXES, _single("font.letterSpacing", "number")),
+    "text-transform": (TEXTUAL | FLEXES, _transform),
+    "text-align": ({"Text", "TextField", "TextArea"} | FLEXES, _text_align),
+    "line-height": ({"Text"} | FLEXES, _line_height),
+    "white-space": ({"Text"} | FLEXES, _white_space),
+    "text-overflow": ({"Text"} | FLEXES, _text_overflow),
     "flex": (ITEMS, _flex),
     "flex-grow": (ITEMS, _flex_grow),
     "flex-shrink": (ITEMS, _flex_shrink),
     "flex-basis": (ITEMS, _flex_basis),
     "order": (ITEMS, _order),
     "margin": (ITEMS, _margin),
+    "position": (ITEMS, _position),
+    "top": (ITEMS, _edge("top")),
+    "right": (ITEMS, _edge("right")),
+    "bottom": (ITEMS, _edge("bottom")),
+    "left": (ITEMS, _edge("left")),
+    "inset": (ITEMS, _inset),
+    "z-index": (ITEMS, _z_index),
     **{f"margin-{side}": (ITEMS, _margin_one(side)) for side in _SIDES},
     "align-self": (ITEMS, _align_self),
     "width": (ALL, _size("width")),
@@ -490,22 +716,19 @@ SUPPORTED: dict[str, tuple[set[str], Converter]] = {
     "max-height": (ALL, _limit("max", "height")),
     "opacity": (ALL, _single("opacity", "number")),
     "transition": (ITEMS, _transition),
+    "transform": (ITEMS, _box_transform),
+    "cursor": (ITEMS, _cursor),
+    "box-shadow": (FLEXES, _box_shadow),
+    "outline": (FLEXES, _outline),
+    "outline-width": (FLEXES, _single("fxOutlineWidth", "number")),
+    "outline-color": (FLEXES, _single("fxOutlineColor", "color")),
+    "outline-offset": (FLEXES, _single("fxOutlineOffset", "number")),
+    "pointer-events": (FLEXES, lambda v, ctx: {"fxPointerEvents": _keyword(v, {"auto": "true", "none": "false"}, "pointer-events")}),
+    "visibility": (FLEXES, lambda v, ctx: {"fxHidden": _keyword(v, {"visible": "false", "hidden": "true"}, "visibility")}),
 }
 
 # Window usa su propia propiedad de color de fondo.
 _WINDOW_OVERRIDES = {"background": "color", "background-color": "color"}
-
-
-def matching_declarations(rules: list[Rule], tag: str, classes: list[str]) -> list[Declaration]:
-    """Declaraciones aplicables en orden de precedencia (las últimas ganan).
-
-    Precedencia simple: reglas de elemento antes que reglas de clase; dentro de
-    cada grupo, el orden del archivo.
-    """
-    by_tag = [d for r in rules if tag in r.selectors for d in r.declarations]
-    class_sel = {f".{c}" for c in classes}
-    by_class = [d for r in rules if class_sel & set(r.selectors) for d in r.declarations]
-    return by_tag + by_class
 
 
 def compile_declarations(
@@ -514,6 +737,7 @@ def compile_declarations(
     source: str,
     warnings: list[Diagnostic],
     tokens: list[TokenUse] | None = None,
+    local_vars: frozenset[str] = frozenset(),
 ) -> dict[str, str]:
     """Propiedades QML (nombre -> expresión) para el elemento `tag`."""
     tokens = tokens if tokens is not None else []
@@ -523,7 +747,14 @@ def compile_declarations(
         warnings.append(Diagnostic(msg, decl.loc, hint, severity="warning", source=source))
 
     for decl in decls:
-        ctx = _Context(tag, decl, tokens)
+        ctx = _Context(tag, decl, tokens, local_vars)
+        if decl.prop.startswith("--"):
+            # Variable propia: la ven la caja y todo lo que contiene (también otros componentes).
+            if tag not in FLEXES:
+                warn(f"las variables propias ({decl.prop}) se definen en <flex>, Column o Row", decl)
+                continue
+            props[VAR_PREFIX + token_key(decl.prop[2:])] = _variable(decl.value, ctx)
+            continue
         if tag == "Window" and decl.prop in _WINDOW_OVERRIDES:
             try:
                 props[_WINDOW_OVERRIDES[decl.prop]] = ctx.color(decl.value)
@@ -548,6 +779,12 @@ def compile_declarations(
             props.update(convert(decl.value, ctx))
         except StyleValueError as exc:
             warn(str(exc), decl)
+        for note in ctx.notes:
+            warn(note, decl)
+    if tag in FLEXES:
+        # En una caja, el texto no es suyo: lo heredan los <Text> de dentro.
+        props = {(TEXT_PREFIX + INHERITED[k] if k in INHERITED else k): v for k, v in props.items()}
+        props.pop(BEHAVIOR + "fxColor", None)  # el color heredado no se anima en la caja
     autos = [k for k in props if k.startswith(AUTO_MARGIN)]
     if autos:
         mask = sum(_AUTO_BITS[k[len(AUTO_MARGIN):]] for k in autos if props[k] == "1")

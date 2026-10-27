@@ -19,6 +19,13 @@ Label {
     property color fxBorderColor: "transparent"
     property real fxBorderWidth: 0
     property real fxRadius: 0
+    // Texto heredado de las cajas que lo contienen (FxContext, FxTextInherit). fxOwn: lo que
+    // fija el propio texto (" color size "), que gana a lo heredado.
+    readonly property QtObject fxCtx: Fx.ctxOf(label)
+    property string fxOwn: ""
+    property Item fxInherit: null
+    onFxCtxChanged: Fx.textInherit(label)
+    Component.onCompleted: Fx.textInherit(label)
     background: Rectangle {
         visible: label.fxBackground.a > 0 || label.fxBorderWidth > 0
         color: label.fxBackground

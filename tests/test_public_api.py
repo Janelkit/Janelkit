@@ -11,7 +11,7 @@ API_DOC = (Path(__file__).parent.parent / "docs" / "api.md").read_text(encoding=
 
 PUBLIC = {
     "fluxui": [
-        "Computed", "Effect", "Event", "PageStack", "Prop", "PropError", "Ref", "State", "Task", "Timer", "__version__", "background",
+        "Computed", "Effect", "Event", "FocusEvent", "KeyEvent", "PageStack", "PointerEvent", "ResizeEvent", "WheelEvent", "Prop", "PropError", "Ref", "State", "Task", "Timer", "__version__", "background",
         "batch", "computed", "dialogs", "effect", "event", "i18n", "inject", "interval", "notify", "on_destroy", "on_mount", "open_window", "pages", "prop", "provide", "ref", "run",
         "spawn", "state", "t", "task", "theme", "timeout", "untracked",
     ],

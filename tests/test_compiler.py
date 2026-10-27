@@ -262,8 +262,8 @@ def test_unsupported_style_property_is_a_warning_with_location():
 
 
 def test_style_not_applicable_to_element_is_a_warning():
-    c = compile_source('<Column class="c" />\n<style>.c { font-size: 12px; }</style>')
-    assert "no tiene efecto en <Column>" in c.warnings[0].message
+    c = compile_source('<Scroll class="c" />\n<style>.c { font-size: 12px; }</style>')
+    assert "no tiene efecto en <Scroll>" in c.warnings[0].message
 
 
 def test_unsupported_style_values_are_warnings():
@@ -477,9 +477,12 @@ def test_conditional_classes_generate_bindings_and_last_wins():
     )
     qml = c.qml
     assert "fxBackground: fxtheme.surface" in qml
-    assert "Binding on fxBackground { when: !!fx.b0 && !!!fx.b1; value: fxtheme.primary }" in qml
+    # Un solo Binding por propiedad: gana la última clase activa.
+    assert (
+        "Binding on fxBackground { when: !!fx.b0 || !!fx.b1; value: !!fx.b1 ? fxtheme.danger : fxtheme.primary }"
+        in qml
+    )
     assert "Binding on fxBorderWidth { when: !!fx.b0; value: 2 }" in qml
-    assert "Binding on fxBackground { when: !!fx.b1; value: fxtheme.danger }" in qml
     assert c.warnings == []
 
 

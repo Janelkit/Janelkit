@@ -128,7 +128,12 @@ class CompileSession:
 
     def interface(self, path: Path) -> ComponentInterface:
         sfc, info = self.load(path)
-        return ComponentInterface(dict(info.props), dict(info.events), frozenset(_slot_names(sfc.template)))
+        roots = sfc.root_elements
+        root = roots[0].tag if len(roots) == 1 and isinstance(roots[0], Element) else None
+        return ComponentInterface(
+            dict(info.props), dict(info.events), frozenset(_slot_names(sfc.template)),
+            root_box=root in ("flex", "Column", "Row") and info.inherit_attrs, inherit_attrs=info.inherit_attrs,
+        )  # fmt: skip
 
     def _resolver(self, file: Path):
         here = file.resolve().parent  # en memoria: el directorio actual

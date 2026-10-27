@@ -1,10 +1,21 @@
 <script lang="python">
-# Catálogo de elementos construidos con <flex> (fase 1: rejilla y barra de herramientas).
-# Ver docs/flex.md. Ningún tamaño ni columna se calcula en Python.
+# Catálogo de elementos construidos con <flex> (docs/flex.md): rejilla y barra de
+# herramientas (fase 1), tarjeta y botón con estados (fase 2), botón, chip, interruptor
+# y menú con eventos y accesibilidad (fase 3), tabla y pestañas con texto heredado y
+# variables (fase 4), componentes usados como elementos (fase 5), e insignia, menú en
+# el puntero y diálogo superpuesto (fase 6). Ningún tamaño ni columna se calcula en
+# Python; los estados (hover, pulsado, foco) tampoco.
 import os
 
-from fluxui import state
+from fluxui import ref, state
 from components.Barra import Barra
+from components.Boton import Boton
+from components.Chip import Chip
+from components.Interruptor import Interruptor
+from components.Dialogo import Dialogo
+from components.Menu import Menu
+from components.Segmentado import Segmentado
+from components.Tabla import Tabla
 from components.Tarjeta import Tarjeta
 
 TAGS = ["diseño", "datos", "red", "texto"]
@@ -14,23 +25,96 @@ cards = [
     for i in range(int(os.environ.get("FLEX_CARDS", "8")))  # FLEX_CARDS: para bench.py
 ]
 last = state("—")
+chips = state(list(TAGS))
+chosen = state("diseño")
+compact = state(False)
+menu_open = state(False)
+menu_at = state((0, 0))
+dialog_open = state(False)
+borrar = ref()
+PROCESSES = [
+    {"id": 1, "nombre": "servidor-web", "estado": "activo", "cpu": 12},
+    {"id": 2, "nombre": "base-de-datos", "estado": "alerta", "cpu": 91},
+    {"id": 3, "nombre": "copias", "estado": "parado", "cpu": 0},
+    {"id": 4, "nombre": "cola-de-correo", "estado": "activo", "cpu": 7},
+]
+FILTERS = {"Todos": None, "Activos": "activo", "Alertas": "alerta"}
+view = state("Todos")
+process = state(2)
+
+
+def shown():
+    wanted = FILTERS[view.value]
+    return [p for p in PROCESSES if wanted is None or p["estado"] == wanted]
 
 
 def on_action(name):
     last.set(name)
+
+
+def remove_chip(tag):
+    chips.value.remove(tag)
+    last.set(f"quitar {tag}")
+
+
+def on_menu(option):
+    menu_open.set(False)
+    last.set(f"menú: {option}")
+
+
+def open_menu(event):
+    event.prevent()
+    menu_at.set((event.x, event.y))  # el menú se abre donde está el puntero
+    menu_open.set(True)
+
+
+def on_delete():
+    dialog_open.set(False)
+    last.set("eliminado")
 </script>
 
-<Window title="flex: catálogo" width={900} height={600}>
+<Window title="flex: catálogo" width={900} height={640}>
   <flex direction="column" class="pagina">
     <Barra title="Catálogo de flex" on:action={on_action} />
     <flex class="contenido">
       <Text class="estado">Última acción: {last}</Text>
-      <flex id="rejilla" class="rejilla">
+      <flex class="controles">
+        <Boton text="Guardar" class="primary" on:click={on_action("guardar")} />
+        <Boton text="Cancelar" on:click={on_action("cancelar")} />
+        <Boton text="Ayuda" class="ghost" on:click={on_action("ayuda")} />
+        <Boton text="Desactivado" disabled />
+        <flex class="con-insignia">
+          <Boton text="Eliminar…" ref={borrar} on:click={dialog_open = True} />
+          <flex class="insignia" label="3 avisos"><Text>3</Text></flex>
+        </flex>
+        <Interruptor text="Compacto" checked={compact} on:change={compact = event} />
+      </flex>
+      <flex class="chips">
+        {#each chips as tag (tag)}
+          <Chip text={tag} selected={tag == chosen} on:choose={chosen = tag} on:remove={remove_chip(tag)} />
+        {/each}
+      </flex>
+      <flex class="zona" label="Zona con menú contextual" on:contextmenu={open_menu}>
+        <Text class="pista">Clic derecho (o la tecla de menú) aquí para abrir un menú</Text>
+        {#if menu_open}
+          <Menu class="emergente" style={{"left": menu_at[0], "top": menu_at[1]}}
+                items={["Copiar", "Pegar", "Renombrar", "Eliminar"]} on:choose={on_menu} on:close={menu_open = False} />
+        {/if}
+      </flex>
+      <flex class="procesos">
+        <Segmentado label="Filtro" options={list(FILTERS)} value={view} on:change={view = event} />
+        <Tabla class="tabla-procesos" rows={shown()} selected={process} on:select={process = event} />
+      </flex>
+      <flex id="rejilla" class="rejilla" class:compacta={compact}>
         {#each cards as card (card["id"])}
-          <Tarjeta class="celda" title={card["title"]} tag={card["tag"]} body={card["body"]} />
+          <Tarjeta class="celda" title={card["title"]} tag={card["tag"]} body={card["body"]} on:action={on_action} />
         {/each}
       </flex>
     </flex>
+    {#if dialog_open}
+      <Dialogo title="¿Eliminar los elementos?" text="Esta acción no se puede deshacer."
+               opener={borrar} on:accept={on_delete()} on:close={dialog_open = False} />
+    {/if}
   </flex>
 </Window>
 
@@ -38,7 +122,25 @@ def on_action(name):
 .pagina { background: var(--bg); }
 .contenido { direction: column; gap: 12px; padding: 16px; flex: 1; overflow: auto; }
 .estado { color: var(--text-muted); }
+.controles, .chips { align-items: center; gap: 8px; flex-wrap: wrap; }
+/* z-index ordena entre hermanos: la zona sube para que su menú quede sobre la tabla. */
+.zona {
+  position: relative; z-index: 1;
+  direction: column; align-items: start; gap: 8px; padding: 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.pista { color: var(--text-muted); }
+.emergente { position: absolute; z-index: 10; }
+.con-insignia { position: relative; }
+.insignia {
+  position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px;
+  justify-content: center; align-items: center; border-radius: 9px;
+  background: var(--danger); color: var(--on-primary); font-size: 11px; font-weight: 600;
+}
+.procesos { direction: column; align-items: start; gap: 8px; }
+.tabla-procesos { align-self: stretch; }
 /* Rejilla: cada celda parte de 200 px y crece; las que no caben saltan de línea. */
 .rejilla { flex-wrap: wrap; gap: 12px; align-items: start; }
+.rejilla.compacta { gap: 4px; }
 .celda { flex: 1 1 200px; }
 </style>

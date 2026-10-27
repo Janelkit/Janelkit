@@ -87,6 +87,8 @@ class ScriptInfo:
     props: dict[str, PropDecl] = field(default_factory=dict)
     events: dict[str, EventDecl] = field(default_factory=dict)
     components: dict[str, ComponentImport] = field(default_factory=dict)
+    # `inherit_attrs = False`: los atributos de la etiqueta no pasan a la raíz (docs/flex.md)
+    inherit_attrs: bool = True
 
 
 def analyze_script(script: ScriptBlock | None, file: str, source: str, resolve: Resolver) -> ScriptInfo:
@@ -132,6 +134,13 @@ class _Analyzer:
         ast.increment_lineno(tree, self.script.loc.line - 1)
 
         self.collect_api_aliases(tree)
+        for stmt in tree.body:
+            if (
+                isinstance(stmt, ast.Assign)
+                and any(isinstance(t, ast.Name) and t.id == "inherit_attrs" for t in stmt.targets)
+                and isinstance(stmt.value, ast.Constant)
+            ):
+                self.info.inherit_attrs = bool(stmt.value.value)
         tree.body = [stmt for stmt in (self.top_level(s) for s in tree.body) if stmt is not None]
         self.check_misplaced_factories(tree)
         ast.fix_missing_locations(tree)

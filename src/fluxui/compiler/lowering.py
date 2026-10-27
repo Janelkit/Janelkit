@@ -14,7 +14,17 @@ from pathlib import Path
 from typing import Any, Callable, Union
 
 from ..diagnostics import Diagnostic, FluxError, SourceLocation
-from ..qt_backend.controls import CONTROLS, QML_IMPORTS, ControlSpec, PropSpec, all_props, prop_spec, tag_of
+from ..qt_backend.controls import (
+    BASE_ELEMENTS,
+    CHOICES,
+    CONTROLS,
+    QML_IMPORTS,
+    ControlSpec,
+    PropSpec,
+    all_props,
+    prop_spec,
+    tag_of,
+)
 from ..styling.compiler import BEHAVIOR, compile_declarations, matching_declarations
 from ..styling.parser import Rule, parse_stylesheet
 from .ast_nodes import SFC, Attribute, EachBlock, Element, Expression, IfBlock, Interpolation, KeyBlock, Node, Text
@@ -57,10 +67,29 @@ _BUILTINS = frozenset(dir(builtins))
 # alineación, y crece si alguno de sus hijos tiene flex.
 _TRANSPARENT_BOX = {
     "gap": "parent && parent.spacing !== undefined ? parent.spacing : 0",
-    "align": "parent && parent.fxAlign ? parent.fxAlign : 0",
-    "stretch": "!!parent && parent.fxStretch === true",
+    "alignItems": 'parent && parent.fxAlignItems !== undefined ? parent.fxAlignItems : ""',
+    "fxLegacy": "parent && parent.fxLegacy !== undefined ? parent.fxLegacy : true",
     "fxFlex": "fillMain ? 1 : 0",
 }
+
+# Propiedades de un hijo de <flex> que los controles no declaran: el compilador las
+# declara en el elemento que las usa (tipo, valor por defecto = sin fijar).
+_FLEX_ITEM_EXTRAS = {
+    "fxOrder": ("int", "0"),
+    "fxShrink": ("real", "NaN"),
+    "fxBasis": ("real", "-2"),
+    "fxBasisPct": ("real", "0"),
+    "fxWidthPct": ("real", "0"),
+    "fxHeightPct": ("real", "0"),
+    "fxAutoMargin": ("int", "0"),
+}
+# Lo que un elemento .qml propio comunica a su contenedor <flex> (ver flex.js).
+_TOUCH_DEPS = (
+    "visible",
+    "Layout.preferredWidth", "Layout.preferredHeight", "Layout.minimumWidth", "Layout.minimumHeight",
+    "Layout.maximumWidth", "Layout.maximumHeight", "Layout.fillWidth", "Layout.fillHeight",
+    "Layout.leftMargin", "Layout.topMargin", "Layout.rightMargin", "Layout.bottomMargin",
+)  # fmt: skip
 
 
 @dataclass
@@ -326,6 +355,7 @@ class _Lowerer:
 
         if spec.tag is not None and "fxFlex" in ir.props:
             _custom_flex(ir)
+        _flex_item_extras(ir, custom=spec.tag is not None, new_id=lambda: self.next_id("fxi"))
 
         # Un tamaño fijo desactiva el estiramiento por defecto (texto y campos en columnas).
         for axis in ("Width", "Height"):
@@ -362,7 +392,7 @@ class _Lowerer:
         if root is None or not root.transitions:
             return
         self.pending_transitions.pop(id(root), None)
-        tid = self.next_id("fxt")
+        tid = root.props["id"].qml if "id" in root.props else self.next_id("fxt")
         root.props["id"] = Literal(tid)
         anim = IRElement("FxTransition", root.loc)
         anim.props.update({"target": Literal(tid), "bridge": Literal("fx")})
@@ -439,6 +469,14 @@ class _Lowerer:
                 ir.conditional.append((prop, value, cond))
 
     def unknown_element(self, el: Element) -> None:
+        if el.tag[:1].islower():
+            # Las etiquetas en minúscula son los elementos base de FluxUI.
+            close = difflib.get_close_matches(el.tag, BASE_ELEMENTS, n=1)
+            hint = (f"¿quisiste decir <{close[0]}>? " if close else "") + "elementos base: " + ", ".join(
+                f"<{t}>" for t in BASE_ELEMENTS
+            ) + ". Los componentes se escriben en mayúscula"
+            self.error(f"elemento base desconocido <{el.tag}>", el.loc, hint)
+            return
         options = sorted({*CONTROLS, *self.info.components})
         close = difflib.get_close_matches(el.tag, options, n=1)
         if close:
@@ -465,6 +503,14 @@ class _Lowerer:
                 f"propiedad desconocida '{attr.name}' en <{el.tag}>",
                 attr.loc,
                 (f"¿quisiste decir '{close[0]}'? " if close else "") + "propiedades disponibles: " + ", ".join(all_props(spec)),
+            )
+            return
+        choices = CHOICES.get((el.tag, attr.name))
+        if choices and isinstance(attr.value, str) and attr.value not in choices:
+            self.error(
+                f"valor no válido para '{attr.name}' en <{el.tag}>: {attr.value!r}",
+                attr.loc,
+                "valores admitidos: " + ", ".join(choices),
             )
             return
         value = self.prop_value(attr, pspec)
@@ -721,6 +767,9 @@ class _Lowerer:
             box = self.as_item(items, loc, horizontal)
             if box is not items[0]:
                 box.props.update({k: Literal(v) for k, v in _TRANSPARENT_BOX.items()})
+            # Al reordenar filas, Qt solo cambia el orden de apilado (sin señal): el índice
+            # de la fila sí cambia, y con él se avisa al contenedor <flex>.
+            box.props["readonly property bool fxTouchIndex"] = Literal("Fx.resized(parent, index)")
             frag = Fragment(tpl, root=box)
             if component_root:  # en <List> las filas se animan con <List animate>
                 self.attach_transitions(frag)
@@ -936,7 +985,7 @@ class _Lowerer:
         return attr.value
 
 
-_BOXES = ("FxColumn", "FxRow")
+_BOXES = ("FxColumn", "FxRow", "FxFlex")
 _TRANSITIONS = ("fade", "scale", "slide")
 _TRANSITION_MS = 200
 
@@ -960,6 +1009,31 @@ def _custom_flex(ir: IRElement) -> None:
     ir.props.setdefault("Layout.fillHeight", Literal("Fx.fillHeight(parent, fxFlex, false)"))
     ir.props.setdefault("Layout.preferredWidth", Literal("Fx.basis(parent, fxFlex, true)"))
     ir.props.setdefault("Layout.preferredHeight", Literal("Fx.basis(parent, fxFlex, false)"))
+
+
+def _flex_item_extras(ir: IRElement, custom: bool, new_id: Callable[[], str]) -> None:
+    """Declara en el elemento las propiedades de hijo de <flex> que usa (order, flex-shrink,
+    flex-basis, %, margin: auto) y avisa a su contenedor cuando cambian."""
+    used = [n for n in _FLEX_ITEM_EXTRAS if n in ir.props or any(c[0] == n for c in ir.conditional)]
+    for name in used:
+        kind, default = _FLEX_ITEM_EXTRAS[name]
+        value = ir.props.pop(name, Literal(default))
+        ir.props[f"property {kind} {name}"] = value
+    deps = list(used)
+    if custom:
+        # Un elemento .qml propio no trae el binding fxTouch de los controles de FluxUI.
+        deps = [*_TOUCH_DEPS, *(["fxFlex"] if "property int fxFlex" in ir.props else []), *deps]
+    if deps:
+        name = "fxTouch" if custom else "fxTouchExtras"
+        # El motor necesita el propio elemento (para olvidar lo que guardó de él): con un id.
+        if "id" not in ir.props:
+            ir.props["id"] = Literal(new_id())
+        item = ir.props["id"].qml
+        ir.props[f"readonly property bool {name}"] = Literal(f"Fx.touch(parent, {item}, {', '.join(deps)})")
+    if custom:
+        ir.props["property var fxHints"] = Literal("null")
+        ir.handlers.setdefault("onImplicitWidthChanged", []).append("Fx.resized(parent)")
+        ir.handlers.setdefault("onImplicitHeightChanged", []).append("Fx.resized(parent)")
 
 
 def _const_matches(value: object, names: frozenset[str]) -> bool:

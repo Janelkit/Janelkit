@@ -1,6 +1,8 @@
 // Ventana raíz de FluxUI: colores, paleta y tipografía ligados a los tokens del tema.
 import QtQuick
 import QtQuick.Controls.Basic
+import FluxEngine
+import "flex.js" as Flex
 
 ApplicationWindow {
     visible: true
@@ -22,4 +24,11 @@ ApplicationWindow {
     palette.mid: fxtheme.border
     palette.dark: fxtheme.text_muted
     palette.light: fxtheme.surface_alt
+
+    // Disposición de <flex>: se calcula en la fase de polish, antes de cada fotograma.
+    FxPolisher {
+        onPolishing: Flex.flush()
+        Component.onCompleted: Flex.registerPolisher(this)
+        Component.onDestruction: Flex.unregisterPolisher(this)
+    }
 }

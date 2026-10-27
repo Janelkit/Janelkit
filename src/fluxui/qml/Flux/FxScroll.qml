@@ -13,9 +13,8 @@ ScrollView {
     property alias innerRightPadding: col.rightPadding
     property alias innerBottomPadding: col.bottomPadding
     property alias innerLeftPadding: col.leftPadding
-    property alias align: col.align
-    property alias stretch: col.stretch
-    property alias justify: col.justify
+    property alias alignItems: col.alignItems
+    property alias justifyContent: col.justifyContent
     property color fxBackground: "transparent"
     property real fxRadius: 0
     property color fxBorderColor: "transparent"
@@ -32,6 +31,17 @@ ScrollView {
 
     implicitWidth: col.implicitWidth
     implicitHeight: col.implicitHeight
+    readonly property bool fxScrollable: true
+    property var fxHints: null  // lo que el motor de <flex> guardó de este elemento
+    readonly property bool fxTouch: Fx.touch(parent, sv, visible,
+        Layout.preferredWidth, Layout.preferredHeight, Layout.minimumWidth, Layout.minimumHeight,
+        Layout.maximumWidth, Layout.maximumHeight, Layout.fillWidth, Layout.fillHeight,
+        Layout.leftMargin, Layout.topMargin, Layout.rightMargin, Layout.bottomMargin,
+        fxFlex, fxSelfAlign, fxSelfStretch)
+    // El tamaño natural, con manejadores: leerlo en un binding puede recalcular el texto
+    // dentro del propio binding (Qt lo toma por un bucle).
+    onImplicitWidthChanged: Fx.resized(parent)
+    onImplicitHeightChanged: Fx.resized(parent)
     contentWidth: availableWidth
     clip: true
     background: Rectangle {
@@ -44,5 +54,6 @@ ScrollView {
     FxColumn {
         id: col
         width: sv.availableWidth
+        fxSizedW: true
     }
 }

@@ -181,7 +181,7 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 | Texto seleccionable | 4, 5 | Núcleo |
 | Tabla 2D y árbol virtualizados | 1, 2, 5 | Núcleo o `fluxui-kit` · el reto 1 hizo su tabla con `<List>` y anchos repetidos en cabecera y filas |
 | Canvas, gráficas, editor de código | 1, 5 | `fluxui-kit` (sobre la vía de escape QML) · el reto 1 hizo su gráfica en QML propio sin problemas |
-| Rejilla con salto de línea (tarjetas que se recolocan según el ancho) | 1 | Núcleo (disposición) |
+| Rejilla con salto de línea (tarjetas que se recolocan según el ancho) | 1 | ✅ Núcleo: `flex-wrap` en `<flex>`, `Column` y `Row` ([flex.md](flex.md), fase 1) |
 | Texto enriquecido | 4 | ✅ Núcleo: `<Text format="markdown">` (reto 4) |
 | Deshacer/rehacer y stores | 2, 3 | `fluxui-store` |
 

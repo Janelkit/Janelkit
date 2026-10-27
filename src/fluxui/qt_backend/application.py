@@ -28,6 +28,7 @@ from ..reactivity import Effect, Scope
 from ..runtime.component import ComponentInstance, flush_mounts
 from ..styling.compiler import THEME_OBJECT
 from ..styling.theme import theme
+from .polish import register_types
 
 log = logging.getLogger("fluxui")
 
@@ -87,6 +88,7 @@ class Application:
         return None
 
     def _create_engine(self) -> None:
+        register_types()
         self.engine = QQmlEngine()
         self.engine.addImportPath(str(QML_DIR))
         self.engine.quit.connect(self.qt_app.quit)

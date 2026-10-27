@@ -5,7 +5,7 @@ Qt Quick no es un navegador y FluxUI **no implementa CSS**. `<style>` admite una
 ## Selectores
 
 - De clase: `.titulo { … }` → elementos con `class="titulo"`.
-- De elemento: `Button { … }` → todos los `<Button>` del componente.
+- De elemento: `Button { … }` → todos los `<Button>` del componente (también `flex { … }`).
 - Varios selectores separados por comas: `.a, .b { … }`.
 - Clases condicionales: `class:activa={cond}` en el elemento aplica `.activa` mientras `cond` sea verdadera.
 - Clases dinámicas: `class={["tarjeta", variante, {"activa": sel}]}` (texto, listas o diccionarios `{clase: condición}`). Entre clases gana la regla que aparece después en `<style>`; las `class:x={cond}` se aplican por encima.
@@ -25,13 +25,18 @@ Sin descendientes, pseudo-clases ni combinadores. Los estilos son **locales al c
 | CSS | Aplica a | Notas |
 |---|---|---|
 | `color` | Text, Button, TextField, TextArea, Checkbox | color del texto |
-| `background`, `background-color` | Window, Column, Row, Scroll, List, Text, Button, TextField, TextArea, Select | en `Text`, con `padding` y `border-radius`, sirve para etiquetas y contadores |
+| `background`, `background-color` | Window, flex, Column, Row, Scroll, List, Text, Button, TextField, TextArea, Select | en `Text`, con `padding` y `border-radius`, sirve para etiquetas y contadores |
 | `border` | los mismos que `background` (salvo Window) | `1px solid #ccc`, `1px solid var(--border)`, `none` |
 | `border-color`, `border-width` | ídem | |
-| `border-radius` | ídem | |
+| `border-top`, `-right`, `-bottom`, `-left` (y `-width`, `-color`) | flex, Column, Row | bordes por lado (separadores). Con radio, los lados son rectos en las esquinas |
+| `border-radius` | ídem | 1 valor; de 2 a 4 (radio por esquina, como en CSS) solo en flex, Column y Row |
+| `overflow` | flex, Column, Row | `visible`, `hidden` (recorta, sin redondear las esquinas), `auto`/`scroll` (zona de desplazamiento) |
 | `padding` | contenedores y controles con texto | 1 a 4 valores, como en CSS |
 | `padding-top`, `-right`, `-bottom`, `-left` | ídem | |
-| `gap` | Column, Row, Scroll | separación entre hijos |
+| `gap` | flex, Column, Row, Scroll | separación entre hijos |
+| `row-gap`, `column-gap` | flex, Column, Row | separación entre filas / entre columnas |
+| `flex-direction` (o `direction`) | flex | `row` (por defecto), `column`, `row-reverse`, `column-reverse` |
+| `flex-wrap` | flex, Column, Row | `nowrap`, `wrap` (salto de línea: rejillas) |
 | `font-size` | Window y controles con texto | en Window se hereda en toda la ventana |
 | `font-weight` | ídem | `100`–`1000`, `normal`, `bold`, `lighter`, `bolder` |
 | `font-family` | ídem | `"Inter"` o un token |
@@ -40,20 +45,24 @@ Sin descendientes, pseudo-clases ni combinadores. Los estilos son **locales al c
 | `text-transform` | controles con texto | `uppercase`, `lowercase`, `capitalize`, `none` |
 | `text-align` | Text, TextField, TextArea | `left`, `center`, `right`, `justify` |
 | `line-height` | Text | factor sin unidades (`1.4`) |
-| `align-items` | Column, Row, Scroll | `start`, `center`, `end`, `stretch` |
-| `justify-content` | Column, Row, Scroll | `start`, `center`, `end` |
-| `flex`, `flex-grow` | todos salvo Window | entero: crecer en el eje del contenedor |
+| `align-items` | flex, Column, Row, Scroll | `start`, `center`, `end`, `stretch`; `baseline` en flex, Column y Row |
+| `justify-content` | flex, Column, Row, Scroll | `start`, `center`, `end`, `space-between`, `space-around`, `space-evenly` |
+| `align-content` | flex, Column, Row | como `justify-content` y `stretch`: reparto entre líneas con `flex-wrap` |
+| `flex` | todos salvo Window | `1` (= `1 1 0`), `1 0 200px` (crecer, encoger, base), `auto`, `none` |
+| `flex-grow`, `flex-shrink`, `flex-basis` | todos salvo Window | como en CSS; `flex-grow` solo deja la base en `auto` |
+| `order` | todos salvo Window | entero: orden dentro del contenedor |
+| `margin`, `margin-top`, `-right`, `-bottom`, `-left` | todos salvo Window | px o `auto` (empuja: `margin-left: auto`). Sin colapso de márgenes |
 | `align-self` | todos salvo Window | `start`, `center`, `end`, `stretch` |
-| `width`, `height` | todos | px, o `100%` (ocupar el espacio disponible) |
+| `width`, `height` | todos | px, `%` del contenedor, `auto`; `100%` ocupa el espacio disponible |
 | `min-width`, `max-width`, `min-height`, `max-height` | todos | px |
 | `opacity` | todos | `0`–`1` |
 | `transition` | todos salvo Window | `background 200ms, opacity .3s` o `all 150ms`: anima los cambios de `color`, `background`, `border-color`, `opacity`, `width`, `height` y `border-radius` (también los que provoca una clase condicional o dinámica). |
 
-No soportado (advertencia): márgenes, sombras, posiciones absolutas, `space-between`, porcentajes distintos de 100%, selectores complejos, animaciones.
+No soportado todavía (advertencia): sombras, posiciones absolutas, pseudo-clases (`:hover`…), selectores de descendientes, variables propias, `em`/`rem`, `display: grid`, animaciones. Ver las fases de [flex.md](flex.md).
 
 ## Disposición
 
-`Column` y `Row` se comportan como un contenedor flex de CSS en una dirección:
+Toda la disposición la hace el motor de [`<flex>`](flex.md), un subconjunto del flexbox de CSS. `<flex>` sigue los valores por defecto de la web (fila, `align-items: stretch`, los hijos encogen si no caben). `Column` y `Row` son atajos de `<flex>` con los valores por defecto de siempre:
 
 - Los hijos se colocan en orden, separados por `gap`. El espacio sobrante **no** se reparte entre ellos: queda al final, salvo que `justify-content` diga otra cosa.
 - `flex: 1` (o el atributo `flex={1}`) hace que un hijo ocupe el espacio libre del eje principal (alto en una `Column`, ancho en una `Row`). Si varios tienen `flex`, se lo reparten **en proporción**, sin importar su contenido (como `flex: N 1 0` en CSS): `flex: 2` y `flex: 1` reciben dos tercios y un tercio del espacio que dejan los demás.
@@ -61,8 +70,21 @@ No soportado (advertencia): márgenes, sombras, posiciones absolutas, `space-bet
 - En la etiqueta de un componente (`<Panel flex={2} />`), `flex` se aplica a una caja exterior y la raíz del componente la ocupa entera.
 - En una `Column`, `Text`, `TextField`, `TextArea`, `Column`, `Row` y `Scroll` ocupan todo el ancho por defecto (como bloques); botones y casillas conservan su tamaño. `align-items` en el contenedor (o `align-self` en el hijo) cambia ese comportamiento.
 - En una `Row`, los hijos se centran verticalmente por defecto.
-- `width`/`height` en px fijan el tamaño preferido; `100%` ocupa el espacio disponible en ese eje.
+- `width`/`height` en px fijan el tamaño preferido; `100%` ocupa el espacio disponible en ese eje; otro porcentaje es del contenedor.
+- En `Column` y `Row` solo encoge lo que tiene `flex` (en `<flex>`, todo, como en CSS, sin bajar del contenido mínimo: un texto que se corta puede estrecharse; un botón, no).
 - La raíz de la ventana ocupa la ventana entera.
+
+**Rejilla con `flex-wrap`** (se recoloca al cambiar el ancho, sin Python):
+
+```html
+<flex class="rejilla">{#each fichas as f}<Ficha class="celda" … />{/each}</flex>
+<style>
+.rejilla { flex-wrap: wrap; gap: 12px; align-items: start; }
+.celda { flex: 1 1 200px; }   /* parte de 200 px, crece; las que no caben saltan de línea */
+</style>
+```
+
+Un bloque `{#if}` o `{#each}` con varios elementos se agrupa en una caja que copia la dirección, la separación y la alineación de su contenedor; con `flex-wrap`, sus elementos saltan de línea dentro de esa caja, no junto con los hermanos de fuera.
 
 ```html
 <Row class="app">

@@ -1,0 +1,366 @@
+# Diseño de `<flex>`: el elemento base para construir componentes visuales
+
+> **Estado: fase 1 de 6 hecha** (caja y disposición; ver [Fases](#fases-de-implementación)). Lo demás es diseño aprobado, sin implementar. Este documento fija qué es `<flex>`, qué hace y qué no, cómo se escribe y cómo se comprobará que cumple. Las decisiones tomadas están al final.
+
+## Por qué
+
+Hoy, en FluxUI, se puede **componer** (componentes `.flux` con props, eventos y slots), pero no se puede **construir un control desde cero**. Un `Button` propio en `.flux` no puede:
+
+- cambiar de aspecto al pasar el ratón, al pulsarlo o con el foco (no hay `:hover`, `:pressed`, `:focus`);
+- reaccionar al puntero o al teclado más allá de `on:click`;
+- dar color y tipo de letra a su texto desde el contenedor (no hay herencia ni selectores de descendientes);
+- tener sombra, márgenes, posición absoluta o una rejilla que salte de línea.
+
+Por eso los controles integrados están escritos en QML y quedan cerrados: solo se personalizan con tokens del tema y con una lista corta de propiedades.
+
+En el frontend web, todo eso se hace con una caja (`<div>`), CSS y eventos. **`<flex>` es esa caja para FluxUI**: un elemento con el que cualquier persona pueda escribir en `.flux` un botón, una tarjeta, un chip, un elemento de menú o una barra de herramientas, con el aspecto y el comportamiento que espera de la web, **sin escribir JavaScript ni QML**. La lógica va en el `<script>` de Python; el aspecto, en `<style>`.
+
+**`<flex>` no cubre todos los casos, y no lo pretende.** Es una **base**: el punto de partida para crear elementos nuevos a partir de él. Quien no es experto puede hacerse su propio botón, menú o diálogo con lo que ya sabe de la web, sin toparse con la barrera de aprender QML. El QML propio sigue disponible como vía de escape para lo que `<flex>` no alcanza (dibujo libre, gráficas).
+
+> **Sin `.js` para el usuario.** Quien escribe la aplicación nunca escribe JavaScript: ni en la plantilla, ni en los estilos, ni en manejadores. Por dentro, FluxUI implementa `<flex>` en su módulo QML interno, como hace hoy con el resto de elementos; eso es un detalle interno y no forma parte de la API.
+
+## Elementos base en minúscula
+
+Regla del lenguaje: **los elementos base se escriben en minúscula** (`<flex>`, y el futuro elemento base de entrada); **los componentes, en mayúscula** (`<Boton>`, `<Tarjeta>`). Es la misma convención de la web con React o Svelte: `<div>` es primitivo, `<Boton>` es algo construido.
+
+- De un vistazo se distingue en una plantilla qué es primitivo y qué está construido encima.
+- Un componente nunca choca con un elemento base: `Flex.flux` sería un componente válido, distinto de `<flex>`.
+- Las etiquetas en minúscula quedan reservadas para FluxUI. Una desconocida da error con la lista de elementos base, nunca la pista de importar un componente.
+- Los controles integrados que existen hoy (`Column`, `Row`, `Text`, `Button`, `List`…) mantienen su nombre: no son elementos base, sino controles ya hechos o atajos (ver [`Column` y `Row`](#column-y-row)).
+
+## Qué es y qué no es
+
+`<flex>` es el **padre de los elementos visuales y de interacción**: cajas que se dibujan, se disponen, cambian de estado y responden al puntero y al teclado. No es el padre de todo:
+
+| Familia | Elemento base | Para qué | Estado |
+|---|---|---|---|
+| **Cajas e interacción** | `<flex>` | Contenedores, tarjetas, botones, chips, menús, barras, rejillas, superposiciones | Este documento |
+| **Entrada de datos** | Otro elemento base en minúscula (nombre por decidir: `<field>`, `<input>`) | Edición de texto, cursor y selección, método de entrada (IME), valor con `bind:value`, validación, autocompletado. Sobre él se escribirían campos, selectores, deslizadores… | Diseño aparte, después de `<flex>` |
+| **Texto** | `<Text>` | Hoja: muestra texto (plano, Markdown, HTML). Hereda estilo de su `<flex>` contenedor | Existe |
+| **Colecciones grandes** | `<List>` | Virtualización de miles de filas. Cada fila puede ser un `<flex>` | Existe |
+| **Dibujo libre y gráficas** | Vía de escape QML / `fluxui-kit` | Gráficas, lienzos | Fuera del núcleo ([alcance.md](alcance.md)) |
+
+Regla para decidir: si el comportamiento esencial es **editar un valor** (texto, número, fecha, selección de opciones con teclado de edición), pertenece a la familia de entrada, no a `<flex>`. Un interruptor o una casilla, que solo alternan, sí se pueden construir con `<flex>`; un campo de texto, no.
+
+## Vistazo
+
+```html
+<!-- components/Boton.flux: un botón escrito entero en .flux -->
+<script lang="python">
+from fluxui import prop, event
+
+variant = prop("default")   # "default" | "primary" | "danger"
+disabled = prop(False)
+press = event()
+</script>
+
+<flex as="button" class={["boton", variant]} disabled={disabled}
+      on:click={press.emit()}>
+  <Slot />
+</flex>
+
+<style>
+.boton {
+  direction: row; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); font-weight: 500; cursor: pointer;
+  transition: background 120ms, box-shadow 120ms, transform 80ms;
+}
+.boton:hover   { background: var(--surface-alt); }
+.boton:pressed { transform: scale(0.97); }
+.boton:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.boton:disabled { opacity: 0.5; cursor: default; }
+
+.primary { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+.primary:hover { background: var(--primary-hover); }
+.danger  { background: var(--danger);  color: var(--on-danger);  border-color: transparent; }
+</style>
+```
+
+```html
+<!-- Uso: como cualquier elemento, con clases, eventos y contenido -->
+<Boton variant="primary" class="ancho" on:press={guardar}>Guardar</Boton>
+```
+
+- El texto del slot es un `<Text>` que **hereda** `color` y `font-weight` del `<flex>`: no hace falta estilarlo aparte.
+- `:hover`, `:pressed`, `:focus-visible` y `:disabled` los resuelve FluxUI **sin pasar por Python**: no cuestan nada aunque haya cientos de botones.
+- `as="button"` le da el papel de botón para la accesibilidad, el foco con Tab y la activación con Espacio/Intro.
+
+## La plantilla
+
+### Atributos
+
+| Atributo | Valores | Qué hace |
+|---|---|---|
+| `class`, `class:x`, `class={expr}` | como hoy | Clases para `<style>`. |
+| `style` | `style={{"background": color, "width": f"{pct}%"}}` o `style="gap: 4px"` | Estilos en línea, también calculados en Python. Ganan a las clases (como en la web). Acepta las mismas propiedades que `<style>`, no pseudo-clases. |
+| `as` | `"box"` (por defecto), `"button"`, `"link"`, `"checkbox"`, `"switch"`, `"tab"`, `"menuitem"`, `"dialog"`, `"listitem"`, `"heading"`… | Papel para la accesibilidad y comportamiento de teclado asociado (ver [Accesibilidad](#accesibilidad)). No cambia el aspecto. |
+| `disabled` | bool | Activa `:disabled`, deja de recibir eventos de puntero y teclado y sale del orden de Tab. |
+| `checked`, `selected`, `expanded` | bool | Estados que exponen `:checked`, `:selected`, `:expanded` a los estilos y a la accesibilidad. |
+| `tabindex` | `0` (entra en el orden de Tab), `-1` (enfocable solo por código) | Como en HTML. Por defecto, solo los papeles interactivos (`as="button"`…) son enfocables. |
+| `label` | texto | Nombre accesible (como hoy). |
+| `title` | texto | Descripción emergente al dejar el ratón encima (tooltip del sistema). |
+| `id`, `ref` | como hoy | `ref` da `.focus()`, `.blur()`, `.scroll_to(...)` si desborda, `.rect` (posición y tamaño). |
+| `on:...` | ver [Eventos](#eventos) | |
+| Disposición abreviada | `direction`, `gap`, `padding`, `wrap`, `align`, `justify`, `flex`, `width`, `height` | Atajos de las propiedades CSS equivalentes, para casos rápidos (`<flex direction="column" gap={8}>`). |
+
+Contenido: cualquier elemento, `{#if}`, `{#each}`, slots y texto suelto (que se convierte en `<Text>`, como hoy).
+
+### `Column` y `Row`
+
+Pasan a ser **atajos** de `<flex direction="column">` y `<flex direction="row">`, con sus valores por defecto actuales (en una columna, los bloques ocupan el ancho; en una fila, los hijos se centran en vertical). El código existente no cambia de significado.
+
+## Los estilos
+
+`<flex>` amplía el subconjunto de CSS de [estilos.md](estilos.md). Lo que no aparece aquí sigue sin estar soportado (advertencia del compilador).
+
+### Disposición: flexbox
+
+| Propiedad | Valores |
+|---|---|
+| `direction` (alias `flex-direction`) | `row` (por defecto, como en CSS), `column`, `row-reverse`, `column-reverse` |
+| `flex-wrap` (alias `wrap`) | `nowrap` (por defecto), `wrap` |
+| `gap`, `row-gap`, `column-gap` | px |
+| `justify-content` | `start`, `center`, `end`, `space-between`, `space-around`, `space-evenly` |
+| `align-items` | `start`, `center`, `end`, `stretch` (por defecto, como en CSS), `baseline` |
+| `align-content` | igual que `justify-content` y `stretch` (filas de un contenedor con `wrap`) |
+| En los hijos: `flex`, `flex-grow`, `flex-shrink`, `flex-basis`, `align-self`, `order` | como en CSS (`flex: 1` = `1 1 0`) |
+| `width`, `height`, `min-*`, `max-*` | px, `%` (del contenedor), `auto`, `fit-content` |
+| `aspect-ratio` | `16 / 9`, `1` |
+
+Diferencias deliberadas con CSS, documentadas:
+
+- `direction` en `<flex>` vale `row` por defecto, como en la web; `Column` sigue existiendo para la columna.
+- No hay `display`: todo `<flex>` es un contenedor flex. Para ocultar, `visible={False}` o `{#if}`.
+- No hay flujo de texto en línea (`inline`): el texto vive en `<Text>`, que es un bloque.
+
+**Rejilla**: con `flex-wrap: wrap` y `flex-basis` (o `min-width`) se hacen rejillas que se recolocan al cambiar el ancho (la carencia 13 del [reto del panel](../examples/challenges/panel/HALLAZGOS.md)). Un `display: grid` completo queda fuera de esta versión.
+
+### Caja
+
+| Propiedad | Valores |
+|---|---|
+| `padding`, `padding-*` | como hoy |
+| `margin`, `margin-*` | px, `auto` (empuja, como en flexbox: `margin-left: auto`). Sin colapso de márgenes |
+| `background`, `background-color` | color, token; `linear-gradient(<ángulo>, <color>, <color>…)` |
+| `border`, `border-color`, `border-width`, `border-style` | como hoy; `border-style`: `solid`, `none` (`dashed` quizá más adelante) |
+| `border-top`, `-right`, `-bottom`, `-left` | bordes por lado (separadores, pestañas) |
+| `border-radius` | 1 a 4 valores (radio por esquina) |
+| `box-shadow` | `0 2px 8px rgba(0,0,0,.15)`; varias sombras separadas por comas; `inset` no |
+| `outline`, `outline-offset` | anillo de foco que no ocupa espacio |
+| `opacity`, `visibility` | `visibility: hidden` ocupa sitio sin verse |
+| `overflow` | `visible` (por defecto), `hidden` (recorta), `auto`/`scroll` (desplazamiento: el `<flex>` se convierte en zona de scroll) |
+| `cursor` | `default`, `pointer`, `text`, `move`, `grab`, `grabbing`, `not-allowed`, `ew-resize`, `ns-resize`… |
+| `transform` | `scale()`, `rotate()`, `translate()`; no afecta a la disposición, como en CSS |
+| `pointer-events` | `none` (deja pasar el ratón a lo de debajo), `auto` |
+
+### Posición
+
+| Propiedad | Valores |
+|---|---|
+| `position` | `static` (por defecto), `relative`, `absolute` |
+| `top`, `right`, `bottom`, `left`, `inset` | px, `%` |
+| `z-index` | entero |
+
+Un hijo con `position: absolute` sale del flujo y se coloca respecto al `<flex>` antecesor más cercano con `position: relative` o `absolute` (como en la web). Sirve para insignias sobre un icono, botones de cerrar en una esquina, superposiciones y menús emergentes. `position: fixed` (respecto a la ventana) se valora con los menús.
+
+### Texto heredado
+
+Igual que en CSS, estas propiedades puestas en un `<flex>` las **heredan** los `<Text>` (y el texto de los controles) que contiene, a cualquier profundidad, hasta que alguien las cambie:
+
+`color`, `font-family`, `font-size`, `font-weight`, `font-style`, `line-height`, `letter-spacing`, `text-align`, `text-transform`, `white-space` (`normal`, `nowrap`), `text-overflow` (`ellipsis`).
+
+La herencia **atraviesa los componentes y los slots**: el texto que el padre pasa a `<Boton>` toma el color del botón. Resuelve la carencia 16 del reto del panel (la fila seleccionada no podía cambiar el color de su texto).
+
+### Estados (pseudo-clases)
+
+| Pseudo-clase | Cuándo |
+|---|---|
+| `:hover` | el puntero está encima (también si está encima de un hijo) |
+| `:pressed` (alias `:active`) | se está pulsando con el ratón, el dedo o Espacio/Intro |
+| `:focus` | tiene el foco del teclado |
+| `:focus-visible` | tiene el foco y llegó con el teclado (para el anillo de foco, sin mostrarlo al hacer clic) |
+| `:focus-within` | él o un descendiente tiene el foco |
+| `:disabled` | `disabled={True}` |
+| `:checked`, `:selected`, `:expanded` | el atributo correspondiente es verdadero |
+| `:first-child`, `:last-child` | primero o último entre sus hermanos (también dentro de `{#each}`) |
+
+- Se combinan con clases: `.boton.primary:hover`.
+- Las cambia FluxUI directamente en la vista: pasar el ratón por encima **no llama a Python**.
+- `transition` anima los cambios (incluidos `transform` y `box-shadow`, además de lo que ya anima hoy).
+
+### Selectores
+
+| Selector | Ejemplo | Notas |
+|---|---|---|
+| Clase, elemento, varios | `.a`, `flex`, `.a, .b` | como hoy |
+| Compuesto | `.boton.primary`, `flex.tarjeta` | |
+| Pseudo-clase | `.fila:hover` | |
+| Descendiente | `.tarjeta .titulo`, `.tarjeta:hover .acciones` | **Nuevo.** Dentro del mismo componente |
+| Hijo directo | `.menu > .item` | **Nuevo.** |
+
+**Alcance (como el CSS con ámbito de Vue o Svelte):** los estilos de un componente solo afectan a los elementos escritos en **su** plantilla, incluido el contenido que él pasa a los slots de sus hijos; nunca al interior de otro componente. Para personalizar el interior de un componente se usan sus props, sus clases en la etiqueta (`class` en la etiqueta va a su raíz) o sus variables (siguiente apartado). Así un componente de una biblioteca no se rompe por una regla de quien lo usa.
+
+Sin especificidad compleja: entre reglas que fijan lo mismo, gana la que aparece **después** en `<style>`; los estilos en línea (`style=`) ganan a todas; las clases condicionales siguen ganando a las reglas, como hoy.
+
+### Variables propias
+
+```css
+.tarjeta { --acento: var(--primary); border-left: 3px solid var(--acento); }
+.tarjeta.alerta { --acento: var(--danger); }
+.titulo { color: var(--acento); }
+```
+
+- Una propiedad que empieza por `--` define una variable **en ese elemento y sus descendientes**, también dentro de componentes hijos. `var(--x)` toma la del antecesor más cercano y, si no hay, el token del tema; `var(--x, valor)` admite un valor por defecto.
+- Es la forma de que un componente ofrezca puntos de personalización sin exponer su interior: `Boton.flux` usa `var(--boton-fondo, var(--surface))` y quien lo usa escribe `<Boton style="--boton-fondo: #222">`.
+- Se pueden cambiar en estados (`.tarjeta:hover { --acento: … }`) y con `style={...}` desde Python.
+
+### Unidades
+
+`px` (o números sin unidad), `%`, `ms`/`s` en transiciones y `deg` en rotaciones. Sin `em`/`rem` en esta versión.
+
+## Eventos
+
+Todos se escuchan con `on:` y el manejador está en Python (función o en línea, como hoy). Solo se envían a Python los eventos que tienen manejador.
+
+| Evento | Cuándo | `event` |
+|---|---|---|
+| `on:click` | clic principal, o Espacio/Intro en un `<flex>` con papel interactivo | `PointerEvent` |
+| `on:dblclick` | doble clic | `PointerEvent` |
+| `on:contextmenu` | clic derecho, tecla de menú o pulsación larga | `PointerEvent` |
+| `on:pointerdown`, `on:pointerup` | se pulsa o se suelta cualquier botón | `PointerEvent` |
+| `on:pointerenter`, `on:pointerleave` | el puntero entra o sale (sin propagación, como en la web) | `PointerEvent` |
+| `on:pointermove` | el puntero se mueve encima (solo con manejador: es frecuente) | `PointerEvent` |
+| `on:wheel` | rueda o gesto de desplazamiento | `WheelEvent` |
+| `on:keydown`, `on:keyup` | tecla, con el foco en el `<flex>` o en un descendiente | `KeyEvent` |
+| `on:focus`, `on:blur` | gana o pierde el foco (`focusin`/`focusout` para descendientes) | `FocusEvent` |
+| `on:resize` | cambia su tamaño | `{"width", "height"}` |
+
+```python
+from fluxui import KeyEvent, PointerEvent   # tipos públicos, para anotar
+
+def al_pulsar_tecla(event: KeyEvent):
+    if event.key == "Delete" and not event.repeat:
+        borrar(seleccion.value)
+        event.prevent()          # nadie más la procesa (p. ej. la ventana)
+
+def menu(event: PointerEvent):
+    abrir_menu(en=(event.window_x, event.window_y))
+```
+
+| Tipo | Atributos |
+|---|---|
+| `PointerEvent` | `x`, `y` (respecto al elemento), `window_x`, `window_y`, `button` (`"left"`, `"right"`, `"middle"`), `buttons`, `ctrl`, `shift`, `alt`, `meta`, `pointer` (`"mouse"`, `"touch"`, `"pen"`), `clicks` |
+| `KeyEvent` | `key` (nombres como en la web: `"a"`, `"Enter"`, `"Escape"`, `"ArrowUp"`, `"Delete"`…), `code` (tecla física), `text`, `repeat`, `ctrl`, `shift`, `alt`, `meta` |
+| `WheelEvent` | `dx`, `dy` (píxeles), y los modificadores |
+| `FocusEvent` | `reason` (`"tab"`, `"click"`, `"code"`) |
+
+Todos tienen:
+
+- **`event.prevent()`**: cancela el comportamiento por defecto. Por ejemplo, que Espacio active un botón, que la rueda desplace una zona con `overflow: auto` o que una tecla llegue a un `<Shortcut>`.
+- **`event.stop()`**: el evento no sigue hacia los `<flex>` antecesores.
+
+**Propagación** como en la web: el evento empieza en el `<flex>` más profundo que está bajo el puntero o que tiene el foco y sube por sus antecesores. Esto es posible sin JavaScript porque los manejadores de Python se ejecutan en el momento, en el mismo hilo que la interfaz, y FluxUI lee `prevent()`/`stop()` al volver.
+
+Un manejador `async def` también se puede usar, pero `prevent()` y `stop()` solo tienen efecto antes de su primer `await`.
+
+**Arrastrar y soltar** (`draggable`, `on:dragstart`, `on:dragover`, `on:drop`) y la captura del puntero no entran en esta versión. Se diseñarán con el reto Kanban, sobre estos mismos eventos.
+
+## Accesibilidad
+
+`as` da el papel accesible y el teclado que la gente espera, sin código:
+
+| `as` | Enfocable con Tab | Teclado incluido | Estados que expone |
+|---|---|---|---|
+| `box` (por defecto) | no | — | — |
+| `button` | sí | Espacio/Intro → `on:click` | `:pressed`, `:disabled` |
+| `link` | sí | Intro → `on:click` | — |
+| `checkbox`, `switch` | sí | Espacio → `on:click` | `checked` |
+| `tab`, `menuitem`, `option`, `listitem` | según el contenedor | las flechas no se gestionan solas en esta versión: el componente las programa con `on:keydown` | `selected` |
+| `dialog`, `heading`, `region` | no | — | — |
+
+- El anillo de foco no es automático: se dibuja con `:focus-visible` (en los ejemplos, con `outline`). El tema base ofrece una clase y un token (`--focus-ring`) para no repetirlo.
+- `label` y `title` como se describió. Un `<flex as="button">` sin texto ni `label` produce una **advertencia del compilador**, porque el lector de pantalla no tendría qué leer.
+
+## Componentes construidos sobre `<flex>`
+
+Para que un componente se use **como un elemento más**, se añade lo siguiente a los componentes `.flux`:
+
+1. **Atributos que pasan a la raíz.** En un componente cuya raíz es un `<flex>`, lo que la etiqueta lleva y el componente no declara como prop pasa a esa raíz: `class` (se suma a la suya), `style` (se mezcla), `id`, `label`, `title`, `tabindex`, `disabled`, y los eventos nativos (`on:click`, `on:keydown`…). Así funciona `<Boton on:click={...}>` sin que `Boton` declare `click = event()`. Si el componente declara una prop o un evento con ese nombre, gana lo declarado. Se desactiva por componente con `inherit_attrs = False` en el script (como `inheritAttrs` de Vue); entonces el componente recibe esos atributos en `attrs` y decide dónde ponerlos.
+2. **`class` en la etiqueta va a la raíz.** Hoy envuelve al componente en una caja exterior; con `<flex>` como raíz, se aplica a la raíz directamente, y la caja exterior desaparece.
+3. **`ref` en la etiqueta** apunta a la raíz (`.focus()` en un `<Boton>` enfoca su `<flex>`).
+4. Los **estilos de la raíz** pueden depender de los atributos recibidos: `disabled` en la etiqueta activa `:disabled` en la raíz.
+
+Con esto, una biblioteca de componentes (la futura `fluxui-kit`) puede escribirse en `.flux` puro, como se haría en Vue o Svelte.
+
+## Cómo se comporta por dentro
+
+Esto no es API, pero condiciona el diseño:
+
+- **Motor de disposición propio** (hecho en la fase 1). Los `Layout` de Qt Quick no tienen salto de línea, márgenes, `space-between`, `order` ni posición absoluta dentro del flujo. `<flex>` usa un motor flexbox propio (un subconjunto del algoritmo de CSS, `Flux/flex.js`):
+  - Cada elemento avisa a su contenedor con un binding que depende de lo que afecta a su sitio (`Layout.*`, `flex`, márgenes…). El contenedor pasa a una cola.
+  - La cola se vacía en la fase de *polish* de Qt Quick, justo antes de sincronizar el fotograma (`FxPolisher`, un `QQuickItem` de Python por ventana). Nunca se dibuja un fotograma a medio colocar, y muchos cambios seguidos cuestan una sola pasada.
+  - Se coloca de fuera adentro: un contenedor coloca en la misma pasada los contenedores de dentro a los que cambia el tamaño. Lo leído de cada hijo se guarda hasta que el hijo avisa.
+  - Un contenedor recién creado se coloca enseguida si lo crea algo que lee su tamaño al momento (una `<List>`, un layout de Qt).
+  - Lecciones de rendimiento del motor JS de Qt: `Set`/`Map` buscan de forma lineal, `for…of` es varias veces más lento que un bucle con índice, y un binding que recorre todos los hijos se vuelve cuadrático al añadirlos uno a uno.
+- **Estados sin Python.** `:hover`, `:pressed`, `:focus…` y `:disabled` se compilan a estados de la vista. Python solo interviene si hay un manejador `on:`.
+- **Herencia y variables.** Se resuelven en el compilador cuando el antecesor está en la misma plantilla, y en la vista cuando cruzan un componente o un slot.
+- **Selectores de descendientes.** Se resuelven en el compilador, porque los estilos tienen ámbito y la plantilla se conoce entera.
+- **Sombras.** Se dibujan con el efecto de sombra de Qt Quick (disponible desde Qt 6.5; FluxUI exige 6.8).
+- **Rendimiento.** Un `<flex>` sin estados, sombra ni eventos no debe costar más que el `Column` de hoy.
+
+## Compatibilidad y versiones
+
+- Todo es **sintaxis nueva**: los archivos actuales compilan igual y significan lo mismo. `FORMAT_VERSION` no cambia.
+- `Column` y `Row` se reimplementan sobre `<flex>` conservando sus valores por defecto (hecho). Las pruebas de comportamiento pasaron sin cambios; tres que comprobaban nombres internos del QML generado (`align`, `justify`) se actualizaron. Diferencia visible: los bordes ocupan sitio, como en CSS.
+- Los controles integrados (`Button`, `Checkbox`…) siguen existiendo. Los que no son de entrada (botón, casilla, interruptor) se reescribirán sobre `<flex>` cuando la paridad esté probada, sin cambiar su API.
+
+## Cómo se comprobará: construir otros elementos con `<flex>`
+
+La prueba de que `<flex>` cumple es poder escribir, **solo con `.flux`** (sin QML ni JavaScript), los elementos que una aplicación de escritorio necesita, con la calidad de la web. Vivirán en `examples/flex/` con pruebas de `fluxui.inspect` y capturas en tema claro y oscuro.
+
+| Elemento | Qué demuestra | Criterio de aceptación |
+|---|---|---|
+| **Botón** (normal, primario, peligro, fantasma, solo icono, cargando) | estados, foco, papel, atributos que pasan a la raíz | Se usa como `<Boton on:click>`. Hover, pulsado, foco con teclado y deshabilitado se ven como en `Button`. Espacio/Intro lo activan. Al lector de pantalla llega como botón |
+| **Tarjeta** con cabecera, cuerpo y acciones que aparecen al pasar el ratón | descendientes con estado (`.tarjeta:hover .acciones`), sombra, `overflow: hidden` | Las acciones aparecen con transición. La imagen se recorta al radio |
+| **Chip / etiqueta** con botón de quitar | `margin-left: auto`, eventos anidados con `stop()` | Pulsar la ✕ no activa el chip |
+| **Insignia sobre un icono** | `position: absolute` | El contador queda en la esquina sin mover el icono |
+| **Interruptor** (como `Switch`) | `as="switch"`, `checked`, `transform`, transición | Se alterna con clic y Espacio; mismo aspecto que el integrado |
+| **Elemento de menú y menú contextual** | `on:contextmenu`, posición absoluta, `z-index`, flechas | Abre en la posición del clic, se cierra con Escape y se navega con flechas (programadas en el componente con `on:keydown` y `ref.focus()`) |
+| **Rejilla de tarjetas** | `flex-wrap`, `flex-basis`, `gap` | Pasa de 4 a 2 y a 1 columna al estrechar la ventana, sin código Python |
+| **Barra de herramientas** con separadores | `border-left` por lado, `:first-child`, `justify-content: space-between` | |
+| **Pestañas segmentadas** | `:selected`, variables propias (`--acento`) | El color de acento se cambia desde fuera con `style="--acento: …"` |
+| **Diálogo superpuesto** | superposición absoluta, `as="dialog"`, `on:keydown`, `prevent()`, `ref.focus()` | Un componente `Dialogo.flux` sobre `<flex>`, no una función de `<flex>`: retiene el foco (Tab y Mayús+Tab con `prevent()`), se cierra con Escape y devuelve el foco al elemento que lo abrió |
+| **Fila de tabla** con selección | herencia de `color` a los textos de la fila | El texto de la fila seleccionada cambia de color sin estilar cada `<Text>` |
+
+Además:
+
+- **Paridad:** el `Boton.flux` del ejemplo y el `Button` integrado se comparan en capturas y en el árbol de accesibilidad.
+- **Rendimiento:** con 1 000 `<flex>` en pantalla, crearlos no puede tardar más que con `Column` + 10 %. Pasar el ratón no llama a Python. Una rejilla de 200 tarjetas con `wrap` se recoloca al redimensionar en menos de 4 ms por fotograma (instrumentación de Qt, como en `examples/challenges/panel/bench.py`).
+- **Retos:** el Kanban (reto 3) se construirá sobre `<flex>`. Ahí aparecerá lo que le falte (arrastrar y soltar).
+
+## Fases de implementación
+
+1. **Caja y disposición:** `<flex>`, el motor flexbox (wrap, márgenes, `space-*`, `order`, `align-self`, `%`, mín./máx.), bordes por lado, radios por esquina, `overflow`. `Column`/`Row` pasan a ser atajos. Validación: rejilla y barra de herramientas. **Hecha** (`examples/flex`). Pendiente de esta fase: `aspect-ratio` y `min-width: 0` explícito, y el objetivo de rendimiento de la rejilla de 200 tarjetas, que hoy cuesta 14 ms por fotograma frente a 4 ms; con la fase 5 desaparece un tercio de las cajas. `style={...}` en línea llega en la fase 4.
+2. **Estados y selectores:** pseudo-clases, selectores compuestos, de descendientes y de hijo, `transition` ampliada, `cursor`, `transform`, `box-shadow`, `outline`. Validación: tarjeta y botón (solo aspecto).
+3. **Eventos y accesibilidad:** eventos de puntero, teclado, rueda y foco con propagación, `prevent()`/`stop()`, `as`, `tabindex`, `title`. Validación: botón completo, chip, interruptor, menú.
+4. **Herencia y variables:** texto heredado y variables propias que atraviesan componentes, más `style={...}`. Validación: fila de tabla y pestañas segmentadas.
+5. **Componentes como elementos:** atributos que pasan a la raíz (`inherit_attrs = False` para desactivarlo), `class` y `ref` en la raíz. Validación: todos los ejemplos usados como elementos.
+6. **Posición:** `position`, `inset`, `z-index`. Validación: insignia y diálogo superpuesto.
+
+Cada fase termina con sus pruebas, la documentación en [lenguaje.md](lenguaje.md) y [estilos.md](estilos.md), y una entrada en [cambios.md](cambios.md).
+
+## Decisiones tomadas
+
+| # | Pregunta | Decisión |
+|---|---|---|
+| 1 | ¿`direction` por defecto `row` o `column`? | `row`, como en la web. `Column` queda como atajo |
+| 2 | Nombre y alcance del elemento base de entrada | Documento aparte tras la fase 3. Será un elemento base, en minúscula; candidatos: `<field>`, `<input>` |
+| 3 | Sintaxis para desactivar el paso de atributos a la raíz | `inherit_attrs = False` en el script, como `inheritAttrs` de Vue |
+| 4 | ¿`em`/`rem`? | No en esta versión |
+| 5 | Navegación con flechas en grupos (`tab`, `menuitem`) | No en esta versión. El componente la programa con `on:keydown` y `ref.focus()` |
+| 6 | Foco atrapado en diálogos | No es parte de `<flex>`: es un componente (`Dialogo.flux`) construido sobre él con eventos de teclado, `prevent()` y `ref.focus()`. Sirve además de prueba de que `<flex>` basta para construirlo |
+| 7 | ¿`display: grid`? | No en esta versión; revisar tras la hoja de cálculo (reto 2) |
+| 8 | ¿Reescribir los controles integrados sobre `<flex>`? | Sí, los que no son de entrada (botón, casilla, interruptor), cuando la paridad esté probada y sin cambiar su API |
+| — | Mayúsculas y minúsculas | Los elementos base van en minúscula (`<flex>`); los componentes y controles, en mayúscula (ver [Elementos base en minúscula](#elementos-base-en-minúscula)) |

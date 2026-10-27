@@ -2,6 +2,7 @@
 // `p` es el layout padre: FxColumn/FxRow/FxScroll exponen fxHorizontal,
 // fxAlign (align-items) y fxStretch (align-items: stretch).
 .pragma library
+.import "flex.js" as Flex
 
 const ALIGN_LEFT = 0x1, ALIGN_RIGHT = 0x2, ALIGN_HCENTER = 0x4
 const ALIGN_TOP = 0x20, ALIGN_BOTTOM = 0x40, ALIGN_VCENTER = 0x80
@@ -91,4 +92,52 @@ function flexUnit(lay, horizontal, available) {
     }
     if (total === 0) return 0
     return Math.max(0, available - fixed - lay.spacing * Math.max(0, n - 1)) / total
+}
+
+// -- <flex> (motor en flex.js) ------------------------------------------------
+
+// Binding de cada elemento: depende de todo lo que afecta a su sitio en el
+// contenedor (salvo el tamaño natural, ver resized) y, al cambiar, lo pone en la
+// cola de disposición. Devuelve true.
+// `item` es el propio elemento: lo que el motor guardó de él deja de valer.
+function touch(p, item) {
+    return Flex.touch(p, item)
+}
+
+// Cambió el tamaño natural (o algo del contenedor): solo hay que volver a colocar.
+function resized(p) {
+    return Flex.resized(p)
+}
+
+// align-items de un contenedor flex como banderas Qt.Align* (las leen los
+// controles en Fx.alignment cuando su contenedor es un layout de Qt).
+function alignFlags(align, horizontal) {
+    if (align === "start") return horizontal ? ALIGN_TOP : ALIGN_LEFT
+    if (align === "center") return horizontal ? ALIGN_VCENTER : ALIGN_HCENTER
+    if (align === "end") return horizontal ? ALIGN_BOTTOM : ALIGN_RIGHT
+    return 0
+}
+
+// Bordes por lado y desplazamiento (overflow: auto) solo se crean si se usan.
+let sidesComponent = null
+let scrollerComponent = null
+
+function component(cached, file) {
+    if (cached) return cached
+    const c = Qt.createComponent(Qt.resolvedUrl(file))
+    if (c.status === 3) console.warn(c.errorString())
+    return c
+}
+
+function flexDecorations(box) {
+    if (box.fxSides && !box.fxSideItem) {
+        sidesComponent = component(sidesComponent, "FxSides.qml")
+        box.fxSideItem = sidesComponent.createObject(box, { box: box })
+    }
+    if (box.fxScrollable && !box.fxScroller) {
+        scrollerComponent = component(scrollerComponent, "FxScroller.qml")
+        const s = scrollerComponent.createObject(box, { box: box })
+        box.fxLay.parent = s.contentItem
+        box.fxScroller = s
+    }
 }

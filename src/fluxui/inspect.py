@@ -34,8 +34,10 @@ _TAGS = {
     "FxText": "Text", "FxButton": "Button", "FxTextField": "TextField", "FxTextArea": "TextArea",
     "FxCheckBox": "Checkbox", "FxSwitch": "Switch", "FxSlider": "Slider", "FxSelect": "Select",
     "FxRadioGroup": "RadioGroup", "FxTabs": "Tabs", "FxImage": "Image", "FxProgressBar": "ProgressBar",
-    "FxShortcut": "Shortcut", "FxSpacer": "Spacer",
+    "FxShortcut": "Shortcut", "FxSpacer": "Spacer", "FxFlex": "flex",
 }  # fmt: skip
+# Piezas internas de FluxUI que no son elementos de la plantilla.
+_INTERNAL = ("FxPolisher", "FxSides", "FxScroller")
 
 
 class InspectError(AssertionError):
@@ -291,7 +293,8 @@ class MountedApp:
         root = self.window.contentItem() if hasattr(self.window, "contentItem") else self.window
         return [
             Element(self, i) for i in self._walk(root)
-            if _tag(i) in _TAGS.values() or not i.metaObject().className().startswith("QQuick")
+            if _tag(i) in _TAGS.values()
+            or not i.metaObject().className().startswith(("QQuick", *_INTERNAL))
         ]  # fmt: skip
 
     def find_all(

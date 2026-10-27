@@ -231,7 +231,7 @@ Vuelve a crear el contenido cuando cambia el valor de la expresión. Útil para 
 
 ### Varios elementos en un bloque
 
-Si una rama o una fila tiene varios elementos, se agrupan en un contenedor implícito con la orientación del contenedor padre (`Column` o `Row`), que hereda su separación y alineación. Normalmente no se nota; si necesitas controlar la disposición, envuélvelos tú en un `<Column>` o `<Row>`.
+Si una rama o una fila tiene varios elementos, se agrupan en un contenedor implícito con la orientación del contenedor padre, que hereda su dirección, separación y alineación. Normalmente no se nota; si necesitas controlar la disposición, envuélvelos tú en un `<Column>` o `<Row>`.
 
 ## Componentes
 
@@ -558,13 +558,21 @@ Ejemplo: `examples/counter` (`src/widgets/Meter.qml`).
 
 ## Elementos disponibles
 
+**Elementos base, en minúscula; componentes y controles, en mayúscula.** Las etiquetas en minúscula están reservadas para los elementos base de FluxUI, a partir de los que se construyen otros elementos sin escribir QML (como `<div>` frente a `<Boton>` en la web). Hoy hay uno, [`<flex>`](flex.md); el de la entrada de datos llegará después. Una etiqueta en minúscula desconocida es un error que lista los elementos base.
+
+| Elemento base | Qt Quick | Propiedades | Eventos |
+|---|---|---|---|
+| `flex` | caja propia con el motor flexbox (`FxFlex`) | `direction` (`row` por defecto, `column`, `row-reverse`, `column-reverse`), `wrap`, `gap`, `padding`, `align` (`align-items`), `justify` (`justify-content`) | `on:click` |
+
+`<flex>` es la caja de la web: fila por defecto, `align-items: stretch` y el resto del flexbox de CSS en `<style>` (`flex-wrap`, márgenes y `margin: auto`, `space-between`, `order`, `%`, bordes por lado, radio por esquina, `overflow`). Ver [estilos.md](estilos.md) y el diseño completo, con lo que llegará en las fases siguientes, en [flex.md](flex.md). Los atributos de texto se comprueban al compilar: `<flex direction="diagonal">` es un error.
+
 Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`, `enabled`, `opacity` y `label` (nombre para lectores de pantalla; ver [Accesibilidad](#accesibilidad)).
 
 | Elemento | Qt Quick | Propiedades | Eventos | `bind:` |
 |---|---|---|---|---|
 | `Window` | `ApplicationWindow` | `title`, `width`, `height`, `minWidth`, `minHeight`, `background` | `on:activate`, `on:deactivate` | — |
-| `Column` | `ColumnLayout` | `gap`, `padding` | `on:click` | — |
-| `Row` | `RowLayout` | `gap`, `padding` | `on:click` | — |
+| `Column` | `<flex direction="column">` | `gap`, `padding` | `on:click` | — |
+| `Row` | `<flex direction="row">` | `gap`, `padding` | `on:click` | — |
 | `Scroll` | `ScrollView` + columna | `gap`, `padding` | — | — |
 | `List` | `ListView` | `gap`, `padding`, `animate`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
 | `Text` | `Label` | `text`, `color`, `format` (`plain`, `markdown`, `html`) | `on:link(url)` | — |
@@ -589,7 +597,8 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 - `Image`: `src` puede ser una ruta relativa a la carpeta del `.flux`, una ruta absoluta o una URL (`https:`, `qrc:`, `data:`). Sin `width`/`height`, toma el tamaño de la imagen.
 - `Shortcut` no ocupa espacio: escucha el teclado de su ventana mientras existe (`<Shortcut keys="Ctrl+S" on:activate={guardar} />`; teclas como en Qt: `Ctrl+Shift+N`, `F5`, `Esc`). Dentro de un `{#if}`, solo está activo con la rama.
 - `TextArea` emite `on:input` solo con los cambios del usuario, no con los que llegan de Python.
-- `Column`/`Row` con `on:click` se pueden pulsar en toda su superficie (tarjetas, filas): muestran cursor de mano y un resaltado al pasar el ratón. Un botón dentro sigue funcionando por separado.
+- `Column` y `Row` son atajos de `<flex>` con sus valores por defecto de siempre: en una columna, texto y cajas ocupan el ancho y los controles se quedan a la izquierda; en una fila, los hijos se centran en vertical; solo encoge lo que tiene `flex`. Admiten todo el flexbox de `<flex>` en `<style>` (también `flex-wrap`).
+- `<flex>`, `Column` y `Row` con `on:click` se pueden pulsar en toda su superficie (tarjetas, filas): muestran cursor de mano y un resaltado al pasar el ratón. Un botón dentro sigue funcionando por separado.
 - `Scroll` es una columna con desplazamiento vertical; por defecto ocupa el espacio libre (`flex: 1`).
 - `Spacer` ocupa el espacio libre y empuja a sus hermanos hacia los extremos.
 - `width`/`height` fijan el tamaño preferido dentro del contenedor; `flex={1}` hace crecer el elemento en el eje del contenedor. Ver [estilos.md](estilos.md#disposición).

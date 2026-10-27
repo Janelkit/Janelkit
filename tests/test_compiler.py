@@ -231,8 +231,8 @@ def test_box_styles_tokens_and_alignment():
         "fxBorderWidth: 1",
         "fxBorderColor: fxtheme.border",
         "fxRadius: fxtheme.radius_lg",
-        "align: Qt.AlignHCenter",
-        "justify: 1",
+        'alignItems: "center"',
+        'justifyContent: "end"',
         "fxFlex: 1",
         "fxSelfStretch: true",
         "Layout.fillWidth: true",
@@ -243,9 +243,9 @@ def test_box_styles_tokens_and_alignment():
     assert c.warnings == []
 
 
-def test_row_align_items_uses_vertical_flags():
+def test_row_align_items_is_passed_to_the_flex_engine():
     qml = compile_source('<Row class="r" />\n<style>.r { align-items: end; }</style>').qml
-    assert "align: Qt.AlignBottom" in qml
+    assert 'alignItems: "end"' in qml
 
 
 def test_explicit_attribute_overrides_style():
@@ -267,9 +267,9 @@ def test_style_not_applicable_to_element_is_a_warning():
 
 
 def test_unsupported_style_values_are_warnings():
-    c = compile_source('<Column class="c" />\n<style>.c { justify-content: space-between; width: 50%; }</style>')
+    c = compile_source('<Column class="c" />\n<style>.c { justify-content: middle; width: 50pc; }</style>')
     messages = " | ".join(w.message for w in c.warnings)
-    assert "justify-content no soportado" in messages and "100%" in messages
+    assert "justify-content no soportado" in messages and "número" in messages
 
 
 def test_source_map_points_back_to_flux_lines():

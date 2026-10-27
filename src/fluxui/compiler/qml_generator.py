@@ -31,6 +31,7 @@ def _emit(node: IRNode, depth: int, lines: list[str], source_map: SourceMap, pre
     if isinstance(node, IRRepeater):
         lines.append(f"{pad}{prefix}Repeater {{")
         lines.append(f"{inner}model: {BRIDGE_NAME}.{node.model_id}")
+        lines.append(f"{inner}readonly property bool fxSkip: true")  # no ocupa sitio en <flex>
         if node.delegate is None:
             lines.append(f"{inner}delegate: {BRIDGE_NAME}.{node.model_id}.delegate")
         else:

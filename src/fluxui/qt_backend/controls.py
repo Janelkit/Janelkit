@@ -81,6 +81,20 @@ CONTROLS: dict[str, ControlSpec] = {
         },
         container=True,
     ),
+    # Elemento base (en minúscula): la caja con flexbox de la web. Column y Row son atajos suyos.
+    "flex": ControlSpec(
+        "FxFlex",
+        props={
+            **_BOX_PROPS,
+            "direction": PropSpec("direction", "string"),  # row | column | row-reverse | column-reverse
+            "wrap": PropSpec("wrap", "bool"),
+            "align": PropSpec("alignItems", "string"),
+            "justify": PropSpec("justifyContent", "string"),
+        },
+        events=dict(_BOX_EVENTS),
+        container=True,
+        horizontal=True,
+    ),
     "Column": ControlSpec("FxColumn", props=dict(_BOX_PROPS), events=dict(_BOX_EVENTS), container=True),
     "Row": ControlSpec("FxRow", props=dict(_BOX_PROPS), events=dict(_BOX_EVENTS), container=True, horizontal=True),
     "Scroll": ControlSpec(
@@ -222,6 +236,16 @@ CONTROLS: dict[str, ControlSpec] = {
 }
 
 QML_IMPORTS = ("QtQuick", "QtQuick.Controls", "QtQuick.Layouts", "Flux")
+
+# Elementos base: se escriben en minúscula (los componentes y controles, en mayúscula).
+BASE_ELEMENTS = tuple(tag for tag in CONTROLS if tag[:1].islower())
+
+# Valores admitidos en los atributos de texto de los elementos base (se validan si son literales).
+CHOICES: dict[tuple[str, str], tuple[str, ...]] = {
+    ("flex", "direction"): ("row", "column", "row-reverse", "column-reverse"),
+    ("flex", "align"): ("start", "center", "end", "stretch", "baseline"),
+    ("flex", "justify"): ("start", "center", "end", "space-between", "space-around", "space-evenly"),
+}
 
 
 def tag_of(spec: ControlSpec) -> str:

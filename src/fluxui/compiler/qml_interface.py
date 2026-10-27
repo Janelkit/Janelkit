@@ -119,6 +119,7 @@ def read_interface(path: Path, tag: str, alias: str) -> ControlSpec:
         m = _SIGNAL.match(statement)
         if m:
             name = m.group("name")
-            events[name] = EventSpec(f"on{name[0].upper()}{name[1:]}", _params(m.group("params")))
+            params = _params(m.group("params"))
+            events[name] = EventSpec(f"on{name[0].upper()}{name[1:]}", params, params=params)
     return ControlSpec(f"{alias}.{tag}", props=props, events=events, two_way=two_way, tag=tag)
 

@@ -67,6 +67,15 @@ class SlotModel(QAbstractListModel):
         self._rows.insert(position, bridge)
         self.endInsertRows()
 
+    def insert_many(self, position: int, entries: list) -> None:
+        """Inserta varias filas seguidas con una sola notificación a Qt."""
+        if not entries:
+            return
+        position = self._physical(position)
+        self.beginInsertRows(QModelIndex(), position, position + len(entries) - 1)
+        self._rows[position:position] = entries
+        self.endInsertRows()
+
     def remove(self, position: int) -> QObject:
         return self._remove_physical(self._physical(position))
 

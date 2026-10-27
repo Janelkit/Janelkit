@@ -22,6 +22,7 @@ from .reactivity import (
 from . import dialogs
 from .i18n import i18n, t
 from .lifecycle import Ref, inject, on_destroy, on_mount, provide, ref
+from .notifications import notify
 from .pages import PageStack, pages
 from .styling.theme import theme
 from .tasks import Task, background, spawn, task
@@ -50,6 +51,7 @@ __all__ = [
     "i18n",
     "event",
     "inject",
+    "notify",
     "on_destroy",
     "on_mount",
     "pages",

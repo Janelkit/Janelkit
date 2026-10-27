@@ -1,0 +1,11 @@
+{
+  "title": "Chat",
+  "connecting": "Conectando…",
+  "offline": "Sin conexión. Reintentando…",
+  "loading": "Cargando historial…",
+  "start": "Principio de la conversación",
+  "new": {"one": "1 mensaje nuevo", "other": "{n} mensajes nuevos"},
+  "typing": "{user} está escribiendo…",
+  "placeholder": "Escribe un mensaje (admite **negrita**, `código` y enlaces)",
+  "send": "Enviar"
+}

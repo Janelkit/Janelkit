@@ -142,6 +142,10 @@ Explorador (`examples/files`) sobre una carpeta de 5000 archivos:
 3. **Procesar eventos de Qt dentro de una corrutina** hacía que asyncio ejecutara una tarea dentro de otra. `Application.process_events()` procesa con el bucle marcado como activo y fuera de cualquier corrutina.
 4. **En pruebas, un clic sobre el texto de una fila** no llegaba a la fila. `Element.click()` sube hasta el contenedor con `on:click`, como un clic real.
 
+### Retos ([challenges_to_test.md](challenges_to_test.md))
+
+- **Chat (reto 4):** hecho, en `examples/challenges/chat`, con pruebas en `tests/test_challenge_chat.py` y [registro de hallazgos](../examples/challenges/chat/HALLAZGOS.md). Añadió al núcleo el desplazamiento de `<List>` (`follow`, `on:top`/`on:bottom`/`on:scroll`, `ref.scroll_to_*`), las inserciones por bloques sin reiniciar la lista, `<Text format="markdown">` con `on:link`, fondo y borde en `<Text>`, `on:activate`/`on:deactivate` en `<Window>`, `fluxui.notify`, y parámetros de señal declarados en el QML generado. Medido: 20 mensajes/s durante 5 min con menos del 10 % de CPU; la memoria se estabiliza.
+
 ## Limitaciones conocidas
 
 - Los objetos propios modificados en el sitio no se detectan (las listas, diccionarios y conjuntos sí): llama a `estado.notify()`.

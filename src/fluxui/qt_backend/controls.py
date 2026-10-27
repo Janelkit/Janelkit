@@ -21,6 +21,8 @@ class EventSpec:
     qml_handler: str  # p. ej. "onClicked"
     args: tuple[str, ...] = ()  # expresiones QML que se pasan al manejador Python
     enables: str | None = None  # propiedad booleana que el control necesita activar para emitirlo
+    when: str | None = None  # condición QML: el manejador solo se llama si se cumple
+    params: tuple[str, ...] = ()  # parámetros de la señal (se declaran: Qt ya no los inyecta)
 
 
 @dataclass(frozen=True)
@@ -28,6 +30,7 @@ class TwoWaySpec:
     qml_prop: str
     qml_handler: str  # señal que indica un cambio hecho por el usuario
     qml_value: str | None = None  # expresión con el valor nuevo (por defecto, qml_prop)
+    params: tuple[str, ...] = ()  # parámetros de la señal
 
 
 @dataclass(frozen=True)
@@ -72,6 +75,10 @@ CONTROLS: dict[str, ControlSpec] = {
             "minHeight": PropSpec("minimumHeight", "number"),
             "background": PropSpec("color", "color"),
         },
+        events={
+            "activate": EventSpec("onActiveChanged", when="active"),
+            "deactivate": EventSpec("onActiveChanged", when="!active"),
+        },
         container=True,
     ),
     "Column": ControlSpec("FxColumn", props=dict(_BOX_PROPS), events=dict(_BOX_EVENTS), container=True),
@@ -87,11 +94,23 @@ CONTROLS: dict[str, ControlSpec] = {
             "gap": PropSpec("gap", "number"),
             "padding": PropSpec("innerPadding", "number"),
             "animate": PropSpec("animate", "bool"),
+            "follow": PropSpec("follow", "bool"),
+        },
+        events={
+            "top": EventSpec("onReachedTop"),
+            "bottom": EventSpec("onReachedBottom"),
+            "scroll": EventSpec("onScrolled", ("info",), enables="fxScrollHandled", params=("info",)),
         },
     ),
     "Text": ControlSpec(
         "FxText",
-        props={"text": PropSpec("text", "string"), "color": PropSpec("fxColor", "color")},
+        props={
+            "text": PropSpec("text", "string"),
+            "color": PropSpec("fxColor", "color"),
+            "format": PropSpec("format", "string"),  # "plain" | "markdown" | "html"
+        },
+        # Sin on:link, los enlaces se abren en el navegador.
+        events={"link": EventSpec("onLinkActivated", ("link",), enables="fxLinkHandled", params=("link",))},
         text_prop="text",
     ),
     "Button": ControlSpec(
@@ -125,8 +144,8 @@ CONTROLS: dict[str, ControlSpec] = {
             "readonly": PropSpec("readOnly", "bool"),
         },
         # FxTextArea emite userEdited solo con los cambios del usuario (no con los de Python).
-        events={"input": EventSpec("onUserEdited", ("text",))},
-        two_way={"value": TwoWaySpec("fxValue", "onUserEdited", "text")},
+        events={"input": EventSpec("onUserEdited", ("text",), params=("text",))},
+        two_way={"value": TwoWaySpec("fxValue", "onUserEdited", "text", params=("text",))},
     ),
     "Checkbox": ControlSpec(
         "FxCheckBox",
@@ -170,14 +189,14 @@ CONTROLS: dict[str, ControlSpec] = {
             "value": PropSpec("value"),
             "horizontal": PropSpec("horizontal", "bool"),
         },
-        events={"change": EventSpec("onPicked", ("choice",))},
-        two_way={"value": TwoWaySpec("value", "onPicked", "choice")},
+        events={"change": EventSpec("onPicked", ("choice",), params=("choice",))},
+        two_way={"value": TwoWaySpec("value", "onPicked", "choice", params=("choice",))},
     ),
     "Tabs": ControlSpec(
         "FxTabs",
         props={"options": PropSpec("options"), "value": PropSpec("value")},
-        events={"change": EventSpec("onPicked", ("choice",))},
-        two_way={"value": TwoWaySpec("value", "onPicked", "choice")},
+        events={"change": EventSpec("onPicked", ("choice",), params=("choice",))},
+        two_way={"value": TwoWaySpec("value", "onPicked", "choice", params=("choice",))},
     ),
     "Image": ControlSpec(
         "FxImage",

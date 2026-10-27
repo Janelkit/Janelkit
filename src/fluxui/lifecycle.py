@@ -145,13 +145,25 @@ class Ref:
         """Selecciona todo el texto (TextField, TextArea)."""
         self._call("selectAll")
 
-    def _call(self, method: str) -> None:
+    def scroll_to_start(self) -> None:
+        """Lleva una `<List>` al principio."""
+        self._call("scrollToStart")
+
+    def scroll_to_end(self) -> None:
+        """Lleva una `<List>` al final (con `follow`, vuelve a seguir las filas nuevas)."""
+        self._call("scrollToEnd")
+
+    def scroll_to(self, index: int) -> None:
+        """Desplaza una `<List>` lo justo para que se vea la fila `index`."""
+        self._call("scrollTo", index)
+
+    def _call(self, method: str, *args: Any) -> None:
         item = self._live()
         if item is None:
             return
-        from PySide6.QtCore import QMetaObject
+        from PySide6.QtCore import Q_ARG, QMetaObject
 
-        if not QMetaObject.invokeMethod(item, method):
+        if not QMetaObject.invokeMethod(item, method, *(Q_ARG("QVariant", a) for a in args)):
             raise TypeError(f"este elemento no admite {method}")
 
     def __repr__(self) -> str:

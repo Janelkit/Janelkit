@@ -80,6 +80,17 @@ class Element:
         return value if isinstance(value, str) else None
 
     @property
+    def label(self) -> str | None:
+        """Nombre accesible (`label="..."` en la plantilla), o None."""
+        from PySide6.QtQml import QQmlEngine, QQmlProperty
+
+        context = QQmlEngine.contextForObject(self.item)
+        if context is None:
+            return None
+        value = QQmlProperty(self.item, "Accessible.name", context).read()
+        return value or None
+
+    @property
     def value(self) -> Any:
         """Valor actual de un control (texto, marcado, número u opción elegida)."""
         tag = self.tag
@@ -283,6 +294,7 @@ class MountedApp:
         text: str | None = None,
         id: str | None = None,
         placeholder: str | None = None,
+        label: str | None = None,
         visible_only: bool = True,
     ) -> list[Element]:
         """Elementos que cumplen todos los criterios dados."""
@@ -297,6 +309,8 @@ class MountedApp:
             if id is not None and el.id != id:
                 continue
             if placeholder is not None and el.prop("placeholderText") != placeholder:
+                continue
+            if label is not None and el.label != label:
                 continue
             out.append(el)
         return out
@@ -346,7 +360,13 @@ class MountedApp:
         self.application.run_until(run(), timeout=timeout + 1 if until else max(seconds + 1, timeout))
         self.process()
 
-    # -- diálogos -------------------------------------------------------------
+    # -- notificaciones y diálogos -----------------------------------------------
+    def notifications(self) -> list[dict[str, str]]:
+        """Notificaciones enviadas con `notify` (`{"title", "message"}`), de la más antigua a la más reciente."""
+        from . import notifications
+
+        return notifications.sent()
+
     def dialogs(self) -> list[Any]:
         from . import dialogs
 

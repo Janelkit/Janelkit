@@ -47,6 +47,10 @@ def _emit(node: IRNode, depth: int, lines: list[str], source_map: SourceMap, pre
     for prop, value, when in el.conditional:
         lines.append(f"{inner}Binding on {prop} {{ when: {when}; value: {value} }}")
     for handler, statements in el.handlers.items():
+        params = el.handler_params.get(handler)
+        if params is not None:  # parámetros declarados: Qt ya no los inyecta en el manejador
+            lines.append(f"{inner}{handler}: function({', '.join(params)}) {{ {'; '.join(statements)} }}")
+            continue
         body = statements[0] if len(statements) == 1 else "{ " + "; ".join(statements) + " }"
         lines.append(f"{inner}{handler}: {body}")
     if el.delegate is not None:

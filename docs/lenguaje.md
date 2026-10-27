@@ -133,6 +133,14 @@ Las llaves pueden contener cadenas y diccionarios con llaves: `{ {"a": "}"}["a"]
 
 El contenido de `<Text>`, `<Button>` y `<Checkbox>` es su texto: `<Button>Clicks: {count}</Button>`. Los espacios se colapsan como en HTML. Texto suelto dentro de un contenedor se convierte en un `<Text>`.
 
+`<Text format="markdown">` interpreta Markdown (negrita, cursiva, enlaces, código, listas); `format="html"`, el subconjunto de HTML de Qt. Los enlaces muestran la mano al pasar por encima y, al pulsarlos, emiten `on:link` con la URL; si nadie escucha `on:link`, se abren en el navegador:
+
+```html
+<Text format="markdown" on:link={abrir}>{mensaje["texto"]}</Text>
+```
+
+El Markdown de Qt también acepta HTML. Si el texto viene de otras personas (un chat, una web), escapa `<` y `&` antes de mostrarlo (`texto.replace("&", "&amp;").replace("<", "&lt;")`).
+
 ## Bloques
 
 ### `{#if}`
@@ -354,8 +362,25 @@ tema = inject("tema", "claro")       # con valor por defecto
 - Debe contener exactamente un `{#each}` (con clave, como siempre). El resto funciona igual: claves, índice, manejadores, componentes dentro de la fila y colecciones reactivas.
 - Cada fila se crea —su parte Python y su vista— la primera vez que se hace visible. Su parte Python se conserva hasta que la fila sale de la lista; la vista se destruye al salir de pantalla y se vuelve a crear al volver. Por eso, lo que el usuario esté escribiendo en una fila debe ir a un `state` (`bind:`), no quedarse solo en el control.
 - Las filas ocupan el ancho de la lista. Admite `gap`, `padding`, fondo, borde y radio desde `<style>`; por defecto ocupa el espacio libre (`flex: 1`).
-- Cambios pequeños (insertar, borrar o mover pocas filas) se aplican uno a uno. A partir de 64 cambios a la vez (ordenar, invertir, sustituir la lista) se aplican de golpe y la lista vuelve al principio.
+- Añadir filas (al final, al principio o en medio, en cualquier cantidad) se aplica por bloques y la vista conserva su posición. Borrar o mover pocas filas se aplica una a una. A partir de 64 borrados o movimientos a la vez (ordenar, invertir, sustituir la lista) se aplican de golpe y la lista vuelve al principio.
 - `{:else}` no está disponible dentro de `<List>`: muestra el estado vacío con un `{#if}` fuera.
+
+### Desplazamiento
+
+Para chats, registros y cualquier lista que crece:
+
+```html
+<List follow ref={lista} on:top={cargar_anteriores} on:scroll={al_desplazar}>
+  {#each mensajes as m (m["id"])}
+    <Mensaje msg={m} />
+  {/each}
+</List>
+```
+
+- **`follow`**: la lista empieza abajo; si el usuario está abajo, sigue a las filas nuevas (también cuando una fila crece, p. ej. al cargar una imagen); si subió a leer, no se mueve. Al insertar filas por arriba (historial), lo que se estaba viendo se queda en el mismo sitio de la pantalla.
+- **`on:top`** y **`on:bottom`**: el usuario llegó al principio o al final (solo si el contenido no cabe entero).
+- **`on:scroll`**: como mucho una vez por fotograma, con `event = {"top": bool, "bottom": bool, "y": píxeles desde arriba, "height": alto del contenido}`. Sirve para saber si el usuario está abajo (`on:scroll={abajo = event["bottom"]}`).
+- Con `lista = ref()`: `lista.scroll_to_end()` (y con `follow` vuelve a seguir las nuevas), `lista.scroll_to_start()` y `lista.scroll_to(índice)` (lo justo para que se vea esa fila).
 
 Con 10 000 filas, crear la lista tarda unos 40 ms (ver `python tools/bench.py`).
 
@@ -512,12 +537,12 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 
 | Elemento | Qt Quick | Propiedades | Eventos | `bind:` |
 |---|---|---|---|---|
-| `Window` | `ApplicationWindow` | `title`, `width`, `height`, `minWidth`, `minHeight`, `background` | — | — |
+| `Window` | `ApplicationWindow` | `title`, `width`, `height`, `minWidth`, `minHeight`, `background` | `on:activate`, `on:deactivate` | — |
 | `Column` | `ColumnLayout` | `gap`, `padding` | `on:click` | — |
 | `Row` | `RowLayout` | `gap`, `padding` | `on:click` | — |
 | `Scroll` | `ScrollView` + columna | `gap`, `padding` | — | — |
-| `List` | `ListView` | `gap`, `padding` | — | — |
-| `Text` | `Label` | `text`, `color` | — | — |
+| `List` | `ListView` | `gap`, `padding`, `animate`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
+| `Text` | `Label` | `text`, `color`, `format` (`plain`, `markdown`, `html`) | `on:link(url)` | — |
 | `Button` | `Button` | `text`, `variant` (`default`, `primary`, `danger`, `ghost`), `flat` | `on:click` | — |
 | `TextField` | `TextField` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:submit(texto)` | `bind:value` |
 | `TextArea` | `TextArea` | `value`, `placeholder`, `readonly` | `on:input(texto)` | `bind:value` |
@@ -532,7 +557,8 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 | `Shortcut` | `Shortcut` | `keys` | `on:activate` | — |
 | `Spacer` | `Item` | — | — | — |
 
-- **`List`** es una lista virtualizada para colecciones grandes; ver [Listas grandes](#listas-grandes-list).
+- **`List`** es una lista virtualizada para colecciones grandes; ver [Listas grandes](#listas-grandes-list) y [Desplazamiento](#desplazamiento).
+- **`Window`**: `on:activate` y `on:deactivate` avisan cuando la ventana pasa a primer plano o deja de estarlo (para marcar como leído o decidir si mostrar una notificación con `notify`).
 - **Opciones** (`Select`, `RadioGroup`, `Tabs`): `options` es una lista de textos (`["rojo", "verde"]`) o de diccionarios `{"label": "Mediano", "value": 2}`; `value` es el valor elegido. La elección del usuario se ve al momento; si Python cambia `value`, manda Python.
 - `Tabs` es solo la barra: el contenido de cada pestaña se elige con `{#if pestaña == "general"}`.
 - `Image`: `src` puede ser una ruta relativa a la carpeta del `.flux`, una ruta absoluta o una URL (`https:`, `qrc:`, `data:`). Sin `width`/`height`, toma el tamaño de la imagen.

@@ -25,8 +25,8 @@ Sin descendientes, pseudo-clases ni combinadores. Los estilos son **locales al c
 | CSS | Aplica a | Notas |
 |---|---|---|
 | `color` | Text, Button, TextField, TextArea, Checkbox | color del texto |
-| `background`, `background-color` | Window, Column, Row, Scroll, Button, TextField, TextArea | |
-| `border` | Column, Row, Scroll, Button, TextField, TextArea | `1px solid #ccc`, `1px solid var(--border)`, `none` |
+| `background`, `background-color` | Window, Column, Row, Scroll, List, Text, Button, TextField, TextArea, Select | en `Text`, con `padding` y `border-radius`, sirve para etiquetas y contadores |
+| `border` | los mismos que `background` (salvo Window) | `1px solid #ccc`, `1px solid var(--border)`, `none` |
 | `border-color`, `border-width` | ídem | |
 | `border-radius` | ídem | |
 | `padding` | contenedores y controles con texto | 1 a 4 valores, como en CSS |

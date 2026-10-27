@@ -1,0 +1,11 @@
+{
+  "title": "Chat",
+  "connecting": "Connecting…",
+  "offline": "Offline. Retrying…",
+  "loading": "Loading history…",
+  "start": "Start of the conversation",
+  "new": {"one": "1 new message", "other": "{n} new messages"},
+  "typing": "{user} is typing…",
+  "placeholder": "Write a message (supports **bold**, `code` and links)",
+  "send": "Send"
+}

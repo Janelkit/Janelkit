@@ -302,12 +302,12 @@ def _limit(kind: str, axis: str) -> Converter:
 # propiedad CSS -> (elementos donde aplica, conversor)
 SUPPORTED: dict[str, tuple[set[str], Converter]] = {
     "color": (TEXTUAL, _single("fxColor", "color")),
-    "background": (BOXES | FIELDS, _single("fxBackground", "color")),
-    "background-color": (BOXES | FIELDS, _single("fxBackground", "color")),
-    "border": (BOXES | FIELDS, _border),
-    "border-color": (BOXES | FIELDS, _single("fxBorderColor", "color")),
-    "border-width": (BOXES | FIELDS, _single("fxBorderWidth", "number")),
-    "border-radius": (BOXES | FIELDS, _single("fxRadius", "number")),
+    "background": (BOXES | FIELDS | {"Text"}, _single("fxBackground", "color")),
+    "background-color": (BOXES | FIELDS | {"Text"}, _single("fxBackground", "color")),
+    "border": (BOXES | FIELDS | {"Text"}, _border),
+    "border-color": (BOXES | FIELDS | {"Text"}, _single("fxBorderColor", "color")),
+    "border-width": (BOXES | FIELDS | {"Text"}, _single("fxBorderWidth", "number")),
+    "border-radius": (BOXES | FIELDS | {"Text"}, _single("fxRadius", "number")),
     "padding": (BOXES | TEXTUAL, _padding),
     **{f"padding-{side}": (BOXES | TEXTUAL, _padding_side(side)) for side in _SIDES},
     "gap": (BOXES, _single("gap", "number")),

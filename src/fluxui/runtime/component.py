@@ -623,10 +623,13 @@ class _LazyEachRegion(_EachRegion):
         keys = self.keys_for(items)
         old = {row.key: row for row in self.rows}
         wanted = set(keys)
-        changes = sum(k not in old for k in keys) + sum(k not in wanted for k in old)
+        removed = sum(k not in wanted for k in old)
         position = {row.key: i for i, row in enumerate(self.rows)}
         survivors = [position[k] for k in keys if k in old]
-        changes += len(survivors) - _longest_increasing(survivors)  # filas que hay que mover
+        moves = len(survivors) - _longest_increasing(survivors)  # filas que hay que mover
+        if not removed and not moves:
+            return self.insert_runs(keys, items, old)
+        changes = sum(k not in old for k in keys) + removed + moves
         if changes <= self.BULK:
             return self.apply_reconcile(keys, items)
         # Muchos cambios: un solo reinicio del modelo. Las filas que siguen conservan
@@ -643,6 +646,31 @@ class _LazyEachRegion(_EachRegion):
             row.item.value = value
             if row.index is not None:
                 row.index.value = index
+
+    def insert_runs(self, keys: list, items: list, old: dict) -> None:
+        """Solo hay filas nuevas (añadir al final, cargar historial arriba...): se insertan
+        por bloques contiguos, sin reiniciar el modelo, así la vista conserva su posición."""
+        rows: list[_Row] = []
+        run_start, run = 0, []
+        for index, (key, value) in enumerate(zip(keys, items)):
+            row = old.get(key)
+            if row is None:
+                if not run:
+                    run_start = index
+                run.append(self.placeholder(key, value, index))
+                continue
+            if run:
+                self.model.insert_many(run_start, run)
+                rows.extend(run)
+                run = []
+            row.item.value = value
+            if row.index is not None:
+                row.index.value = index
+            rows.append(row)
+        if run:
+            self.model.insert_many(run_start, run)
+            rows.extend(run)
+        self.rows = rows
 
     def materialize(self, row: _Row) -> QObject | None:
         if self.owner.disposed:

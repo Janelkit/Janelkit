@@ -18,6 +18,11 @@ Primera versión pública prevista. Respecto a la prealfa interna (incrementos 0
 - **Accesibilidad:** cajas con `on:click` accesibles con el teclado; foco visible; nombres accesibles.
 - **Herramientas:** `fluxui.inspect` para probar aplicaciones; `fluxui.compiler.check_source`/`check_file` para editores; `FORMAT_VERSION`.
 - **Disposición:** `flex` reparte el espacio en proporción, como en CSS.
+- **Desplazamiento en `<List>`** (reto del chat): `follow`, `on:top`, `on:bottom`, `on:scroll`; `ref.scroll_to_end()`, `scroll_to_start()`, `scroll_to(i)`. Añadir filas ya no reinicia la lista, aunque sean muchas.
+- **Texto enriquecido:** `<Text format="markdown">` (o `"html"`) y `on:link`.
+- **Ventanas:** `on:activate` y `on:deactivate` en `<Window>`.
+- **Notificaciones:** `fluxui.notify(título, mensaje)`, con icono en la bandeja del sistema.
+- **Inspección:** `find(label=...)` y `Element.label`; `MountedApp.notifications()`.
 
 ### Cambia (puede requerir ajustes)
 

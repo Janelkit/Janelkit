@@ -46,7 +46,7 @@ Button {
     }
 
     background: Rectangle {
-        implicitWidth: 64
+        implicitWidth: control.fxGhost ? 0 : 64  // los botones fantasma (iconos, emojis) pueden ser estrechos
         implicitHeight: 34
         radius: control.fxRadius
         color: control.down ? Qt.tint(control.fxBackground, fxtheme.pressed)

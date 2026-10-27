@@ -402,7 +402,9 @@ class _Lowerer:
             self.tpl.bindings.append(ExprBinding(bid, dynamic.value, dynamic.loc, classes=True))
             for name in self.class_names():
                 decls = [d for r in self.rules if f".{name}" in r.selectors for d in r.declarations]
-                props = compile_declarations(decls, el.tag, self.sfc.source, self.warnings, self.tokens)
+                # No se sabe qué clases dará la expresión: las que no aplican a este elemento
+                # (p. ej. reglas de texto) se ignoran sin avisar.
+                props = compile_declarations(decls, el.tag, self.sfc.source, [], self.tokens)
                 for key in [k for k in props if k.startswith(BEHAVIOR)]:
                     ir.behaviors[key[len(BEHAVIOR):]] = props.pop(key)
                 if props:
@@ -521,7 +523,10 @@ class _Lowerer:
         handler = self.handler(attr, name)
         if handler is not None:
             args = ", ".join(ev.args)
-            ir.handlers.setdefault(ev.qml_handler, []).append(f'fx.invoke("{handler.id}", [{args}])')
+            call = f'fx.invoke("{handler.id}", [{args}])'
+            ir.handlers.setdefault(ev.qml_handler, []).append(f"if ({ev.when}) {call}" if ev.when else call)
+            if ev.params:
+                ir.handler_params[ev.qml_handler] = ev.params
             if ev.enables:
                 ir.props[ev.enables] = Literal("true")
 
@@ -573,6 +578,8 @@ class _Lowerer:
             return
         bid = self.add_expr_binding(expr, attr.loc)
         self.tpl.writes.append(Write(bid, expr, attr.loc))
+        if tw.params:
+            ir.handler_params[tw.qml_handler] = tw.params
         if spec.tag is None:
             ir.props[tw.qml_prop] = Bound(bid)
             ir.handlers.setdefault(tw.qml_handler, []).insert(0, f'fx.write("{bid}", {tw.qml_value or tw.qml_prop})')

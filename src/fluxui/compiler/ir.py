@@ -94,6 +94,7 @@ class IRElement:
     props: dict[str, PropValue] = field(default_factory=dict)
     # manejador QML ("onClicked") -> sentencias JS que llaman al puente
     handlers: dict[str, list[str]] = field(default_factory=dict)
+    handler_params: dict[str, tuple[str, ...]] = field(default_factory=dict)  # parámetros de la señal
     children: list["IRNode"] = field(default_factory=list)
     # class:nombre={cond}: (propiedad QML, valor, condición QML) -> `Binding on ... { when }`
     conditional: list[tuple[str, str, str]] = field(default_factory=list)

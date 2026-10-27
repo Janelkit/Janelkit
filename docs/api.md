@@ -58,7 +58,7 @@ Se llaman mientras se ejecuta el `<script>` de un componente; fuera de él lanza
 | `provide` | `provide(clave, valor)` pone un valor a disposición de los descendientes. |
 | `inject` | `inject(clave, defecto)` lee el valor del antecesor más cercano que lo provee. Sin defecto y sin proveedor: `LookupError`. |
 | `ref` | `ref()` crea una referencia para `ref={nombre}` en la plantilla. |
-| `Ref` | Tipo de `ref`: `.value` (reactivo; el objeto Qt o `None`), `.exists`, `.focus()`, `.blur()`, `.select_all()`. |
+| `Ref` | Tipo de `ref`: `.value` (reactivo; el objeto Qt o `None`), `.exists`, `.focus()`, `.blur()`, `.select_all()`; en una `<List>`, `.scroll_to_start()`, `.scroll_to_end()`, `.scroll_to(índice)`. |
 
 ### Trabajo asíncrono
 
@@ -91,6 +91,12 @@ Un manejador `async def` (o en línea que devuelva una corrutina, como `on:click
 | Nombre | Descripción |
 |---|---|
 | `dialogs` | Módulo de diálogos del sistema, todos asíncronos (`await`): `open_file`, `open_files`, `save_file`, `choose_folder` (devuelven `Path`, lista o `None` si se cancela), `message` y `confirm` (devuelve `bool`). `pending()` lista los abiertos (para pruebas). |
+
+### Notificaciones
+
+| Nombre | Descripción |
+|---|---|
+| `notify` | `notify(título, mensaje="", on_click=None)` muestra una notificación del sistema (con el icono de la aplicación en la bandeja). Pulsarla trae la ventana al frente y llama a `on_click`. Donde no hay bandeja no se ve, pero queda registrada (`MountedApp.notifications()`). |
 
 ### Idiomas
 
@@ -129,8 +135,8 @@ Un manejador `async def` (o en línea que devuelva una corrutina, como `on:click
 | Nombre | Descripción |
 |---|---|
 | `mount` | `with mount("src/App.flux", headless=True) as app:` monta la aplicación sin ventana visible y la desmonta al salir. |
-| `MountedApp` | `app.find(tag, text=, id=, placeholder=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.dialogs()`, `app.answer_dialog(resultado)`. |
-| `Element` | `.tag`, `.id`, `.text`, `.value`, `.visible`, `.enabled`, `.prop(nombre)`; acciones `.click()`, `.type(texto)`, `.submit()`, `.check(bool)`, `.slide(valor)`, `.choose(opción)`, `.focus()`. `.item` es el objeto Qt (no cubierto por la política de versiones). |
+| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.dialogs()`, `app.answer_dialog(resultado)`, `app.notifications()`. |
+| `Element` | `.tag`, `.id`, `.text`, `.label`, `.value`, `.visible`, `.enabled`, `.prop(nombre)`; acciones `.click()`, `.type(texto)`, `.submit()`, `.check(bool)`, `.slide(valor)`, `.choose(opción)`, `.focus()`. `.item` es el objeto Qt (no cubierto por la política de versiones). |
 | `InspectError` | Elemento no encontrado, ambiguo, desactivado o que no admite la acción. Es un `AssertionError`. |
 
 ## Política de versiones

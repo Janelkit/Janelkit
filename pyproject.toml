@@ -16,7 +16,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "build>=1", "pyflakes>=3"]
+dev = ["pytest>=8", "build>=1", "pyflakes>=3", "websockets>=13"]
 
 [project.scripts]
 flux = "fluxui.cli.main:main"

@@ -20,3 +20,4 @@ FxShortcut 1.0 FxShortcut.qml
 FxList 1.0 FxList.qml
 FxTransition 1.0 FxTransition.qml
 FxPages 1.0 FxPages.qml
+Fx 1.0 fx.js

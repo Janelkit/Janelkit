@@ -17,7 +17,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 | # | Reto | Estado | Resultado |
 |---|---|---|---|
 | 4 | Chat | ✅ | [examples/challenges/chat](../examples/challenges/chat/) · [hallazgos](../examples/challenges/chat/HALLAZGOS.md). Se añadieron al núcleo el desplazamiento de `<List>`, `<Text format>`, eventos de ventana y `notify`; quedan temporizadores, texto seleccionable y Markdown seguro. |
-| 1 | Panel | ⏳ | |
+| 1 | Panel | ✅ | [examples/challenges/panel](../examples/challenges/panel/) · [hallazgos](../examples/challenges/panel/HALLAZGOS.md). Se añadieron al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`, y se corrigieron cuatro fallos (listas modificadas en el sitio que no llegaban a QML, scroll perdido al reordenar, `flex` en QML propio, `flux build` con ventanas); quedan gráficas (fluxui-kit), rejilla con salto de línea y tabla. |
 | 3 | Kanban | ⏳ | |
 | 2 | Hoja de cálculo | ⏳ | |
 | 5 | Editor | ⏳ | |
@@ -172,15 +172,16 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 | Carencia | Retos | Núcleo o proyecto aparte |
 |---|---|---|
 | Eventos de teclado y de puntero (`on:keydown`, doble clic, clic derecho, arrastrar) | 2, 3, 5 | Núcleo: afecta al lenguaje |
-| Control del desplazamiento (leer y fijar el scroll, anclaje) | 1, 2, 4, 5 | Núcleo · ✅ en `<List>` (reto 4); falta en `<Scroll>` |
+| Control del desplazamiento (leer y fijar el scroll, anclaje) | 1, 2, 4, 5 | Núcleo · ✅ en `<List>` (retos 4 y 1: también al reordenar); falta en `<Scroll>` |
 | Eventos de ventana (cerrar cancelable, activa) | 4, 5 | Núcleo · ✅ activa (reto 4); falta cerrar cancelable |
 | Menús (contextual y barra) | 3, 5 | Núcleo (controles básicos) |
 | Conservar contenido oculto (`keep-alive`) | 5 | Núcleo: afecta al lenguaje |
 | Portapapeles, notificaciones, bandeja, ajustes | 2, 4, 5 | Núcleo, como módulos pequeños (`fluxui.clipboard`, …) · ✅ `notify` (reto 4) |
-| Temporizadores ligados al componente | 1, 4 | Núcleo |
+| Temporizadores ligados al componente | 1, 4 | ✅ Núcleo: `interval`, `timeout` (reto 1) |
 | Texto seleccionable | 4, 5 | Núcleo |
-| Tabla 2D y árbol virtualizados | 2, 5 | Núcleo o `fluxui-kit` |
-| Canvas, gráficas, editor de código | 1, 5 | `fluxui-kit` (sobre la vía de escape QML) |
+| Tabla 2D y árbol virtualizados | 1, 2, 5 | Núcleo o `fluxui-kit` · el reto 1 hizo su tabla con `<List>` y anchos repetidos en cabecera y filas |
+| Canvas, gráficas, editor de código | 1, 5 | `fluxui-kit` (sobre la vía de escape QML) · el reto 1 hizo su gráfica en QML propio sin problemas |
+| Rejilla con salto de línea (tarjetas que se recolocan según el ancho) | 1 | Núcleo (disposición) |
 | Texto enriquecido | 4 | ✅ Núcleo: `<Text format="markdown">` (reto 4) |
 | Deshacer/rehacer y stores | 2, 3 | `fluxui-store` |
 

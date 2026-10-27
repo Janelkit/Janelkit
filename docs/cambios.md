@@ -22,7 +22,13 @@ Primera versión pública prevista. Respecto a la prealfa interna (incrementos 0
 - **Texto enriquecido:** `<Text format="markdown">` (o `"html"`) y `on:link`.
 - **Ventanas:** `on:activate` y `on:deactivate` en `<Window>`.
 - **Notificaciones:** `fluxui.notify(título, mensaje)`, con icono en la bandeja del sistema.
-- **Inspección:** `find(label=...)` y `Element.label`; `MountedApp.notifications()`.
+- **Inspección:** `find(label=...)` y `Element.label`; `MountedApp.notifications()`; `MountedApp.windows()` para inspeccionar las ventanas abiertas con `open_window`.
+- **Temporizadores** (reto del panel): `interval(ms, fn)` y `timeout(ms, fn)` (también como decoradores), ligados al componente; `Timer` con `.active`, `.start()`, `.restart()`, `.stop()`.
+- **Formato en el texto:** `{cpu:.1f}`, `{n:,}`, `{x!r}`, como en un f-string.
+- **Listas:** reordenar muchas filas de una `<List>` (una tabla que se ordena cada segundo) ya no la devuelve al principio.
+- **Elementos propios en QML:** `flex` funciona como en los elementos de FluxUI.
+- **`flux build`:** acepta los componentes con `<Window>` que solo se abren con `open_window`.
+- **Corrección:** una lista o diccionario de un `state` pasado entero a un control (`options={items}`, `values={serie}` en un QML propio) no se actualizaba al modificarlo en el sitio (`append`, `del`); ahora sí.
 
 ### Cambia (puede requerir ajustes)
 

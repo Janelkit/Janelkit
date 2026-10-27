@@ -11,7 +11,7 @@ import json
 import time
 from typing import Any, Callable
 
-from fluxui import batch, state
+from fluxui import Timer, batch, state, timeout
 
 MAX_KEPT = 600  # mensajes que se guardan por sala cuando se está abajo (la memoria no crece sin fin)
 PAGE = 50
@@ -26,7 +26,7 @@ class Room:
         self.loading = state(False)
         self.unread = state(0)
         self.typing = state("")  # quién está escribiendo ahora mismo
-        self._typing_task: asyncio.Task | None = None
+        self._typing_clear: Timer | None = None  # borra el aviso de "escribiendo…"
         self.by_id: dict[int, dict] = {}
 
     @property
@@ -149,16 +149,11 @@ class ChatClient:
                 msg["reactions"] = data["reactions"]
 
     def show_typing(self, room: Room, user: str) -> None:
-        # No hay temporizadores declarativos: una corrutina que espera y limpia.
         room.typing.value = user
-        if room._typing_task is not None:
-            room._typing_task.cancel()
-
-        async def clear() -> None:
-            await asyncio.sleep(3)
-            room.typing.value = ""
-
-        room._typing_task = asyncio.ensure_future(clear())
+        if room._typing_clear is None:
+            room._typing_clear = timeout(3000, lambda: room.typing.set(""))
+        else:
+            room._typing_clear.restart()  # otro aviso: vuelve a contar los 3 s
 
     # -- acciones de la interfaz ----------------------------------------------
     def load_history(self, room: Room) -> None:

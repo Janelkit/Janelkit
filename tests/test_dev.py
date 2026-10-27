@@ -97,6 +97,13 @@ def test_build_reports_errors_in_unused_components(tmp_path):
     assert len(result.errors) == 1 and result.errors[0].location.file.endswith("Roto.flux")
 
 
+def test_build_accepts_window_components_opened_with_open_window(tmp_path):
+    root = create_project("b3", tmp_path).root
+    (root / "src" / "components" / "Ventana.flux").write_text('<Window title="otra"><Text>hola</Text></Window>', encoding="utf-8")
+    result = build_project(root)
+    assert result.ok, [d.format() for d in result.errors]
+
+
 def test_qml_files_restart_the_process_instead_of_reloading(tmp_path, flux_app):
     """Un .qml propio no se recarga en el proceso (Qt < 6.12 no lo vuelve a leer): lo reinicia el supervisor."""
     from fluxui.cli.dev import restart_files

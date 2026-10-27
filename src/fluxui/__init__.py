@@ -26,6 +26,7 @@ from .notifications import notify
 from .pages import PageStack, pages
 from .styling.theme import theme
 from .tasks import Task, background, spawn, task
+from .timers import Timer, interval, timeout
 from .windows import open_window
 
 __version__ = "0.0.1.dev0"
@@ -42,6 +43,7 @@ __all__ = [
     "Ref",
     "State",
     "Task",
+    "Timer",
     "__version__",
     "background",
     "batch",
@@ -51,6 +53,7 @@ __all__ = [
     "i18n",
     "event",
     "inject",
+    "interval",
     "notify",
     "on_destroy",
     "on_mount",
@@ -65,6 +68,7 @@ __all__ = [
     "t",
     "task",
     "theme",
+    "timeout",
     "untracked",
 ]
 

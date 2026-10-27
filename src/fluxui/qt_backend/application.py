@@ -76,7 +76,7 @@ class Application:
             Effect(self._sync_language)
         # Al salir del intérprete sin pasar por exec(), desmontar antes de que Python
         # recolecte los objetos en un orden arbitrario.
-        atexit.register(self.close)
+        atexit.register(self._at_exit)
         Application.current = self
 
     def main_window(self) -> QObject | None:
@@ -256,6 +256,16 @@ class Application:
     def close(self) -> None:
         for mounted in reversed(list(self.mounted)):
             self.unmount(mounted)
+
+    def _at_exit(self) -> None:
+        self.close()
+        # El bucle de qasync se cierra ahora, con Qt todavía vivo: si lo cerrara el
+        # recolector al final, Qt ya no existiría ("Signal source has been deleted").
+        if not self.loop.is_running() and not self.loop.is_closed():
+            try:
+                self.loop.close()
+            except RuntimeError:
+                pass
 
     def exec(self) -> int:
         if ms := os.environ.get(EXIT_AFTER_ENV):

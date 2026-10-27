@@ -324,6 +324,9 @@ class _Lowerer:
             else:
                 self.prop(attr, el, spec, ir)
 
+        if spec.tag is not None and "fxFlex" in ir.props:
+            _custom_flex(ir)
+
         # Un tamaño fijo desactiva el estiramiento por defecto (texto y campos en columnas).
         for axis in ("Width", "Height"):
             if f"Layout.preferred{axis}" in ir.props:
@@ -947,6 +950,16 @@ def _fill_parent(item: IRElement) -> None:
     if item.qml_type in _BOXES:
         item.props["fxSizedW"] = Literal("true")
         item.props["fxSizedH"] = Literal("true")
+
+
+def _custom_flex(ir: IRElement) -> None:
+    """flex en un elemento .qml propio: no tiene `fxFlex`, así que se declara y se le dan
+    las mismas reglas de disposición que a los controles de FluxUI (fx.js)."""
+    ir.props["property int fxFlex"] = ir.props.pop("fxFlex")
+    ir.props.setdefault("Layout.fillWidth", Literal("Fx.fillWidth(parent, fxFlex, false, false)"))
+    ir.props.setdefault("Layout.fillHeight", Literal("Fx.fillHeight(parent, fxFlex, false)"))
+    ir.props.setdefault("Layout.preferredWidth", Literal("Fx.basis(parent, fxFlex, true)"))
+    ir.props.setdefault("Layout.preferredHeight", Literal("Fx.basis(parent, fxFlex, false)"))
 
 
 def _const_matches(value: object, names: frozenset[str]) -> bool:

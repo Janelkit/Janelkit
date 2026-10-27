@@ -278,6 +278,13 @@ class MountedApp:
         value = self.namespace[name]
         return value.value if hasattr(value, "value") and hasattr(value, "peek") else value
 
+    def windows(self) -> list["MountedApp"]:
+        """Las otras ventanas abiertas (con `open_window`), de la más antigua a la más reciente.
+
+        Cada una se inspecciona igual que la principal: `app.windows()[-1].texts()`.
+        """
+        return [MountedApp(self.application, m) for m in self.application.mounted if m is not self.mounted]
+
     # -- búsqueda -------------------------------------------------------------
     def elements(self) -> list[Element]:
         """Elementos de la plantilla (integrados y QML propios), sin las piezas internas de cada control."""

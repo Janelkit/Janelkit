@@ -58,7 +58,8 @@ def build_project(target: Path, out_dir: Path | None = None) -> BuildResult:
         attempt(entry, as_window=True)
     for path in files:
         if str(path.resolve()) not in session.registry and path != entry:
-            attempt(path, as_window=False)  # componentes aún sin usar
+            # Sin usar en ninguna plantilla: un componente, o una ventana para open_window.
+            attempt(path, as_window=_is_window(session, path))
     compiled.update(session.registry)
     # Un archivo con errores puede intentarse dos veces (como hijo y por sí mismo).
     result.errors = list({(d.message, d.location): d for d in result.errors}.values())
@@ -71,3 +72,13 @@ def build_project(target: Path, out_dir: Path | None = None) -> BuildResult:
         target_file.write_text(comp.qml, encoding="utf-8")
         result.written.append(target_file)
     return result
+
+
+def _is_window(session: CompileSession, path: Path) -> bool:
+    """El archivo tiene <Window> como raíz (se abrirá con open_window)."""
+    try:
+        sfc, _ = session.load(path)
+    except FluxError:
+        return False
+    roots = sfc.root_elements
+    return bool(roots) and getattr(roots[0], "tag", None) == "Window"

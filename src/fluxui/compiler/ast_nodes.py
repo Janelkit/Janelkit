@@ -16,6 +16,14 @@ class Expression:
 
 
 @dataclass
+class FormattedExpression(Expression):
+    """`{valor:.1f}` o `{valor!r}` en el texto: conversión y formato como en un f-string."""
+
+    conversion: str = ""  # "", "r", "s" o "a"
+    spec: str = ""  # especificación de formato (sin los dos puntos)
+
+
+@dataclass
 class Attribute:
     name: str
     # str = literal entre comillas, Expression = {expr}, True = atributo booleano sin valor
@@ -147,7 +155,9 @@ def _dump_node(node: Node, depth: int, out: list[str]) -> None:
         if node.value.strip():
             out.append(f"{pad}Text {node.value.strip()!r} @{_lc(node.loc)}")
     elif isinstance(node, Interpolation):
-        out.append(f"{pad}{{{node.expression.code.strip()}}} @{_lc(node.loc)}")
+        expr = node.expression
+        fmt = (f"!{expr.conversion}" if getattr(expr, "conversion", "") else "") + (f":{expr.spec}" if getattr(expr, "spec", "") else "")
+        out.append(f"{pad}{{{expr.code.strip()}{fmt}}} @{_lc(node.loc)}")
     elif isinstance(node, IfBlock):
         for i, branch in enumerate(node.branches):
             if i == 0:

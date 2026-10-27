@@ -165,3 +165,37 @@ def test_text_accepts_background_border_and_radius(mount):
     assert badge.property("fxBackground").name() == "#ff0000"
     assert badge.property("fxRadius") == 9
     assert badge.property("leftPadding") == 6
+
+
+TABLE = """<script>
+from fluxui import state
+rows = state([{"id": i, "v": i} for i in range(300)])
+
+def shuffle():
+    import random
+    new = list(rows.value)
+    random.Random(1).shuffle(new)
+    rows.value = new
+</script>
+<Window width={300} height={200}>
+  <List id="list">
+    {#each rows as r (r["id"])}
+      <Text>fila {r["v"]}</Text>
+    {/each}
+  </List>
+</Window>
+"""
+
+
+def test_reordering_many_rows_keeps_the_scroll_position(mount):
+    """Reordenar una tabla (cientos de movimientos, un reinicio del modelo) no la devuelve al principio."""
+    m = mount(TABLE)
+    view = settle(m)
+    view.setProperty("contentY", view.property("originY") + 2000)
+    settle(m, view)
+    top = QMetaObject.invokeMethod(view, "indexAt", Q_RETURN_ARG("int"), Q_ARG("double", 1.0), Q_ARG("double", view.property("contentY") + 1))
+    assert top > 50
+    m.instance.namespace["shuffle"]()
+    settle(m, view)
+    after = QMetaObject.invokeMethod(view, "indexAt", Q_RETURN_ARG("int"), Q_ARG("double", 1.0), Q_ARG("double", view.property("contentY") + 1))
+    assert after == top

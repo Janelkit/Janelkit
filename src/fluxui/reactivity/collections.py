@@ -32,13 +32,24 @@ def reactive(value: Any) -> Any:
     return value
 
 
-def to_plain(value: Any) -> Any:
-    """Copia profunda sin colecciones reactivas (para entregar valores a Qt)."""
+def to_plain(value: Any, track: bool = False) -> Any:
+    """Copia profunda sin colecciones reactivas (para entregar valores a Qt).
+
+    Con `track=True`, el observador en curso pasa a depender del contenido de
+    cada colección copiada: un binding que entrega una lista entera a QML se
+    recalcula cuando esa lista se modifica en el sitio.
+    """
     if isinstance(value, ReactiveList):
-        return [to_plain(v) for v in list.__iter__(value)]
+        if track:
+            value._fx_src._track()
+        return [to_plain(v, track) for v in list.__iter__(value)]
     if isinstance(value, ReactiveDict):
-        return {k: to_plain(v) for k, v in dict.items(value)}
+        if track:
+            value._fx_src._track()
+        return {k: to_plain(v, track) for k, v in dict.items(value)}
     if isinstance(value, ReactiveSet):
+        if track:
+            value._fx_src._track()
         return set(set.__iter__(value))
     return value
 

@@ -80,12 +80,35 @@ def enviar():
 | `@task` | Una operación con estado para la plantilla: `{#if resultados.loading}`, `{resultados.error}`, `{resultados.value}`. `.run(*args)` la reinicia y `.cancel()` la detiene. |
 | `background(fn, *args)` | Código que bloquea (disco, CPU, bibliotecas síncronas como `urllib` o `requests`): `await background(fn, ...)` lo ejecuta en otro hilo y devuelve el resultado. `fn` no debe tocar estado ni interfaz. |
 | `spawn(corrutina)` | Lanzar una corrutina sin esperarla, por ejemplo desde `on_mount`. |
+| `interval(ms, fn)`, `timeout(ms, fn)` | Repetir algo cada cierto tiempo, o hacerlo una vez más tarde. Ver [Temporizadores](#temporizadores). |
 
 - Lo lanzado desde un componente (manejadores, `@task`, `spawn`, `on_mount` asíncrono) se **cancela al desmontarlo**: una corrutina nunca actualiza una vista que ya no existe. Una fila de `{#each}` cancela lo suyo al eliminarse.
 - Los errores de un manejador asíncrono se registran con archivo y línea, como los síncronos. Los de una `@task` quedan en `.error` para mostrarlos.
 - El trabajo de `background` en curso no se puede interrumpir (es un hilo), pero su resultado se descarta si la tarea se canceló.
 
 Ejemplo completo: `examples/books` (busca en la API de Open Library).
+
+### Temporizadores
+
+```python
+from fluxui import interval, timeout
+
+@interval(250)                        # cada 250 ms mientras exista el componente
+def muestrear():
+    cpu.value = leer_cpu()
+
+@interval(1000)
+async def procesos():                 # async: el siguiente tic se salta si este no ha terminado
+    lista.value = await background(leer_procesos)
+
+ocultar = timeout(3000, lambda: aviso.set(""))
+ocultar.restart()                     # vuelve a contar los 3 s (p. ej. con cada «escribiendo…»)
+```
+
+- Se detienen solos al desmontar el componente que los creó. Fuera de un componente (en un servicio), viven hasta `.stop()`.
+- Cada ejecución agrupa sus cambios de estado en un solo `batch`: actualizar 50 métricas en un tic recalcula la interfaz una vez.
+- `.active` es reactivo (`{#if muestrear.active}`); `.stop()`, `.start()` y `.restart()` lo controlan. Para cambiar el periodo: `muestrear.ms = 500` y `muestrear.restart()`.
+- Un error en la función se registra con su nombre en el logger `fluxui` y el temporizador sigue.
 
 ## Expresiones en la plantilla
 
@@ -97,6 +120,7 @@ Ejemplo completo: `examples/books` (busca en la API de Open Library).
 - Las dependencias se registran solas: cada binding se recalcula solo cuando cambia algo de lo que leyó, y solo se notifica a QML la propiedad afectada.
 - **Nombres no definidos:** si una expresión usa un nombre que no define el script (ni un `{#each}` que la contenga, ni Python), es un error de compilación con sugerencia: `'cuont' no está definido — ¿quisiste decir 'count'?`. Si el script usa `from x import *` o `globals()`, esta comprobación se desactiva.
 - `None` se muestra como texto vacío.
+- **Formato** (solo en el texto, como en un f-string): `{cpu:.1f} %`, `{total:,}`, `{nombre!r}`, `{n:>4}`. Los dos puntos dentro de corchetes, paréntesis o cadenas no cuentan (`{lista[1:3]}`); una `lambda` necesita paréntesis.
 - Si una expresión lanza una excepción al ejecutarse, se registra un error con archivo y línea en el logger `fluxui` y la aplicación sigue funcionando.
 
 Las llaves pueden contener cadenas y diccionarios con llaves: `{ {"a": "}"}["a"] }`.
@@ -362,7 +386,7 @@ tema = inject("tema", "claro")       # con valor por defecto
 - Debe contener exactamente un `{#each}` (con clave, como siempre). El resto funciona igual: claves, índice, manejadores, componentes dentro de la fila y colecciones reactivas.
 - Cada fila se crea —su parte Python y su vista— la primera vez que se hace visible. Su parte Python se conserva hasta que la fila sale de la lista; la vista se destruye al salir de pantalla y se vuelve a crear al volver. Por eso, lo que el usuario esté escribiendo en una fila debe ir a un `state` (`bind:`), no quedarse solo en el control.
 - Las filas ocupan el ancho de la lista. Admite `gap`, `padding`, fondo, borde y radio desde `<style>`; por defecto ocupa el espacio libre (`flex: 1`).
-- Añadir filas (al final, al principio o en medio, en cualquier cantidad) se aplica por bloques y la vista conserva su posición. Borrar o mover pocas filas se aplica una a una. A partir de 64 borrados o movimientos a la vez (ordenar, invertir, sustituir la lista) se aplican de golpe y la lista vuelve al principio.
+- Añadir filas (al final, al principio o en medio, en cualquier cantidad) se aplica por bloques y la vista conserva su posición. Borrar o mover pocas filas se aplica una a una (con `animate`, animado). A partir de 64 borrados o movimientos a la vez (ordenar, invertir, sustituir la lista) se aplican de golpe: las filas visibles se vuelven a crear y la vista conserva su posición (la fila que estaba arriba, por su número, sigue arriba), como al reordenar una tabla.
 - `{:else}` no está disponible dentro de `<List>`: muestra el estado vacío con un `{#if}` fuera.
 
 ### Desplazamiento
@@ -521,6 +545,7 @@ from widgets.Meter import Meter
 ```
 
 - El compilador lee las `property` y `signal` del **objeto raíz** del archivo (sin ejecutarlo) y valida el uso: una prop o un evento que no existe es un error con sugerencia.
+- Disposición: sin `width`/`height` toma su tamaño natural (`implicitWidth`/`implicitHeight`), como un botón. `flex={1}` lo hace crecer en el eje del contenedor igual que a los elementos de FluxUI (`<LineChart flex={1} />` ocupa el alto libre de una columna).
 - Props: las propiedades que no son `readonly`, con su tipo (`string`, `int`, `real`, `bool`, `color`; el resto acepta cualquier valor). Además, las comunes: `width`, `height`, `flex`, `visible`, `enabled`, `opacity`, y `id`, `class`, `ref`.
 - Eventos: cada `signal`. El manejador recibe sus parámetros (`def elegido(step):`; en línea, `event`).
 - `bind:prop={estado}` funciona con cualquier propiedad escribible: los cambios que haga el QML (también por asignación, `root.value = 3`) vuelven al `state`. Los números de QML (`real`) llegan como `float`.

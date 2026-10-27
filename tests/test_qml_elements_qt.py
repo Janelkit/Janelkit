@@ -112,3 +112,45 @@ def test_qml_errors_point_to_the_flux_usage(mount, project, caplog):
     with caplog.at_level(logging.WARNING, logger="fluxui"):
         mount(project({"App.flux": APP, "widgets/Gauge.qml": broken}))
     assert "noExiste" in caplog.text
+
+
+def test_flex_on_a_qml_element_follows_the_flux_layout_rules(mount, project):
+    app = """<script>
+from widgets.Gauge import Gauge
+</script>
+<Window width={400} height={300}>
+  <Column>
+    <Text>arriba</Text>
+    <Gauge id="g" flex={1} />
+  </Column>
+</Window>
+"""
+    m = mount(project({"App.flux": app, "widgets/Gauge.qml": GAUGE}))
+    gauge = find(m, "g")
+    assert gauge.property("fxFlex") == 1
+    assert gauge.height() > 200  # ocupa el alto libre de la columna (no sus 16 px naturales)
+
+
+def test_a_list_passed_whole_to_qml_follows_in_place_changes(mount, project):
+    """`values={serie.value}` entrega una copia a QML: modificar la lista en el sitio
+    (append, del) también debe llegar, no solo asignar una lista nueva."""
+    chart = 'import QtQuick\nItem { property var values: []; readonly property int n: values.length }'
+    app = """<script>
+from fluxui import state
+from widgets.Chart import Chart
+serie = state([1.0])
+nested = state({"pts": [1, 2]})
+</script>
+<Column>
+  <Chart id="a" values={serie} />
+  <Chart id="b" values={nested["pts"]} />
+</Column>
+"""
+    m = mount(project({"App.flux": app, "widgets/Chart.qml": chart}))
+    ns = m.instance.namespace
+    ns["serie"].value.append(2.0)
+    assert find(m, "a").property("n") == 2
+    del ns["serie"].value[0]
+    assert list(find(m, "a").property("values")) == [2.0]
+    ns["nested"].value["pts"].append(3)
+    assert find(m, "b").property("n") == 3

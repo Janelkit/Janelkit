@@ -27,7 +27,7 @@ Gravedad: **Bloquea** (no se podía hacer), **Molesta** (había que dar un rodeo
 
 | # | Qué intenté | Qué pasó | Gravedad | Propuesta |
 |---|---|---|---|---|
-| 15 | Indicador «escribiendo…» que se borra a los 3 s | No hay temporizadores: una corrutina con `asyncio.sleep` y cancelación a mano | Molesta | `timeout(ms, fn)` / `interval(ms, fn)` ligados al componente (el reto 1 lo confirmará) |
+| 15 | Indicador «escribiendo…» que se borra a los 3 s | No hay temporizadores: una corrutina con `asyncio.sleep` y cancelación a mano | Molesta | ✅ Resuelto en el reto 1: `timeout(3000, fn)` y `.restart()` en cada aviso |
 | 16 | Copiar el texto de un mensaje | `<Text>` no se puede seleccionar | Molesta | `<Text selectable>` (un `TextEdit` de solo lectura con el mismo formato) |
 | 17 | Mostrar Markdown de otras personas | El Markdown de Qt acepta HTML; hay que escaparlo a mano, y el escape se ve literal dentro de `código` (`a &lt; b`) | Molesta (seguridad) | Que `format="markdown"` no interprete HTML (`MarkdownNoHTML`) y dejar `"html"` para quien lo quiera |
 | 18 | Icono propio en la notificación y en la bandeja | Se usa el icono de FluxUI; no hay forma de dar el de la aplicación | Molesta | `<Window icon="...">` o `run(..., icon=)`, usado también por `notify` |
@@ -59,4 +59,4 @@ Ninguna: ni `.qml` propio ni acceso a Qt desde la aplicación. Solo el banco de 
 - **Al empezar, no se podía construir** con la API pública: faltaban el control del desplazamiento, el texto enriquecido, los eventos de ventana y las notificaciones, y la lista perdía la posición al cargar historial. Con lo añadido al núcleo (puntos 1–14), **sí**, sin vía de escape.
 - La asincronía (`spawn` + `qasync` + WebSocket) funcionó a la primera: una corrutina que vive toda la sesión, con reconexión y cancelación al cerrar, sin hilos.
 - El rendimiento sobra para un chat: 20 mensajes/s con la lista siguiendo al final usan menos del 10 % de CPU.
-- Lo que más se echa de menos ahora son los **temporizadores** (15) y el **texto seleccionable** (16). El Markdown seguro (17) conviene decidirlo antes de publicar, porque cambiar después qué interpreta `format="markdown"` rompería aplicaciones.
+- Lo que más se echaba de menos eran los **temporizadores** (15, ya resueltos en el reto 1) y el **texto seleccionable** (16). El Markdown seguro (17) conviene decidirlo antes de publicar, porque cambiar después qué interpreta `format="markdown"` rompería aplicaciones.

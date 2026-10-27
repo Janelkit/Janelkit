@@ -16,6 +16,7 @@ from .ast_nodes import (
     EachBlock,
     Element,
     Expression,
+    FormattedExpression,
     IfBlock,
     IfBranch,
     Interpolation,
@@ -198,7 +199,7 @@ class _TemplateParser:
                 raise self.error(f"directiva {self._peek_directive()} sin bloque abierto")
             elif self.startswith("{"):
                 start = self.pos
-                expr = self.read_braced()
+                expr = self.read_interpolation()
                 nodes.append(Interpolation(expr, self.loc(start)))
             elif self.startswith("<"):
                 raise self.error("carácter '<' inesperado", hint="los nombres de elemento empiezan con una letra")
@@ -275,6 +276,15 @@ class _TemplateParser:
         return Attribute(name, value, self.loc(start))
 
     # -- expresiones --------------------------------------------------------
+    def read_interpolation(self) -> Expression:
+        """`{expr}` en el texto; admite conversión y formato como un f-string: `{x:.1f}`, `{x!r}`."""
+        raw = self.read_braced(validate=False)
+        code, conversion, spec = split_format(raw.code)
+        validate_expression(code, raw.loc, self.source)
+        if not conversion and spec is None:
+            return Expression(code, raw.loc)
+        return FormattedExpression(code, raw.loc, conversion, spec or "")
+
     def read_braced(self, validate: bool = True) -> Expression:
         """Lee `{...}` respetando llaves anidadas y cadenas Python."""
         open_pos = self.pos
@@ -421,3 +431,39 @@ class _TemplateParser:
         if directive != "/each":
             raise self.error(f"directiva {{{directive}}} inesperada dentro de {{#each}}", dstart, "cierra el bloque con {/each}")
         return block
+
+
+def split_format(code: str) -> tuple[str, str, str | None]:
+    """Separa `expr!c:spec` como hacen los f-strings: el primer `!` o `:` fuera de paréntesis y cadenas.
+
+    Devuelve (expr, conversión, formato); formato es None si no hay `:`.
+    Como en Python, una lambda o un `:=` en el nivel superior necesitan paréntesis.
+    """
+    depth = 0
+    i = 0
+    while i < len(code):
+        ch = code[i]
+        if ch in "\"'":
+            triple = code.startswith(ch * 3, i)
+            delim = ch * 3 if triple else ch
+            end = i + len(delim)
+            while True:
+                end = code.find(delim, end)
+                if end < 0:
+                    return code, "", None  # cadena sin cerrar: que lo diga la validación
+                if code[end - 1] != "\\":
+                    break
+                end += 1
+            i = end + len(delim)
+            continue
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif depth == 0 and ch == "!" and i + 1 < len(code) and code[i + 1] in "rsa" and (i + 2 == len(code) or code[i + 2] == ":"):
+            spec = code[i + 3:] if i + 2 < len(code) else None
+            return code[:i], code[i + 1], spec
+        elif depth == 0 and ch == ":":
+            return code[:i], "", code[i + 1:]
+        i += 1
+    return code, "", None

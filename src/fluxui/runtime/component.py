@@ -26,7 +26,7 @@ from PySide6.QtCore import QObject, QTimer
 from shiboken6 import Shiboken
 
 from ..compiler import CompiledComponent
-from ..compiler.ast_nodes import Expression
+from ..compiler.ast_nodes import Expression, FormattedExpression
 from ..compiler.expressions import EVENT_NAME, GETTER, RUNNER, SETTER, compile_expression, compile_handler
 from ..compiler.ir import (
     Binding,
@@ -123,6 +123,18 @@ def _display(value: Any) -> str:
     return "" if value is None else str(value)
 
 
+_CONVERSIONS = {"r": repr, "s": str, "a": ascii}
+
+
+def _formatted(value: Any, expr: FormattedExpression) -> str:
+    """`{valor!r:.1f}`: conversión y después formato, como en un f-string (None sigue siendo "")."""
+    if value is None:
+        return ""
+    if expr.conversion:
+        value = _CONVERSIONS[expr.conversion](value)
+    return format(value, expr.spec)
+
+
 # -- plantillas ------------------------------------------------------------------
 class TemplateInstance:
     def __init__(
@@ -206,7 +218,8 @@ class TemplateInstance:
         bridge = self.bridge
 
         def update() -> None:
-            bridge.set_value(binding.id, self._evaluate(binding))
+            # QML recibe una copia: el binding depende también del contenido de las colecciones.
+            bridge.set_value(binding.id, to_plain(self._evaluate(binding), track=True))
 
         def on_error(exc: BaseException) -> None:
             self.report(f"error al evaluar el binding: {type(exc).__name__}: {exc}", binding.loc, exc)
@@ -219,7 +232,10 @@ class TemplateInstance:
         if isinstance(binding, ExprBinding):
             value = self.eval(binding.expression)
             return self._class_string(value, binding) if binding.classes else value
-        return "".join(p if isinstance(p, str) else _display(self.eval(p)) for p in binding.parts)
+        return "".join(
+            p if isinstance(p, str) else _formatted(self.eval(p), p) if isinstance(p, FormattedExpression) else _display(self.eval(p))
+            for p in binding.parts
+        )
 
     def _class_string(self, value: Any, binding: ExprBinding) -> str:
         """class={expr}: texto, lista/tupla/conjunto (se ignoran los vacíos) o dict {clase: condición}."""

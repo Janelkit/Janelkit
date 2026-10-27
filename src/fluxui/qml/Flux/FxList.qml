@@ -150,7 +150,23 @@ Item {
                 }
                 else if (view.fxWasAtTop) view.positionViewAtBeginning()
             }
-            function onModelReset() { if (root.follow && view.fxStick) fxPositioningLater.restart() }
+            // Muchos cambios a la vez (reordenar una tabla) llegan como un reinicio del modelo:
+            // ListView volvería al principio. Se conserva la posición: la fila que estaba arriba
+            // de la vista (por su número, como en un administrador de tareas) vuelve a su sitio.
+            function onModelAboutToBeReset() {
+                view.fxAnchorIndex = -1
+                if (root.follow && view.fxStick) return
+                const index = view.indexAt(view.contentX + 1, view.contentY + 1)
+                const item = index > 0 ? view.itemAtIndex(index) : null
+                if (item) {
+                    view.fxAnchorIndex = index
+                    view.fxAnchorOffset = item.y - view.contentY
+                }
+            }
+            function onModelReset() {
+                if (root.follow && view.fxStick) fxPositioningLater.restart()
+                else if (view.fxAnchorIndex >= 0) fxAnchorLater.restart()  // después de que ListView procese el reinicio
+            }
         }
         onContentYChanged: {
             if (root.follow && !fxPositioning && (!fxPositioningLater.running || moving)) fxStick = atYEnd

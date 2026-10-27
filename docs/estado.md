@@ -2,7 +2,7 @@
 
 Referencia: [`FluxUI_Plan_Desarrollo_v0.1.md`](../FluxUI_Plan_Desarrollo_v0.1.md). Actualizado: 26 de octubre de 2026.
 
-**Entornos verificados:** Windows 11 con Python 3.13.9 + PySide6 6.12.0, y con Python 3.10.19 + PySide6 6.8.3 (las versiones mínimas declaradas): las 267 pruebas pasan en ambos. Linux y macOS **no se han probado** todavía: la CI (`.github/workflows/ci.yml`) está preparada para hacerlo en cuanto el repositorio tenga un remoto en GitHub.
+**Entornos verificados:** Windows 11 con Python 3.13.9 + PySide6 6.12.0, y con Python 3.10.19 + PySide6 6.8.3 (las versiones mínimas declaradas): las 334 pruebas pasan en ambos. Linux y macOS **no se han probado** todavía: la CI (`.github/workflows/ci.yml`) está preparada para hacerlo en cuanto el repositorio tenga un remoto en GitHub.
 
 ## Backlog inicial (sección 11)
 
@@ -145,6 +145,8 @@ Explorador (`examples/files`) sobre una carpeta de 5000 archivos:
 ### Retos ([challenges_to_test.md](challenges_to_test.md))
 
 - **Chat (reto 4):** hecho, en `examples/challenges/chat`, con pruebas en `tests/test_challenge_chat.py` y [registro de hallazgos](../examples/challenges/chat/HALLAZGOS.md). Añadió al núcleo el desplazamiento de `<List>` (`follow`, `on:top`/`on:bottom`/`on:scroll`, `ref.scroll_to_*`), las inserciones por bloques sin reiniciar la lista, `<Text format="markdown">` con `on:link`, fondo y borde en `<Text>`, `on:activate`/`on:deactivate` en `<Window>`, `fluxui.notify`, y parámetros de señal declarados en el QML generado. Medido: 20 mensajes/s durante 5 min con menos del 10 % de CPU; la memoria se estabiliza.
+
+- **Panel (reto 1):** hecho, en `examples/challenges/panel`, con pruebas en `tests/test_challenge_panel.py` y [registro de hallazgos](../examples/challenges/panel/HALLAZGOS.md). Añadió al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`. Corrigió que las listas modificadas en el sitio no llegaran a QML cuando se pasan enteras a un control, que una `<List>` volviera arriba al reordenar muchas filas, `flex` en elementos QML propios, `flux build` con ventanas de `open_window` y un aviso al salir. Medido: 50 métricas 10 veces por segundo durante 10 min con un 12 % del hilo de la interfaz, memoria estable y menos de 30 ms hasta la pantalla.
 
 ## Limitaciones conocidas
 

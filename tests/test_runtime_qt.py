@@ -520,3 +520,40 @@ big = state(False)
     with caplog.at_level(logging.WARNING, logger="fluxui"):
         ns["kind"].value = "nada"
     assert "la clase 'nada' no tiene reglas en <style>" in caplog.text
+
+
+def test_text_interpolation_accepts_conversion_and_format_spec(mount):
+    """`{x:.1f}`, `{x!r}`, `{x:>5}` como en un f-string; los dos puntos dentro de corchetes o
+    cadenas no cuentan, y None sigue mostrándose vacío."""
+    m = mount("""<script>
+from fluxui import state
+cpu = state(12.345)
+name = state("ana")
+items = state([1, 2, 3, 4])
+nada = state(None)
+</script>
+<Column>
+  <Text id="a">CPU {cpu:.1f} %</Text>
+  <Text id="b">{name!r} {name:>5}|</Text>
+  <Text id="c">{items[1:3]} {"a:b"} {{"k": 1}["k"]}</Text>
+  <Text id="d">[{nada:.2f}] {cpu * 100:,.0f}</Text>
+</Column>""")
+    assert find(m, "a").property("text") == "CPU 12.3 %"
+    assert find(m, "b").property("text") == "'ana'   ana|"
+    assert find(m, "c").property("text") == "[2, 3] a:b 1"
+    assert find(m, "d").property("text") == "[] 1,234"
+    m.instance.namespace["cpu"].value = 99.96
+    assert find(m, "a").property("text") == "CPU 100.0 %"
+
+
+def test_split_format_rules():
+    from fluxui.compiler.template_parser import split_format
+
+    assert split_format("x") == ("x", "", None)
+    assert split_format("x:.1f") == ("x", "", ".1f")
+    assert split_format("x!r") == ("x", "r", None)
+    assert split_format("x!s:>4") == ("x", "s", ">4")
+    assert split_format("a != b") == ("a != b", "", None)
+    assert split_format("d['a:b']") == ("d['a:b']", "", None)
+    assert split_format("f(x)[1:2]") == ("f(x)[1:2]", "", None)
+    assert split_format("(lambda: 1)()") == ("(lambda: 1)()", "", None)

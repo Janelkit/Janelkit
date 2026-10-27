@@ -73,6 +73,16 @@ Las corrutinas corren en el hilo de la interfaz, sobre el bucle de Qt (con `qasy
 
 Un manejador `async def` (o en línea que devuelva una corrutina, como `on:click={guardar()}`) se lanza con `spawn` automáticamente.
 
+### Temporizadores
+
+Creados en el script de un componente (o en algo que se ejecuta dentro de él), se detienen al desmontarlo. Cada ejecución agrupa sus cambios (`batch`); si la función es `async def`, se lanza con `spawn` y los tics siguientes se saltan mientras no termine.
+
+| Nombre | Descripción |
+|---|---|
+| `interval` | `interval(ms, fn)` llama a `fn` cada `ms` milisegundos. También como decorador: `@interval(250)`. Devuelve un `Timer`. |
+| `timeout` | `timeout(ms, fn)` llama a `fn` una vez, pasados `ms` milisegundos. También como decorador. Devuelve un `Timer`. |
+| `Timer` | Tipo de `interval` y `timeout`: `.active` (reactivo), `.ms` (se aplica al volver a arrancar), `.start()`, `.restart()` (vuelve a contar desde cero), `.stop()`; llamarlo (`muestrear()`) ejecuta la función ahora. Un error en la función se registra en el logger `fluxui` y el temporizador sigue. |
+
 ### Ventanas
 
 | Nombre | Descripción |
@@ -135,7 +145,7 @@ Un manejador `async def` (o en línea que devuelva una corrutina, como `on:click
 | Nombre | Descripción |
 |---|---|
 | `mount` | `with mount("src/App.flux", headless=True) as app:` monta la aplicación sin ventana visible y la desmonta al salir. |
-| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.dialogs()`, `app.answer_dialog(resultado)`, `app.notifications()`. |
+| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.dialogs()`, `app.answer_dialog(resultado)`, `app.notifications()`, `app.windows()` (las ventanas abiertas con `open_window`, cada una inspeccionable igual). |
 | `Element` | `.tag`, `.id`, `.text`, `.label`, `.value`, `.visible`, `.enabled`, `.prop(nombre)`; acciones `.click()`, `.type(texto)`, `.submit()`, `.check(bool)`, `.slide(valor)`, `.choose(opción)`, `.focus()`. `.item` es el objeto Qt (no cubierto por la política de versiones). |
 | `InspectError` | Elemento no encontrado, ambiguo, desactivado o que no admite la acción. Es un `AssertionError`. |
 

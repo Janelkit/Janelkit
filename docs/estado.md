@@ -2,7 +2,7 @@
 
 Referencia: [`FluxUI_Plan_Desarrollo_v0.1.md`](../FluxUI_Plan_Desarrollo_v0.1.md). Actualizado: 26 de octubre de 2026.
 
-**Entornos verificados:** Windows 11 con Python 3.13.9 + PySide6 6.12.0, y con Python 3.10.19 + PySide6 6.8.3 (las versiones mínimas declaradas): las 392 pruebas pasan en ambos. Linux y macOS **no se han probado** todavía: la CI (`.github/workflows/ci.yml`) está preparada para hacerlo en cuanto el repositorio tenga un remoto en GitHub.
+**Entornos verificados:** Windows 11 con Python 3.13.9 + PySide6 6.12.0, y con Python 3.10.19 + PySide6 6.8.3 (las versiones mínimas declaradas): las 424 pruebas pasan en ambos (la vía rápida de `Column`/`Row` y las cajas ligeras, comprobadas con PySide6 6.12.0 y 6.8.3). Linux y macOS **no se han probado** todavía: la CI (`.github/workflows/ci.yml`) está preparada para hacerlo en cuanto el repositorio tenga un remoto en GitHub.
 
 ## Backlog inicial (sección 11)
 
@@ -86,14 +86,14 @@ Windows 11, offscreen, lista de filas con casilla, texto y botón. Se reproduce 
 
 | Operación | 100 filas | 1000 filas |
 |---|---|---|
-| Crear la lista completa | 33 ms | 443 ms |
+| Crear la lista completa | 38 ms | 430 ms |
 | Insertar una fila en medio (reasignando) | 1 ms | 7 ms |
 | Insertar una fila en medio (`insert`) | 1 ms | 5 ms |
 | Añadir al final (`append`) | 1 ms | 2 ms |
 | Editar una fila (reasignando) | <1 ms | 3 ms |
 | Editar una fila en el sitio (`todo["done"] = True`) | <1 ms | <1 ms |
-| Invertir el orden (`reverse`) | 3 ms | 102 ms |
-| Vaciar (`clear`) | 1 ms | 92 ms |
+| Invertir el orden (`reverse`) | 2 ms | 93 ms |
+| Vaciar (`clear`) | 2 ms | 39 ms |
 
 Modificar en el sitio un elemento de una colección reactiva solo actualiza los bindings que leyeron ese elemento.
 
@@ -156,6 +156,9 @@ Explorador (`examples/files`) sobre una carpeta de 5000 archivos:
 - **Herencia y variables (fase 4):** texto heredado, variables propias y `style=` (`FxContext.qml`, `FxTextInherit.qml`), validados con la tabla y las pestañas segmentadas de `examples/flex` (`tests/test_flex_inherit.py`). 
 - **Componentes como elementos (fase 5):** los atributos de la etiqueta van a la raíz del componente (`FxRemote.qml`), sin caja exterior (`tests/test_flex_components.py`). Rendimiento de la rejilla: 44 ms por paso con el catálogo actual (48 ms antes); el objetivo de 4 ms no se cumple (ver [flex.md](flex.md), fase 5).
 - **Posición (fase 6):** `position` (relative, absolute, fixed), `inset`, `z-index`, validados con la insignia, el menú en el puntero y el diálogo superpuesto de `examples/flex` (`tests/test_flex_position.py`). Con esto están las seis fases de [flex.md](flex.md). Pendiente: el rendimiento de la rejilla grande (ver fase 5).
+- **Vía rápida de `Column`/`Row`:** el compilador elige caja a caja entre un layout de Qt (`FxColumn`, `FxRow`, `FxQtBox`) y el motor de `<flex>` (`FxFlexColumn`, `FxFlexRow`, `FxFlex`), según lo que usen la caja y sus hijos (`compiler/layout_choice.py`; `tests/test_layout_choice.py`). Las dos vías colocan igual en todos los ejemplos. Medido con 300 tarjetas: cambiar el ancho, 9 ms por paso frente a 32 ms con el motor (4 ms con `ColumnLayout` sin más); crear, 285 ms frente a 300 ms (60 ms). Crear sigue siendo caro por el peso de cada caja y de cada texto (ver [flex.md](flex.md#vía-rápida-layouts-de-qt)). En los ejemplos, algo más de la mitad de las cajas van por la vía rápida (96 de 173; en el panel, 60 de 72); las de `<flex>` en fila, como las de `examples/flex` (1 de 43), siguen con el motor.
+- **Cajas y textos ligeros:** cada caja y cada `<Text>` crean solo las piezas que usan (`FxHover`, `FxTap`, `FxRole`, `FxTranslate`, `FxTextBox`, `FxTextLinks`; `tests/test_flex_lazy.py`). Una caja vacía pasa de ~50 a ~32 µs y un texto de ~43 a ~30 µs; las 300 tarjetas desde `.flux`, de ~425 a ~325 ms al crear y de ~9 a ~6,5 ms por paso al cambiar el ancho.
+- **Tiempos recuperados:** invertir 1000 filas en un `<Scroll>` volvió a ~93 ms (~380 ms desde el motor de `<flex>`): cada fila avisaba a su contenedor al cambiar su índice, y mover una fila cambiaba el de todas las de detrás; ahora avisa el modelo, una vez por movimiento. La rejilla de 200 tarjetas de `examples/flex` volvió a 17 ms por fotograma (con la vía rápida había subido a 40, con picos de casi 3 s): dentro de una caja con el motor, también el motor, y lo que quede con layout de Qt se coloca al momento (ver [flex.md](flex.md#vía-rápida-layouts-de-qt)). 300 tarjetas dentro de un `<Scroll>`: 8,7 ms por paso al cambiar el ancho (28 ms en el último commit).
 
 ## Limitaciones conocidas
 

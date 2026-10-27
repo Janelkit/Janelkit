@@ -150,8 +150,8 @@ def test_each_with_key_index_and_else():
 def test_each_with_several_nodes_gets_an_implicit_container_matching_the_parent():
     c = compile_source(SCRIPT + "<Row>{#each items as x}<Text>{x}</Text><Text>-</Text>{/each}</Row>")
     root = c.ir.template.slots[0].fragment.root
-    assert root.qml_type == "FxRow" and len(root.children) == 2
-    assert "parent.spacing" in root.props["gap"].qml
+    assert root.qml_type == "FxFlexRow" and len(root.children) == 2  # caja implícita: motor de <flex>
+    assert "Fx.mainGap(parent)" in root.props["gap"].qml
     assert root.props["fxFlex"].qml == "fillMain ? 1 : 0"
 
 

@@ -133,7 +133,7 @@ Hoy lo heredan los `<Text>`; el texto de los controles de Qt (`Button`, `TextFie
 
 ## Disposición
 
-Toda la disposición la hace el motor de [`<flex>`](flex.md), un subconjunto del flexbox de CSS. `<flex>` sigue los valores por defecto de la web (fila, `align-items: stretch`, los hijos encogen si no caben). `Column` y `Row` son atajos de `<flex>` con los valores por defecto de siempre:
+Toda la disposición sigue las reglas de [`<flex>`](flex.md), un subconjunto del flexbox de CSS. `<flex>` sigue los valores por defecto de la web (fila, `align-items: stretch`, los hijos encogen si no caben). `Column` y `Row` son atajos de `<flex>` con los valores por defecto de siempre. Cuando no usan nada que lo impida, el compilador los coloca con un layout de Qt, más rápido, con el mismo resultado (ver [Vía rápida](flex.md#vía-rápida-layouts-de-qt)):
 
 - Los hijos se colocan en orden, separados por `gap`. El espacio sobrante **no** se reparte entre ellos: queda al final, salvo que `justify-content` diga otra cosa.
 - `flex: 1` (o el atributo `flex={1}`) hace que un hijo ocupe el espacio libre del eje principal (alto en una `Column`, ancho en una `Row`). Si varios tienen `flex`, se lo reparten **en proporción**, sin importar su contenido (como `flex: N 1 0` en CSS): `flex: 2` y `flex: 1` reciben dos tercios y un tercio del espacio que dejan los demás.

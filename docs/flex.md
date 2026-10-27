@@ -111,6 +111,8 @@ Contenido: cualquier elemento, `{#if}`, `{#each}`, slots y texto suelto (que se 
 
 Pasan a ser **atajos** de `<flex direction="column">` y `<flex direction="row">`, con sus valores por defecto actuales (en una columna, los bloques ocupan el ancho; en una fila, los hijos se centran en vertical). El código existente no cambia de significado.
 
+Por dentro, el compilador los dispone con un layout de Qt (en C++, como los `ColumnLayout`/`RowLayout` de antes) siempre que la caja y sus hijos usen solo lo que ese layout hace igual que el motor de `<flex>`; si no, usa el motor. El resultado en pantalla es el mismo; cambia la velocidad. Ver [Vía rápida](#vía-rápida-layouts-de-qt).
+
 ## Los estilos
 
 `<flex>` amplía el subconjunto de CSS de [estilos.md](estilos.md). Lo que no aparece aquí sigue sin estar soportado (advertencia del compilador).
@@ -304,11 +306,53 @@ Esto no es API, pero condiciona el diseño:
   - Se coloca de fuera adentro: un contenedor coloca en la misma pasada los contenedores de dentro a los que cambia el tamaño. Lo leído de cada hijo se guarda hasta que el hijo avisa.
   - Un contenedor recién creado se coloca enseguida si lo crea algo que lee su tamaño al momento (una `<List>`, un layout de Qt).
   - Lecciones de rendimiento del motor JS de Qt: `Set`/`Map` buscan de forma lineal, `for…of` es varias veces más lento que un bucle con índice, y un binding que recorre todos los hijos se vuelve cuadrático al añadirlos uno a uno.
+- **Vía rápida: layouts de Qt.** Ver la sección siguiente.
 - **Estados sin Python.** `:hover`, `:pressed`, `:focus…` y `:disabled` se compilan a estados de la vista. Python solo interviene si hay un manejador `on:`.
 - **Herencia y variables.** Se resuelven en el compilador cuando el antecesor está en la misma plantilla, y en la vista cuando cruzan un componente o un slot.
 - **Selectores de descendientes.** Se resuelven en el compilador, porque los estilos tienen ámbito y la plantilla se conoce entera.
 - **Sombras.** Se dibujan con el efecto de sombra de Qt Quick (disponible desde Qt 6.5; FluxUI exige 6.8).
 - **Rendimiento.** Un `<flex>` sin estados, sombra ni eventos no debe costar más que el `Column` de hoy.
+
+## Vía rápida: layouts de Qt
+
+El motor de `<flex>` está en JS y lee y escribe propiedades de cada hijo en cada pasada. Medido con 300 tarjetas en columna (unas 1500 cajas; cada tarjeta con cabecera, un texto que se corta y dos botones), los `ColumnLayout`/`RowLayout` de Qt con los que empezaron `Column` y `Row` eran unas 6 veces más rápidos al cambiar el ancho de la ventana. Por eso el compilador elige, caja a caja:
+
+- **Layout de Qt** (`FxColumn`, `FxRow` y `FxQtBox`, sobre un `GridLayout`): para `Column`, `Row` y `<flex direction="column">` que usan dirección (sin `-reverse`), `gap`, `padding`, bordes, `align-items`/`align-self` (sin `baseline`), márgenes fijos, tamaños en px, mínimos y máximos, y un solo hijo con `flex` (o solo `<Spacer>`).
+- **Motor de `<flex>`** (`FxFlexColumn`, `FxFlexRow` y `FxFlex`) si la caja usa `wrap`, `justify-content` u `overflow: auto`, o algún hijo usa `order`, `margin: auto`, tamaños en `%`, `position`, `flex-shrink`, `flex-basis` o `:first-child`/`:last-child`; si varios hijos tienen `flex` (Qt no reparte en proporción como `flex: N 1 0`); si hay contenido de un `<Slot />` (no se conoce al compilar); para las cajas implícitas de `{#if}`/`{#each}` y las cajas exteriores de componentes; y para `<flex>` en fila (encoge como CSS, y un layout de Qt no encoge lo que no crece). En `<flex direction="column">`, cualquier hijo con `flex` también lleva al motor.
+
+Se decide al compilar con todo lo que la caja y sus hijos pueden llegar a tener, también en estados y clases condicionales. De un componente hijo se miran las reglas de su raíz en su propio `<style>` (`compiler/layout_choice.py`). Las dos vías comparten `FxBox.qml` (aspecto, estados, eventos, accesibilidad), así que solo cambia quién coloca a los hijos. Un detalle de Qt: con espacio de sobra y ningún hijo que crezca, un layout reparte el hueco entre los hijos; en flexbox se queda al final. Por eso el layout no pasa de su tamaño máximo en el eje principal.
+
+**Dentro de una caja con el motor, también el motor.** El motor lee al momento el tamaño de cada hijo; un layout de Qt lo calcula más tarde, en su propio *polish*. Por eso una caja que va directamente dentro de otra con el motor usa también el motor, y lo mismo la raíz de un componente que se usa ahí: la página se compila antes que sus componentes y les deja anotado dónde van. `<Scroll>` no cuenta: su contenido suele ser una columna grande, y como layout de Qt cambia de ancho antes. Cuando aun así queda un layout de Qt dentro del motor (en un `<Scroll>`, o un componente compilado aparte), flex.js lo coloca al momento con `ensurePolished()`, y también las cajas del motor que tenga dentro (las que el compilador marca con `fxDeep`), antes de leer su alto. Medido (`examples/flex/bench.py`, ventana real, rejilla de 200 tarjetas de `Tarjeta.flux`): sin nada de esto, 40 ms por fotograma con picos de casi 3 s; solo colocando al momento, 24 ms; con la raíz de la tarjeta en el motor, 17 ms, como antes de la vía rápida.
+
+Medido sin pantalla (Windows 11, la misma interfaz de 300 tarjetas en QML; mediana de 120 cambios de ancho):
+
+| | Crear | Cambiar el ancho, por paso |
+|---|---|---|
+| `ColumnLayout`/`RowLayout` de Qt (referencia) | ~60 ms | ~4 ms |
+| `Column`/`Row` con el motor de `<flex>` | ~300 ms | ~32 ms |
+| `Column`/`Row` con la vía rápida | ~285 ms | ~9 ms |
+| Vía rápida y cajas y textos ligeros (abajo) | ~205 ms | ~6,5 ms |
+
+- Cambiar el ancho es unas 5 veces más rápido que con el motor, y queda a algo más de una vez y media de los layouts de Qt sin más. La diferencia que queda es de `Text` y de la caja: cada `FxText` es un `Label` de Qt Quick Controls, y cada caja tiene borde, estados y eventos.
+- Crear sigue costando unas 3 veces más que con los layouts de Qt sin más: el coste está en la propia caja y en el texto (abajo).
+- Comprobado que las dos vías colocan igual: la misma página con las dos (`tests/test_layout_choice.py`) y todos los ejemplos de `examples/` montados de las dos formas, comparando la posición y el tamaño de cada elemento a dos anchos.
+
+### Cajas y textos ligeros: cada pieza, solo si se usa
+
+Una caja vacía costaba ~50 µs al crearse (un `Rectangle`, ~2 µs) y un `<Text>` ~43 µs (un `Label`, ~11 µs), aunque no usaran casi nada. Ahora cada pieza se crea solo cuando hace falta (`fx.js`, `flexDecorations` y `textDecorations`):
+
+| Pieza | Se crea si… |
+|---|---|
+| `FxHover.qml` (ratón encima) | `on:click`, una regla `:hover`, `cursor` o `title` |
+| `FxTap.qml` (pulsación) | `on:click` o una regla `:pressed` |
+| `FxRole.qml` (lector de pantalla, Espacio/Intro) | un papel distinto de `box` (`as="..."` u `on:click`), también si cambia al ejecutar |
+| `FxTranslate.qml` | `transform: translate(...)` distinto de cero |
+| `FxTextBox.qml` (fondo y borde de un `<Text>`) | `background` o `border` en el texto |
+| `FxTextLinks.qml` (mano sobre los enlaces) | `format="markdown"` o `"html"` |
+
+Además: el aviso de cada hijo a su contenedor (`fxTouch`) solo se calcula si el contenedor usa el motor de `<flex>` (un layout de Qt lee los `Layout.*` por su cuenta); `padding-top`, `row-gap` y los demás por lado no cuestan un binding cada uno si no se fijan (valen `NaN` y se usa `padding` o `gap`); los colores de borde por lado los resuelve `FxSides`, que solo existe con bordes por lado; y se quitaron dos `Layout.preferred*` por elemento que ya no hacían nada. Una caja con `label` pero sin papel sigue oculta a los lectores de pantalla (el compilador le pone `Accessible.ignored`).
+
+Medido: una caja vacía, ~32 µs; un `<Text>`, ~30 µs; las 300 tarjetas en QML, de ~285 a ~205 ms al crear y de ~9 a ~6,5 ms al cambiar el ancho; desde `.flux` (con Python), de ~425 a ~325 ms al crear. En la lista de 1000 filas de `tools/bench.py`, donde manda Python, crear baja de ~470 a ~430 ms. Lo que queda por caja son sobre todo sus ~90 propiedades y los bindings del aspecto (color, borde, foco); escribir los `Layout.*` en línea en vez de llamar a `fx.js` no ahorra nada (medido). Pruebas: `tests/test_flex_lazy.py`.
 
 ## Compatibilidad y versiones
 

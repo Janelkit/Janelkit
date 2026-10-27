@@ -176,3 +176,44 @@ def test_new_style_properties_compile_without_warnings():
 def test_element_selector_for_flex():
     c = compile_source('<flex><Text>x</Text></flex>\n<style>flex { gap: 6px; }</style>')
     assert "gap: 6" in c.qml and c.warnings == []
+
+
+def test_implicit_block_container_follows_the_parent_direction(mount):
+    m = mount('<script>\nver = True\n</script>\n' + page(
+        '<flex direction="column"><Text id="a">arriba</Text>{#if ver}<Text id="b">uno</Text><Text id="c">dos</Text>{/if}</flex>'
+    ))
+    settle(m)
+    b, c = geo(find(m, "b")), geo(find(m, "c"))
+    assert b[0] == c[0] == 0 and c[1] > b[1]  # uno debajo de otro, como en la columna
+
+
+def test_late_content_of_unstretched_child_in_sized_column(mount):
+    # La fila se llena después (las filas de {#each} las crea Python): la columna, con ancho
+    # propio y align-items: start, debe darle su ancho natural, no el de antes (0).
+    m = mount('<script>\nitems = ["uno", "dos", "tres"]\n</script>\n' + page(
+        '<flex direction="column" class="col"><flex id="fila">{#each items as i}<Text>{i}</Text>{/each}</flex></flex>',
+        ".col { align-items: start; justify-content: end; }",
+    ))
+    settle(m)
+    fila = find(m, "fila")
+    assert fila.width() > 0 and fila.width() == fila.implicitWidth()
+
+
+def test_reordered_element_rows_are_placed_again(mount):
+    # Al mover filas, el modelo avisa al contenedor (una vez por movimiento, no cada fila).
+    m = mount("""<script>
+from fluxui import state
+items = state([1, 2, 3])
+</script>
+<flex>{#each items as i (i)}<flex class="c"><Text>{i}</Text></flex>{/each}</flex>
+<style>.c { width: 30px; }</style>""")
+    QCoreApplication.processEvents()
+
+    def xs():
+        texts = {t.property("text"): t for t in visual_items(m) if t.inherits("QQuickText")}
+        return [round(texts[str(i)].mapToScene(texts[str(i)].position() * 0).x()) for i in (1, 2, 3)]
+    assert xs() == [0, 30, 60]
+    m.instance.namespace["items"].value.reverse()
+    for _ in range(3):
+        QCoreApplication.processEvents()
+    assert xs() == [60, 30, 0]

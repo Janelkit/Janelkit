@@ -226,9 +226,38 @@ function autoMin(it, horiz, legacy) {
     if (explicit > 0) return explicit
     if (legacy || h.scrollable) return 0
     if (!horiz) return prefH(it)               // en columna no se encoge por debajo del contenido
-    if (h.isFlex) return it.c.fxMinW
+    if (h.isFlex) return it.c.fxQt === true ? qtMinW(it.c) : it.c.fxMinW
     if (h.wraps) return 0                      // texto que se corta: puede estrecharse
     return prefW(it)
+}
+
+// Mínimo de contenido en ancho de una caja con layout de Qt (FxQtBox): lo que flex.js
+// calcularía para ella (ver `minContent` en arrange). Solo se pide al encoger una fila.
+function qtMinW(box) {
+    const lay = box.fxLay
+    const horiz = box.direction === "row" || box.direction === "row-reverse"
+    const legacy = box.fxLegacy === true
+    let m = 0, n = 0
+    const kids = lay ? lay.children : []
+    for (let i = 0; i < kids.length; ++i) {
+        const c = kids[i]
+        const h = hintsOf(c, box)
+        // Dentro de un layout de Qt los hijos no avisan (Fx.touch): no se guarda nada.
+        if (c.fxHints === h) c.fxHints = null
+        if (h.skip || !c.visible) continue
+        const it = itemOf(c, h, box, horiz, 0, 0)
+        const v = autoMin(it, true, legacy) + it.ml + it.mr
+        if (horiz) m += v
+        else m = Math.max(m, v)
+        n++
+    }
+    if (horiz) m += pad(box.columnGap, box.gap) * Math.max(0, n - 1)
+    return m + pad(box.leftPadding, box.padding) + pad(box.rightPadding, box.padding) + box.fxBorderLeftW + box.fxBorderRightW
+}
+
+// padding y gap por lado sin fijar (NaN): los generales (como Fx.pad).
+function pad(own, all) {
+    return isNaN(own) ? all : own
 }
 
 // -- disposición -------------------------------------------------------------
@@ -262,12 +291,14 @@ function arrange(box, lay, out) {
     const legacy = box.fxLegacy === true
     const wrap = box.wrap === true
     const bt = box.fxBorderTopW, br = box.fxBorderRightW, bb = box.fxBorderBottomW, bl = box.fxBorderLeftW
-    const padL = box.leftPadding + bl, padR = box.rightPadding + br
-    const padT = box.topPadding + bt, padB = box.bottomPadding + bb
+    const pd = box.padding
+    const padL = pad(box.leftPadding, pd) + bl, padR = pad(box.rightPadding, pd) + br
+    const padT = pad(box.topPadding, pd) + bt, padB = pad(box.bottomPadding, pd) + bb
     const padMain = horiz ? padL + padR : padT + padB
     const padCross = horiz ? padT + padB : padL + padR
-    const mainGap = horiz ? box.columnGap : box.rowGap
-    const crossGap = horiz ? box.rowGap : box.columnGap
+    const rowGap = pad(box.rowGap, box.gap), columnGap = pad(box.columnGap, box.gap)
+    const mainGap = horiz ? columnGap : rowGap
+    const crossGap = horiz ? rowGap : columnGap
 
     // ¿El tamaño viene de fuera o sigue al natural? Si sigue al natural, el espacio
     // disponible es el que pide el contenido (no se encoge ni se reparte nada).
@@ -354,6 +385,9 @@ function arrange(box, lay, out) {
         it.minCross = horiz ? it.minH : it.minW
         it.maxCross = horiz ? it.maxH : it.maxW
         it.stretch = stretches(it)
+        // En columna con ancho propio, un hijo flex que no se estira toma su ancho natural:
+        // hay que colocarlo antes de leerlo (su aviso llegaría con esta caja ocupada).
+        if (!horiz && crossDefinite && !it.stretch && it.h.isFlex) measure(it.c)
     }
 
     // En columna el ancho (eje transversal) se fija antes que el alto: el alto
@@ -610,6 +644,7 @@ function placeOutside(c, box, lay, padL, padT) {
 function measure(c) {
     const st = c.fxState
     if (st && st.queued && !st.busy) layout(c)
+    else if (c.fxQt === true) settleQt(c)
 }
 
 // Asigna tamaño a un hijo y, si es otro contenedor flex que ha quedado pendiente,
@@ -619,6 +654,32 @@ function place(c, w, h) {
     if (h !== null) c.height = h
     const st = c.fxState
     if (st && st.queued && !st.busy) layout(c)
+    else if (c.fxQt === true) settleQt(c)
+}
+
+// Una caja con layout de Qt se coloca en su propio polish, más tarde: aquí se coloca ya
+// (ensurePolished), y también lo pendiente de dentro, para que su alto natural esté al
+// día cuando se lea. Si no, cada cambio de ancho daba vueltas de más (en la rejilla de
+// examples/flex, de 17 a 40 ms por fotograma, con fotogramas de casi 3 s).
+function settleQt(box) {
+    const lay = box.fxLay
+    if (!lay) return
+    lay.ensurePolished()
+    let changed = false
+    const kids = lay.children
+    for (let i = 0; i < kids.length; ++i) {
+        const k = kids[i]
+        const st = k.fxState
+        if (st && st.queued && !st.busy) {
+            layout(k)
+            changed = true
+        } else if (k.fxDeep === true && k.visible) {
+            const h = k.implicitHeight, w = k.implicitWidth
+            settleQt(k)
+            changed = changed || h !== k.implicitHeight || w !== k.implicitWidth
+        }
+    }
+    if (changed) lay.ensurePolished()
 }
 
 // Reparto del espacio libre de una línea (CSS Flexbox §9.7, simplificado).

@@ -10,14 +10,12 @@ StackLayout {
     property string fxSelfAlign: ""
     property bool fxSelfStretch: false
 
-    Layout.fillWidth: Fx.fillWidth(parent, fxFlex, fxSelfStretch, true)
-    Layout.fillHeight: Fx.fillHeight(parent, fxFlex, fxSelfStretch)
-    Layout.preferredWidth: Fx.basis(parent, fxFlex, true)
-    Layout.preferredHeight: Fx.basis(parent, fxFlex, false)
+    Layout.fillWidth: Fx.fillWidth(parent, fxFlex, fxSelfStretch, true, fxSelfAlign)
+    Layout.fillHeight: Fx.fillHeight(parent, fxFlex, fxSelfStretch, fxSelfAlign)
     Layout.alignment: Fx.alignment(parent, fxSelfAlign)
     // Avisa a su contenedor <flex> de lo que cambia su sitio (flex.js).
     property var fxHints: null  // lo que el motor de <flex> guardó de este elemento
-    readonly property bool fxTouch: Fx.touch(parent, pages, visible,
+    readonly property bool fxTouch: parent !== null && parent.fxEngine === true && Fx.touch(parent, pages, visible,
         Layout.preferredWidth, Layout.preferredHeight, Layout.minimumWidth, Layout.minimumHeight,
         Layout.maximumWidth, Layout.maximumHeight, Layout.fillWidth, Layout.fillHeight,
         Layout.leftMargin, Layout.topMargin, Layout.rightMargin, Layout.bottomMargin,

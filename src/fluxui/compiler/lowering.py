@@ -32,6 +32,7 @@ from ..qt_backend.controls import (
 from ..styling.compiler import BEHAVIOR, INHERITED, SUPPORTED, TEXT_PREFIX, VAR_PREFIX, compile_declarations, token_key
 from ..styling.parser import Declaration, Rule, parse_stylesheet
 from .cascade import ALWAYS, Cascade, StyleNode
+from .layout_choice import BOX_TYPES, choose_layouts
 from .ast_nodes import SFC, Attribute, EachBlock, Element, Expression, IfBlock, Interpolation, KeyBlock, Node, Text
 from .qml_interface import QmlImport, read_interface
 from .expressions import EVENT_NAME, free_names, handler_names, is_inline_handler
@@ -71,9 +72,9 @@ _BUILTINS = frozenset(dir(builtins))
 # sus hijos estuvieran directamente en el contenedor padre: hereda separación y
 # alineación, y crece si alguno de sus hijos tiene flex.
 _TRANSPARENT_BOX = {
-    "gap": "parent && parent.spacing !== undefined ? parent.spacing : 0",
-    "alignItems": 'parent && parent.fxAlignItems !== undefined ? parent.fxAlignItems : ""',
-    "fxLegacy": "parent && parent.fxLegacy !== undefined ? parent.fxLegacy : true",
+    "gap": "parent && parent.fxBox ? Fx.mainGap(parent) : 0",
+    "alignItems": 'parent && parent.fxBox ? parent.fxBox.alignItems : ""',
+    "fxLegacy": "parent && parent.fxBox ? parent.fxBox.fxLegacy : true",
     "fxFlex": "fillMain ? 1 : 0",
 }
 
@@ -111,6 +112,7 @@ class ComponentInterface:
     slots: frozenset[str] | None = None  # nombres de <Slot>; None = desconocido (no se valida)
     root_box: bool = False  # su raíz es una caja y hereda atributos: van a ella (FxRemote)
     inherit_attrs: bool = True
+    root_items: frozenset[str] | None = None  # lo que su raíz pide a la caja que lo contiene (None: no se sabe)
 
 
 # Atributos de la etiqueta de un componente que no son props: se aplican a una
@@ -131,8 +133,11 @@ def lower(
     *,
     as_window: bool = True,
     interface: InterfaceLookup | None = None,
+    root_in_engine: bool = False,
 ) -> IRComponent:
-    return _Lowerer(sfc, info or ScriptInfo(), as_window, interface).run()
+    lowerer = _Lowerer(sfc, info or ScriptInfo(), as_window, interface)
+    lowerer.root_in_engine = root_in_engine
+    return lowerer.run()
 
 
 def _literal(code: str) -> Any:
@@ -160,6 +165,7 @@ class _Lowerer:
         self.tpl = IRTemplate(self.next_id("t"))
         self.scopes: list[set[str]] = []  # variables de {#each} visibles
         self.component_paths: list[str] = []
+        self.root_in_engine = False  # la raíz va dentro de una caja con el motor (layout_choice.py)
         self.slot_fragments: list[Fragment] = []
         self.qml_imports: dict[str, QmlImport] = {}  # tag -> import
         self.pending_transitions: dict[int, SourceLocation] = {}  # id(IRElement) -> ubicación
@@ -306,6 +312,11 @@ class _Lowerer:
         if self.errors:
             raise FluxError(self.errors)
         assert root_ir is not None
+        # Layout de Qt o motor de <flex> para cada caja (layout_choice.py).
+        engine_children = choose_layouts(
+            [root_ir, *(f.root for f in self.slot_fragments if f.root is not None)],
+            self.root_features, self.root_in_engine,
+        )
         # Avisa al runtime de que la vista existe (on_mount).
         root_ir.handlers.setdefault("Component.onCompleted", []).append("fx.mounted()")
 
@@ -321,6 +332,7 @@ class _Lowerer:
             warnings=self.warnings,
             tokens=self.tokens,
             component_paths=self.component_paths,
+            engine_children=sorted(engine_children),
             slot_fragments=self.slot_fragments,
             qml_files=sorted({str(self.info.components[t].path) for t in self.qml_imports}),
             class_names=self.class_names(),
@@ -407,6 +419,8 @@ class _Lowerer:
     def check_role(self, el: Element, ir: IRElement) -> None:
         """`<flex as="button">` sin texto ni label: el lector de pantalla no tendría qué leer."""
         role = ir.props.get("fxRole")
+        if role is not None and not isinstance(role, Literal):
+            return  # as={...}: el papel se sabe al ejecutar
         interactive = role is not None and role.qml.strip('"') in INTERACTIVE_ROLES
         if not interactive and not (role is None and "fxClickable" in ir.props and el.tag == "flex"):
             return
@@ -477,7 +491,7 @@ class _Lowerer:
             ir.props["Accessible.description"] = Literal("ToolTip.text")
         if match_tag is None:  # en la etiqueta de un componente, el papel es el de su raíz
             self.check_role(el, ir)
-        _accessible_states(ir)
+        _accessible_states(ir, self.cascade)
         _context_extras(ir, self.cascade)
         if spec.tag is not None and "fxFlex" in ir.props:
             _custom_flex(ir)
@@ -913,9 +927,9 @@ class _Lowerer:
             box = self.as_item(items, loc, horizontal)
             if box is not items[0]:
                 box.props.update({k: Literal(v) for k, v in _TRANSPARENT_BOX.items()})
-            # Al reordenar filas, Qt solo cambia el orden de apilado (sin señal): el índice
-            # de la fila sí cambia, y con él se avisa al contenedor <flex>.
-            box.props["readonly property bool fxTouchIndex"] = Literal("Fx.resized(parent, index)")
+                # La dirección del padre (<flex direction="column"> con un {#if} de varios elementos).
+                own = "row" if horizontal else "column"
+                box.props["direction"] = Literal(f'parent && parent.fxBox ? parent.fxBox.direction : "{own}"')
             frag = Fragment(tpl, root=box)
             if component_root:  # en <List> las filas se animan con <List animate>
                 self.attach_transitions(frag)
@@ -933,7 +947,7 @@ class _Lowerer:
             model_id = None if frag.empty else self.next_id("m")
             branches.append(IfBranchSlot(model_id, branch.condition, frag))
         self.tpl.slots.append(IfSlot(branches, node.loc))
-        return [IRRepeater(b.model_id, node.loc, b.fragment.root) for b in branches if b.model_id]
+        return [IRRepeater(b.model_id, node.loc, b.fragment.root, _path(b.fragment)) for b in branches if b.model_id]
 
     def each_block(self, node: EachBlock, horizontal: bool, lazy: bool = False) -> list[IRNode]:
         self.check_expr(node.iterable)
@@ -959,9 +973,9 @@ class _Lowerer:
         self.tpl.slots.append(slot)
         out: list[IRNode] = []
         if not frag.empty:
-            out.append(IRRepeater(slot.model_id, node.loc, frag.root))
+            out.append(IRRepeater(slot.model_id, node.loc, frag.root, _path(frag), many=True))
         if slot.empty_model_id:
-            out.append(IRRepeater(slot.empty_model_id, node.loc, slot.empty_fragment.root))
+            out.append(IRRepeater(slot.empty_model_id, node.loc, slot.empty_fragment.root, _path(slot.empty_fragment)))
         return out
 
     def key_block(self, node: KeyBlock, horizontal: bool) -> list[IRNode]:
@@ -971,7 +985,7 @@ class _Lowerer:
             return []
         slot = KeySlot(self.next_id("m"), node.expression, frag, node.loc)
         self.tpl.slots.append(slot)
-        return [IRRepeater(slot.model_id, node.loc, frag.root)]
+        return [IRRepeater(slot.model_id, node.loc, frag.root, _path(frag))]
 
     # -- slots ---------------------------------------------------------------
     def slot_outlet(self, el: Element, horizontal: bool) -> list[IRNode]:
@@ -984,10 +998,10 @@ class _Lowerer:
                 self.error('<Slot> solo admite name="nombre" (un identificador literal)', attr.loc)
         fallback = self.fragment(el.children, horizontal, (), el.loc)
         slot = SlotOutlet(name, self.next_id("m"), None if fallback.empty else fallback, el.loc)
-        out: list[IRNode] = [IRRepeater(slot.model_id, el.loc)]
+        out: list[IRNode] = [IRRepeater(slot.model_id, el.loc, opaque=True)]
         if slot.fallback is not None:
             slot.fallback_model_id = self.next_id("m")
-            out.append(IRRepeater(slot.fallback_model_id, el.loc, fallback.root))
+            out.append(IRRepeater(slot.fallback_model_id, el.loc, fallback.root, _path(fallback)))
         self.tpl.slots.append(slot)
         return out
 
@@ -1041,6 +1055,10 @@ class _Lowerer:
         return slots
 
     # -- componentes hijos ---------------------------------------------------
+    def root_features(self, path: str) -> frozenset[str] | None:
+        """Lo que la raíz de un componente hijo pide a su caja (layout_choice.py)."""
+        return self.interface(Path(path)).root_items if self.interface else None
+
     def iface_of(self, el: Element) -> ComponentInterface:
         imp = self.info.components[el.tag]
         return self.interface(imp.path) if self.interface else ComponentInterface()
@@ -1063,7 +1081,7 @@ class _Lowerer:
         model_id = self.next_id("m")
         use = self.component_use(el)
         self.tpl.slots.append(ComponentSlot(model_id, use, el.loc))
-        repeater = IRRepeater(model_id, el.loc)
+        repeater = IRRepeater(model_id, el.loc, component=use.path)
         attrs = self.tag_attrs(el)
         if not attrs:
             return repeater
@@ -1074,8 +1092,9 @@ class _Lowerer:
                 return repeater
             remote = self.remote(ir, model_id, self.last_node)
             if remote is not None:
+                remote.component = use.path
                 return remote
-            ir.qml_type = "FxColumn"  # lo que no se puede aplicar desde fuera: caja exterior
+            ir.qml_type = "FxColumn"  # lo que no se puede aplicar desde fuera: caja exterior (fxFill)
             box = ir
         else:
             # Caja exterior con los estilos de la etiqueta: <Tarjeta class="ancha" flex={1} />
@@ -1216,7 +1235,7 @@ class _Lowerer:
         return attr.value
 
 
-_BOXES = ("FxColumn", "FxRow", "FxFlex")
+_BOXES = BOX_TYPES
 _TRANSITIONS = ("fade", "scale", "slide")
 _TRANSITION_MS = 200
 
@@ -1238,8 +1257,6 @@ def _custom_flex(ir: IRElement) -> None:
     ir.props["property int fxFlex"] = ir.props.pop("fxFlex")
     ir.props.setdefault("Layout.fillWidth", Literal("Fx.fillWidth(parent, fxFlex, false, false)"))
     ir.props.setdefault("Layout.fillHeight", Literal("Fx.fillHeight(parent, fxFlex, false)"))
-    ir.props.setdefault("Layout.preferredWidth", Literal("Fx.basis(parent, fxFlex, true)"))
-    ir.props.setdefault("Layout.preferredHeight", Literal("Fx.basis(parent, fxFlex, false)"))
 
 
 # style={{...}}: propiedad CSS -> [(propiedad QML, expresión con {} = el valor de Python)].
@@ -1309,12 +1326,15 @@ def _context_extras(ir: IRElement, cascade: Cascade) -> None:
         ir.props["readonly property QtObject fxCtx"] = Literal(f"Fx.ctxOf({cascade.ensure_id(ir)})")
 
 
-def _accessible_states(ir: IRElement) -> None:
+def _accessible_states(ir: IRElement, cascade: Cascade) -> None:
     """Estados de una caja para los lectores de pantalla, solo donde se usan."""
     if ir.qml_type not in _BOXES:
         return
+    if any(k.startswith("Accessible.") for k in [*ir.props, *(c[0] for c in ir.conditional)]):
+        # label o title en una caja sin papel: no se anuncia (con papel, FxRole.qml la anuncia).
+        ir.props.setdefault("Accessible.ignored", Literal(f'{cascade.ensure_id(ir)}.fxAs === "box"'))
     role = ir.props.get("fxRole")
-    role = role.qml.strip('"') if role is not None else ""
+    role = role.qml.strip('"') if isinstance(role, Literal) else ""
     if role in ("checkbox", "switch"):
         ir.props["Accessible.checkable"] = Literal("true")
         ir.props["Accessible.checked"] = Literal("checked")
@@ -1442,3 +1462,8 @@ def _normalize_text(nodes: list[Node]) -> list[Union[str, Expression]]:
     if parts and isinstance(parts[-1], str):
         parts[-1] = parts[-1].rstrip()
     return [p for p in parts if not (isinstance(p, str) and not p)]
+
+
+def _path(frag: Fragment) -> str | None:
+    """Ruta del componente que es la raíz del fragmento, si lo es."""
+    return frag.component.path if frag.component is not None else None

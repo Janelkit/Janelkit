@@ -17,6 +17,7 @@ from pathlib import Path
 from ..diagnostics import Diagnostic, FluxError, SourceLocation
 from .ast_nodes import SFC, EachBlock, Element, IfBlock, KeyBlock, Node
 from .ir import IRComponent
+from .layout_choice import root_features
 from .lowering import ComponentInterface, lower
 from .qml_generator import SourceMap, generate_qml, lookup
 from .script_analysis import ScriptInfo, analyze_script
@@ -92,6 +93,10 @@ class CompileSession:
         self.roots = [Path(r).resolve() for r in roots]
         self.registry: dict[str, CompiledComponent] = {}
         self._loaded: dict[str, tuple[SFC, ScriptInfo]] = {}
+        self._roots: dict[str, frozenset[str] | None] = {}
+        # Componentes cuya raíz va dentro de una caja con el motor de <flex>: su raíz usa
+        # también el motor (layout_choice.py). Los anota el padre, que se compila antes.
+        self._engine_roots: set[str] = set()
 
     def compile(self, path: Path, as_window: bool) -> CompiledComponent:
         key = _key(path)
@@ -106,7 +111,8 @@ class CompileSession:
         return self._compile_loaded(file, sfc, info, as_window)
 
     def _compile_loaded(self, key: str, sfc: SFC, info: ScriptInfo, as_window: bool) -> CompiledComponent:
-        ir = lower(sfc, info, as_window=as_window, interface=self.interface)
+        ir = lower(sfc, info, as_window=as_window, interface=self.interface, root_in_engine=key in self._engine_roots)
+        self._engine_roots.update(_key(Path(p)) for p in ir.engine_children)
         qml, source_map = generate_qml(ir)
         fragments = {}
         for frag in ir.slot_fragments:
@@ -130,9 +136,13 @@ class CompileSession:
         sfc, info = self.load(path)
         roots = sfc.root_elements
         root = roots[0].tag if len(roots) == 1 and isinstance(roots[0], Element) else None
+        key = _key(path)
+        if key not in self._roots:
+            self._roots[key] = root_features(sfc)
         return ComponentInterface(
             dict(info.props), dict(info.events), frozenset(_slot_names(sfc.template)),
             root_box=root in ("flex", "Column", "Row") and info.inherit_attrs, inherit_attrs=info.inherit_attrs,
+            root_items=self._roots[key],
         )  # fmt: skip
 
     def _resolver(self, file: Path):

@@ -102,6 +102,7 @@ class IRElement:
     behaviors: dict[str, str] = field(default_factory=dict)  # propiedad QML -> animación (transition en CSS)
     # transition:/in:/out: -> {"in": (tipo, ms), "out": (tipo, ms)}
     transitions: dict[str, tuple[str, int]] = field(default_factory=dict)
+    component: str | None = None  # FxRemote: ruta del componente cuya raíz recibe los atributos
 
 
 @dataclass
@@ -115,6 +116,10 @@ class IRRepeater:
     model_id: str
     loc: SourceLocation
     delegate: IRElement | None = None
+    # Para elegir el layout de la caja que lo contiene (layout_choice.py):
+    component: str | None = None  # el delegado es la raíz de este componente
+    many: bool = False  # {#each}: puede repetir el delegado
+    opaque: bool = False  # contenido de un <Slot />: no se sabe qué es
 
 
 IRNode = Union[IRElement, IRRepeater]
@@ -265,6 +270,8 @@ class IRComponent:
     warnings: list[Diagnostic] = field(default_factory=list)
     tokens: list[TokenUse] = field(default_factory=list)
     component_paths: list[str] = field(default_factory=list)
+    # Componentes hijos que van dentro de una caja con el motor de <flex> (layout_choice.py).
+    engine_children: list[str] = field(default_factory=list)
     # Contenido de slots escrito aquí con elementos propios: cada uno se genera
     # como un documento QML aparte, porque se muestra dentro de otro componente.
     slot_fragments: list[Fragment] = field(default_factory=list)

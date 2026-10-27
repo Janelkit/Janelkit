@@ -21,6 +21,10 @@ FxList 1.0 FxList.qml
 FxTransition 1.0 FxTransition.qml
 FxPages 1.0 FxPages.qml
 Fx 1.0 fx.js
+FxBox 1.0 FxBox.qml
 FxFlex 1.0 FxFlex.qml
+FxFlexColumn 1.0 FxFlexColumn.qml
+FxFlexRow 1.0 FxFlexRow.qml
+FxQtBox 1.0 FxQtBox.qml
 FxContext 1.0 FxContext.qml
 FxRemote 1.0 FxRemote.qml

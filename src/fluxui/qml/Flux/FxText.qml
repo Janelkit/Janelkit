@@ -24,24 +24,22 @@ Label {
     readonly property QtObject fxCtx: Fx.ctxOf(label)
     property string fxOwn: ""
     property Item fxInherit: null
-    onFxCtxChanged: Fx.textInherit(label)
-    Component.onCompleted: Fx.textInherit(label)
-    background: Rectangle {
-        visible: label.fxBackground.a > 0 || label.fxBorderWidth > 0
-        color: label.fxBackground
-        border.color: label.fxBorderColor
-        border.width: label.fxBorderWidth
-        radius: label.fxRadius
+    onFxCtxChanged: if (fxCtx) Fx.textInherit(label)
+    // Fondo y borde (FxTextBox) y mano sobre los enlaces (FxTextLinks): solo si se usan.
+    readonly property int fxDecor: (fxBackground.a > 0 || fxBorderWidth > 0 ? 1 : 0) | (format !== "plain" ? 2 : 0)
+    property QtObject fxLinks: null
+    onFxDecorChanged: Fx.textDecorations(label)
+    Component.onCompleted: {
+        if (fxCtx) Fx.textInherit(label)
+        if (fxDecor) Fx.textDecorations(label)
     }
 
-    Layout.fillWidth: Fx.fillWidth(parent, fxFlex, fxSelfStretch, true)
-    Layout.fillHeight: Fx.fillHeight(parent, fxFlex, fxSelfStretch)
-    Layout.preferredWidth: Fx.basis(parent, fxFlex, true)
-    Layout.preferredHeight: Fx.basis(parent, fxFlex, false)
+    Layout.fillWidth: Fx.fillWidth(parent, fxFlex, fxSelfStretch, true, fxSelfAlign)
+    Layout.fillHeight: Fx.fillHeight(parent, fxFlex, fxSelfStretch, fxSelfAlign)
     Layout.alignment: Fx.alignment(parent, fxSelfAlign)
     // Avisa a su contenedor <flex> de lo que cambia su sitio (flex.js).
     property var fxHints: null  // lo que el motor de <flex> guardó de este elemento
-    readonly property bool fxTouch: Fx.touch(parent, label, visible,
+    readonly property bool fxTouch: parent !== null && parent.fxEngine === true && Fx.touch(parent, label, visible,
         Layout.preferredWidth, Layout.preferredHeight, Layout.minimumWidth, Layout.minimumHeight,
         Layout.maximumWidth, Layout.maximumHeight, Layout.fillWidth, Layout.fillHeight,
         Layout.leftMargin, Layout.topMargin, Layout.rightMargin, Layout.bottomMargin,
@@ -59,10 +57,4 @@ Label {
         : format === "html" ? Text.RichText
         : Text.PlainText
     onLinkActivated: (link) => { if (!fxLinkHandled) Qt.openUrlExternally(link) }
-
-    // Mano sobre los enlaces (el texto en sí no captura el ratón).
-    HoverHandler {
-        enabled: label.format !== "plain"
-        cursorShape: label.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
-    }
 }

@@ -35,9 +35,13 @@ _TAGS = {
     "FxCheckBox": "Checkbox", "FxSwitch": "Switch", "FxSlider": "Slider", "FxSelect": "Select",
     "FxRadioGroup": "RadioGroup", "FxTabs": "Tabs", "FxImage": "Image", "FxProgressBar": "ProgressBar",
     "FxShortcut": "Shortcut", "FxSpacer": "Spacer", "FxFlex": "flex",
+    "FxFlexColumn": "Column", "FxFlexRow": "Row", "FxQtBox": "flex",
 }  # fmt: skip
 # Piezas internas de FluxUI que no son elementos de la plantilla.
-_INTERNAL = ("FxPolisher", "FxSides", "FxScroller", "FxShadow", "FxOutline", "FxTextInherit", "FxRemote", "FxBlocker")
+_INTERNAL = (
+    "FxPolisher", "FxSides", "FxScroller", "FxShadow", "FxOutline", "FxTextInherit", "FxRemote", "FxBlocker",
+    "FxHover", "FxTap", "FxRole", "FxTranslate", "FxTextBox", "FxTextLinks",
+)
 
 
 def _move_pointer(window: Any, pos: Any) -> None:

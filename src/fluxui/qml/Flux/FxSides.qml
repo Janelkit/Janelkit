@@ -13,26 +13,26 @@ Item {
         visible: width > 0 && height > 0
         width: parent.width
         height: box ? box.fxBorderTopW : 0
-        color: box ? box.fxBorderTopColor : "transparent"
+        color: !box ? "transparent" : box.fxBorderTopColor !== undefined ? box.fxBorderTopColor : box.fxBorderColor
     }
     Rectangle {
         visible: width > 0 && height > 0
         y: parent.height - height
         width: parent.width
         height: box ? box.fxBorderBottomW : 0
-        color: box ? box.fxBorderBottomColor : "transparent"
+        color: !box ? "transparent" : box.fxBorderBottomColor !== undefined ? box.fxBorderBottomColor : box.fxBorderColor
     }
     Rectangle {
         visible: width > 0 && height > 0
         width: box ? box.fxBorderLeftW : 0
         height: parent.height
-        color: box ? box.fxBorderLeftColor : "transparent"
+        color: !box ? "transparent" : box.fxBorderLeftColor !== undefined ? box.fxBorderLeftColor : box.fxBorderColor
     }
     Rectangle {
         visible: width > 0 && height > 0
         x: parent.width - width
         width: box ? box.fxBorderRightW : 0
         height: parent.height
-        color: box ? box.fxBorderRightColor : "transparent"
+        color: !box ? "transparent" : box.fxBorderRightColor !== undefined ? box.fxBorderRightColor : box.fxBorderColor
     }
 }

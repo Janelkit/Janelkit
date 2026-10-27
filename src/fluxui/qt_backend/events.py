@@ -10,7 +10,7 @@ clic, ni desplazamiento, ni texto escrito).
 Los manejadores se ejecutan en el momento, en el hilo de la interfaz: por eso
 `prevent()` y `stop()` funcionan sin JavaScript.
 
-`on:click` no pasa por el filtro: lo emite el propio `<flex>` (FxFlex.qml), con lo
+`on:click` no pasa por el filtro: lo emite el propio `<flex>` (FxBox.qml), con lo
 que un control de Qt que se queda el clic (un `<Button>` dentro de una fila) sigue
 impidiendo el clic de la fila, como hasta ahora.
 """
@@ -110,7 +110,7 @@ class EventRouter(QObject):
         self._click_stopped = False
         self._resized: dict[int, _Listener] = {}
 
-    # -- registro (desde FxFlex.qml) -----------------------------------------
+    # -- registro (desde FxBox.qml) ------------------------------------------
     @Slot(QObject)
     def listen(self, item: Any, watch: bool = True) -> None:
         on = item.property("fxOn")
@@ -156,7 +156,7 @@ class EventRouter(QObject):
         if window is not None:
             window.installEventFilter(self)  # instalarlo otra vez no lo duplica
 
-    # -- on:click (lo emite FxFlex) ------------------------------------------
+    # -- on:click (lo emite FxBox) -------------------------------------------
     @Slot(QObject, float, float, int)
     def click(self, item: Any, x: float, y: float, button: int) -> None:
         """Un clic (ratón) o una activación con el teclado (x < 0) en un `<flex>` con on:click."""

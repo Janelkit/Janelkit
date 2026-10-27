@@ -1,6 +1,7 @@
 // Reglas de disposición compartidas por los controles de FluxUI.
-// `p` es el layout padre: FxColumn/FxRow/FxScroll exponen fxHorizontal,
-// fxAlign (align-items) y fxStretch (align-items: stretch).
+// `p` es el layout padre (el `lay` de una caja): expone fxBox (la caja), fxHorizontal,
+// fxAlign (align-items) y fxStretch (align-items: stretch); el del motor de <flex>,
+// además, fxEngine.
 .pragma library
 .import "flex.js" as Flex
 
@@ -12,19 +13,24 @@ function inLayout(p) {
 }
 
 // `block`: el elemento ocupa todo el ancho de una columna salvo que el
-// contenedor fije una alineación (como un bloque en CSS).
-function fillWidth(p, flex, selfStretch, block) {
+// contenedor fije una alineación (como un bloque en CSS). `self` (align-self) gana:
+// con start, center o end no se estira en el eje transversal.
+function fillWidth(p, flex, selfStretch, block, self) {
     if (!inLayout(p)) return false
-    if (p.fxFill) return true
+    if (p.fxBox.fxFill) return true
     if (p.fxHorizontal) return flex > 0
-    return selfStretch || p.fxStretch || (block && !p.fxAlign)
+    if (selfStretch) return true
+    if (self && self !== "stretch") return false
+    return p.fxStretch || (block && !p.fxAlign)
 }
 
-function fillHeight(p, flex, selfStretch) {
+function fillHeight(p, flex, selfStretch, self) {
     if (!inLayout(p)) return false
-    if (p.fxFill) return true
-    if (p.fxHorizontal) return selfStretch || p.fxStretch
-    return flex > 0
+    if (p.fxBox.fxFill) return true
+    if (!p.fxHorizontal) return flex > 0
+    if (selfStretch) return true
+    if (self && self !== "stretch") return false
+    return p.fxStretch
 }
 
 function alignment(p, self) {
@@ -34,13 +40,6 @@ function alignment(p, self) {
     if (self === "center") return h ? ALIGN_VCENTER : ALIGN_HCENTER
     if (self === "end") return h ? ALIGN_BOTTOM : ALIGN_RIGHT
     return p.fxAlign
-}
-
-// true si algún hijo visible pide crecer en el eje principal (flex).
-function anyFlex(children) {
-    for (let i = 0; i < children.length; ++i)
-        if (children[i].fxFlex > 0 && children[i].visible) return true
-    return false
 }
 
 // Opciones de Select, RadioGroup y Tabs: textos sueltos o {label, value}.
@@ -68,30 +67,16 @@ function resolveUrl(base, src) {
     return b + (b.endsWith("/") ? "" : "/") + src
 }
 
-// flex como en CSS (`flex: N 1 0`): en el eje principal, cada hijo con flex N recibe
-// N partes del espacio que dejan libre los demás. El contenedor calcula el tamaño
-// de una parte (fxFlexUnit) solo si su propio tamaño viene de fuera; si depende
-// del contenido, se devuelve -1 (tamaño natural) para no crear bucles.
-function basis(p, flex, horizontalAxis) {
-    if (!inLayout(p) || flex <= 0 || p.fxHorizontal !== horizontalAxis || p.fxFill || !(p.fxFlexUnit > 0)) return -1
-    return p.fxFlexUnit * flex
+// padding y gap por lado sin fijar (NaN): los de padding y gap. Así una caja no paga
+// un binding por lado.
+function pad(own, all) {
+    return isNaN(own) ? all : own
 }
 
-function flexUnit(lay, horizontal, available) {
-    let fixed = 0, total = 0, n = 0
-    const kids = lay.children
-    for (let i = 0; i < kids.length; ++i) {
-        const c = kids[i]
-        if (!c.visible) continue
-        const flex = c.fxFlex
-        const size = horizontal ? c.width : c.height
-        if (flex > 0) { total += flex; n++; continue }
-        if (flex === undefined && size === 0) continue  // Repeater y similares: no ocupan sitio
-        fixed += size
-        n++
-    }
-    if (total === 0) return 0
-    return Math.max(0, available - fixed - lay.spacing * Math.max(0, n - 1)) / total
+// Separación en el eje principal de un contenedor (`lay`): la heredan las cajas implícitas.
+function mainGap(lay) {
+    const b = lay.fxBox
+    return pad(lay.fxHorizontal ? b.columnGap : b.rowGap, b.gap)
 }
 
 // -- <flex> (motor en flex.js) ------------------------------------------------
@@ -118,7 +103,16 @@ function alignFlags(align, horizontal) {
     return 0
 }
 
-// Bordes por lado, sombra, contorno y desplazamiento (overflow: auto) solo se crean si se usan.
+// Lo que una caja solo crea si lo usa: bordes por lado, sombra, contorno, bloqueo del
+// puntero, desplazamiento (overflow: auto), manejadores del puntero (on:click, :hover,
+// :pressed, cursor), papel interactivo (accesibilidad y teclado) y translate().
+// FxBox.fxDecor dice qué hace falta; al cambiar, se llama a flexDecorations.
+const D_SIDES = 1, D_SHADOW = 2, D_OUTLINE = 4, D_BLOCKER = 8, D_SCROLL = 16
+const D_HOVER = 32, D_TAP = 64, D_ROLE = 128, D_TRANSLATE = 256
+let hoverComponent = null
+let tapComponent = null
+let roleComponent = null
+let translateComponent = null
 let sidesComponent = null
 let scrollerComponent = null
 let shadowComponent = null
@@ -133,6 +127,24 @@ function component(cached, file) {
 }
 
 function flexDecorations(box) {
+    const d = box.fxDecor
+    if (d & D_HOVER && !box.fxHover) {
+        hoverComponent = component(hoverComponent, "FxHover.qml")
+        box.fxHover = hoverComponent.createObject(box, { box: box })
+    }
+    if (d & D_TAP && !box.fxTap) {
+        tapComponent = component(tapComponent, "FxTap.qml")
+        box.fxTap = tapComponent.createObject(box, { box: box })
+    }
+    if (d & D_ROLE && !box.fxRoleItem) {
+        roleComponent = component(roleComponent, "FxRole.qml")
+        box.fxRoleItem = roleComponent.createObject(box, { box: box })
+    }
+    if (d & D_TRANSLATE && !box.fxTranslate) {
+        translateComponent = component(translateComponent, "FxTranslate.qml")
+        box.fxTranslate = translateComponent.createObject(box, { box: box })
+        box.transform = [box.fxTranslate]
+    }
     if (box.fxSides && !box.fxSideItem) {
         sidesComponent = component(sidesComponent, "FxSides.qml")
         box.fxSideItem = sidesComponent.createObject(box, { box: box })
@@ -208,6 +220,20 @@ function cssVar(ctx, name, fallback, dflt) {
     const v = vs ? vs[name] : undefined
     if (v !== undefined) return v
     return fallback === undefined ? dflt : fallback
+}
+
+// Fondo y borde de un <Text>, y la mano sobre sus enlaces: solo los que los usan (FxText.fxDecor).
+let textBoxComponent = null
+let textLinksComponent = null
+function textDecorations(label) {
+    if (label.fxDecor & 1 && !label.background) {
+        textBoxComponent = component(textBoxComponent, "FxTextBox.qml")
+        label.background = textBoxComponent.createObject(label, { label: label })
+    }
+    if (label.fxDecor & 2 && !label.fxLinks) {
+        textLinksComponent = component(textLinksComponent, "FxTextLinks.qml")
+        label.fxLinks = textLinksComponent.createObject(label, { label: label })
+    }
 }
 
 let inheritComponent = null

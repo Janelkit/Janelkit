@@ -32,6 +32,10 @@ def _emit(node: IRNode, depth: int, lines: list[str], source_map: SourceMap, pre
         lines.append(f"{pad}{prefix}Repeater {{")
         lines.append(f"{inner}model: {BRIDGE_NAME}.{node.model_id}")
         lines.append(f"{inner}readonly property bool fxSkip: true")  # no ocupa sitio en <flex>
+        # Al reordenar filas, Qt solo cambia el orden de apilado (sin señal para <flex>): el
+        # modelo avisa una vez por movimiento. Antes lo hacía el índice de cada fila, y
+        # mover una fila recalculaba el de todas las de detrás (invertir 1000: ~380 ms).
+        lines.append(f"{inner}readonly property bool fxTouchOrder: Fx.resized(parent, model ? model.order : 0)")
         if node.delegate is None:
             lines.append(f"{inner}delegate: {BRIDGE_NAME}.{node.model_id}.delegate")
         else:

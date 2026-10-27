@@ -21,7 +21,7 @@ from ..styling.parser import Compound, Declaration, Rule, Selector
 from .ir import IRElement, Literal
 
 ALWAYS = "true"
-_BOXES = ("FxColumn", "FxRow", "FxFlex")
+_BOXES = ("FxColumn", "FxRow", "FxFlex", "FxFlexColumn", "FxFlexRow", "FxQtBox")
 
 
 @dataclass

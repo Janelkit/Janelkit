@@ -7,7 +7,7 @@ delegados afectados: las filas que se mueven conservan su estado visual.
 """
 from __future__ import annotations
 
-from PySide6.QtCore import QAbstractListModel, QByteArray, QModelIndex, QObject, Property, Qt
+from PySide6.QtCore import QAbstractListModel, QByteArray, QModelIndex, QObject, Property, Qt, Signal
 
 from ..compiler.qml_generator import BRIDGE_NAME
 
@@ -22,6 +22,7 @@ class SlotModel(QAbstractListModel):
         # Filas que se están animando al salir: siguen en el modelo (Qt las muestra)
         # pero ya no cuentan para las posiciones que usan las regiones.
         self._leaving: set[int] = set()
+        self._order = 0
 
     # -- QAbstractListModel ----------------------------------------------------
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:  # noqa: B008
@@ -40,6 +41,18 @@ class SlotModel(QAbstractListModel):
 
     # Componente QML que se repite cuando la región es un componente hijo.
     delegate = Property(QObject, _get_delegate, constant=True)
+
+    # Cambia con cada movimiento: el contenedor <flex> vuelve a colocar a sus hijos.
+    orderChanged = Signal()
+
+    def _get_order(self) -> int:
+        return self._order
+
+    order = Property(int, _get_order, notify=orderChanged)
+
+    def _moved(self) -> None:
+        self._order += 1
+        self.orderChanged.emit()
 
     # -- operaciones (posiciones lógicas: sin las filas que están saliendo) ---------
     def __len__(self) -> int:
@@ -108,6 +121,7 @@ class SlotModel(QAbstractListModel):
                 raise ValueError(f"movimiento de fila no válido: {source} -> {target}")
             self._rows.insert(target, self._rows.pop(source))
             self.endMoveRows()
+            self._moved()
             return
         src = self._physical(source)
         row = self._rows[src]
@@ -129,6 +143,7 @@ class SlotModel(QAbstractListModel):
             raise ValueError(f"movimiento de fila no válido: {source} -> {target}")
         self._rows = rest[:final] + [row] + rest[final:]
         self.endMoveRows()
+        self._moved()
 
 
 class LazySlotModel(SlotModel):

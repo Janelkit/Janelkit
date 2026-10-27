@@ -11,8 +11,11 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from importlib import resources
-from importlib.resources.abc import Traversable
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # importlib.resources.abc no existe en Python 3.10
+    from importlib.resources.abc import Traversable
 
 from .. import __version__
 

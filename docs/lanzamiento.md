@@ -4,6 +4,35 @@ Prioriza lo que falta en **el framework** antes de su primera versión pública 
 
 Situación de partida: incrementos 0–7 completos; detalle en [estado.md](estado.md).
 
+## Avance
+
+| # | Pendiente | Prioridad | Estado | Evidencia |
+|---|---|---|---|---|
+| 1 | Colecciones reactivas | P0 | ✅ | `tests/test_collections.py`, `tools/bench.py` |
+| 2 | Modificar estado desde la plantilla | P0 | ✅ | manejadores en línea; `tests/test_runtime_qt.py::test_inline_handlers_*` |
+| 3 | Slots | P0 | ✅ | `tests/test_slots_qt.py` |
+| 4 | Ciclo de vida y referencias | P0 | ✅ | `tests/test_lifecycle_qt.py` |
+| 5 | Asincronía y segundo plano | P0 | ✅ | `tests/test_async_qt.py`, `examples/books` |
+| 6 | Contexto | P0 | ✅ | `tests/test_lifecycle_qt.py::test_provide_*` |
+| 7 | Superficie pública y versionado | P0 | ✅ | [api.md](api.md), `tests/test_public_api.py` |
+| 8 | Interoperabilidad con Qt | P0 | ✅ | `.qml` propios; `tests/test_qml_elements_qt.py`, `examples/counter` |
+| 9 | Controles que faltan | P1 | ✅ | `tests/test_controls_qt.py` (Switch, Slider, Select, RadioGroup, Tabs, Image, ProgressBar, Shortcut, diálogos, `on:input` en TextArea) |
+| 10 | Lista virtualizada | P1 | ✅ | `<List>`; `tests/test_list_qt.py`; 10 000 filas en ~40 ms (`tools/bench.py`) |
+| 12 | Aplicaciones de validación | P1 | ✅ | `examples/files`, `examples/books`; hallazgos en [estado.md](estado.md#validación-con-aplicaciones-reales) |
+| 13 | Rendimiento de una aplicación mediana | P1 | ✅ | `tools/bench_app.py`; arranque < 300 ms, interacciones < 70 ms |
+| 15 | API de inspección pública | P1 | ✅ | `fluxui.inspect`; `tests/test_inspect.py` |
+| 14 | Accesibilidad básica | P1 | ✅ | `tests/test_accessibility_qt.py`: orden de Tab, Espacio/Intro en cajas pulsables, foco visible, nombres accesibles (`label`, `alt`) |
+| 11 | Linux, macOS y CI | P1 | 🟡 | CI con matriz preparada (`.github/workflows/ci.yml`); versiones mínimas (Python 3.10 + PySide6 6.8) verificadas en Windows. **Falta:** ejecutarla en GitHub (necesita un remoto) para probar Linux y macOS. |
+| 16 | Documentación de lanzamiento | P1 | ✅ | [tutorial.md](tutorial.md) (con `examples/compra` probado), [api.md](api.md), [cambios.md](cambios.md), [empaquetado.md](empaquetado.md) (receta verificada con PyInstaller) |
+| 17 | Nombre, licencia y publicación | P1 | ⏳ | Necesita decisiones del autor: nombre en PyPI, licencia. |
+| 18 | Tipos en props | P2 | ✅ | `edad: int = prop(0)`; literales al compilar, valores dinámicos al ejecutar (`tests/test_components_qt.py`) |
+| 20 | Transiciones y animaciones | P2 | ✅ | `transition:`/`in:`/`out:`, `transition` en CSS, `<List animate>` (`tests/test_transitions_qt.py`) |
+| 23 | `class={expr}` dinámico | P2 | ✅ | `tests/test_runtime_qt.py::test_dynamic_class_expression` |
+| 19 | Varias ventanas y tema por ventana | P2 | ✅ | `open_window`; `tests/test_windows_qt.py` |
+| 24 | Navegación entre pantallas | P2 | ✅ | `pages()` y `<Pages>`; `tests/test_pages_qt.py` |
+| 21 | Internacionalización | P2 | ✅ | `t`, `i18n`; formatos con QLocale; RTL; `examples/idiomas`; `tests/test_i18n_qt.py` |
+| 22 | `flux dev` conservando el estado (HMR) | P2 | ✅ | `tests/test_dev.py::test_reload_keeps_state_unless_the_script_changed` |
+
 ## Cómo se prioriza
 
 | Prioridad | Significado |

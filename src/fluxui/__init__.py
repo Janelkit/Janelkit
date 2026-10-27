@@ -4,12 +4,67 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from .reactivity import Computed, State, batch, computed, event, prop, state
+from .reactivity import (
+    Computed,
+    Effect,
+    Event,
+    Prop,
+    PropError,
+    State,
+    batch,
+    computed,
+    effect,
+    event,
+    prop,
+    state,
+    untracked,
+)
+from . import dialogs
+from .i18n import i18n, t
+from .lifecycle import Ref, inject, on_destroy, on_mount, provide, ref
+from .pages import PageStack, pages
 from .styling.theme import theme
+from .tasks import Task, background, spawn, task
+from .windows import open_window
 
 __version__ = "0.0.1.dev0"
 
-__all__ = ["Computed", "State", "__version__", "batch", "computed", "event", "prop", "run", "state", "theme"]
+# API pública: lo que se importa desde `fluxui` es estable dentro de una
+# versión menor (ver docs/api.md). Cualquier otro módulo es interno.
+__all__ = [
+    "Computed",
+    "Effect",
+    "Event",
+    "Prop",
+    "PageStack",
+    "PropError",
+    "Ref",
+    "State",
+    "Task",
+    "__version__",
+    "background",
+    "batch",
+    "computed",
+    "dialogs",
+    "effect",
+    "i18n",
+    "event",
+    "inject",
+    "on_destroy",
+    "on_mount",
+    "pages",
+    "open_window",
+    "prop",
+    "provide",
+    "ref",
+    "run",
+    "spawn",
+    "state",
+    "t",
+    "task",
+    "theme",
+    "untracked",
+]
 
 if TYPE_CHECKING:
     from .qt_backend.application import run

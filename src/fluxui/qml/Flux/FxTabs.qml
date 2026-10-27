@@ -1,0 +1,84 @@
+// Barra de pestañas de FluxUI. Solo la barra: el contenido se elige con {#if} según `value`.
+// options: lista de textos o de {label, value}.
+import QtQuick
+import QtQuick.Controls.Basic
+import QtQuick.Layouts
+import "fx.js" as Fx
+
+TabBar {
+    id: bar
+    property var options: []
+    property var value: undefined
+    property color fxColor: fxtheme.text
+    property int fxFlex: 0
+    property string fxSelfAlign: ""
+    property bool fxSelfStretch: false
+    readonly property var fxModel: Fx.options(options)
+    signal picked(var choice)
+
+    Layout.fillWidth: Fx.fillWidth(parent, fxFlex, fxSelfStretch, true)
+    Layout.fillHeight: Fx.fillHeight(parent, fxFlex, fxSelfStretch)
+    Layout.preferredWidth: Fx.basis(parent, fxFlex, true)
+    Layout.preferredHeight: Fx.basis(parent, fxFlex, false)
+    Layout.alignment: Fx.alignment(parent, fxSelfAlign)
+
+    function fxSync() {
+        for (let i = 0; i < fxModel.length; ++i)
+            if (fxModel[i].value === value) { currentIndex = i; return }
+        currentIndex = -1
+    }
+    onValueChanged: fxSync()
+    onFxModelChanged: fxSync()
+    Component.onCompleted: fxSync()
+
+    background: Rectangle {
+        color: "transparent"
+        Rectangle {
+            anchors.bottom: parent.bottom
+            width: parent.width
+            height: 1
+            color: fxtheme.border
+        }
+    }
+
+    Repeater {
+        model: bar.fxModel
+
+        TabButton {
+            id: tab
+            required property var modelData
+            Accessible.name: modelData.label
+            required property int index
+            text: modelData.label
+            width: implicitWidth
+            leftPadding: 14
+            rightPadding: 14
+            hoverEnabled: true
+            onClicked: bar.picked(modelData.value)
+
+            contentItem: Text {
+                text: tab.text
+                font: tab.font
+                color: tab.checked ? fxtheme.primary : bar.fxColor
+                opacity: tab.enabled ? 1 : 0.55
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            background: Rectangle {
+                implicitHeight: 36
+                color: tab.hovered && !tab.checked ? fxtheme.hover : "transparent"
+                border.color: tab.visualFocus ? fxtheme.primary : "transparent"
+                border.width: tab.visualFocus ? 2 : 0
+                radius: fxtheme.radius_sm
+                Rectangle {
+                    anchors.bottom: parent.bottom
+                    width: parent.width
+                    height: 2
+                    color: fxtheme.primary
+                    visible: tab.checked
+                }
+            }
+        }
+    }
+}

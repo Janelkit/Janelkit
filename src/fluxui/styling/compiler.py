@@ -17,9 +17,9 @@ from .parser import Declaration, Rule
 
 THEME_OBJECT = "fxtheme"  # propiedad de contexto QML con los tokens del tema activo
 
-BOXES = {"Column", "Row", "Scroll"}
-TEXTUAL = {"Text", "Button", "TextField", "TextArea", "Checkbox"}
-FIELDS = {"Button", "TextField", "TextArea"}
+BOXES = {"Column", "Row", "Scroll", "List"}
+TEXTUAL = {"Text", "Button", "TextField", "TextArea", "Checkbox", "Switch", "Select", "RadioGroup", "Tabs"}
+FIELDS = {"Button", "TextField", "TextArea", "Select"}
 ITEMS = set(CONTROLS) - {"Window"}
 ALL = set(CONTROLS)
 
@@ -84,6 +84,45 @@ class _Context:
 
 Converter = Callable[[str, _Context], dict[str, str]]
 
+# Clave especial que devuelven los conversores: `Behavior on <prop>` (lo coloca el compilador).
+BEHAVIOR = "@behavior "
+
+# transition: <propiedad CSS> -> (propiedad QML, animación)
+_ANIMATABLE = {
+    "color": ("fxColor", "ColorAnimation"),
+    "background": ("fxBackground", "ColorAnimation"),
+    "background-color": ("fxBackground", "ColorAnimation"),
+    "border-color": ("fxBorderColor", "ColorAnimation"),
+    "opacity": ("opacity", "NumberAnimation"),
+    "width": ("Layout.preferredWidth", "NumberAnimation"),
+    "height": ("Layout.preferredHeight", "NumberAnimation"),
+    "border-radius": ("fxRadius", "NumberAnimation"),
+}
+_DURATION_RE = re.compile(r"^(\d+(?:\.\d+)?)(ms|s)$")
+
+
+def _transition(value: str, ctx: _Context) -> dict[str, str]:
+    """`transition: background 200ms, opacity .3s` -> animaciones de esas propiedades."""
+    out: dict[str, str] = {}
+    for part in value.split(","):
+        words = part.split()
+        if len(words) < 2:
+            raise StyleValueError(f"transition necesita propiedad y duración, p. ej. 'background 200ms': {part.strip()!r}")
+        prop, duration = words[0], words[1]
+        m = _DURATION_RE.match(duration if not duration.startswith(".") else "0" + duration)
+        if not m:
+            raise StyleValueError(f"duración no válida en transition: {duration!r} (usa 200ms o 0.2s)")
+        ms = float(m.group(1)) * (1000 if m.group(2) == "s" else 1)
+        props = list(_ANIMATABLE) if prop == "all" else [prop]
+        for name in props:
+            if name not in _ANIMATABLE:
+                raise StyleValueError(
+                    f"transition no puede animar {name!r}; se admiten: {', '.join(_ANIMATABLE)} y all"
+                )
+            qml_prop, animation = _ANIMATABLE[name]
+            out[BEHAVIOR + qml_prop] = f"{animation} {{ duration: {ms:.0f}; easing.type: Easing.OutCubic }}"
+    return out
+
 
 def _single(qml_prop: str, kind: str) -> Converter:
     def convert(value: str, ctx: _Context) -> dict[str, str]:
@@ -93,7 +132,7 @@ def _single(qml_prop: str, kind: str) -> Converter:
 
 
 def _padding_names(tag: str) -> tuple[str, list[str]]:
-    if tag == "Scroll":
+    if tag in ("Scroll", "List"):
         return "innerPadding", [f"inner{s.capitalize()}Padding" for s in _SIDES]
     return "padding", [f"{s}Padding" for s in _SIDES]
 
@@ -292,6 +331,7 @@ SUPPORTED: dict[str, tuple[set[str], Converter]] = {
     "min-height": (ALL, _limit("min", "height")),
     "max-height": (ALL, _limit("max", "height")),
     "opacity": (ALL, _single("opacity", "number")),
+    "transition": (ITEMS, _transition),
 }
 
 # Window usa su propia propiedad de color de fondo.
@@ -341,7 +381,9 @@ def compile_declarations(
             )
             continue
         tags, convert = entry
-        if tag not in tags:
+        if tag not in CONTROLS and ITEMS <= tags:
+            pass  # elemento propio (.qml): admite las propiedades de disposición comunes
+        elif tag not in tags:
             warn(f"'{decl.prop}' no tiene efecto en <{tag}>", decl)
             continue
         try:

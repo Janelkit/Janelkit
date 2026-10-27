@@ -25,6 +25,10 @@ Rectangle {
     property int fxFlex: 0
     property string fxSelfAlign: ""
     property bool fxSelfStretch: false
+    // El compilador los activa cuando el tamaño viene de fuera aunque no haya layout
+    // (raíz de la ventana, fila de <List>): entonces se puede repartir el espacio por flex.
+    property bool fxSizedW: false
+    property bool fxSizedH: false
     readonly property bool fillMain: Fx.anyFlex(lay.children)
     // on:click: el contenedor entero se puede pulsar (tarjetas, filas de lista)
     property bool fxClickable: false
@@ -33,12 +37,26 @@ Rectangle {
 
     Layout.fillWidth: Fx.fillWidth(parent, fxFlex, fxSelfStretch, true)
     Layout.fillHeight: Fx.fillHeight(parent, fxFlex, fxSelfStretch)
+    Layout.preferredWidth: Fx.basis(parent, fxFlex, true)
+    Layout.preferredHeight: Fx.basis(parent, fxFlex, false)
     Layout.alignment: Fx.alignment(parent, fxSelfAlign)
 
     color: fxClickable && hover.hovered ? Qt.tint(fxBackground, fxtheme.hover) : fxBackground
     radius: fxRadius
-    border.color: fxBorderColor
-    border.width: fxBorderWidth
+    // Con on:click se puede usar con el teclado: Tab para llegar, Espacio o Intro para pulsar.
+    readonly property bool fxKeyFocus: fxClickable && activeFocus
+    border.color: fxKeyFocus ? fxtheme.primary : fxBorderColor
+    border.width: fxKeyFocus ? 2 : fxBorderWidth
+    activeFocusOnTab: fxClickable
+    Keys.onPressed: (event) => {
+        if (fxClickable && [Qt.Key_Space, Qt.Key_Return, Qt.Key_Enter].includes(event.key)) {
+            box.clicked()
+            event.accepted = true
+        }
+    }
+    Accessible.role: Accessible.Button
+    Accessible.ignored: !fxClickable
+    Accessible.onPressAction: if (fxClickable) box.clicked()
     implicitWidth: lay.implicitWidth + leftPadding + rightPadding
     implicitHeight: lay.implicitHeight + topPadding + bottomPadding
 
@@ -58,6 +76,7 @@ Rectangle {
         readonly property int fxAlign: box.align
         readonly property bool fxStretch: box.stretch
         readonly property real fxFree: box.width - box.leftPadding - box.rightPadding
+        readonly property real fxFlexUnit: box.Layout.fillWidth || box.fxSizedW ? Fx.flexUnit(lay, true, fxFree) : 0
         x: box.leftPadding + (box.fillMain ? 0 : Math.max(0, fxFree - implicitWidth) * box.justify)
         y: box.topPadding
         width: box.fillMain ? fxFree : implicitWidth

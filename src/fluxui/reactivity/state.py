@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import Any, Callable, Generic, TypeVar
 
-from .effects import Source, batch
+from .collections import reactive
+from .effects import Source, batch, check_thread, untracked
 
 T = TypeVar("T")
 
@@ -14,7 +15,8 @@ def _same(a: Any, b: Any) -> bool:
     if type(a) is not type(b):
         return False
     try:
-        return bool(a == b)
+        with untracked():
+            return bool(a == b)
     except Exception:  # noqa: BLE001 - comparaciones ambiguas (p. ej. arrays) cuentan como cambio
         return False
 
@@ -22,13 +24,14 @@ def _same(a: Any, b: Any) -> bool:
 class State(Source, Generic[T]):
     """Valor observable. Leer `.value` registra la dependencia; asignarlo notifica.
 
-    Las mutaciones internas (`lista.append`) no se detectan: asigna un valor nuevo
-    (`items.value = [*items.value, x]`).
+    Las listas, diccionarios y conjuntos se guardan como colecciones reactivas
+    (ver `collections.py`): `items.value.append(x)` también notifica. Para otros
+    objetos modificados en el sitio, llama a `notify()`.
     """
 
     def __init__(self, initial: T):
         super().__init__()
-        self._value = initial
+        self._value = reactive(initial)
 
     @property
     def value(self) -> T:
@@ -37,6 +40,8 @@ class State(Source, Generic[T]):
 
     @value.setter
     def value(self, new: T) -> None:
+        check_thread()
+        new = reactive(new)
         if _same(self._value, new):
             return
         self._value = new
@@ -48,6 +53,11 @@ class State(Source, Generic[T]):
 
     def update(self, fn: Callable[[T], T]) -> None:
         self.value = fn(self._value)
+
+    def notify(self) -> None:
+        """Avisa de un cambio hecho en el sitio que FluxUI no puede detectar (p. ej. un objeto propio)."""
+        with batch():
+            self._notify()
 
     def peek(self) -> T:
         """Lee el valor sin registrar dependencia."""

@@ -7,17 +7,40 @@ de su `Repeater`). Así QML solo reevalúa las propiedades cuyo valor cambió.
 """
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any, Protocol
 
 from PySide6.QtCore import Property, QObject, Signal, Slot
 
+from ..reactivity.collections import to_plain
 from ..reactivity.state import _same
 
-InvokeFn = Callable[[str, list], None]
-WriteFn = Callable[[str, Any], None]
+
+
+class BridgeOwner(Protocol):
+    """Quien recibe lo que QML comunica a través del puente."""
+
+    def bridge_invoke(self, handler_id: str, args: list) -> None: ...
+    def bridge_write(self, binding_id: str, value: Any) -> None: ...
+    def bridge_ref(self, ref_id: str, item: QObject, attached: bool) -> None: ...
+    def bridge_mounted(self) -> None: ...
+
+
+# Las clases puente nunca se liberan: QML guarda en caché la información de
+# cada QMetaObject por su dirección, y si una clase se liberase, otra nueva
+# podría ocupar la misma dirección y heredar una caché que no le corresponde.
+# Además, clases con la misma forma se reutilizan entre compilaciones.
+_classes: dict[tuple, type[QObject]] = {}
 
 
 def make_bridge_class(binding_ids: list[str], model_ids: list[str] = (), name: str = "FluxBridge") -> type[QObject]:
+    key = (name, tuple(binding_ids), tuple(model_ids))
+    cls = _classes.get(key)
+    if cls is None:
+        cls = _classes[key] = _make_bridge_class(binding_ids, model_ids, name)
+    return cls
+
+
+def _make_bridge_class(binding_ids: list[str], model_ids: list[str], name: str) -> type[QObject]:
     attrs: dict[str, Any] = {}
     for bid in binding_ids:
         signal = Signal()
@@ -35,15 +58,15 @@ def make_bridge_class(binding_ids: list[str], model_ids: list[str] = (), name: s
 
         attrs[mid] = Property(QObject, model_getter, constant=True)
 
-    def __init__(self, on_invoke: InvokeFn, on_write: WriteFn, parent: QObject | None = None):
+    def __init__(self, owner: BridgeOwner, parent: QObject | None = None):
         QObject.__init__(self, parent)
         self._values: dict[str, Any] = {}
         self._models: dict[str, QObject] = {}
-        self._on_invoke = on_invoke
-        self._on_write = on_write
+        self._owner = owner
 
     def set_value(self, bid: str, value: Any) -> bool:
         """Actualiza una propiedad; solo notifica a QML si el valor cambió."""
+        value = to_plain(value)
         if bid in self._values and _same(self._values[bid], value):
             return False
         self._values[bid] = value
@@ -62,10 +85,19 @@ def make_bridge_class(binding_ids: list[str], model_ids: list[str] = (), name: s
 
     # Qt registra los slots por __name__: deben ser funciones con nombre, no lambdas.
     def invoke(self, handler_id: str, args: list) -> None:
-        self._on_invoke(handler_id, list(args or []))
+        self._owner.bridge_invoke(handler_id, list(args or []))
 
     def write(self, binding_id: str, value: Any) -> None:
-        self._on_write(binding_id, value)
+        self._owner.bridge_write(binding_id, value)
+
+    def setRef(self, ref_id: str, item: QObject, attached: bool) -> None:
+        self._owner.bridge_ref(ref_id, item, attached)
+
+    def mounted(self) -> None:
+        self._owner.bridge_mounted()
+
+    # Salida animada (out:/transition:): FxTransition anima la raíz al recibir leave().
+    attrs["leave"] = Signal()
 
     attrs.update(
         __init__=__init__,
@@ -75,5 +107,7 @@ def make_bridge_class(binding_ids: list[str], model_ids: list[str] = (), name: s
         model=model,
         invoke=Slot(str, "QVariantList")(invoke),
         write=Slot(str, "QVariant")(write),
+        setRef=Slot(str, QObject, bool)(setRef),
+        mounted=Slot()(mounted),
     )
     return type(name, (QObject,), attrs)

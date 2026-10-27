@@ -33,6 +33,37 @@ class PropDecl:
     name: str
     required: bool
     loc: SourceLocation
+    annotation: str | None = None  # `edad: int = prop(0)` -> "int"
+    # Tipos admitidos según la anotación, si solo usa tipos básicos ("int", "str", "None"…).
+    # None: sin anotación o con tipos que solo se pueden comprobar al ejecutar.
+    type_names: frozenset[str] | None = None
+
+
+_BASIC = {"int", "float", "str", "bool", "list", "dict", "set", "tuple", "None"}
+
+
+def basic_type_names(node: ast.expr) -> frozenset[str] | None:
+    """Nombres de tipos básicos que admite una anotación, o None si no se puede saber sin ejecutar."""
+    if isinstance(node, ast.Constant) and node.value is None:
+        return frozenset({"None"})
+    if isinstance(node, ast.Name):
+        if node.id == "Any" or node.id == "object":
+            return None
+        return frozenset({node.id}) if node.id in _BASIC else None
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+        left, right = basic_type_names(node.left), basic_type_names(node.right)
+        return left | right if left is not None and right is not None else None
+    if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name):
+        base = node.value.id
+        if base == "Optional":
+            inner = basic_type_names(node.slice)
+            return inner | {"None"} if inner is not None else None
+        if base == "Union" and isinstance(node.slice, ast.Tuple):
+            parts = [basic_type_names(e) for e in node.slice.elts]
+            return frozenset().union(*parts) if all(p is not None for p in parts) else None
+        if base in _BASIC:  # list[str] -> list
+            return frozenset({base})
+    return None
 
 
 @dataclass
@@ -154,10 +185,11 @@ class _Analyzer:
         if not isinstance(target, ast.Name):
             self.error(f"{kind}() debe asignarse a un nombre simple", stmt, f"usa nombre = {kind}(...)")
             return stmt
-        self.declare(kind, target.id, value, stmt)
+        annotation = stmt.annotation if isinstance(stmt, ast.AnnAssign) else None
+        self.declare(kind, target.id, value, stmt, annotation)
         return stmt
 
-    def declare(self, kind: str, name: str, call: ast.Call, stmt: ast.stmt) -> None:
+    def declare(self, kind: str, name: str, call: ast.Call, stmt: ast.stmt, annotation: ast.expr | None = None) -> None:
         if name in self.info.props or name in self.info.events:
             self.error(f"'{name}' ya está declarado como prop o evento", stmt)
             return
@@ -166,7 +198,14 @@ class _Analyzer:
                 self.error("prop() admite un único argumento: el valor por defecto", call, "usa nombre = prop(valor_por_defecto)")
                 return
             required = not call.args and not call.keywords
-            self.info.props[name] = PropDecl(name, required, self.loc(stmt))
+            decl = PropDecl(name, required, self.loc(stmt))
+            if annotation is not None:
+                decl.annotation = ast.unparse(annotation)
+                decl.type_names = basic_type_names(annotation)
+                # El tipo llega al runtime, que valida cada valor que recibe la prop.
+                kind_value = ast.Constant(decl.annotation) if isinstance(annotation, ast.Constant) else annotation
+                call.keywords.append(ast.copy_location(ast.keyword("kind", kind_value), call))
+            self.info.props[name] = decl
             call.func = ast.copy_location(ast.Name(PROP_FACTORY, ast.Load()), call.func)
         else:
             if call.args or call.keywords:

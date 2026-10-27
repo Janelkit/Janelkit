@@ -35,20 +35,9 @@ def pending():
 def add():
     title = draft.value.strip()
     if title:
-        todos.value = [*todos.value, {"id": next(_ids), "title": title, "done": False}]
+        # Las listas y diccionarios de un state son reactivos: se pueden modificar en el sitio.
+        todos.value.append({"id": next(_ids), "title": title, "done": False})
         draft.value = ""
-
-
-def toggle(todo_id, done):
-    todos.value = [{**t, "done": done} if t["id"] == todo_id else t for t in todos.value]
-
-
-def remove(todo_id):
-    todos.value = [t for t in todos.value if t["id"] != todo_id]
-
-
-def set_filter(mode):
-    filter_mode.value = mode
 
 
 def clear_done():
@@ -67,7 +56,7 @@ def clear_done():
     <Row class="filters">
       <TextField bind:value={query} placeholder="Buscar…" flex={1} />
       {#each FILTERS as mode (mode)}
-        <Button variant={"primary" if mode == filter_mode else "ghost"} on:click={lambda: set_filter(mode)}>
+        <Button variant={"primary" if mode == filter_mode else "ghost"} on:click={filter_mode = mode}>
           {mode.capitalize()}
         </Button>
       {/each}
@@ -75,11 +64,11 @@ def clear_done():
 
     <Scroll class="list">
       {#each visible as todo (todo["id"])}
-        <Row class="item">
-          <Checkbox checked={todo["done"]} on:change={lambda done: toggle(todo["id"], done)} flex={1}>
+        <Row class="item" transition:fade={150}>
+          <Checkbox checked={todo["done"]} on:change={todo["done"] = event} flex={1}>
             {todo["title"]}
           </Checkbox>
-          <Button variant="ghost" on:click={lambda: remove(todo["id"])}>Eliminar</Button>
+          <Button variant="ghost" on:click={todos.remove(todo)}>Eliminar</Button>
         </Row>
       {:else}
         <Column class="empty">

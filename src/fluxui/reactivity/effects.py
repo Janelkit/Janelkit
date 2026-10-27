@@ -11,6 +11,7 @@ Modelo:
 """
 from __future__ import annotations
 
+import threading
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator
 
@@ -20,10 +21,27 @@ _batch_depth = 0
 _flushing = False
 _pending: dict["Effect", None] = {}  # conjunto ordenado
 _MAX_FLUSH_ITERATIONS = 10_000
+# El sistema reactivo vive en un solo hilo (el de la interfaz). Desde otros hilos
+# (p. ej. código de `background()`) leer no registra dependencias y escribir es un error.
+_OWNER = threading.get_ident()
+_get_ident = threading.get_ident
 
 
 class ReactiveCycleError(RuntimeError):
     """Los efectos se reactivan entre sí indefinidamente."""
+
+
+class WrongThreadError(RuntimeError):
+    """Se modificó estado reactivo fuera del hilo de la interfaz."""
+
+
+def check_thread() -> None:
+    """Error si se intenta modificar estado fuera del hilo de la interfaz."""
+    if _get_ident() != _OWNER:
+        raise WrongThreadError(
+            "el estado solo se puede modificar desde el hilo de la interfaz; en código de "
+            "background() devuelve el valor y asígnalo tras el await: x.value = await background(f)"
+        )
 
 
 class Source:
@@ -31,12 +49,13 @@ class Source:
         self._subscribers: dict[Observer, None] = {}
 
     def _track(self) -> None:
-        if _observer_stack:
+        if _observer_stack and _get_ident() == _OWNER:
             observer = _observer_stack[-1]
             if observer is not None:
                 observer._add_dependency(self)
 
     def _notify(self) -> None:
+        check_thread()
         for observer in list(self._subscribers):
             observer._mark_stale()
 
@@ -81,20 +100,45 @@ class Observer:
 
 
 class Effect(Observer):
-    """Ejecuta `fn` ahora y cada vez que cambie algo de lo que leyó."""
+    """Ejecuta `fn` ahora y cada vez que cambie algo de lo que leyó.
+
+    Si `fn` devuelve una función, es su *limpieza*: se llama antes de la
+    siguiente ejecución y al liberar el efecto (p. ej. al desmontar el componente).
+    """
 
     def __init__(self, fn: Callable[[], Any], on_error: Callable[[BaseException], None] | None = None):
         super().__init__()
         self._fn = fn
         self._on_error = on_error
+        self._cleanup: Callable[[], Any] | None = None
         self.run()
 
     def run(self) -> None:
         if self.disposed:
             return
         try:
-            self._collect(self._fn)
+            self._run_cleanup()
+            result = self._collect(self._fn)
+            if callable(result):
+                self._cleanup = result
         except Exception as exc:  # noqa: BLE001 - se delega al manejador
+            if self._on_error is None:
+                raise
+            self._on_error(exc)
+
+    def _run_cleanup(self) -> None:
+        cleanup, self._cleanup = self._cleanup, None
+        if cleanup is not None:
+            with untracked():
+                cleanup()
+
+    def dispose(self) -> None:
+        if self.disposed:
+            return
+        super().dispose()
+        try:
+            self._run_cleanup()
+        except Exception as exc:  # noqa: BLE001
             if self._on_error is None:
                 raise
             self._on_error(exc)
@@ -182,6 +226,11 @@ def untracked() -> Iterator[None]:
         yield
     finally:
         _observer_stack.pop()
+
+
+def current_scope() -> "Scope | None":
+    """Ámbito activo (p. ej. el del componente que se está preparando), o None."""
+    return _scope_stack[-1] if _scope_stack else None
 
 
 def effect(fn: Callable[[], Any]) -> Effect:

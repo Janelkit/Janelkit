@@ -8,6 +8,7 @@ Qt Quick no es un navegador y FluxUI **no implementa CSS**. `<style>` admite una
 - De elemento: `Button { … }` → todos los `<Button>` del componente.
 - Varios selectores separados por comas: `.a, .b { … }`.
 - Clases condicionales: `class:activa={cond}` en el elemento aplica `.activa` mientras `cond` sea verdadera.
+- Clases dinámicas: `class={["tarjeta", variante, {"activa": sel}]}` (texto, listas o diccionarios `{clase: condición}`). Entre clases gana la regla que aparece después en `<style>`; las `class:x={cond}` se aplican por encima.
 
 Sin descendientes, pseudo-clases ni combinadores. Los estilos son **locales al componente**: las clases de un componente no afectan a sus hijos.
 
@@ -46,6 +47,7 @@ Sin descendientes, pseudo-clases ni combinadores. Los estilos son **locales al c
 | `width`, `height` | todos | px, o `100%` (ocupar el espacio disponible) |
 | `min-width`, `max-width`, `min-height`, `max-height` | todos | px |
 | `opacity` | todos | `0`–`1` |
+| `transition` | todos salvo Window | `background 200ms, opacity .3s` o `all 150ms`: anima los cambios de `color`, `background`, `border-color`, `opacity`, `width`, `height` y `border-radius` (también los que provoca una clase condicional o dinámica). |
 
 No soportado (advertencia): márgenes, sombras, posiciones absolutas, `space-between`, porcentajes distintos de 100%, selectores complejos, animaciones.
 
@@ -54,7 +56,9 @@ No soportado (advertencia): márgenes, sombras, posiciones absolutas, `space-bet
 `Column` y `Row` se comportan como un contenedor flex de CSS en una dirección:
 
 - Los hijos se colocan en orden, separados por `gap`. El espacio sobrante **no** se reparte entre ellos: queda al final, salvo que `justify-content` diga otra cosa.
-- `flex: 1` (o el atributo `flex={1}`) hace que un hijo ocupe el espacio libre del eje principal (alto en una `Column`, ancho en una `Row`). Si varios tienen `flex`, se lo reparten.
+- `flex: 1` (o el atributo `flex={1}`) hace que un hijo ocupe el espacio libre del eje principal (alto en una `Column`, ancho en una `Row`). Si varios tienen `flex`, se lo reparten **en proporción**, sin importar su contenido (como `flex: N 1 0` en CSS): `flex: 2` y `flex: 1` reciben dos tercios y un tercio del espacio que dejan los demás.
+- El reparto proporcional se aplica cuando el tamaño del contenedor en ese eje viene de fuera (llena la ventana, tiene `flex` o se estira). Si el contenedor se ajusta a su contenido, cada hijo toma su tamaño natural.
+- En la etiqueta de un componente (`<Panel flex={2} />`), `flex` se aplica a una caja exterior y la raíz del componente la ocupa entera.
 - En una `Column`, `Text`, `TextField`, `TextArea`, `Column`, `Row` y `Scroll` ocupan todo el ancho por defecto (como bloques); botones y casillas conservan su tamaño. `align-items` en el contenedor (o `align-self` en el hijo) cambia ese comportamiento.
 - En una `Row`, los hijos se centran verticalmente por defecto.
 - `width`/`height` en px fijan el tamaño preferido; `100%` ocupa el espacio disponible en ese eje.

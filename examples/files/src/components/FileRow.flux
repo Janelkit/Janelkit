@@ -1,0 +1,26 @@
+<script lang="python">
+from fluxui import prop, event, inject
+from services.fs import format_date, format_size
+
+file = prop()
+selected = prop(False)
+opened = event()
+
+# El componente raíz decide (con provide) si los tamaños se muestran exactos.
+exact = inject("exact_sizes", False)
+</script>
+
+<Row class="row" class:selected={selected} on:click={opened.emit(file)}>
+  <Text class="icon">{"📁" if file["is_dir"] else "📄"}</Text>
+  <Text class="name" flex={1}>{file["name"]}</Text>
+  <Text class="meta">{"" if file["is_dir"] else format_size(file["size"], exact)}</Text>
+  <Text class="meta date">{format_date(file["modified"])}</Text>
+</Row>
+
+<style>
+.row { padding: 6px 8px; gap: 10px; border-radius: var(--radius-sm); align-items: center; }
+.selected { background: var(--surface-alt); }
+.icon { width: 20px; }
+.meta { color: var(--text-muted); font-size: var(--font-size-sm); }
+.date { width: 110px; }
+</style>

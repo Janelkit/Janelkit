@@ -27,6 +27,7 @@ class EventSpec:
 class TwoWaySpec:
     qml_prop: str
     qml_handler: str  # señal que indica un cambio hecho por el usuario
+    qml_value: str | None = None  # expresión con el valor nuevo (por defecto, qml_prop)
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,8 @@ class ControlSpec:
     text_prop: str | None = None  # propiedad que recibe el contenido textual
     container: bool = False
     horizontal: bool = False  # contenedores: eje principal horizontal
+    tag: str | None = None  # elementos propios (QML del proyecto): nombre en la plantilla
+    fixed: dict[str, str] = field(default_factory=dict)  # propiedades QML que el compilador fija siempre
 
 
 # Propiedades de disposición comunes a todos los elementos salvo Window.
@@ -48,6 +51,7 @@ COMMON_PROPS: dict[str, PropSpec] = {
     "visible": PropSpec("visible", "bool"),
     "enabled": PropSpec("enabled", "bool"),
     "opacity": PropSpec("opacity", "number"),
+    "label": PropSpec("Accessible.name", "string"),  # nombre para lectores de pantalla
 }
 
 _BOX_PROPS = {
@@ -76,6 +80,14 @@ CONTROLS: dict[str, ControlSpec] = {
         "FxScroll",
         props={"gap": PropSpec("gap", "number"), "padding": PropSpec("innerPadding", "number")},
         container=True,
+    ),
+    "List": ControlSpec(
+        "FxList",
+        props={
+            "gap": PropSpec("gap", "number"),
+            "padding": PropSpec("innerPadding", "number"),
+            "animate": PropSpec("animate", "bool"),
+        },
     ),
     "Text": ControlSpec(
         "FxText",
@@ -108,13 +120,13 @@ CONTROLS: dict[str, ControlSpec] = {
     "TextArea": ControlSpec(
         "FxTextArea",
         props={
-            "value": PropSpec("text", "string"),
+            "value": PropSpec("fxValue", "string"),
             "placeholder": PropSpec("placeholderText", "string"),
             "readonly": PropSpec("readOnly", "bool"),
         },
-        # TextArea no distingue cambios del usuario de los programáticos; escribir
-        # el mismo valor de vuelta no notifica, así que no hay bucles.
-        two_way={"value": TwoWaySpec("text", "onTextChanged")},
+        # FxTextArea emite userEdited solo con los cambios del usuario (no con los de Python).
+        events={"input": EventSpec("onUserEdited", ("text",))},
+        two_way={"value": TwoWaySpec("fxValue", "onUserEdited", "text")},
     ),
     "Checkbox": ControlSpec(
         "FxCheckBox",
@@ -123,6 +135,70 @@ CONTROLS: dict[str, ControlSpec] = {
         two_way={"checked": TwoWaySpec("checked", "onToggled")},
         text_prop="text",
     ),
+    "Switch": ControlSpec(
+        "FxSwitch",
+        props={"checked": PropSpec("checked", "bool"), "text": PropSpec("text", "string")},
+        events={"change": EventSpec("onToggled", ("checked",))},
+        two_way={"checked": TwoWaySpec("checked", "onToggled")},
+        text_prop="text",
+    ),
+    "Slider": ControlSpec(
+        "FxSlider",
+        props={
+            "value": PropSpec("value", "number"),
+            "min": PropSpec("from", "number"),
+            "max": PropSpec("to", "number"),
+            "step": PropSpec("stepSize", "number"),
+        },
+        events={"change": EventSpec("onMoved", ("value",))},
+        two_way={"value": TwoWaySpec("value", "onMoved")},
+    ),
+    "Select": ControlSpec(
+        "FxSelect",
+        props={
+            "options": PropSpec("options"),
+            "value": PropSpec("value"),
+            "placeholder": PropSpec("placeholder", "string"),
+        },
+        events={"change": EventSpec("onActivated", ("currentValue",))},
+        two_way={"value": TwoWaySpec("value", "onActivated", "currentValue")},
+    ),
+    "RadioGroup": ControlSpec(
+        "FxRadioGroup",
+        props={
+            "options": PropSpec("options"),
+            "value": PropSpec("value"),
+            "horizontal": PropSpec("horizontal", "bool"),
+        },
+        events={"change": EventSpec("onPicked", ("choice",))},
+        two_way={"value": TwoWaySpec("value", "onPicked", "choice")},
+    ),
+    "Tabs": ControlSpec(
+        "FxTabs",
+        props={"options": PropSpec("options"), "value": PropSpec("value")},
+        events={"change": EventSpec("onPicked", ("choice",))},
+        two_way={"value": TwoWaySpec("value", "onPicked", "choice")},
+    ),
+    "Image": ControlSpec(
+        "FxImage",
+        props={"src": PropSpec("src", "string"), "fit": PropSpec("fit", "string"), "alt": PropSpec("alt", "string")},
+        # Las rutas relativas se resuelven desde la carpeta del .flux (la del QML generado).
+        fixed={"fxBase": 'Qt.resolvedUrl(".")'},
+    ),
+    "ProgressBar": ControlSpec(
+        "FxProgressBar",
+        props={
+            "value": PropSpec("value", "number"),
+            "max": PropSpec("to", "number"),
+            "indeterminate": PropSpec("indeterminate", "bool"),
+        },
+    ),
+    "Shortcut": ControlSpec(
+        "FxShortcut",
+        props={"keys": PropSpec("keys", "string")},
+        events={"activate": EventSpec("onActivated")},
+    ),
+    "Pages": ControlSpec("FxPages"),  # stack={nav}: lo trata el compilador (como ref)
     "Spacer": ControlSpec("FxSpacer"),
 }
 
@@ -130,7 +206,7 @@ QML_IMPORTS = ("QtQuick", "QtQuick.Controls", "QtQuick.Layouts", "Flux")
 
 
 def tag_of(spec: ControlSpec) -> str:
-    return next(tag for tag, s in CONTROLS.items() if s is spec)
+    return spec.tag or next(tag for tag, s in CONTROLS.items() if s is spec)
 
 
 def prop_spec(spec: ControlSpec, name: str) -> PropSpec | None:

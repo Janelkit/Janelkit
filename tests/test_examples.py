@@ -64,7 +64,12 @@ def test_notes_example_flow(flux_app, app_path):
         return next(b for b in items("FxButton") if b.property("text") == text)
 
     def press(item, method="click"):
-        assert QMetaObject.invokeMethod(item, method)
+        from conftest import click
+
+        if method == "click":
+            click(item)
+        else:
+            assert QMetaObject.invokeMethod(item, method)
         flux_app.qt_app.processEvents()
 
     try:
@@ -115,3 +120,43 @@ def test_example_runs_with_python_main(app):
     assert proc.returncode == 0, proc.stderr
     noise = [line for line in proc.stderr.splitlines() if line.strip() and not line.startswith("qt.qpa")]
     assert noise == []
+
+
+def test_books_example_flow_without_network(flux_app, app_path):
+    """Búsqueda asíncrona: cargando, resultados, error y reintento (búsqueda simulada, sin red)."""
+    import asyncio
+    import time
+
+    from conftest import click, texts, visual_items
+
+    app = next(p for p in EXAMPLES if p.parent.parent.name == "books")
+    m = flux_app.mount(compile_file(app_path(app)))
+    calls = []
+
+    def fake_search(q):
+        calls.append(q)
+        time.sleep(0.05)  # bloquea, pero en otro hilo
+        if q == "mal":
+            raise OSError("sin conexión")
+        return [{"key": f"/w/{i}", "title": f"{q} {i}", "author": "Ana", "year": 2000 + i} for i in range(2)]
+
+    m.instance.namespace["search"] = fake_search  # el script la importó de services.books
+    ns = m.instance.namespace
+
+    def search(q):
+        ns["query"].value = q
+        button = next(b for b in visual_items(m) if b.property("text") == "Buscar")
+        click(button)
+
+    try:
+        assert texts(m)[-1] == "Escribe algo y pulsa Intro."
+        search("dune")
+        assert "Buscando «dune»…" in texts(m)
+        flux_app.run_until(asyncio.sleep(0.3))
+        assert "dune 0" in texts(m) and "Ana · 2001" in texts(m)
+        search("mal")
+        flux_app.run_until(asyncio.sleep(0.3))
+        assert "No se pudo completar la búsqueda" in texts(m) and "sin conexión" in texts(m)
+        assert calls == ["dune", "mal"]
+    finally:
+        flux_app.unmount(m)

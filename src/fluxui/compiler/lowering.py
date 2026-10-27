@@ -15,10 +15,11 @@ from typing import Any, Callable, Union
 
 from ..diagnostics import Diagnostic, FluxError, SourceLocation
 from ..qt_backend.controls import CONTROLS, QML_IMPORTS, ControlSpec, PropSpec, all_props, prop_spec, tag_of
-from ..styling.compiler import compile_declarations, matching_declarations
+from ..styling.compiler import BEHAVIOR, compile_declarations, matching_declarations
 from ..styling.parser import Rule, parse_stylesheet
 from .ast_nodes import SFC, Attribute, EachBlock, Element, Expression, IfBlock, Interpolation, KeyBlock, Node, Text
-from .expressions import free_names
+from .qml_interface import QmlImport, read_interface
+from .expressions import EVENT_NAME, free_names, handler_names, is_inline_handler
 from .ir import (
     Bound,
     ComponentSlot,
@@ -39,6 +40,8 @@ from .ir import (
     Literal,
     PropArg,
     PropValue,
+    RefUse,
+    SlotOutlet,
     TextBinding,
     TokenUse,
     Write,
@@ -66,6 +69,12 @@ class ComponentInterface:
 
     props: dict[str, PropDecl] = field(default_factory=dict)
     events: dict[str, EventDecl] = field(default_factory=dict)
+    slots: frozenset[str] | None = None  # nombres de <Slot>; None = desconocido (no se valida)
+
+
+# Atributos de la etiqueta de un componente que no son props: se aplican a una
+# caja exterior que envuelve al componente (clases, id, tamaño y flex).
+_WRAPPER_ATTRS = frozenset({"class", "id", "flex", "width", "height", "visible"})
 
 
 InterfaceLookup = Callable[[Path], ComponentInterface]
@@ -106,6 +115,11 @@ class _Lowerer:
         self.tpl = IRTemplate(self.next_id("t"))
         self.scopes: list[set[str]] = []  # variables de {#each} visibles
         self.component_paths: list[str] = []
+        self.slot_fragments: list[Fragment] = []
+        self.qml_imports: dict[str, QmlImport] = {}  # tag -> import
+        self.pending_transitions: dict[int, SourceLocation] = {}  # id(IRElement) -> ubicación
+        self.use_counts: dict[str, int] = {}  # etiqueta de componente -> usos vistos
+        self.qml_specs: dict[str, ControlSpec] = {}
         self._reported: set[tuple] = set()
 
     # -- utilidades ----------------------------------------------------------
@@ -127,20 +141,35 @@ class _Lowerer:
         return bid
 
     def is_component(self, tag: str) -> bool:
-        return tag in self.info.components
+        """Componente .flux (los .qml importados son elementos, ver `spec_for`)."""
+        imp = self.info.components.get(tag)
+        return imp is not None and imp.path.suffix != ".qml"
+
+    def spec_for(self, tag: str) -> ControlSpec | None:
+        """Elemento integrado o elemento propio importado de un archivo .qml."""
+        imp = self.info.components.get(tag)
+        if imp is None or imp.path.suffix != ".qml":
+            return CONTROLS.get(tag)
+        if tag not in self.qml_specs:
+            folders = {i.directory: i.alias for i in self.qml_imports.values()}
+            alias = folders.get(imp.path.parent, f"FxUser{len(folders)}")
+            self.qml_imports[tag] = QmlImport(alias, imp.path.parent, tag)
+            self.qml_specs[tag] = read_interface(imp.path, tag, alias)
+        return self.qml_specs[tag]
 
     # -- nombres -------------------------------------------------------------
     def local_names(self) -> set[str]:
         return set().union(*self.scopes) if self.scopes else set()
 
-    def check_expr(self, expr: Expression) -> None:
+    def check_expr(self, expr: Expression, names: list[str] | None = None) -> None:
         """Avisa de nombres que no define el script ni un {#each} que los contenga."""
         if self.info.defined is None:
             return
-        try:
-            names = free_names(expr.code)
-        except SyntaxError:  # ya validada por el parser; por si acaso
-            return
+        if names is None:
+            try:
+                names = free_names(expr.code)
+            except SyntaxError:  # ya validada por el parser; por si acaso
+                return
         known = self.info.defined | self.local_names()
         for name in names:
             if name in known or name in _BUILTINS:
@@ -148,6 +177,24 @@ class _Lowerer:
             close = difflib.get_close_matches(name, sorted(known), n=1)
             hint = f"¿quisiste decir '{close[0]}'?" if close else f"declara '{name}' en el <script> del componente"
             self.error(f"'{name}' no está definido", _name_location(expr, name), hint)
+
+    def check_inline(self, expr: Expression, event: str) -> None:
+        """Manejador en línea: los nombres asignados deben ser state del script."""
+        loads, stores = handler_names(expr.code)
+        self.check_expr(expr, loads + [n for n in stores if n not in loads])
+        for name in stores:
+            loc = _name_location(expr, name)
+            if name in self.local_names():
+                self.error(
+                    f"on:{event} no puede asignar a la variable de bloque '{name}'",
+                    loc,
+                    f"modifica el elemento en el sitio ({name}[\"campo\"] = ...) o usa una función del script",
+                )
+            elif name in self.info.props:
+                self.error(f"on:{event} no puede asignar a la prop '{name}': es de solo lectura", loc,
+                           "emite un evento hacia el padre o copia la prop en un state()")
+            elif name == EVENT_NAME:
+                self.error(f"'{EVENT_NAME}' es el argumento del evento y no se puede asignar", loc)
 
     # -- entrada -------------------------------------------------------------
     def run(self) -> IRComponent:
@@ -182,13 +229,21 @@ class _Lowerer:
                 content = self.as_item(self.children([first], horizontal=False), first.loc)
                 if content is not None and self.as_window:
                     root_ir = IRElement("FxWindow", first.loc)
-                    content.props["anchors.fill"] = Literal("parent")
+                    _fill_parent(content)
                     root_ir.children.append(content)
                 else:
                     root_ir = content
+        for loc in self.pending_transitions.values():
+            self.error(
+                "transition:, in: y out: solo se aplican al elemento raíz de un bloque {#if}, {#each} o {#key}",
+                loc,
+                "si el bloque tiene varios elementos, agrúpalos en un <Column> o <Row> y pon ahí la transición",
+            )
         if self.errors:
             raise FluxError(self.errors)
         assert root_ir is not None
+        # Avisa al runtime de que la vista existe (on_mount).
+        root_ir.handlers.setdefault("Component.onCompleted", []).append("fx.mounted()")
 
         return IRComponent(
             file=sfc.file,
@@ -198,10 +253,13 @@ class _Lowerer:
             script=sfc.script,
             script_info=self.info,
             is_window=self.as_window,
-            imports=QML_IMPORTS,
+            imports=QML_IMPORTS + tuple(dict.fromkeys(i.import_line for i in self.qml_imports.values())),
             warnings=self.warnings,
             tokens=self.tokens,
             component_paths=self.component_paths,
+            slot_fragments=self.slot_fragments,
+            qml_files=sorted({str(self.info.components[t].path) for t in self.qml_imports}),
+            class_names=self.class_names(),
         )
 
     def window(self, el: Element) -> IRElement:
@@ -221,7 +279,7 @@ class _Lowerer:
 
     # -- elementos -----------------------------------------------------------
     def element(self, el: Element, allow_window: bool = False) -> IRElement | None:
-        spec = CONTROLS.get(el.tag)
+        spec = self.spec_for(el.tag)
         if spec is None:
             self.unknown_element(el)
             return None
@@ -229,11 +287,15 @@ class _Lowerer:
             self.error("<Window> solo puede usarse como raíz de la plantilla", el.loc, "usa <Column> o <Row>")
             return None
         ir = IRElement(spec.qml_type, el.loc)
+        ir.props.update({k: Literal(v) for k, v in spec.fixed.items()})
         conditional: list[Attribute] = []
 
         decls = matching_declarations(self.rules, el.tag, self.classes(el))
         for qml_prop, value in compile_declarations(decls, el.tag, self.sfc.source, self.warnings, self.tokens).items():
-            ir.props[qml_prop] = Literal(value)
+            if qml_prop.startswith(BEHAVIOR):
+                ir.behaviors[qml_prop[len(BEHAVIOR):]] = value
+            else:
+                ir.props[qml_prop] = Literal(value)
 
         for attr in el.attributes:
             if attr.name == "class":
@@ -243,15 +305,21 @@ class _Lowerer:
                     ir.props["objectName"] = Literal(qml_string(attr.value))
                 else:
                     self.error('el atributo id debe ser un texto literal, p. ej. id="guardar"', attr.loc)
+            elif attr.name == "ref" or (el.tag == "Pages" and attr.name == "stack"):
+                self.ref(attr, ir)
             elif attr.directive == "on":
                 self.event(attr, spec, ir)
             elif attr.directive == "bind":
                 self.two_way(attr, el, spec, ir)
             elif attr.directive == "class":
                 conditional.append(attr)
+            elif attr.directive in ("transition", "in", "out"):
+                self.transition(attr, ir)
             elif attr.directive is not None:
                 self.error(
-                    f"directiva desconocida '{attr.directive}:'", attr.loc, "las directivas disponibles son on:, bind: y class:"
+                    f"directiva desconocida '{attr.directive}:'",
+                    attr.loc,
+                    "las directivas disponibles son on:, bind:, class:, transition:, in: y out:",
                 )
             else:
                 self.prop(attr, el, spec, ir)
@@ -261,13 +329,84 @@ class _Lowerer:
             if f"Layout.preferred{axis}" in ir.props:
                 ir.props.setdefault(f"Layout.fill{axis}", Literal("false"))
 
-        self.conditional_classes(el, conditional, ir)
+        class_attr = el.attribute("class")
+        dynamic = class_attr if class_attr is not None and isinstance(class_attr.value, Expression) else None
+        self.conditional_classes(el, conditional, ir, dynamic)
         self.content(el, spec, ir)
         return ir
 
-    def conditional_classes(self, el: Element, attrs: list[Attribute], ir: IRElement) -> None:
-        """`class:activa={cond}`: los estilos de `.activa` se aplican mientras `cond` sea verdadera."""
+    def transition(self, attr: Attribute, ir: IRElement) -> None:
+        """`transition:fade`, `in:scale={300}`, `out:slide`: animación al montar/desmontar el bloque."""
+        kind = attr.argument
+        if kind not in _TRANSITIONS:
+            self.error(f"transición desconocida '{kind}'", attr.loc, "disponibles: " + ", ".join(_TRANSITIONS))
+            return
+        ms = _TRANSITION_MS
+        if attr.value is not True:
+            value = _literal(attr.value.code) if isinstance(attr.value, Expression) else _NOT_LITERAL
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                self.error(f"{attr.name} espera la duración en milisegundos, p. ej. {attr.name}={{300}}", attr.loc)
+                return
+            ms = value
+        directions = ("in", "out") if attr.directive == "transition" else (attr.directive,)
+        for direction in directions:
+            ir.transitions[direction] = (kind, ms)
+        self.pending_transitions[id(ir)] = attr.loc
+
+    def attach_transitions(self, frag: Fragment) -> None:
+        """Raíz de un bloque con transiciones: un FxTransition hijo hace las animaciones."""
+        root = frag.root
+        if root is None or not root.transitions:
+            return
+        self.pending_transitions.pop(id(root), None)
+        tid = self.next_id("fxt")
+        root.props["id"] = Literal(tid)
+        anim = IRElement("FxTransition", root.loc)
+        anim.props.update({"target": Literal(tid), "bridge": Literal("fx")})
+        for direction, prefix in (("in", "enter"), ("out", "leave")):
+            if direction in root.transitions:
+                kind, ms = root.transitions[direction]
+                anim.props[f"{prefix}Kind"] = Literal(qml_string(kind))
+                anim.props[f"{prefix}Ms"] = Literal(str(ms))
+        root.children.append(anim)
+        if "out" in root.transitions:
+            frag.leave_ms = root.transitions["out"][1]
+
+    def ref(self, attr: Attribute, ir: IRElement) -> None:
+        name = _parse_name(attr.value.code) if isinstance(attr.value, Expression) else None
+        if name is None:
+            self.error("ref necesita el nombre de una referencia", attr.loc, "declara campo = ref() en el script y usa ref={campo}")
+            return
+        if name in self.local_names():
+            self.error(f"ref no puede usar la variable de {{#each}} '{name}'", attr.loc, "declara la referencia en el script")
+            return
+        self.check_expr(attr.value)
+        use = RefUse(self.next_id("r"), name, attr.loc)
+        self.tpl.refs.append(use)
+        ir.handlers.setdefault("Component.onCompleted", []).append(f'fx.setRef("{use.id}", this, true)')
+
+    def class_names(self) -> list[str]:
+        """Clases con reglas en <style>, en orden de aparición."""
+        names = [s[1:] for r in self.rules for s in r.selectors if s.startswith(".")]
+        return list(dict.fromkeys(names))
+
+    def conditional_classes(
+        self, el: Element, attrs: list[Attribute], ir: IRElement, dynamic: Attribute | None = None
+    ) -> None:
+        """`class:activa={cond}` y `class={expr}`: estilos de clase que se activan y desactivan."""
         layers: list[tuple[str, dict[str, str]]] = []
+        if dynamic is not None:
+            # class={expr}: una capa por cada clase del <style>; el binding vale " a b ".
+            self.check_expr(dynamic.value)
+            bid = self.next_id("b")
+            self.tpl.bindings.append(ExprBinding(bid, dynamic.value, dynamic.loc, classes=True))
+            for name in self.class_names():
+                decls = [d for r in self.rules if f".{name}" in r.selectors for d in r.declarations]
+                props = compile_declarations(decls, el.tag, self.sfc.source, self.warnings, self.tokens)
+                for key in [k for k in props if k.startswith(BEHAVIOR)]:
+                    ir.behaviors[key[len(BEHAVIOR):]] = props.pop(key)
+                if props:
+                    layers.append((f'(fx.{bid} || "").indexOf(" {name} ") >= 0', props))
         for attr in attrs:
             name = attr.argument
             expr = attr.value
@@ -283,6 +422,8 @@ class _Lowerer:
                 )
                 continue
             props = compile_declarations(decls, el.tag, self.sfc.source, self.warnings, self.tokens)
+            for key in [k for k in props if k.startswith(BEHAVIOR)]:  # la animación pertenece al elemento
+                ir.behaviors[key[len(BEHAVIOR):]] = props.pop(key)
             when = f"!!fx.{self.add_expr_binding(expr, attr.loc)}"
             layers.append((when, props))
         # Si varias clases activas fijan la misma propiedad, gana la última.
@@ -308,8 +449,7 @@ class _Lowerer:
         if attr is None:
             return []
         if not isinstance(attr.value, str):
-            self.error("class dinámico aún no está soportado", attr.loc, 'usa un texto literal: class="a b"')
-            return []
+            return []  # class={expr}: lo resuelve conditional_classes
         return attr.value.split()
 
     def prop(self, attr: Attribute, el: Element, spec: ControlSpec, ir: IRElement) -> None:
@@ -389,8 +529,12 @@ class _Lowerer:
         if not isinstance(attr.value, Expression):
             self.error(f"on:{event} espera una función entre llaves", attr.loc, f"usa on:{event}={{mi_funcion}}")
             return None
-        self.check_expr(attr.value)
-        handler = Handler(self.next_id("h"), attr.value, event, attr.loc)
+        inline = is_inline_handler(attr.value.code)
+        if inline:
+            self.check_inline(attr.value, event)
+        else:
+            self.check_expr(attr.value)
+        handler = Handler(self.next_id("h"), attr.value, event, attr.loc, inline)
         self.tpl.handlers.append(handler)
         return handler
 
@@ -428,19 +572,30 @@ class _Lowerer:
             )
             return
         bid = self.add_expr_binding(expr, attr.loc)
-        ir.props[tw.qml_prop] = Bound(bid)
         self.tpl.writes.append(Write(bid, expr, attr.loc))
-        ir.handlers.setdefault(tw.qml_handler, []).insert(0, f'fx.write("{bid}", {tw.qml_prop})')
+        if spec.tag is None:
+            ir.props[tw.qml_prop] = Bound(bid)
+            ir.handlers.setdefault(tw.qml_handler, []).insert(0, f'fx.write("{bid}", {tw.qml_value or tw.qml_prop})')
+            return
+        # Elemento QML propio: su señal <prop>Changed también salta con los cambios que
+        # llegan de Python, y su código puede asignar la propiedad (lo que rompería un
+        # binding normal). Un Binding sobrevive a esas asignaciones, y solo se devuelve
+        # a Python un valor distinto del que ya tiene.
+        prop = tw.qml_prop
+        ir.conditional.append((prop, f"fx.{bid}", "true"))
+        ir.handlers.setdefault(tw.qml_handler, []).insert(0, f'if ({prop} !== fx.{bid}) fx.write("{bid}", {prop})')
 
     # -- contenido -----------------------------------------------------------
     def content(self, el: Element, spec: ControlSpec, ir: IRElement) -> None:
-        if spec.text_prop:
+        if el.tag == "List":
+            self.list_content(el, ir)
+        elif spec.text_prop:
             self.text_content(el, spec, ir)
         elif el.tag == "Window":
             kids = self.children(el.children, horizontal=False)
             item = self.as_item(kids, el.loc)
             if item is not None:
-                item.props["anchors.fill"] = Literal("parent")
+                _fill_parent(item)
                 ir.children.append(item)
         elif spec.container:
             ir.children.extend(self.children(el.children, spec.horizontal))
@@ -449,6 +604,29 @@ class _Lowerer:
                 if not (isinstance(child, Text) and not child.value.strip()):
                     self.error(f"<{el.tag}> no admite contenido", child.loc, f"usa <{el.tag} ... />")
                     break
+
+    def list_content(self, el: Element, ir: IRElement) -> None:
+        """`<List>{#each ...}{/each}</List>`: una lista virtualizada (ListView)."""
+        blocks = [n for n in el.children if not (isinstance(n, Text) and not n.value.strip())]
+        if len(blocks) != 1 or not isinstance(blocks[0], EachBlock):
+            loc = blocks[0].loc if blocks else el.loc
+            self.error(
+                "<List> debe contener exactamente un bloque {#each}",
+                loc,
+                "<List>{#each elementos as e (e['id'])}<Row>...</Row>{/each}</List>; para contenido libre usa <Scroll>",
+            )
+            return
+        node = blocks[0]
+        if node.else_children is not None:
+            self.error("{:else} no está disponible dentro de <List>", node.loc, "muestra el estado vacío con un {#if} fuera de la lista")
+        for rep in self.each_block(node, horizontal=False, lazy=True):
+            ir.props["model"] = Literal(f"fx.{rep.model_id}")
+            ir.delegate = rep.delegate
+        animate = el.attribute("animate")
+        if animate is not None and self.tpl.slots and isinstance(self.tpl.slots[-1], EachSlot):
+            self.tpl.slots[-1].animated = animate.value is True or (
+                isinstance(animate.value, Expression) and _literal(animate.value.code) is True
+            )
 
     def text_content(self, el: Element, spec: ControlSpec, ir: IRElement) -> None:
         for child in el.children:
@@ -491,7 +669,9 @@ class _Lowerer:
                 continue
             flush_text()
             if isinstance(node, Element):
-                if self.is_component(node.tag):
+                if node.tag == "Slot" and not self.is_component("Slot"):
+                    out.extend(self.slot_outlet(node, horizontal))
+                elif self.is_component(node.tag):
                     out.append(self.component_slot(node))
                 else:
                     child = self.element(node)
@@ -507,22 +687,34 @@ class _Lowerer:
         return out
 
     # -- regiones dinámicas --------------------------------------------------
-    def fragment(self, nodes: list[Node], horizontal: bool, local_names: tuple[str, ...], loc: SourceLocation) -> Fragment:
+    def fragment(
+        self,
+        nodes: list[Node],
+        horizontal: bool,
+        local_names: tuple[str, ...],
+        loc: SourceLocation,
+        component_root: bool = True,
+    ) -> Fragment:
+        """Contenido de un bloque. Con `component_root=False` la raíz es siempre un elemento propio."""
         tpl = IRTemplate(self.next_id("t"))
         saved = self.tpl
         self.tpl = tpl
         self.scopes.append(set(local_names))
         try:
             meaningful = [n for n in nodes if not (isinstance(n, Text) and not n.value.strip())]
-            if len(meaningful) == 1 and isinstance(meaningful[0], Element) and self.is_component(meaningful[0].tag):
-                return Fragment(tpl, component=self.component_use(meaningful[0]))
+            only = meaningful[0] if len(meaningful) == 1 else None
+            if component_root and isinstance(only, Element) and self.is_component(only.tag) and not self.wrapper_attrs(only):
+                return Fragment(tpl, component=self.component_use(only))
             items = self.children(nodes, horizontal)
             if not items:
                 return Fragment(tpl)
             box = self.as_item(items, loc, horizontal)
             if box is not items[0]:
                 box.props.update({k: Literal(v) for k, v in _TRANSPARENT_BOX.items()})
-            return Fragment(tpl, root=box)
+            frag = Fragment(tpl, root=box)
+            if component_root:  # en <List> las filas se animan con <List animate>
+                self.attach_transitions(frag)
+            return frag
         finally:
             self.tpl = saved
             self.scopes.pop()
@@ -538,7 +730,7 @@ class _Lowerer:
         self.tpl.slots.append(IfSlot(branches, node.loc))
         return [IRRepeater(b.model_id, node.loc, b.fragment.root) for b in branches if b.model_id]
 
-    def each_block(self, node: EachBlock, horizontal: bool) -> list[IRNode]:
+    def each_block(self, node: EachBlock, horizontal: bool, lazy: bool = False) -> list[IRNode]:
         self.check_expr(node.iterable)
         local_names = tuple(n for n in (node.item, node.index) if n)
         if node.index is not None and node.index == node.item:
@@ -547,9 +739,14 @@ class _Lowerer:
             self.scopes.append(set(local_names))
             self.check_expr(node.key)
             self.scopes.pop()
-        frag = self.fragment(node.children, horizontal, local_names, node.loc)
-        slot = EachSlot(self.next_id("m"), node.iterable, node.item, node.index, node.key, frag, node.loc)
-        if node.else_children is not None:
+        frag = self.fragment(node.children, horizontal, local_names, node.loc, component_root=not lazy)
+        slot = EachSlot(self.next_id("m"), node.iterable, node.item, node.index, node.key, frag, node.loc, lazy=lazy)
+        if lazy and frag.root is not None:
+            # En un ListView las filas no están en un layout: ocupan el ancho de la lista.
+            frag.root.props["width"] = Literal("ListView.view ? ListView.view.width : implicitWidth")
+            if frag.root.qml_type in _BOXES:
+                frag.root.props["fxSizedW"] = Literal("true")
+        if node.else_children is not None and not lazy:
             empty = self.fragment(node.else_children, horizontal, (), node.loc)
             if not empty.empty:
                 slot.empty_model_id = self.next_id("m")
@@ -571,19 +768,99 @@ class _Lowerer:
         self.tpl.slots.append(slot)
         return [IRRepeater(slot.model_id, node.loc, frag.root)]
 
+    # -- slots ---------------------------------------------------------------
+    def slot_outlet(self, el: Element, horizontal: bool) -> list[IRNode]:
+        """`<Slot />` o `<Slot name="x">reserva</Slot>` en la plantilla de un componente."""
+        name = "default"
+        for attr in el.attributes:
+            if attr.name == "name" and isinstance(attr.value, str) and attr.value.isidentifier():
+                name = attr.value
+            else:
+                self.error('<Slot> solo admite name="nombre" (un identificador literal)', attr.loc)
+        fallback = self.fragment(el.children, horizontal, (), el.loc)
+        slot = SlotOutlet(name, self.next_id("m"), None if fallback.empty else fallback, el.loc)
+        out: list[IRNode] = [IRRepeater(slot.model_id, el.loc)]
+        if slot.fallback is not None:
+            slot.fallback_model_id = self.next_id("m")
+            out.append(IRRepeater(slot.fallback_model_id, el.loc, fallback.root))
+        self.tpl.slots.append(slot)
+        return out
+
+    def slot_contents(self, el: Element, iface: ComponentInterface) -> dict[str, Fragment]:
+        """Contenido entre las etiquetas de un componente: por defecto, o `slot="x"` en un elemento."""
+        default: list[Node] = []
+        named: dict[str, Element] = {}
+        for child in el.children:
+            attr = child.attribute("slot") if isinstance(child, Element) else None
+            if attr is None:
+                default.append(child)
+            elif not (isinstance(attr.value, str) and attr.value.isidentifier()):
+                self.error('slot="..." debe ser un nombre literal', attr.loc)
+            elif attr.value in named:
+                self.error(
+                    f"el slot '{attr.value}' se rellena dos veces en <{el.tag}>",
+                    attr.loc,
+                    "agrupa el contenido en un <Column> o <Row>",
+                )
+            else:
+                named[attr.value] = Element(child.tag, [a for a in child.attributes if a is not attr], child.children, child.loc)
+        contents: dict[str, tuple[list[Node], SourceLocation]] = {}
+        if any(not (isinstance(n, Text) and not n.value.strip()) for n in default):
+            contents["default"] = (default, el.loc)
+        for name, child in named.items():
+            contents[name] = ([child], child.loc)
+        slots: dict[str, Fragment] = {}
+        for name, (nodes, loc) in contents.items():
+            if iface.slots is not None and name not in iface.slots:
+                available = ", ".join("<Slot />" if s == "default" else f'<Slot name="{s}" />' for s in sorted(iface.slots))
+                what = "contenido entre etiquetas" if name == "default" else f"el slot '{name}'"
+                self.error(
+                    f"<{el.tag}> no admite {what}",
+                    loc,
+                    f"slots de <{el.tag}>: {available}" if available else f"<{el.tag}> no declara ningún <Slot />",
+                )
+                continue
+            frag = self.fragment(nodes, False, (), loc)
+            if frag.root is not None:
+                self.slot_fragments.append(frag)
+            if not frag.empty:
+                slots[name] = frag
+        return slots
+
     # -- componentes hijos ---------------------------------------------------
-    def component_slot(self, el: Element) -> IRRepeater:
+    def wrapper_attrs(self, el: Element) -> list[Attribute]:
+        imp = self.info.components[el.tag]
+        iface = self.interface(imp.path) if self.interface else ComponentInterface()
+        return [
+            a for a in el.attributes
+            if a.name not in iface.props and (a.name in _WRAPPER_ATTRS or a.directive == "class")
+        ]  # fmt: skip
+
+    def component_slot(self, el: Element) -> IRNode:
         model_id = self.next_id("m")
         use = self.component_use(el)
         self.tpl.slots.append(ComponentSlot(model_id, use, el.loc))
-        return IRRepeater(model_id, el.loc)
+        repeater = IRRepeater(model_id, el.loc)
+        attrs = self.wrapper_attrs(el)
+        if not attrs:
+            return repeater
+        # Caja exterior con los estilos de la etiqueta: <Tarjeta class="ancha" flex={1} />
+        box = self.element(Element("Column", attrs, [], el.loc))
+        if box is None:
+            return repeater
+        box.props["fxFill"] = Literal("true")  # la raíz del componente ocupa toda la caja
+        box.children.append(repeater)
+        return box
 
     def component_use(self, el: Element) -> ComponentUse:
         imp = self.info.components[el.tag]
         iface = self.interface(imp.path) if self.interface else ComponentInterface()
         props: dict[str, PropArg] = {}
         events: dict[str, Handler] = {}
+        wrapper = self.wrapper_attrs(el)
         for attr in el.attributes:
+            if any(attr is w for w in wrapper):
+                continue
             if attr.directive == "on":
                 if attr.argument not in iface.events:
                     available = ", ".join(f"on:{e}" for e in iface.events) or "ninguno"
@@ -602,12 +879,6 @@ class _Lowerer:
                     attr.loc,
                     "pasa el valor como prop y escucha un evento del hijo para recibir cambios",
                 )
-            elif attr.name in ("class", "id"):
-                self.error(
-                    f"'{attr.name}' aún no se admite en componentes",
-                    attr.loc,
-                    "aplica estilos y flex en el elemento raíz del componente hijo",
-                )
             elif attr.name not in iface.props:
                 available = ", ".join(iface.props) or "ninguna"
                 close = difflib.get_close_matches(attr.name, list(iface.props), n=1)
@@ -617,7 +888,15 @@ class _Lowerer:
                     (f"¿quisiste decir '{close[0]}'? " if close else "") + f"props disponibles: {available}",
                 )
             else:
-                props[attr.name] = self.prop_arg(attr)
+                props[attr.name] = arg = self.prop_arg(attr)
+                decl = iface.props[attr.name]
+                if isinstance(arg, ConstArg) and decl.type_names is not None and not _const_matches(arg.value, decl.type_names):
+                    self.error(
+                        f"la prop '{attr.name}' de <{el.tag}> espera {decl.annotation} y recibe "
+                        f"{type(arg.value).__name__} ({arg.value!r})",
+                        attr.loc,
+                        f"en {Path(imp.path).name}: {attr.name}: {decl.annotation} = prop(...)",
+                    )
         missing = [p.name for p in iface.props.values() if p.required and p.name not in props]
         if missing:
             self.error(
@@ -627,18 +906,13 @@ class _Lowerer:
                 el.loc,
                 " ".join(f"{m}={{...}}" for m in missing),
             )
-        for child in el.children:
-            if not (isinstance(child, Text) and not child.value.strip()):
-                self.error(
-                    f"<{el.tag}> no admite contenido entre etiquetas (slots) todavía",
-                    child.loc,
-                    f"pasa los datos como props: <{el.tag} ... />",
-                )
-                break
+        slots = self.slot_contents(el, iface)
         key = str(imp.path)
         if key not in self.component_paths:
             self.component_paths.append(key)
-        return ComponentUse(el.tag, key, props, events, el.loc)
+        ordinal = self.use_counts.get(el.tag, 0)
+        self.use_counts[el.tag] = ordinal + 1
+        return ComponentUse(el.tag, key, props, events, el.loc, slots, ordinal)
 
     def prop_arg(self, attr: Attribute) -> PropArg:
         if attr.value is True:
@@ -650,6 +924,32 @@ class _Lowerer:
             return ConstArg(lit)
         self.check_expr(attr.value)
         return attr.value
+
+
+_BOXES = ("FxColumn", "FxRow")
+_TRANSITIONS = ("fade", "scale", "slide")
+_TRANSITION_MS = 200
+
+
+def _fill_parent(item: IRElement) -> None:
+    """Raíz del contenido de la ventana: la ocupa entera, así que su tamaño viene de fuera."""
+    item.props["anchors.fill"] = Literal("parent")
+    # Idiomas de derecha a izquierda (árabe, hebreo…): todo el contenido se refleja.
+    item.props["LayoutMirroring.enabled"] = Literal("fxi18n.rtl === true")
+    item.props["LayoutMirroring.childrenInherit"] = Literal("true")
+    if item.qml_type in _BOXES:
+        item.props["fxSizedW"] = Literal("true")
+        item.props["fxSizedH"] = Literal("true")
+
+
+def _const_matches(value: object, names: frozenset[str]) -> bool:
+    """¿Un literal pasado como prop encaja con los tipos básicos de su anotación?"""
+    kind = "None" if value is None else type(value).__name__
+    if kind in names:
+        return True
+    if kind == "bool" and "int" in names:
+        return True  # bool es un int en Python
+    return kind == "int" and "float" in names
 
 
 def _parse_name(code: str) -> str | None:

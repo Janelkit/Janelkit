@@ -2,6 +2,7 @@
 import logging
 
 import pytest
+from conftest import click as press
 from conftest import find, find_all, texts, visual_items
 from PySide6.QtCore import QMetaObject, QObject
 
@@ -38,7 +39,7 @@ def increment():
 
 
 def click(button: QObject) -> None:
-    assert QMetaObject.invokeMethod(button, "click")
+    press(button)
 
 
 def type_text(field: QObject, text: str) -> None:
@@ -398,3 +399,124 @@ other = state("a")
     m.instance.namespace["k"].value = 2
     second = find(m, "f")
     assert second != first and second.property("text") == "b"
+
+
+def test_in_place_mutations_update_the_view(mount):
+    m = mount(TODOS)
+    todos = m.instance.namespace["todos"]
+    rows = find_all(m, "row")
+    todos.value.append({"id": 4, "t": "d"})
+    assert texts(m) == ["0:a", "1:b", "2:c", "3:d"]
+    todos.value[0]["t"] = "A"
+    assert texts(m) == ["0:A", "1:b", "2:c", "3:d"]
+    todos.value.reverse()
+    assert texts(m) == ["0:d", "1:c", "2:b", "3:A"]
+    assert find_all(m, "row")[1:] == rows[::-1]  # las filas existentes se movieron, no se recrearon
+    todos.value.clear()
+    assert texts(m) == ["Sin tareas"]
+
+
+INLINE = """<script>
+from fluxui import state
+n = state(0)
+last = state("")
+todos = state([{"id": 1, "done": False}])
+plain = 5
+</script>
+<Column>
+  <Button id="inc" on:click={n += 1}>{n}</Button>
+  <Button id="reset" on:click={n = 0; last = "reset"}>reset</Button>
+  <TextField id="field" on:input={last = event} />
+  <Button id="plain" on:click={plain = 1}>x</Button>
+  {#each todos as todo (todo["id"])}
+    <Checkbox id="check" checked={todo["done"]} on:change={todo["done"] = event}>{todo["done"]}</Checkbox>
+    <Button id="add" on:click={todos.append({"id": len(todos) + 1, "done": False})}>+</Button>
+  {/each}
+</Column>"""
+
+
+def test_inline_handlers_assign_state(mount, caplog):
+    m = mount(INLINE)
+    ns = m.instance.namespace
+    click(find(m, "inc"))
+    click(find(m, "inc"))
+    assert ns["n"].value == 2 and find(m, "inc").property("text") == "2"
+    click(find(m, "reset"))
+    assert ns["n"].value == 0 and ns["last"].value == "reset"
+    type_text(find(m, "field"), "hola")
+    assert ns["last"].value == "hola"
+    with caplog.at_level(logging.ERROR, logger="fluxui"):
+        click(find(m, "plain"))
+    assert "'plain' es int, no un state" in caplog.text
+
+
+def test_inline_handlers_mutate_collections(mount):
+    m = mount(INLINE)
+    todos = m.instance.namespace["todos"]
+    check = find(m, "check")
+    check.setProperty("checked", True)
+    assert QMetaObject.invokeMethod(check, "toggled")
+    assert todos.value[0]["done"] is True
+    click(find_all(m, "add")[0])
+    assert len(todos.value) == 2 and len(find_all(m, "check")) == 2
+
+
+def test_unmount_releases_bindings_of_a_script_without_effects(mount, flux_app):
+    # Regresión: un ámbito vacío es falso (len 0) y la raíz creaba otro ámbito sin registrar.
+    m = mount("<script>\nfrom fluxui import state\nn = state(1)\n</script>\n<Text>{n}</Text>")
+    n = m.instance.namespace["n"]
+    assert n.subscriber_count == 1
+    flux_app.unmount(m)
+    assert n.subscriber_count == 0
+
+
+def test_flex_splits_free_space_in_proportion(mount, caplog):
+    m = mount(
+        """<Window width={900} height={300}>
+  <Column>
+    <Row id="r" flex={1}>
+      <Column id="a" flex={2}><Text>corto</Text></Column>
+      <Column id="b" flex={1}><Text>un texto bastante más largo que el otro para ver el reparto</Text></Column>
+      <Button id="c">fijo</Button>
+    </Row>
+    <Column id="d" flex={1}><Text>abajo</Text></Column>
+    <Column id="e" flex={3}><Text>abajo</Text></Column>
+  </Column>
+</Window>"""
+    )
+    a, b, c = (find(m, n).property("width") for n in "abc")
+    assert a == 2 * b and a + b + c == 900  # como flex: 2 / flex: 1 en CSS, sin importar el contenido
+    r, d, e = (find(m, n).property("height") for n in "rde")
+    assert e == 3 * d and r == d and r + d + e == 300
+    assert "loop" not in caplog.text.lower()
+
+
+def test_dynamic_class_expression(mount, caplog):
+    from PySide6.QtGui import QColor
+
+    m = mount(
+        """<script>
+from fluxui import state
+kind = state("info")
+big = state(False)
+</script>
+<Column><Text id="t" class={["base", kind, {"big": big}]} class:alert={kind == "error"}>x</Text></Column>
+<style>
+.base { color: #000000; }
+.info { color: #0000ff; }
+.error { color: #ff0000; }
+.big { font-size: 30px; }
+.alert { font-weight: 700; }
+</style>"""
+    )
+    t, ns = find(m, "t"), m.instance.namespace
+    assert t.property("fxColor") == QColor("#0000ff")  # .info gana a .base: va después en <style>
+    ns["kind"].value = "error"
+    assert t.property("fxColor") == QColor("#ff0000") and t.property("font").bold()
+    ns["big"].value = True
+    assert t.property("font").pixelSize() == 30
+    ns["kind"].value = ""
+    assert t.property("fxColor") == QColor("#000000") and not t.property("font").bold()
+    with caplog.at_level(logging.WARNING, logger="fluxui"):
+        ns["kind"].value = "nada"
+    assert "la clase 'nada' no tiene reglas en <style>" in caplog.text

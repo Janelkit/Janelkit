@@ -48,9 +48,10 @@ def remove(todo_id):
 
 ## Qué incluye
 
-- **Reactividad:** `state`, `@computed`, interpolación `{expr}`, `on:evento`, `bind:value`/`bind:checked`. Solo se actualiza lo que depende de lo que cambió.
+- **Reactividad:** `state` (con listas y diccionarios reactivos), `@computed`, `effect`, interpolación `{expr}`, `on:evento` (también en línea: `on:click={n += 1}`), `bind:value`/`bind:checked`. Solo se actualiza lo que depende de lo que cambió.
 - **Control de flujo:** `{#if}`/`{:else if}`/`{:else}` (desmonta de verdad), `{#each items as item, i (clave)}` con `{:else}`, `{#key}`.
-- **Componentes:** imports Python de otros `.flux`, `prop()` y `event()`, estado local por instancia, componentes recursivos.
+- **Componentes:** imports Python de otros `.flux`, `prop()` y `event()`, slots, estado local por instancia, ciclo de vida (`on_mount`, `on_destroy`), referencias a elementos (`ref`), contexto (`provide`/`inject`), componentes recursivos.
+- **Asincronía:** manejadores `async def`, `@task` con estados de carga y error, `background()` para trabajo bloqueante; todo se cancela al desmontar.
 - **Estilos:** subconjunto CSS (colores, tipografía, espaciado, bordes, radios, alineación, `flex`), clases condicionales `class:x={cond}`, tokens `var(--primary)` y temas claro/oscuro intercambiables en caliente.
 - **Diagnósticos:** errores con archivo, línea, columna y sugerencias («¿quisiste decir…?»), también para errores de Qt y de ejecución.
 - **Herramientas:** `flux new`, `flux dev` (recarga al guardar), `flux build`, `flux compile`, `flux parse`; resaltado para VS Code.
@@ -75,6 +76,10 @@ Ejemplos incluidos (cada uno se ejecuta con `python examples/<nombre>/main.py`):
 | `todo` | lista con claves, filtro, búsqueda, estado vacío |
 | `todo-components` | la misma app dividida en `TodoList` y `TodoItem` con props y eventos |
 | `notes` | barra lateral, formulario, tarjetas, `class:`, `{#key}` y cambio de tema |
+| `books` | búsqueda en una API real sin bloquear la ventana: `@task`, `background`, cargando y errores |
+| `compra` | la aplicación del [tutorial](docs/tutorial.md): componentes, slot, guardado en segundo plano y pruebas |
+| `idiomas` | cambio de idioma en caliente, plurales, formatos según el idioma y árabe (derecha a izquierda) |
+| `files` | explorador de archivos: `<List>` virtualizada, slots, `provide`/`inject`, `ref`, atajos, diálogos y vista previa en segundo plano |
 
 ## Comandos
 
@@ -101,9 +106,13 @@ Las expresiones de la plantilla se evalúan en **Python**; cuando cambia un `sta
 
 ## Documentación
 
+- [docs/tutorial.md](docs/tutorial.md) — **empieza aquí**: una aplicación completa paso a paso (código en `examples/compra`).
 - [docs/lenguaje.md](docs/lenguaje.md) — formato `.flux`, expresiones, bloques, componentes y elementos.
 - [docs/estilos.md](docs/estilos.md) — CSS soportado, disposición (flex), tokens y temas.
 - [docs/desarrollo.md](docs/desarrollo.md) — `flux dev`, `flux build`, errores y editor.
+- [docs/api.md](docs/api.md) — qué es API pública y política de versiones.
+- [docs/cambios.md](docs/cambios.md) — cambios entre versiones y cómo migrar.
+- [docs/empaquetado.md](docs/empaquetado.md) — crear un ejecutable con PyInstaller.
 - [docs/estado.md](docs/estado.md) — avance frente al plan, decisiones provisionales, rendimiento y limitaciones.
 - [docs/alcance.md](docs/alcance.md) — qué es el framework, qué queda fuera y proyectos paralelos.
 - [docs/lanzamiento.md](docs/lanzamiento.md) — pendientes priorizados antes de la primera versión pública.

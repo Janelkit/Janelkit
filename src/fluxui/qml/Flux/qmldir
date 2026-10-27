@@ -9,3 +9,14 @@ FxTextField 1.0 FxTextField.qml
 FxTextArea 1.0 FxTextArea.qml
 FxCheckBox 1.0 FxCheckBox.qml
 FxSpacer 1.0 FxSpacer.qml
+FxSwitch 1.0 FxSwitch.qml
+FxSlider 1.0 FxSlider.qml
+FxSelect 1.0 FxSelect.qml
+FxRadioGroup 1.0 FxRadioGroup.qml
+FxTabs 1.0 FxTabs.qml
+FxImage 1.0 FxImage.qml
+FxProgressBar 1.0 FxProgressBar.qml
+FxShortcut 1.0 FxShortcut.qml
+FxList 1.0 FxList.qml
+FxTransition 1.0 FxTransition.qml
+FxPages 1.0 FxPages.qml

@@ -1,0 +1,114 @@
+"""Elementos propios en QML: importar un .qml del proyecto y usarlo como un elemento más."""
+import logging
+from pathlib import Path
+
+import pytest
+from conftest import find, texts
+from PySide6.QtCore import QMetaObject, Q_ARG
+
+from fluxui.compiler import compile_file
+from fluxui.compiler.qml_interface import read_interface
+from fluxui.diagnostics import FluxError
+
+GAUGE = """import QtQuick
+
+// Un indicador sencillo.
+Rectangle {
+    id: root
+    property real value: 0
+    property string label: "{no es una llave}"
+    readonly property bool full: value >= 100
+    property color tint: "steelblue"
+    signal picked(real v, string why)
+    signal reset
+    implicitWidth: 120; implicitHeight: 16
+    color: tint
+
+    function pick(v) { root.value = v; root.picked(v, "click") }
+    Item {
+        property int notMine: 1
+    }
+}
+"""
+
+APP = """<script>
+from fluxui import state, ref
+from widgets.Gauge import Gauge
+level = state(10)
+picked = state([])
+g = ref()
+</script>
+<Column>
+  <Gauge id="g" ref={g} bind:value={level} label="Nivel" tint="tomato" width={200}
+         on:picked={picked.append((event[0], event[1]))} />
+  <Text>{level}</Text>
+</Column>
+"""
+
+
+@pytest.fixture
+def project(tmp_path):
+    def make(files: dict[str, str]) -> Path:
+        for rel, text in files.items():
+            path = tmp_path / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        return tmp_path / "App.flux"
+
+    return make
+
+
+def test_reads_the_interface_of_the_root_object(tmp_path):
+    path = tmp_path / "Gauge.qml"
+    path.write_text(GAUGE, encoding="utf-8")
+    spec = read_interface(path, "Gauge", "W")
+    assert spec.qml_type == "W.Gauge"
+    assert {n: p.type for n, p in spec.props.items()} == {"value": "number", "label": "string", "tint": "color"}
+    assert set(spec.two_way) == {"value", "label", "tint"}  # readonly 'full' no se puede escribir
+    assert spec.events["picked"].args == ("v", "why") and spec.events["picked"].qml_handler == "onPicked"
+    assert spec.events["reset"].args == ()
+
+
+def test_qml_element_props_bind_events_and_ref(mount, project, caplog):
+    m = mount(project({"App.flux": APP, "widgets/Gauge.qml": GAUGE}))
+    assert caplog.text == ""
+    gauge = find(m, "g")
+    ns = m.instance.namespace
+    assert gauge.property("value") == 10 and gauge.property("label") == "Nivel"
+    assert ns["g"].value is gauge and gauge.property("width") == 200
+    ns["level"].value = 30
+    assert gauge.property("value") == 30
+    assert QMetaObject.invokeMethod(gauge, "pick", Q_ARG("QVariant", 75))
+    assert ns["level"].value == 75 and texts(m) == ["75.0"]  # bind:value devuelve el cambio (real en QML)
+    assert ns["picked"].value == [(75, "click")]
+
+
+def test_unknown_prop_and_event_are_compile_errors(project):
+    app = APP.replace('label="Nivel"', 'lable="Nivel"')
+    with pytest.raises(FluxError) as info:
+        compile_file(project({"App.flux": app, "widgets/Gauge.qml": GAUGE}))
+    assert "propiedad desconocida" in info.value.first.message or "lable" in info.value.first.message
+    assert "label" in (info.value.first.hint or "")
+    app = APP.replace("on:picked", "on:pickd")
+    with pytest.raises(FluxError) as info:
+        compile_file(project({"App.flux": app, "widgets/Gauge.qml": GAUGE}))
+    assert "on:pickd" in info.value.first.message and "on:picked" in info.value.first.hint
+
+
+def test_readonly_properties_cannot_be_set(project):
+    app = APP.replace('label="Nivel"', "full={True}")
+    with pytest.raises(FluxError):
+        compile_file(project({"App.flux": app, "widgets/Gauge.qml": GAUGE}))
+
+
+def test_qml_files_are_part_of_the_app_files(project):
+    compiled = compile_file(project({"App.flux": APP, "widgets/Gauge.qml": GAUGE}))
+    assert any(f.endswith("Gauge.qml") for f in compiled.files)
+    assert compiled.qml.count("as FxUser0") == 1 and "FxUser0.Gauge {" in compiled.qml
+
+
+def test_qml_errors_point_to_the_flux_usage(mount, project, caplog):
+    broken = GAUGE.replace("color: tint", "color: noExiste")
+    with caplog.at_level(logging.WARNING, logger="fluxui"):
+        mount(project({"App.flux": APP, "widgets/Gauge.qml": broken}))
+    assert "noExiste" in caplog.text

@@ -1,0 +1,84 @@
+<script lang="python">
+from fluxui import state, computed, effect, task, background, on_mount, theme
+from components.Card import Card
+from components.ItemRow import ItemRow
+from services import storage
+
+items = state([])
+draft = state("")
+loaded = state(False)  # no guardar nada hasta haber leído lo que ya había
+
+
+@computed
+def pending():
+    return sum(not i["done"] for i in items.value)
+
+
+def add():
+    name = draft.value.strip()
+    if name:
+        next_id = max((i["id"] for i in items.value), default=0) + 1
+        items.value.append({"id": next_id, "name": name, "done": False})
+        draft.value = ""
+
+
+@task
+async def load():
+    items.value = await background(storage.load)
+    loaded.value = True
+
+
+@task
+async def save(data):
+    await background(storage.save, data)
+
+
+@on_mount
+def start():
+    load.run()
+
+
+def autosave():
+    if loaded.value:
+        data = [dict(i) for i in items.value]  # copia simple, leída en el hilo de la interfaz
+        save.run(data)
+
+
+effect(autosave)
+</script>
+
+<Window title="Lista de la compra" width={420} height={520}>
+  <Column class="page">
+    <Row class="header">
+      <Text class="title">La compra</Text>
+      <Spacer />
+      <Button variant="ghost" on:click={theme.toggle()}>{"Oscuro" if theme.name == "light" else "Claro"}</Button>
+    </Row>
+
+    <Row class="new">
+      <TextField bind:value={draft} on:submit={add} placeholder="¿Qué falta?" flex={1} />
+      <Button variant="primary" on:click={add} enabled={bool(draft.strip())}>Añadir</Button>
+    </Row>
+
+    <Card title={f"Pendientes: {pending}"}>
+      {#each items as item (item["id"])}
+        <ItemRow item={item} on:toggled={item["done"] = event} on:removed={items.remove(item)} />
+      {:else}
+        <Text class="muted">La lista está vacía.</Text>
+      {/each}
+    </Card>
+
+    {#if save.error}
+      <Text class="error">No se pudo guardar: {save.error}</Text>
+    {/if}
+  </Column>
+</Window>
+
+<style>
+.page { padding: 24px; gap: 16px; }
+.header { align-items: center; }
+.title { font-size: var(--font-size-xl); font-weight: 600; }
+.new { gap: 8px; }
+.muted { color: var(--text-muted); }
+.error { color: var(--danger); }
+</style>

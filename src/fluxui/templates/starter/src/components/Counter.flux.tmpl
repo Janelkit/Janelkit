@@ -14,15 +14,11 @@ def increment():
     count.value += 1
     if count.value == goal.value:
         reached.emit(count.value)
-
-
-def reset():
-    count.value = 0
 </script>
 
 <Row class="counter">
   <Button variant="primary" on:click={increment}>Clicks: {count}</Button>
-  <Button variant="ghost" on:click={reset} enabled={count > 0}>Reiniciar</Button>
+  <Button variant="ghost" on:click={count = 0} enabled={count > 0}>Reiniciar</Button>
   <Text class="hint">{f"faltan {goal - count}" if count < goal else "¡meta cumplida!"}</Text>
 </Row>
 

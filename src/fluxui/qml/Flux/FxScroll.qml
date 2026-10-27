@@ -26,6 +26,8 @@ ScrollView {
 
     Layout.fillWidth: Fx.fillWidth(parent, fxFlex, fxSelfStretch, true)
     Layout.fillHeight: Fx.fillHeight(parent, fxFlex, fxSelfStretch)
+    Layout.preferredWidth: Fx.basis(parent, fxFlex, true)
+    Layout.preferredHeight: Fx.basis(parent, fxFlex, false)
     Layout.alignment: Fx.alignment(parent, fxSelfAlign)
 
     implicitWidth: col.implicitWidth

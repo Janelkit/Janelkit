@@ -3,8 +3,8 @@ import logging
 from pathlib import Path
 
 import pytest
+from conftest import click as press
 from conftest import find, find_all, texts
-from PySide6.QtCore import QMetaObject
 from PySide6.QtGui import QColor
 
 from fluxui import theme
@@ -63,7 +63,7 @@ def project(tmp_path):
 
 
 def click(item):
-    assert QMetaObject.invokeMethod(item, "click")
+    press(item)
 
 
 def test_props_flow_down_and_update(mount, project):
@@ -224,3 +224,57 @@ def test_theme_validation():
         theme.set("no-existe")
     with pytest.raises(ValueError):
         theme.extend(**{"Mal-Nombre": "#000"})
+
+
+# -- props con tipo ------------------------------------------------------------------
+TYPED = """<script>
+from typing import Optional
+from fluxui import prop
+count: int = prop(0)
+label: str = prop("")
+ratio: float = prop(1.0)
+note: Optional[str] = prop(None)
+tags: list[str] = prop([])
+anything = prop(None)
+</script>
+<Text>{label}:{count}:{ratio}:{note}:{len(tags)}</Text>
+"""
+
+
+def test_literal_props_are_checked_against_annotations(project):
+    for usage, message, hint in [
+        ('<Typed count="3" />', "espera int y recibe str ('3')", "count: int = prop(...)"),
+        ("<Typed label={5} />", "espera str y recibe int (5)", "label: str = prop(...)"),
+        ("<Typed tags={3} />", "espera list[str] y recibe int (3)", "tags: list[str] = prop(...)"),
+    ]:
+        app = f"<script>\nfrom components.Typed import Typed\n</script>\n<Column>{usage}</Column>"
+        with pytest.raises(FluxError) as info:
+            compile_file(project({"App.flux": app, "components/Typed.flux": TYPED}))
+        assert message in info.value.first.message
+        assert hint in info.value.first.hint
+
+
+def test_compatible_literals_compile(project):
+    app = (
+        "<script>\nfrom components.Typed import Typed\n</script>\n"
+        '<Column><Typed count={True} ratio={2} note={None} label="x" tags={["a"]} anything={3} /></Column>'
+    )
+    compile_file(project({"App.flux": app, "components/Typed.flux": TYPED}))
+
+
+def test_dynamic_values_are_checked_at_runtime(mount, project, caplog):
+    app = """<script>
+from fluxui import state
+from components.Typed import Typed
+n = state(1)
+</script>
+<Column><Typed count={n} /></Column>
+"""
+    m = mount(project({"App.flux": app, "components/Typed.flux": TYPED}))
+    assert texts(m) == [":1:1.0::0"]  # None se muestra vacío
+    assert caplog.text == ""
+    with caplog.at_level(logging.ERROR, logger="fluxui"):
+        m.instance.namespace["n"].value = "dos"
+    assert "la prop 'count' de <Typed> espera int y recibió str ('dos')" in caplog.text
+    assert "App.flux:6" in caplog.text  # señala el uso en el padre
+    assert texts(m) == [":dos:1.0::0"]  # avisa, pero no rompe la aplicación

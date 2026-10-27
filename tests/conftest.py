@@ -34,12 +34,22 @@ def mount(flux_app):
     flux_app.qt_app.processEvents()
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _example_data(tmp_path_factory):
+    """Los ejemplos que guardan datos (examples/compra) escriben en una carpeta temporal, no en $HOME."""
+    os.environ["COMPRA_FILE"] = str(tmp_path_factory.mktemp("datos") / "lista-compra.json")
+    yield
+
+
 @pytest.fixture(autouse=True)
 def _reset_theme():
     from fluxui import theme
 
     yield
     theme.reset()
+    from fluxui import i18n
+
+    i18n.reset()
 
 
 # -- recorrer la vista ---------------------------------------------------------------
@@ -56,6 +66,13 @@ def visual_items(mounted):
 
     walk(start)
     return out
+
+
+def click(item) -> None:
+    """Pulsa un botón como el usuario (también en Qt < 6.8, sin click() invocable)."""
+    from fluxui.inspect import press
+
+    press(item)
 
 
 def find(mounted, name: str):

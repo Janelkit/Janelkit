@@ -111,6 +111,13 @@ class Theme:
         self._revision.value
         return dict(self._themes[name])
 
+    def tokens_of(self, name: str) -> dict[str, Any]:
+        """Tokens de un tema concreto (reactivo), sin que sea el activo."""
+        self._revision.value
+        if name not in self._themes:
+            raise ThemeError(f"tema desconocido {name!r}; disponibles: {', '.join(self._themes)}")
+        return dict(self._themes[name])
+
     def token(self, key: str) -> Any:
         return self.tokens[key]
 

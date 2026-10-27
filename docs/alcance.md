@@ -20,19 +20,19 @@ Si algo puede construirse **solo con la API pública** y no todas las aplicacion
 
 | Área | Contenido | Estado actual |
 |---|---|---|
-| **Lenguaje `.flux`** | Formato de archivo único (`<script lang="python">`, plantilla, `<style>`), interpolación, `on:`, `bind:`, `class:`, `{#if}`, `{#each}`, `{#key}`, slots | Todo salvo slots |
+| **Lenguaje `.flux`** | Formato de archivo único (`<script lang="python">`, plantilla, `<style>`), interpolación, `on:`, `bind:`, `class:`, `{#if}`, `{#each}`, `{#key}`, slots | ✅ (también `transition:`, `class={expr}`, manejadores en línea) |
 | **Compilador** | Parser con ubicaciones, análisis del script, IR, generación de QML, diagnósticos con sugerencias | ✅ |
-| **Reactividad** | `state`, `computed`, efectos, props, eventos, **colecciones reactivas**, **contexto** (provide/inject) | Faltan colecciones reactivas y contexto |
-| **Runtime de componentes** | Instancias, regiones dinámicas, reconciliación por clave, **ciclo de vida** (`on_mount`, `on_destroy`), **referencias a elementos** | Falta ciclo de vida público y `ref` |
-| **Asincronía** | Manejadores `async def` y trabajo en segundo plano con retorno seguro al hilo de la interfaz | No existe |
-| **Backend Qt** | Módulo QML interno `Flux`, controles básicos, disposición flex, ventanas | ✅ (una ventana) |
-| **Controles básicos** | Los necesarios para formularios y navegación sencilla: texto, botón, campos, casilla, select, switch, slider, radio, imagen, progreso, pestañas, diálogos nativos, lista virtualizada | Faltan varios |
+| **Reactividad** | `state`, `computed`, efectos, props, eventos, **colecciones reactivas**, **contexto** (provide/inject) | ✅ |
+| **Runtime de componentes** | Instancias, regiones dinámicas, reconciliación por clave, **ciclo de vida** (`on_mount`, `on_destroy`), **referencias a elementos** | ✅ |
+| **Asincronía** | Manejadores `async def` y trabajo en segundo plano con retorno seguro al hilo de la interfaz | ✅ (`qasync`, `@task`, `background`) |
+| **Backend Qt** | Módulo QML interno `Flux`, controles básicos, disposición flex, ventanas | ✅ (varias ventanas, navegación, idiomas y derecha a izquierda) |
+| **Controles básicos** | Los necesarios para formularios y navegación sencilla: texto, botón, campos, casilla, select, switch, slider, radio, imagen, progreso, pestañas, diálogos nativos, lista virtualizada | ✅ |
 | **Estilos y temas** | Subconjunto de CSS, tokens `var(--x)`, temas intercambiables | ✅ |
-| **Interoperabilidad con Qt** | Usar un componente QML propio o un objeto Qt existente desde un `.flux` cuando FluxUI no alcanza | No existe |
+| **Interoperabilidad con Qt** | Usar un componente QML propio o un objeto Qt existente desde un `.flux` cuando FluxUI no alcanza | ✅ (importar `.qml`) |
 | **CLI esencial** | `flux new`, `flux dev`, `flux build`, `flux compile`, `flux parse` | ✅ |
-| **API de inspección** | Montar un componente sin ventana visible, buscar elementos, simular eventos, leer el estado. Base para cualquier herramienta de pruebas | Existe solo en `tests/conftest.py` |
-| **API del compilador para herramientas** | Obtener diagnósticos y la estructura de un `.flux` sin ejecutarlo. Base para editores | Existe, pero sin declarar como pública |
-| **Documentación** | Referencia del lenguaje, estilos, flujo de desarrollo, tutorial de inicio | Falta el tutorial |
+| **API de inspección** | Montar un componente sin ventana visible, buscar elementos, simular eventos, leer el estado. Base para cualquier herramienta de pruebas | ✅ `fluxui.inspect` |
+| **API del compilador para herramientas** | Obtener diagnósticos y la estructura de un `.flux` sin ejecutarlo. Base para editores | ✅ `check_source`/`check_file` |
+| **Documentación** | Referencia del lenguaje, estilos, flujo de desarrollo, tutorial de inicio | ✅ |
 
 ### Qué no incluye
 

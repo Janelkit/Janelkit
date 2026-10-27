@@ -1,5 +1,6 @@
 <script lang="python">
 from fluxui import state, computed
+from widgets.Meter import Meter   # elemento propio escrito en QML (src/widgets/Meter.qml)
 
 count = state(0)
 name = state("")
@@ -23,6 +24,7 @@ def decrement():
       <Button on:click={decrement} enabled={count > 0}>−</Button>
       <Button on:click={increment}>Clicks: {count}</Button>
     </Row>
+    <Meter value={count} max={5} on:picked={count = event} width={320} />
 
     {#if count >= 5}
       <Text class="success">Has llegado a cinco clicks.</Text>

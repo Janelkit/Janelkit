@@ -2,8 +2,9 @@
 
 - Cambios en `.flux`: la propia aplicación (con FLUXUI_DEV=1) recompila y
   vuelve a montar la vista sin reiniciar el proceso.
-- Cambios en `.py` del proyecto: este supervisor reinicia `python main.py`,
-  porque los módulos Python no se pueden recargar de forma fiable.
+- Cambios en `.py` o en `.qml` propios del proyecto: este supervisor reinicia
+  `python main.py`. Los módulos Python no se pueden recargar de forma fiable, y
+  Qt (antes de 6.12) no vuelve a leer en el mismo proceso un `.qml` ya cargado.
 
 El arranque sigue siendo `main.py`: lo que funciona con `flux dev` funciona
 igual con `python main.py`.
@@ -35,12 +36,16 @@ def find_entry(target: Path) -> Path:
     return main
 
 
-def python_files(project: Path) -> dict[str, float]:
+RESTART_SUFFIXES = (".py", ".qml")
+
+
+def restart_files(project: Path) -> dict[str, float]:
+    """Archivos cuyo cambio exige reiniciar el proceso: `.py` y `.qml` del proyecto."""
     found: dict[str, float] = {}
     for root, dirs, files in os.walk(project):
         dirs[:] = [d for d in dirs if d not in IGNORED_DIRS and not d.startswith(".")]
         for name in files:
-            if name.endswith(".py"):
+            if name.endswith(RESTART_SUFFIXES):
                 path = os.path.join(root, name)
                 try:
                     found[path] = os.stat(path).st_mtime
@@ -70,7 +75,7 @@ def run_dev(target: Path, python: str = sys.executable) -> int:
     print(f"[flux dev] {main.relative_to(project.parent)} — Ctrl+C para salir", flush=True)
     while True:
         proc = subprocess.Popen([python, str(main)], cwd=project, env=env)
-        snapshot = python_files(project)
+        snapshot = restart_files(project)
         restart = False
         try:
             while True:
@@ -78,13 +83,13 @@ def run_dev(target: Path, python: str = sys.executable) -> int:
                 if code is not None:
                     if code == 0:
                         return 0
-                    print(f"[flux dev] la aplicación terminó con código {code}; esperando cambios en .py…", flush=True)
-                    while not (changed := _changed(snapshot, python_files(project))):
+                    print(f"[flux dev] la aplicación terminó con código {code}; esperando cambios en .py o .qml…", flush=True)
+                    while not (changed := _changed(snapshot, restart_files(project))):
                         time.sleep(POLL_SECONDS)
                     restart = True
                 else:
                     time.sleep(POLL_SECONDS)
-                    changed = _changed(snapshot, python_files(project))
+                    changed = _changed(snapshot, restart_files(project))
                     restart = bool(changed)
                 if restart:
                     names = ", ".join(Path(p).name for p in changed[:3]) + ("…" if len(changed) > 3 else "")

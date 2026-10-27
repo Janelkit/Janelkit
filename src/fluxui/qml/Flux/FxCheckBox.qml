@@ -13,7 +13,10 @@ CheckBox {
 
     Layout.fillWidth: Fx.fillWidth(parent, fxFlex, fxSelfStretch, false)
     Layout.fillHeight: Fx.fillHeight(parent, fxFlex, fxSelfStretch)
+    Layout.preferredWidth: Fx.basis(parent, fxFlex, true)
+    Layout.preferredHeight: Fx.basis(parent, fxFlex, false)
     Layout.alignment: Fx.alignment(parent, fxSelfAlign)
+    Accessible.name: text  // el atributo label la sustituye
 
     spacing: 8
     hoverEnabled: true
@@ -21,7 +24,7 @@ CheckBox {
     indicator: Rectangle {
         implicitWidth: 18
         implicitHeight: 18
-        x: control.leftPadding
+        x: control.mirrored ? control.width - width - control.rightPadding : control.leftPadding
         y: control.topPadding + (control.availableHeight - height) / 2
         radius: fxtheme.radius_sm
         color: control.checked ? fxtheme.primary : fxtheme.surface
@@ -44,7 +47,8 @@ CheckBox {
         font: control.font
         color: control.fxColor
         opacity: control.enabled ? 1 : 0.55
-        leftPadding: control.indicator.width + control.spacing
+        leftPadding: control.mirrored ? 0 : control.indicator.width + control.spacing
+        rightPadding: control.mirrored ? control.indicator.width + control.spacing : 0
         verticalAlignment: Text.AlignVCenter
         wrapMode: Text.Wrap
     }

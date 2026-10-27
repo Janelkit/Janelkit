@@ -1,0 +1,16 @@
+<script lang="python">
+from fluxui import prop, event
+
+item = prop()
+toggled = event()
+removed = event()
+</script>
+
+<Row class="row">
+  <Checkbox checked={item["done"]} on:change={toggled.emit(event)} flex={1}>{item["name"]}</Checkbox>
+  <Button variant="ghost" on:click={removed.emit()}>Quitar</Button>
+</Row>
+
+<style>
+.row { gap: 8px; align-items: center; }
+</style>

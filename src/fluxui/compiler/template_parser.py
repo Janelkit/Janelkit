@@ -10,6 +10,7 @@ import ast
 import re
 
 from ..diagnostics import Diagnostic, FluxError, SourceLocation, location_at
+from .expressions import SIMPLE_STATEMENTS, parse_statements
 from .ast_nodes import (
     Attribute,
     EachBlock,
@@ -43,19 +44,37 @@ def parse_template(text: str, file: str, source: str | None = None) -> list[Node
     return _TemplateParser(text, file, source if source is not None else text).parse()
 
 
-def validate_expression(code: str, loc: SourceLocation, source: str) -> None:
-    """Comprueba que `code` sea una expresión Python válida."""
+def validate_expression(code: str, loc: SourceLocation, source: str, statements: bool = False) -> None:
+    """Comprueba que `code` sea una expresión Python válida.
+
+    Con `statements=True` (manejadores `on:`) también acepta sentencias simples:
+    asignaciones (`n += 1`), llamadas y varias separadas por `;`.
+    """
     if not code.strip():
         raise FluxError(Diagnostic("expresión vacía", loc, "escribe una expresión entre las llaves", source=source))
     stripped = code.lstrip()
     multiline = "\n" in stripped.rstrip()
     # Entre paréntesis se admiten expresiones repartidas en varias líneas.
     candidate = "(" + stripped + "\n)" if multiline else stripped
+    hint = "las llaves de la plantilla aceptan expresiones, no sentencias"
     try:
         ast.parse(candidate, mode="eval")
         return
     except SyntaxError as e:
         err = e
+    if statements:
+        try:
+            module = parse_statements(stripped)
+        except SyntaxError as e:
+            err, multiline = e, False
+            hint = "un manejador acepta una función, una llamada o sentencias simples (n += 1; otra())"
+        else:
+            bad = next((st for st in module.body if not isinstance(st, SIMPLE_STATEMENTS)), None)
+            if bad is None:
+                return
+            err = SyntaxError(f"'{_statement_word(bad)}' no está permitido en un manejador")
+            err.lineno, err.offset, multiline = bad.lineno, bad.col_offset + 1, False
+            hint = "para lógica con if, for o def, escribe una función en el <script>: on:click={mi_funcion}"
     # Ubicación del error relativa al texto sin espacios iniciales.
     skipped = code[: len(code) - len(stripped)]
     start_line = loc.line + skipped.count("\n")
@@ -73,10 +92,18 @@ def validate_expression(code: str, loc: SourceLocation, source: str) -> None:
         Diagnostic(
             f"expresión Python no válida: {err.msg}",
             SourceLocation(loc.file, line, max(col, 1)),
-            "las llaves de la plantilla aceptan expresiones, no sentencias",
+            hint,
             source=source,
         )
     )
+
+
+def _statement_word(node: ast.stmt) -> str:
+    """Palabra clave de una sentencia compuesta (`if`, `for`, `def`...) para el mensaje de error."""
+    words = {"FunctionDef": "def", "AsyncFunctionDef": "async def", "ClassDef": "class", "AsyncFor": "async for",
+             "AsyncWith": "async with", "ImportFrom": "from ... import", "AnnAssign": "asignación con tipo"}  # fmt: skip
+    name = type(node).__name__
+    return words.get(name, name.lower())
 
 
 class _TemplateParser:
@@ -232,7 +259,11 @@ class _TemplateParser:
         self.pos += 1
         self.skip_ws()
         if self.startswith("{"):
-            return Attribute(name, self.read_braced(), self.loc(start))
+            if not name.startswith("on:"):
+                return Attribute(name, self.read_braced(), self.loc(start))
+            expr = self.read_braced(validate=False)
+            validate_expression(expr.code, expr.loc, self.source, statements=True)
+            return Attribute(name, expr, self.loc(start))
         quote = self.text[self.pos] if not self.eof() else ""
         if quote not in "\"'" or not quote:
             raise self.error(f"valor del atributo '{name}' no válido", hint='usa comillas "..." o llaves {...}')

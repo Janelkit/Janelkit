@@ -1,0 +1,12 @@
+{
+  "title": "Languages",
+  "language": "Language",
+  "name": "Your name",
+  "hello": "Hello, {name}",
+  "nobody": "Type your name",
+  "files": {"zero": "No files", "one": "{n} file", "other": "{n} files"},
+  "add": "Add",
+  "remove": "Remove",
+  "total": "Total: {amount}",
+  "today": "Today is {date}"
+}

@@ -45,6 +45,7 @@ class ExprBinding:
     id: str
     expression: Expression
     loc: SourceLocation
+    classes: bool = False  # class={expr}: el runtime lo convierte en " a b " (nombres de clase)
 
 
 @dataclass
@@ -64,6 +65,16 @@ class Handler:
     id: str
     expression: Expression
     event: str
+    loc: SourceLocation
+    inline: bool = False  # llamada o sentencias que se ejecutan al ocurrir el evento
+
+
+@dataclass
+class RefUse:
+    """`ref={nombre}`: el elemento se asigna al `Ref` del script cuando existe."""
+
+    id: str
+    name: str
     loc: SourceLocation
 
 
@@ -86,6 +97,10 @@ class IRElement:
     children: list["IRNode"] = field(default_factory=list)
     # class:nombre={cond}: (propiedad QML, valor, condición QML) -> `Binding on ... { when }`
     conditional: list[tuple[str, str, str]] = field(default_factory=list)
+    delegate: "IRElement | None" = None  # <List>: la fila que repite su ListView
+    behaviors: dict[str, str] = field(default_factory=dict)  # propiedad QML -> animación (transition en CSS)
+    # transition:/in:/out: -> {"in": (tipo, ms), "out": (tipo, ms)}
+    transitions: dict[str, tuple[str, int]] = field(default_factory=dict)
 
 
 @dataclass
@@ -123,6 +138,8 @@ class ComponentUse:
     props: dict[str, PropArg]
     events: dict[str, Handler]  # evento del hijo -> manejador en la plantilla actual
     loc: SourceLocation
+    slots: dict[str, "Fragment"] = field(default_factory=dict)  # contenido entre etiquetas, por nombre de slot
+    ordinal: int = 0  # cuántos usos de esta etiqueta hay antes en la plantilla (identidad estable para flux dev)
 
 
 @dataclass
@@ -132,6 +149,7 @@ class Fragment:
     template: "IRTemplate"
     root: IRElement | None = None  # delegado en línea
     component: ComponentUse | None = None  # o un único componente hijo
+    leave_ms: int = 0  # out:/transition: en la raíz: Python retira la fila al terminar la animación
 
     @property
     def empty(self) -> bool:
@@ -149,6 +167,8 @@ class EachSlot:
     loc: SourceLocation
     empty_model_id: str | None = None  # rama {:else} (lista vacía)
     empty_fragment: Fragment | None = None
+    lazy: bool = False  # dentro de <List>: cada fila se crea cuando Qt la pide (al hacerse visible)
+    animated: bool = False  # <List animate>: al quitar una fila, su vista se anima antes de liberarla
 
 
 @dataclass
@@ -181,7 +201,18 @@ class ComponentSlot:
     loc: SourceLocation
 
 
-Slot = Union[EachSlot, IfSlot, KeySlot, ComponentSlot]
+@dataclass
+class SlotOutlet:
+    """`<Slot name="x">reserva</Slot>` en un componente hijo: aquí va el contenido que pasa el padre."""
+
+    name: str  # "default" para <Slot />
+    model_id: str  # contenido del padre (delegado definido por el padre)
+    fallback: Fragment | None  # contenido de reserva si el padre no pasa nada
+    loc: SourceLocation
+    fallback_model_id: str | None = None
+
+
+Slot = Union[EachSlot, IfSlot, KeySlot, ComponentSlot, SlotOutlet]
 
 
 @dataclass
@@ -191,6 +222,7 @@ class IRTemplate:
     handlers: list[Handler] = field(default_factory=list)
     writes: list[Write] = field(default_factory=list)
     slots: list[Slot] = field(default_factory=list)
+    refs: list[RefUse] = field(default_factory=list)
 
     @property
     def model_ids(self) -> list[str]:
@@ -202,6 +234,10 @@ class IRTemplate:
                     ids.append(slot.empty_model_id)
             elif isinstance(slot, IfSlot):
                 ids.extend(b.model_id for b in slot.branches if b.model_id)
+            elif isinstance(slot, SlotOutlet):
+                ids.append(slot.model_id)
+                if slot.fallback_model_id:
+                    ids.append(slot.fallback_model_id)
             else:  # KeySlot, ComponentSlot
                 ids.append(slot.model_id)
         return ids
@@ -228,6 +264,11 @@ class IRComponent:
     warnings: list[Diagnostic] = field(default_factory=list)
     tokens: list[TokenUse] = field(default_factory=list)
     component_paths: list[str] = field(default_factory=list)
+    # Contenido de slots escrito aquí con elementos propios: cada uno se genera
+    # como un documento QML aparte, porque se muestra dentro de otro componente.
+    slot_fragments: list[Fragment] = field(default_factory=list)
+    qml_files: list[str] = field(default_factory=list)  # elementos propios importados de archivos .qml
+    class_names: list[str] = field(default_factory=list)  # clases con reglas en <style> (para class={expr})
 
 
 def qml_string(text: str) -> str:

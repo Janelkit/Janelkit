@@ -1,0 +1,22 @@
+<script lang="python">
+from fluxui import prop
+
+title = prop()
+subtitle = prop("")
+</script>
+
+<Column class="panel">
+  <Row class="head">
+    <Text class="title">{title}</Text>
+    <Spacer />
+    <Text class="subtitle">{subtitle}</Text>
+  </Row>
+  <Slot />
+</Column>
+
+<style>
+.panel { padding: 12px; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.head { align-items: center; gap: 8px; }
+.title { font-weight: 600; }
+.subtitle { color: var(--text-muted); font-size: var(--font-size-sm); }
+</style>

@@ -401,8 +401,8 @@ def test_bind_cannot_target_a_prop():
 
 
 def test_unknown_element():
-    err = compile_error("<Window>\n  <Slider />\n</Window>")
-    assert "elemento desconocido <Slider>" in err.first.message
+    err = compile_error("<Window>\n  <Carousel />\n</Window>")
+    assert "elemento desconocido <Carousel>" in err.first.message
     assert err.first.location.line == 2
 
 
@@ -493,3 +493,41 @@ def test_key_block():
     (slot,) = c.ir.template.slots
     assert type(slot).__name__ == "KeySlot" and slot.expression.code == "b"
     assert "model: fx.m0" in c.qml
+
+
+# -- manejadores en línea -------------------------------------------------------------
+INLINE_SCRIPT = "<script>\nfrom fluxui import state, prop\nn = state(0)\nitems = state([1])\nlimit = prop(3)\n</script>\n"
+
+
+def test_handlers_accept_calls_and_simple_statements():
+    compiled = compile_source(
+        INLINE_SCRIPT
+        + "<Column>"
+        + "<Button on:click={n += 1}>a</Button>"
+        + "<Button on:click={n = 0; items.append(n)}>b</Button>"
+        + "<Button on:click={print(n)}>c</Button>"
+        + "<Button on:click={lambda: print(n)}>d</Button>"
+        + "<TextField on:input={n = len(event)} />"
+        + "</Column>"
+    )
+    handlers = compiled.ir.template.handlers
+    assert [h.inline for h in handlers] == [True, True, True, False, True]
+
+
+def test_compound_statements_are_rejected_in_handlers():
+    err = compile_error(INLINE_SCRIPT + "<Button on:click={for x in items: n = x}>a</Button>")
+    assert "'for' no está permitido en un manejador" in err.first.message
+    assert "función en el <script>" in err.first.hint
+
+
+def test_statements_are_still_rejected_outside_handlers():
+    err = compile_error(INLINE_SCRIPT + "<Text>{n = 1}</Text>")
+    assert "expresión Python no válida" in err.first.message
+
+
+def test_inline_handler_checks_assigned_names():
+    assert "'m' no está definido" in compile_error(INLINE_SCRIPT + "<Button on:click={m = 1}>a</Button>").first.message
+    err = compile_error(INLINE_SCRIPT + "<Button on:click={limit = 1}>a</Button>")
+    assert "no puede asignar a la prop 'limit'" in err.first.message
+    err = compile_error(INLINE_SCRIPT + "<Column>{#each items as x}<Button on:click={x = 2}>a</Button>{/each}</Column>")
+    assert "variable de bloque 'x'" in err.first.message

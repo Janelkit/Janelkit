@@ -1,0 +1,70 @@
+<script lang="python">
+from fluxui import state, task, background
+from services.books import search
+
+query = state("")
+last = state("")
+
+
+@task
+async def results(q):
+    # search() bloquea (red): se ejecuta en otro hilo y la ventana sigue respondiendo.
+    return await background(search, q)
+
+
+def submit():
+    q = query.value.strip()
+    if q:
+        last.value = q
+        results.run(q)  # cancela la búsqueda anterior si seguía en curso
+</script>
+
+<Window title="Buscar libros" width={560} height={600} minWidth={380}>
+  <Column class="page">
+    <Text class="title">Buscar libros</Text>
+    <Text class="muted">Consulta Open Library sin bloquear la ventana.</Text>
+
+    <Row class="search">
+      <TextField bind:value={query} on:submit={submit} placeholder="Título o autor…" flex={1} />
+      <Button variant="primary" on:click={submit} enabled={bool(query.strip())}>Buscar</Button>
+      {#if results.loading}
+        <Button variant="ghost" on:click={results.cancel()}>Cancelar</Button>
+      {/if}
+    </Row>
+
+    <Scroll class="list" flex={1}>
+      {#if results.loading}
+        <Text class="muted">Buscando «{last}»…</Text>
+      {:else if results.error}
+        <Column class="error">
+          <Text class="error-title">No se pudo completar la búsqueda</Text>
+          <Text class="muted">{results.error}</Text>
+          <Button on:click={results.run(last)}>Reintentar</Button>
+        </Column>
+      {:else if results.value is None}
+        <Text class="muted">Escribe algo y pulsa Intro.</Text>
+      {:else}
+        {#each results.value as book (book["key"])}
+          <Column class="book">
+            <Text class="book-title">{book["title"]}</Text>
+            <Text class="muted">{book["author"]}{f" · {book['year']}" if book["year"] else ""}</Text>
+          </Column>
+        {:else}
+          <Text class="muted">Sin resultados para «{last}».</Text>
+        {/each}
+      {/if}
+    </Scroll>
+  </Column>
+</Window>
+
+<style>
+.page { padding: 24px; gap: 12px; }
+.title { font-size: var(--font-size-xl); font-weight: 600; }
+.muted { color: var(--text-muted); }
+.search { gap: 8px; }
+.list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; gap: 4px; }
+.book { padding: 8px; gap: 2px; border-radius: var(--radius-sm); }
+.book-title { font-weight: 600; }
+.error { gap: 6px; padding: 8px; }
+.error-title { color: var(--danger); font-weight: 600; }
+</style>

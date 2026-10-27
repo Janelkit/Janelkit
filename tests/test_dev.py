@@ -34,7 +34,6 @@ def test_reload_replaces_view_and_keeps_last_good_version_on_error(tmp_path, flu
         assert new.root.geometry().width() == 333  # conserva el tamaño de la ventana
 
         child.write_text("<Text>{sin_definir}</Text>", encoding="utf-8")
-        os.utime(child, (1, 1))  # forzar una marca de tiempo distinta
         reloader.reload()
         assert reloader.mounted is new  # la versión correcta sigue montada
         assert reloader._error_window.property("visible") is True
@@ -96,3 +95,76 @@ def test_build_reports_errors_in_unused_components(tmp_path):
     result = build_project(root)
     assert not result.ok
     assert len(result.errors) == 1 and result.errors[0].location.file.endswith("Roto.flux")
+
+
+def test_qml_files_restart_the_process_instead_of_reloading(tmp_path, flux_app):
+    """Un .qml propio no se recarga en el proceso (Qt < 6.12 no lo vuelve a leer): lo reinicia el supervisor."""
+    from fluxui.cli.dev import restart_files
+    from fluxui.qt_backend.application import DevReloader
+
+    widget = tmp_path / "widgets" / "Box.qml"
+    widget.parent.mkdir()
+    widget.write_text('import QtQuick\nRectangle { objectName: "box"; property real size: 1; width: 10 }', encoding="utf-8")
+    (tmp_path / "main.py").write_text("", encoding="utf-8")
+    app = tmp_path / "App.flux"
+    app.write_text("<script>\nfrom widgets.Box import Box\n</script>\n<Column><Box size={3} /></Column>", encoding="utf-8")
+    compiled = compile_file(app)
+    assert str(widget) in compiled.files
+    reloader = DevReloader(flux_app, app, flux_app.mount(compiled), compiled.files)
+    try:
+        watched = set(reloader.watcher.files())
+        assert str(app.resolve()) in watched and str(widget.resolve()) not in watched
+        assert set(restart_files(tmp_path)) == {str(tmp_path / "main.py"), str(widget)}
+    finally:
+        if reloader.mounted in flux_app.mounted:
+            flux_app.unmount(reloader.mounted)
+
+
+def test_reload_keeps_state_unless_the_script_changed(tmp_path, flux_app, capsys):
+    from fluxui.qt_backend.application import DevReloader
+
+    child = tmp_path / "components" / "Counter.flux"
+    child.parent.mkdir()
+    child.write_text(
+        "<script>\nfrom fluxui import state\nclicks = state(0)\n</script>\n<Text>clicks {clicks}</Text>", encoding="utf-8"
+    )
+    app = tmp_path / "App.flux"
+    app.write_text(
+        "<script>\nfrom fluxui import state\nfrom components.Counter import Counter\nname = state('')\nrows = state(['a', 'b'])\n</script>\n"
+        "<Column><TextField bind:value={name} /><Counter />{#each rows as r (r)}<Counter />{/each}</Column>\n"
+        "<style></style>",
+        encoding="utf-8",
+    )
+    compiled = compile_file(app)
+    reloader = DevReloader(flux_app, app, flux_app.mount(compiled), compiled.files)
+
+    def counters():
+        return [c.namespace["clicks"] for c in reloader.mounted.instance.children]
+
+    try:
+        ns = reloader.mounted.instance.namespace
+        ns["name"].value = "Ana"
+        ns["rows"].value.reverse()  # b, a: cada fila conserva su contador por clave
+        for state, value in zip(counters(), [1, 20, 10]):
+            state.value = value  # Counter fijo, fila "a" (creada primero), fila "b"
+        before = {c.hmr_path: c.namespace["clicks"].value for c in reloader.mounted.instance.children}
+
+        # Cambiar solo estilo y plantilla del raíz: se conserva todo.
+        app.write_text(app.read_text(encoding="utf-8").replace("<style></style>", "<style>.x { gap: 4px; }</style>")
+                       .replace("<Column>", "<Column>\n  <Text>nuevo</Text>"), encoding="utf-8")  # fmt: skip
+        reloader.reload()
+        ns = reloader.mounted.instance.namespace
+        assert ns["name"].value == "Ana" and list(ns["rows"].value) == ["b", "a"]
+        after = {c.hmr_path: c.namespace["clicks"].value for c in reloader.mounted.instance.children}
+        assert after == before
+        assert "estado conservado en 4 componente(s)" in capsys.readouterr().err
+
+        # Cambiar el script del hijo: el hijo vuelve a empezar; el raíz conserva lo suyo.
+        child.write_text(child.read_text(encoding="utf-8").replace("state(0)", "state(100)"), encoding="utf-8")
+        reloader.reload()
+        assert reloader.mounted.instance.namespace["name"].value == "Ana"
+        assert [c.value for c in counters()] == [100, 100, 100]
+        assert "script cambiado, estado reiniciado: Counter.flux" in capsys.readouterr().err
+    finally:
+        if reloader.mounted in flux_app.mounted:
+            flux_app.unmount(reloader.mounted)

@@ -14,10 +14,20 @@ TextArea {
     property int fxFlex: 0
     property string fxSelfAlign: ""
     property bool fxSelfStretch: false
+    // Valor que llega de Python. `text` lo edita el usuario; solo sus cambios emiten userEdited.
+    property string fxValue: ""
+    signal userEdited(string text)
+
+    onFxValueChanged: if (text !== fxValue) text = fxValue
+    onTextChanged: if (text !== fxValue) userEdited(text)
+    Component.onCompleted: if (text !== fxValue) text = fxValue
 
     Layout.fillWidth: Fx.fillWidth(parent, fxFlex, fxSelfStretch, true)
     Layout.fillHeight: Fx.fillHeight(parent, fxFlex, fxSelfStretch)
+    Layout.preferredWidth: Fx.basis(parent, fxFlex, true)
+    Layout.preferredHeight: Fx.basis(parent, fxFlex, false)
     Layout.alignment: Fx.alignment(parent, fxSelfAlign)
+    Accessible.name: placeholderText  // el atributo label la sustituye
 
     color: fxColor
     placeholderTextColor: fxtheme.text_muted

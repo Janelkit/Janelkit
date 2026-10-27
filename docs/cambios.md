@@ -1,0 +1,38 @@
+# Cambios entre versiones
+
+Cada versión lista lo nuevo y, aparte, lo que **rompe** código existente con cómo migrarlo. La política está en [api.md](api.md#política-de-versiones).
+
+## 0.1.0 (sin publicar)
+
+Primera versión pública prevista. Respecto a la prealfa interna (incrementos 0–7):
+
+### Nuevo
+
+- **Reactividad:** listas, diccionarios y conjuntos reactivos dentro de `state` (`items.value.append(x)`, `item["done"] = True`); `State.notify()`; `effect` con limpieza (la función devuelta se llama antes de repetir y al desmontar).
+- **Plantilla:** manejadores en línea (`on:click={n += 1}`, `on:change={item["done"] = event}`, `on:click={borrar(item)}`).
+- **Componentes:** slots (`<Slot />`, `<Slot name="x">`, `slot="x"`); `class`, `id` y `flex` en la etiqueta de un componente; `on_mount`, `on_destroy`; `ref`; `provide`/`inject`.
+- **Asincronía:** manejadores `async def`, `@task` (`.loading`, `.error`, `.value`), `background()` y `spawn()`. Lo lanzado desde un componente se cancela al desmontarlo.
+- **Elementos:** `Switch`, `Slider`, `Select`, `RadioGroup`, `Tabs`, `Image`, `ProgressBar`, `Shortcut`, `List` (virtualizada); `on:input` en `TextArea`; `label` (nombre accesible) en todos; `alt` en `Image`.
+- **Diálogos:** `fluxui.dialogs` (abrir, guardar, carpeta, mensaje, confirmación), asíncronos.
+- **Elementos propios en QML:** importar un `.qml` del proyecto como un componente.
+- **Accesibilidad:** cajas con `on:click` accesibles con el teclado; foco visible; nombres accesibles.
+- **Herramientas:** `fluxui.inspect` para probar aplicaciones; `fluxui.compiler.check_source`/`check_file` para editores; `FORMAT_VERSION`.
+- **Disposición:** `flex` reparte el espacio en proporción, como en CSS.
+
+### Cambia (puede requerir ajustes)
+
+| Antes | Ahora | Cómo migrar |
+|---|---|---|
+| `on:click={crear(x)}` llamaba a la función que devolvía `crear(x)`. | Una llamada en un manejador se **ejecuta** al ocurrir el evento. | Si `crear(x)` devuelve una función, escribe `on:click={lambda: crear(x)()}`, o llama directamente a lo que querías ejecutar. |
+| `state([...])` guardaba la lista tal cual. | Guarda una **copia reactiva** (también de los diccionarios y listas anidados). | Modifica el objeto que devuelve `estado.value`, no el original que pasaste. Los `list`/`dict`/`set` siguen siendo instancias de esos tipos (`isinstance` funciona). |
+| `flex` repartía según el tamaño del contenido. | `flex: N` reparte en proporción a N cuando el tamaño del contenedor viene de fuera. | Revisa las vistas que dependían del reparto anterior; normalmente basta con quitar anchos fijos que compensaban el reparto. |
+| `TextArea value` se aplicaba directamente al texto. | Igual, pero `on:input` solo salta con los cambios del usuario. | Nada, salvo si dependías de que `bind:value` reaccionara a cambios programáticos. |
+| Modificar estado desde otro hilo pasaba sin aviso (y podía corromperlo). | Lanza `WrongThreadError`. | Devuelve el valor desde `background()` y asígnalo tras el `await`. |
+| `flux dev` intentaba recargar en el mismo proceso. | Los cambios en `.qml` propios reinician el proceso, como los `.py`. | Nada. |
+
+### Requisitos
+
+- Python ≥ 3.10.
+- **PySide6 ≥ 6.8** (antes ≥ 6.6): con 6.6 había fallos de PySide al salir, botones sin `click()` y diálogos con tipos erróneos.
+- Nueva dependencia: `qasync` ≥ 0.27 (integra `asyncio` con el bucle de Qt).
+- Formato `.flux`: `FORMAT_VERSION = 1`.

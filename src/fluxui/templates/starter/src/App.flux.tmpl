@@ -14,10 +14,6 @@ def greeting():
 
 def on_reached(total):
     message.value = f"Llegaste a {total} clicks."
-
-
-def toggle_theme():
-    theme.toggle()
 </script>
 
 <Window title="{{project_name}}" width={520} height={340}>
@@ -25,7 +21,7 @@ def toggle_theme():
     <Row class="header">
       <Text class="title">{greeting}</Text>
       <Spacer />
-      <Button variant="ghost" on:click={toggle_theme}>{"Tema oscuro" if theme.name == "light" else "Tema claro"}</Button>
+      <Button variant="ghost" on:click={theme.toggle()}>{"Tema oscuro" if theme.name == "light" else "Tema claro"}</Button>
     </Row>
     <TextField bind:value={name} placeholder="Escribe tu nombre" />
     <Counter goal={5} on:reached={on_reached} />

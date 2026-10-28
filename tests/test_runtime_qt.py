@@ -101,6 +101,53 @@ def test_two_way_binding_without_loops(mount):
     assert field.property("text") == "Carla"
 
 
+def test_bind_to_a_state_inside_an_object(mount, caplog):
+    """bind:value={prefs.nombre}: el state de un módulo (o de un objeto) sin importarlo por su nombre."""
+    m = mount("""<script>
+from types import SimpleNamespace
+from fluxui import state
+prefs = SimpleNamespace(nombre=state("Ana"), ajustes=SimpleNamespace(tema=state("claro")), fijo="x")
+</script>
+<Column>
+  <TextField id="nombre" bind:value={prefs.nombre} />
+  <TextField id="tema" bind:value={prefs.ajustes.tema} />
+  <TextField id="fijo" bind:value={prefs.fijo} />
+  <Text id="saludo">{f"Hola, {prefs.nombre.value}"}</Text>
+</Column>""")
+    prefs = m.instance.namespace["prefs"]
+    nombre, tema = find(m, "nombre"), find(m, "tema")
+    assert nombre.property("text") == "Ana" and tema.property("text") == "claro"  # se lee el valor, no el state
+    type_text(nombre, "Bea")
+    type_text(tema, "oscuro")
+    assert prefs.nombre.value == "Bea" and prefs.ajustes.tema.value == "oscuro"
+    assert find(m, "saludo").property("text") == "Hola, Bea"
+    prefs.nombre.value = "Carla"
+    assert nombre.property("text") == "Carla"
+    with caplog.at_level(logging.ERROR, logger="fluxui"):
+        type_text(find(m, "fijo"), "y")
+    assert "bind: 'prefs.fijo' es str, no un state" in caplog.text
+    assert prefs.fijo == "x"
+
+
+def test_bind_to_a_state_of_each_row(mount):
+    m = mount("""<script>
+from types import SimpleNamespace
+from fluxui import state
+tareas = state([SimpleNamespace(id=i, hecha=state(False)) for i in range(2)])
+</script>
+<Column>
+  {#each tareas as t (t.id)}
+    <Checkbox bind:checked={t.hecha} />
+  {/each}
+</Column>""")
+    tareas = m.instance.namespace["tareas"].value
+    casillas = [i for i in visual_items(m) if "FxCheckBox" in i.metaObject().className()]
+    press(casillas[1])
+    assert [t.hecha.value for t in tareas] == [False, True]
+    tareas[0].hecha.value = True
+    assert casillas[0].property("checked") is True
+
+
 def test_bindings_update_independently(mount):
     m = mount(COUNTER)
     greeting_updates, count_updates = [], []

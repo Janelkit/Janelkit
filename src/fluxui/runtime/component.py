@@ -248,6 +248,8 @@ class TemplateInstance:
     def _evaluate(self, binding: Binding) -> Any:
         if isinstance(binding, ExprBinding):
             value = self.eval(binding.expression)
+            if binding.id in self._writes:  # bind:value={prefs.tema}: el atributo es el state, no su valor
+                value = _unwrap(value)
             return self._class_string(value, binding) if binding.classes else value
         return "".join(
             p if isinstance(p, str) else _formatted(self.eval(p), p) if isinstance(p, FormattedExpression) else _display(self.eval(p))
@@ -377,9 +379,14 @@ class TemplateInstance:
             return
         write = self._writes[binding_id]
         name = write.target.code.strip()
+        root, *attrs = [part.strip() for part in name.split(".")]
         try:
-            target = self.resolve(name)
-        except NameError:
+            target = self.resolve(root)
+            if attrs:  # como al leer: el nombre se desenvuelve, los atributos no
+                target = _unwrap(target)
+            for attr in attrs:
+                target = getattr(target, attr)
+        except (NameError, AttributeError):
             target = None
         if isinstance(target, State):
             target.value = value

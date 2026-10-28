@@ -29,6 +29,14 @@ TextField {
     // dentro del propio binding (Qt lo toma por un bucle).
     onImplicitWidthChanged: Fx.resized(parent)
     onImplicitHeightChanged: Fx.resized(parent)
+    // on:keydown, on:keyup, on:focus, on:blur: los entrega events.py, como en <flex>
+    // (propagación, event.prevent(), event.stop()). El compilador fija fxOn, fxBridge y fxListen.
+    property var fxOn: null
+    property QtObject fxBridge: null
+    property bool fxListen: false
+    function fxRegister() { if (fxListen && typeof fxevents !== "undefined") fxevents.listen(control) }
+    onFxListenChanged: Qt.callLater(fxRegister)
+    Component.onCompleted: if (fxListen) fxevents.listen(control)
     Accessible.name: placeholderText  // el atributo label la sustituye
 
     color: fxColor

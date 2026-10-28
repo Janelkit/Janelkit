@@ -137,7 +137,7 @@ Las llaves pueden contener cadenas y diccionarios con llaves: `{ {"a": "}"}["a"]
 | `class` | `class="a b"`, `class={["tarjeta", variante, {"activa": sel}]}` | Clases para `<style>`. Con llaves admite texto, listas (anidables) y diccionarios `{clase: condición}`; se recalcula al cambiar lo que lee. Una clase sin reglas en `<style>` produce un aviso. |
 | Clase condicional | `class:activa={sel == id}` | Aplica los estilos de `.activa` mientras la condición sea verdadera. `class:activa` equivale a `class:activa={activa}`. |
 | Evento | `on:click={increment}`, `on:click={count += 1}` | Ver [manejadores de eventos](#manejadores-de-eventos). |
-| Enlace | `bind:value={name}` | Enlace bidireccional con un `state` (nombre simple; no una variable de `{#each}` ni una prop). |
+| Enlace | `bind:value={name}`, `bind:value={prefs.tema}` | Enlace bidireccional con un `state`: un nombre (no una variable de `{#each}` ni una prop) o un camino de atributos que termina en un `state` (el de un módulo, un objeto o una fila: `bind:checked={t.hecha}`). Si el final no es un `state`, se avisa al escribir. |
 
 ### Manejadores de eventos
 
@@ -429,6 +429,31 @@ tema = inject("tema", "claro")       # con valor por defecto
 - `inject` devuelve el valor del antecesor **más cercano** que lo provee: un componente intermedio puede proveer otro valor para su subárbol.
 - Lo que se comparte es el objeto tal cual: para que sea reactivo, comparte un `state` (o un objeto que los contenga).
 - Para estado global de toda la aplicación sigue valiendo un módulo Python (`services/store.py`). El contexto es para valores que dependen de dónde está el componente en el árbol.
+
+## Estado que se recuerda: `persisted`
+
+Lo que la aplicación debe recordar al volver a abrirse (el tema, la última sección, el tamaño de un panel, los archivos recientes) es un `persisted`: un `state` que se guarda solo.
+
+```python
+from fluxui import persisted
+
+tema = persisted("tema", "claro")
+recientes = persisted("recientes", [])
+
+def abrir(ruta):
+    recientes.value.insert(0, ruta)   # los cambios en el sitio también se guardan
+```
+
+- Se usa igual que un `state` (`.value`, `bind:`, en la plantilla sin `.value`). Al crearse lee el valor guardado; si no hay ninguno, toma el inicial.
+- Los cambios se escriben agrupados (como mucho cada 300 ms) y al cerrar la aplicación. La escritura es atómica: un corte no deja el archivo a medias.
+- La clave es de toda la aplicación: `persisted("tema", ...)` en dos módulos es el mismo objeto. Letras, cifras, `.`, `_` y `-`; para agrupar, `prefs.tema`.
+- Solo valores JSON: textos, números, booleanos, `None`, listas y diccionarios con claves de texto. Otro valor da `TypeError` al crearlo o al asignarlo.
+- Cada clave es un archivo `<clave>.json` en la carpeta de datos del usuario más el nombre del proyecto (`%APPDATA%\gestor` en Windows, `~/Library/Application Support/gestor` en macOS, `~/.config/gestor` en Linux). `FLUXUI_DATA_DIR` la cambia.
+- En las pruebas con `fluxui.inspect.mount`, cada montaje usa una carpeta temporal vacía: no se tocan los datos reales. Para probar que algo se recuerda entre dos montajes, fija `FLUXUI_DATA_DIR`.
+- Es para preferencias y datos pequeños: cada cambio reescribe el archivo de esa clave. Los datos grandes de la aplicación (documentos, bases de datos) siguen en sus propios archivos.
+- Lo habitual es reunirlos en un módulo (`services/prefs.py`). `bind:value={prefs.tema}` enlaza con el del módulo; para leerlo en la plantilla sin `.value`, impórtalo por su nombre (`from services.prefs import tema`): la plantilla desenvuelve nombres, no atributos (`{prefs.tema}` es el `state`, `{prefs.tema.value}` su valor).
+
+Ejemplo: `examples/preferencias` (nombre, tema, tamaño de letra, notas y un contador de aperturas; `python examples/preferencias/main.py`, ciérrala y vuelve a abrirla).
 
 ## Listas grandes: `<List>`
 
@@ -766,12 +791,12 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 | `List` | `ListView` | `gap`, `padding`, `animate`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
 | `Text` | `Label` | `text`, `color`, `format` (`plain`, `markdown`, `html`) | `on:link(url)` | — |
 | `Button` | `Button` | `text`, `variant` (`default`, `primary`, `danger`, `ghost`), `flat` | `on:click` | — |
-| `TextField` | `TextField` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:submit(texto)` | `bind:value` |
-| `TextArea` | `TextArea` | `value`, `placeholder`, `readonly` | `on:input(texto)` | `bind:value` |
+| `TextField` | `TextField` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:submit(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
+| `TextArea` | `TextArea` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
 | `Checkbox` | `CheckBox` | `checked`, `text` | `on:change(marcado)` | `bind:checked` |
 | `Switch` | `Switch` | `checked`, `text` | `on:change(activado)` | `bind:checked` |
 | `Slider` | `Slider` | `value`, `min` (0), `max` (100), `step` | `on:change(valor)` | `bind:value` |
-| `Select` | `ComboBox` | `options`, `value`, `placeholder` | `on:change(valor)` | `bind:value` |
+| `Select` | `ComboBox` | `options`, `value`, `placeholder` | `on:change(valor)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
 | `RadioGroup` | `RadioButton`s | `options`, `value`, `horizontal` | `on:change(valor)` | `bind:value` |
 | `Tabs` | `TabBar` | `options`, `value` | `on:change(valor)` | `bind:value` |
 | `ProgressBar` | `ProgressBar` | `value`, `max` (1), `indeterminate` | — | — |
@@ -786,6 +811,11 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 - `Image`: `src` puede ser una ruta relativa a la carpeta del `.flux`, una ruta absoluta o una URL (`https:`, `qrc:`, `data:`). Sin `width`/`height`, toma el tamaño de la imagen.
 - `Shortcut` no ocupa espacio: escucha el teclado de su ventana mientras existe (`<Shortcut keys="Ctrl+S" on:activate={guardar} />`; teclas como en Qt: `Ctrl+Shift+N`, `F5`, `Esc`). Dentro de un `{#if}`, solo está activo con la rama.
 - `TextArea` emite `on:input` solo con los cambios del usuario, no con los que llegan de Python.
+- **Teclado y foco en los campos** (`TextField`, `TextArea`, `Select`): `on:keydown`, `on:keyup`, `on:focus` y `on:blur` funcionan como en `<flex>` ([eventos](flex.md)): suben a los contenedores, `event.stop()` corta la subida y `event.prevent()` hace que la tecla no llegue al campo (no se escribe). Por ejemplo, Escape para cancelar una edición y guardar al salir del campo:
+
+  ```html
+  <TextField bind:value={nombre} on:keydown={event.key == "Escape" and cancelar()} on:blur={guardar()} />
+  ```
 - `Column` y `Row` son atajos de `<flex>` con sus valores por defecto de siempre: en una columna, texto y cajas ocupan el ancho y los controles se quedan a la izquierda; en una fila, los hijos se centran en vertical; solo encoge lo que tiene `flex`. Admiten todo el flexbox de `<flex>` en `<style>` (también `flex-wrap`). Si solo usan lo básico (`gap`, `padding`, alineación, márgenes fijos, un hijo con `flex`), se colocan con un layout de Qt, más rápido; no hay que hacer nada para ello ([Vía rápida](flex.md#vía-rápida-layouts-de-qt)).
 - `<flex>`, `Column` y `Row` con `on:click` se pueden pulsar en toda su superficie (tarjetas, filas): muestran cursor de mano y un resaltado al pasar el ratón. Un botón dentro sigue funcionando por separado.
 - `Scroll` es una columna con desplazamiento vertical; por defecto ocupa el espacio libre (`flex: 1`).

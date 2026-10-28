@@ -83,7 +83,7 @@ class Write:
     """Escritura de `bind:` desde Qt hacia un `state` del script."""
 
     binding_id: str
-    target: Expression  # nombre simple
+    target: Expression  # nombre, o camino de atributos (prefs.tema)
     loc: SourceLocation
 
 

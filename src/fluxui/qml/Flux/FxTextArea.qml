@@ -20,7 +20,10 @@ TextArea {
 
     onFxValueChanged: if (text !== fxValue) text = fxValue
     onTextChanged: if (text !== fxValue) userEdited(text)
-    Component.onCompleted: if (text !== fxValue) text = fxValue
+    Component.onCompleted: {
+        if (text !== fxValue) text = fxValue
+        if (fxListen) fxevents.listen(control)
+    }
 
     Layout.fillWidth: Fx.fillWidth(parent, fxFlex, fxSelfStretch, true, fxSelfAlign)
     Layout.fillHeight: Fx.fillHeight(parent, fxFlex, fxSelfStretch, fxSelfAlign)
@@ -36,6 +39,13 @@ TextArea {
     // dentro del propio binding (Qt lo toma por un bucle).
     onImplicitWidthChanged: Fx.resized(parent)
     onImplicitHeightChanged: Fx.resized(parent)
+    // on:keydown, on:keyup, on:focus, on:blur: los entrega events.py, como en <flex>
+    // (propagación, event.prevent(), event.stop()). El compilador fija fxOn, fxBridge y fxListen.
+    property var fxOn: null
+    property QtObject fxBridge: null
+    property bool fxListen: false
+    function fxRegister() { if (fxListen && typeof fxevents !== "undefined") fxevents.listen(control) }
+    onFxListenChanged: Qt.callLater(fxRegister)
     Accessible.name: placeholderText  // el atributo label la sustituye
 
     color: fxColor

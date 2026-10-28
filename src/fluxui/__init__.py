@@ -25,6 +25,7 @@ from .i18n import i18n, t
 from .lifecycle import Ref, before_leave, inject, on_destroy, on_mount, provide, ref
 from .notifications import notify
 from .pages import PageStack, Sections, navigation, pages, sections
+from .storage import Persisted, persisted
 from .styling.theme import theme
 from .tasks import Task, background, spawn, task
 from .timers import Timer, interval, timeout
@@ -43,6 +44,7 @@ __all__ = [
     "KeyEvent",
     "Prop",
     "PageStack",
+    "Persisted",
     "PointerEvent",
     "PropError",
     "Ref",
@@ -68,6 +70,7 @@ __all__ = [
     "on_destroy",
     "on_mount",
     "pages",
+    "persisted",
     "open_window",
     "prop",
     "provide",

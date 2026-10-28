@@ -430,6 +430,16 @@ def test_event_needs_expression():
 def test_bind_requires_state_name():
     err = compile_error("<TextField bind:value={a + b} />")
     assert "necesita el nombre de un state" in err.first.message
+    err = compile_error("<TextField bind:value={prefs['tema']} />")
+    assert "necesita el nombre de un state" in err.first.message
+
+
+def test_bind_accepts_a_path_of_attributes():
+    compiled = compile_source("""<script>
+from services import prefs
+</script>
+<TextField bind:value={prefs.ajustes.tema} />""")
+    assert compiled.all_warnings == []
 
 
 def test_bind_not_available():

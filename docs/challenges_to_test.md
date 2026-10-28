@@ -152,7 +152,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 | Árbol de archivos | Nodos que se expanden bajo demanda | Se puede imitar con `{#each}` y sangría; **no hay** `<Tree>` virtualizado |
 | Pestañas de documentos | Cada pestaña conserva su texto, cursor y scroll | `<Tabs>` es solo la barra; el contenido con `{#if}` se **destruye** al cambiar |
 | Cerrar con cambios | Preguntar antes de cerrar y poder cancelar | **No hay** forma de interceptar el cierre de la ventana |
-| Preferencias persistentes | Guardar y cargar ajustes en la carpeta del usuario | A mano con JSON; **no hay** API de ajustes |
+| Preferencias persistentes | Guardar y cargar ajustes en la carpeta del usuario | ✅ `persisted(clave, valor)` (antes, a mano con JSON) |
 | Búsqueda en el proyecto | Miles de archivos en segundo plano, resultados incrementales | `background` devuelve un único resultado; faltan resultados por partes |
 | Empaquetado | Un ejecutable con Python, Qt y los recursos | Receta verificada; sin probar `--onefile` ni instalador |
 
@@ -227,7 +227,7 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 
 | Carencia | Retos | Núcleo o proyecto aparte |
 |---|---|---|
-| Eventos de teclado y de puntero (`on:keydown`, doble clic, clic derecho, arrastrar) | 2, 3, 5, 6 | ✅ Núcleo en `<flex>` (fase 3 y reto 3: arrastrar y soltar); faltan en los campos (`<TextField>` sin `on:keydown` ni `on:blur`, reto 3) |
+| Eventos de teclado y de puntero (`on:keydown`, doble clic, clic derecho, arrastrar) | 2, 3, 5, 6 | ✅ Núcleo en `<flex>` (fase 3 y reto 3: arrastrar y soltar); ✅ también en los campos (`TextField`, `TextArea`, `Select`) |
 | Control del desplazamiento (leer y fijar el scroll, anclaje) | 1, 2, 4, 5 | Núcleo · ✅ en `<List>` (retos 4 y 1: también al reordenar); falta en `<Scroll>` |
 | Eventos de ventana (cerrar cancelable, activa) | 4, 5 | Núcleo · ✅ activa (reto 4); ✅ cerrar con la X consulta `before_leave` (reto 6) |
 | Menús (contextual y barra) | 3, 5 | Núcleo (controles básicos) · el reto 3 hizo el contextual con `<flex>` (sin submenús ni recolocación junto al borde) |

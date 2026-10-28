@@ -102,6 +102,45 @@ def test_keydown_bubbles_from_focus_and_prevent_blocks_typing(app_from):
     assert campo.item.property("text") == "b"
 
 
+def test_fields_get_keyboard_and_focus_events(app_from):
+    app = app_from("""<script>
+from fluxui import state
+log = []
+texto = state("")
+def tecla(event):
+    log.append(("campo", event.key))
+    if event.key == "Escape":
+        texto.value = ""
+        event.stop()
+    if event.key == "x":
+        event.prevent()
+</script>
+<Column>
+  <flex on:keydown={log.append(("fila", event.key))}>
+    <TextField label="campo" bind:value={texto} on:keydown={tecla} on:blur={log.append(("blur", event.reason))} />
+  </flex>
+  <TextArea label="area" on:focus={log.append(("focus", event.reason))} on:keyup={log.append(("up", event.key))} />
+  <Select label="sel" options={["a", "b"]} on:keydown={log.append(("sel", event.key))} />
+</Column>""")
+    log = app.get("log")
+    campo = app.find("TextField")
+    campo.focus()
+    for key in (Qt.Key.Key_A, Qt.Key.Key_X, Qt.Key.Key_Escape):
+        QTest.keyClick(app.window, key)
+    app.wait(0.02)
+    # Pasa por el campo y sube a la fila; Escape se queda en el campo (stop) y «x» no se escribe (prevent).
+    assert log == [("campo", "a"), ("fila", "a"), ("campo", "x"), ("fila", "x"), ("campo", "Escape")]
+    assert campo.item.property("text") == "" and app.get("texto") == ""
+    log.clear()
+    QTest.keyClick(app.window, Qt.Key.Key_Tab)  # al área de texto
+    QTest.keyClick(app.window, Qt.Key.Key_B)
+    app.find("Select").key("Down")
+    app.wait(0.02)
+    # Como en la web: Tab baja en el campo que lo tenía y sube en el que lo recibe.
+    assert log == [("campo", "Tab"), ("fila", "Tab"), ("blur", "tab"), ("focus", "tab"), ("up", "Tab"), ("up", "b"),
+                   ("sel", "ArrowDown")]
+
+
 def test_wheel_prevent_stops_scrolling(app_from):
     app = app_from("""<script>
 seen = []

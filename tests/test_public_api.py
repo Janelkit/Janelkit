@@ -11,8 +11,8 @@ API_DOC = (Path(__file__).parent.parent / "docs" / "api.md").read_text(encoding=
 
 PUBLIC = {
     "fluxui": [
-        "Computed", "DragEvent", "Effect", "Event", "FocusEvent", "KeyEvent", "PageStack", "PointerEvent", "ResizeEvent", "WheelEvent", "Prop", "PropError", "Ref", "Sections", "State", "Task", "Timer", "__version__", "background",
-        "batch", "before_leave", "computed", "dialogs", "effect", "event", "i18n", "inject", "interval", "navigation", "notify", "on_destroy", "on_mount", "open_window", "pages", "prop", "provide", "ref", "run", "sections",
+        "Computed", "DragEvent", "Effect", "Event", "FocusEvent", "KeyEvent", "PageStack", "Persisted", "PointerEvent", "ResizeEvent", "WheelEvent", "Prop", "PropError", "Ref", "Sections", "State", "Task", "Timer", "__version__", "background",
+        "batch", "before_leave", "computed", "dialogs", "effect", "event", "i18n", "inject", "interval", "navigation", "notify", "on_destroy", "on_mount", "open_window", "pages", "persisted", "prop", "provide", "ref", "run", "sections",
         "spawn", "state", "t", "task", "theme", "timeout", "untracked",
     ],
     "fluxui.compiler": ["CompiledComponent", "FORMAT_VERSION", "check_file", "check_source", "compile_file", "compile_source"],

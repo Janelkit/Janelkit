@@ -36,8 +36,9 @@ def mount(flux_app):
 
 @pytest.fixture(autouse=True, scope="session")
 def _example_data(tmp_path_factory):
-    """Los ejemplos que guardan datos (examples/compra) escriben en una carpeta temporal, no en $HOME."""
+    """Los ejemplos que guardan datos (examples/compra, persisted) escriben en una carpeta temporal, no en $HOME."""
     os.environ["COMPRA_FILE"] = str(tmp_path_factory.mktemp("datos") / "lista-compra.json")
+    os.environ["FLUXUI_DATA_DIR"] = str(tmp_path_factory.mktemp("persisted"))
     yield
 
 

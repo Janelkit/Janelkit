@@ -21,6 +21,7 @@ from PySide6.QtQml import QQmlComponent, QQmlContext, QQmlEngine, QQmlError, QQm
 from PySide6.QtQuickControls2 import QQuickStyle
 from shiboken6 import Shiboken
 
+from .. import storage
 from ..compiler import CompiledComponent, compile_file
 from ..compiler.qml_generator import BRIDGE_NAME
 from ..diagnostics import Diagnostic, FluxError
@@ -502,6 +503,7 @@ def run(entry: str | os.PathLike[str], argv: list[str] | None = None) -> int:
     if str(path.parent) not in sys.path:
         sys.path.insert(0, str(path.parent))
     dev = os.environ.get(DEV_ENV) == "1"
+    storage.use_app(path)  # persisted() guarda en la carpeta de datos de esta aplicación
 
     compiled: CompiledComponent | None = None
     try:

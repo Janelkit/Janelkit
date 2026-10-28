@@ -8,7 +8,7 @@ Lo público es:
 2. Los nombres listados de `fluxui.compiler`, `fluxui.diagnostics` y `fluxui.inspect`, pensados para herramientas y pruebas.
 3. El formato `.flux`: secciones, sintaxis de plantilla, elementos con sus props y eventos, la importación de componentes `.flux` y de elementos `.qml`, y el CSS soportado ([lenguaje.md](lenguaje.md), [estilos.md](estilos.md)).
 4. Los comandos `flux` y sus opciones ([desarrollo.md](desarrollo.md)).
-5. Las variables de entorno `FLUXUI_DEV`, `FLUXUI_EXIT_AFTER_MS` y `QT_QUICK_CONTROLS_STYLE`.
+5. Las variables de entorno `FLUXUI_DEV`, `FLUXUI_EXIT_AFTER_MS`, `FLUXUI_DATA_DIR` y `QT_QUICK_CONTROLS_STYLE`.
 6. En los archivos `.qml` propios: el objeto `fxtheme`, con los tokens del tema activo (`fxtheme.primary`, `fxtheme.radius`…).
 
 **No es de FluxUI**: el contenido de los archivos `.qml` propios es interfaz de Qt; el compilador solo lee sus `property` y `signal`.
@@ -36,6 +36,8 @@ Lo público es:
 | `Effect` | Tipo de `effect`. `.dispose()`. |
 | `batch` | `with batch():` agrupa cambios; los efectos se ejecutan una vez al final. |
 | `untracked` | `with untracked():` lee estado sin registrar dependencias. |
+| `persisted` | `persisted(clave, valor_inicial)` crea un `Persisted`: un `state` que se recuerda entre sesiones. Lee el valor guardado al crearse y guarda cada cambio (también en el sitio) en `<carpeta de datos>/<clave>.json`, agrupado y al cerrar. La misma clave devuelve el mismo objeto. Solo valores JSON. Ver [lenguaje.md](lenguaje.md#estado-que-se-recuerda-persisted). |
+| `Persisted` | Tipo de `persisted`: lo de `State` más `.key`, `.file` y `.flush()` (escribe ya lo pendiente). |
 
 ### Componentes
 

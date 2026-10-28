@@ -22,7 +22,7 @@ Si algo puede construirse **solo con la API pública** y no todas las aplicacion
 |---|---|---|
 | **Lenguaje `.flux`** | Formato de archivo único (`<script lang="python">`, plantilla, `<style>`), interpolación, `on:`, `bind:`, `class:`, `{#if}`, `{#each}`, `{#key}`, slots | ✅ (también `transition:`, `class={expr}`, manejadores en línea) |
 | **Compilador** | Parser con ubicaciones, análisis del script, IR, generación de QML, diagnósticos con sugerencias | ✅ |
-| **Reactividad** | `state`, `computed`, efectos, props, eventos, **colecciones reactivas**, **contexto** (provide/inject) | ✅ |
+| **Reactividad** | `state`, `computed`, efectos, props, eventos, **colecciones reactivas**, **contexto** (provide/inject), **estado que se recuerda** (`persisted`) | ✅ |
 | **Runtime de componentes** | Instancias, regiones dinámicas, reconciliación por clave, **ciclo de vida** (`on_mount`, `on_destroy`), **referencias a elementos** | ✅ |
 | **Asincronía** | Manejadores `async def` y trabajo en segundo plano con retorno seguro al hilo de la interfaz | ✅ (`qasync`, `@task`, `background`) |
 | **Backend Qt** | Módulo QML interno `Flux`, controles básicos, disposición flex, ventanas | ✅ (varias ventanas, navegación, idiomas y derecha a izquierda) |
@@ -39,7 +39,7 @@ Si algo puede construirse **solo con la API pública** y no todas las aplicacion
 
 - Extensiones de editor, servidor de lenguaje (LSP) o autocompletado.
 - Un framework de pruebas (plugin de pytest, snapshots, fixtures).
-- Gestión de estado avanzada: stores con persistencia, deshacer/rehacer, sincronización.
+- Gestión de estado avanzada: stores con acciones, deshacer/rehacer, sincronización. (Recordar un valor entre sesiones sí es del núcleo: `persisted`.)
 - Bibliotecas de componentes ricos: tablas de datos, gráficas, selectores de fecha, editores de texto enriquecido.
 - Empaquetado de aplicaciones en ejecutables (`.exe`, `.app`, instaladores).
 - Herramientas de inspección visual en tiempo de ejecución (devtools).
@@ -54,7 +54,7 @@ Cada proyecto se apoya en una **API del núcleo** concreta. Esa API es la que el
 |---|---|---|---|
 | **Soporte de editor** (`fluxui-vscode`, `fluxui-lsp`) | Resaltado, diagnósticos en vivo, autocompletado de elementos, props y nombres del script, ir a definición | API del compilador para herramientas | El resaltado de `editors/vscode/` es su semilla; debería salir de este repositorio cuando tenga entidad propia |
 | **Pruebas** (`fluxui-testing`) | Plugin de pytest, fixtures, consultas tipo Testing Library (por texto, por rol), capturas visuales comparables | API de inspección | El núcleo ofrece montar, buscar y disparar eventos; la ergonomía de pruebas va aparte |
-| **Gestión de estado** (`fluxui-store`) | Stores con acciones, persistencia en disco, deshacer/rehacer, estado derivado entre ventanas | `state`, `computed`, efectos, colecciones reactivas, contexto | El núcleo da las primitivas; los patrones de arquitectura van aparte |
+| **Gestión de estado** (`fluxui-store`) | Stores con acciones, deshacer/rehacer, estado derivado entre ventanas | `state`, `computed`, efectos, colecciones reactivas, contexto, `persisted` | El núcleo da las primitivas; los patrones de arquitectura van aparte |
 | **Biblioteca de componentes** (`fluxui-kit`) | Tablas con ordenación y filtrado, gráficas, selectores de fecha, árboles, paneles acoplables | Slots, `ref`, interoperabilidad con Qt, tokens de tema | Se escribe en `.flux` (y QML propio cuando haga falta), como lo haría un usuario |
 | **Empaquetado** (`flux package`) | Generar ejecutables e instaladores con PyInstaller, Nuitka o Briefcase | Ubicación estable de recursos del paquete (módulo QML, plantillas); `flux build` | Puede ser un plugin de la CLI. El núcleo debe garantizar que las apps sean empaquetables y documentar una receta |
 | **Devtools** | Ventana que muestra el árbol de componentes, el estado de cada instancia y qué bindings se recalculan | API de inspección; ganchos de depuración en la reactividad | Útil cuando haya aplicaciones medianas |

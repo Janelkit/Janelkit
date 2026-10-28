@@ -82,6 +82,8 @@ ROUTED_EVENTS = (
 _BOX_EVENTS = {
     name: EventSpec(ROUTE, enables="fxClickable" if name == "click" else None) for name in ROUTED_EVENTS
 }
+# Los campos (TextField, TextArea, Select) también reciben por events.py el teclado y el foco.
+_FIELD_EVENTS = {name: EventSpec(ROUTE) for name in ("keydown", "keyup", "focus", "blur")}
 # Papeles de `as`: los interactivos entran en el orden de Tab y se activan con el teclado.
 ROLES = ("box", "button", "link", "checkbox", "switch", "tab", "menuitem", "option",
          "listitem", "list", "menu", "tablist", "dialog", "heading", "region")  # fmt: skip
@@ -174,6 +176,7 @@ CONTROLS: dict[str, ControlSpec] = {
         events={
             "input": EventSpec("onTextEdited", ("text",)),
             "submit": EventSpec("onAccepted", ("text",)),
+            **_FIELD_EVENTS,
         },
         two_way={"value": TwoWaySpec("text", "onTextEdited")},
     ),
@@ -185,7 +188,7 @@ CONTROLS: dict[str, ControlSpec] = {
             "readonly": PropSpec("readOnly", "bool"),
         },
         # FxTextArea emite userEdited solo con los cambios del usuario (no con los de Python).
-        events={"input": EventSpec("onUserEdited", ("text",), params=("text",))},
+        events={"input": EventSpec("onUserEdited", ("text",), params=("text",)), **_FIELD_EVENTS},
         two_way={"value": TwoWaySpec("fxValue", "onUserEdited", "text", params=("text",))},
     ),
     "Checkbox": ControlSpec(
@@ -220,7 +223,7 @@ CONTROLS: dict[str, ControlSpec] = {
             "value": PropSpec("value"),
             "placeholder": PropSpec("placeholder", "string"),
         },
-        events={"change": EventSpec("onActivated", ("currentValue",))},
+        events={"change": EventSpec("onActivated", ("currentValue",)), **_FIELD_EVENTS},
         two_way={"value": TwoWaySpec("value", "onActivated", "currentValue")},
     ),
     "RadioGroup": ControlSpec(

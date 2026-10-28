@@ -767,14 +767,17 @@ class _Lowerer:
             self.error(f"'{name}' y 'bind:{name}' no pueden usarse a la vez", attr.loc)
             return
         expr = attr.value
-        target = _parse_name(expr.code) if isinstance(expr, Expression) else None
-        if target is None:
+        path = _parse_path(expr.code) if isinstance(expr, Expression) else None
+        if path is None:
             self.error(
                 f"bind:{name} necesita el nombre de un state",
                 attr.loc,
-                f"declara nombre = state(...) en el script y usa bind:{name}={{nombre}}",
+                f"declara nombre = state(...) en el script y usa bind:{name}={{nombre}} (o {{modulo.nombre}})",
             )
             return
+        # Con un punto (prefs.tema) se escribe en el state que hay al final: si lo es, se
+        # comprueba al ejecutar. La variable de la fila o la prop solo son el camino.
+        target = path[0] if len(path) == 1 else None
         if target in self.local_names():
             self.error(
                 f"bind:{name} no puede escribir en la variable de {{#each}} '{target}'",
@@ -1474,6 +1477,21 @@ def _const_matches(value: object, names: frozenset[str]) -> bool:
     if kind == "bool" and "int" in names:
         return True  # bool es un int en Python
     return kind == "int" and "float" in names
+
+
+def _parse_path(code: str) -> list[str] | None:
+    """`nombre` o `a.b.nombre` (solo nombres y atributos): sus partes; si no, None."""
+    try:
+        node = ast.parse(code.strip(), mode="eval").body
+    except SyntaxError:
+        return None
+    parts: list[str] = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if not isinstance(node, ast.Name):
+        return None
+    return [node.id, *reversed(parts)]
 
 
 def _parse_name(code: str) -> str | None:

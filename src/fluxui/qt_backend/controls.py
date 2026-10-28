@@ -68,6 +68,7 @@ _BOX_PROPS.update({
     "tabindex": PropSpec("fxTabIndex", "number"),  # 0: en el orden de Tab; -1: solo por código
     "disabled": PropSpec("disabled", "bool"),
     "title": PropSpec("ToolTip.text", "string"),  # descripción emergente
+    "draggable": PropSpec("fxDraggable", "bool"),  # se puede arrastrar (on:dragstart…, events.py)
 })  # fmt: skip
 
 # Los eventos de las cajas los entrega FluxUI (qt_backend/events.py) con propagación,
@@ -76,6 +77,7 @@ ROUTE = "@route"
 ROUTED_EVENTS = (
     "click", "dblclick", "contextmenu", "pointerdown", "pointerup", "pointermove",
     "pointerenter", "pointerleave", "wheel", "keydown", "keyup", "focus", "blur", "resize",
+    "dragstart", "dragover", "drop", "dragend",
 )  # fmt: skip
 _BOX_EVENTS = {
     name: EventSpec(ROUTE, enables="fxClickable" if name == "click" else None) for name in ROUTED_EVENTS

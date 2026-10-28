@@ -200,6 +200,33 @@ Solo existe la rama activa: al cambiar de rama, los elementos de la anterior se 
 - Si cambia un elemento con la misma clave, la fila se actualiza en su sitio.
 - `{:else}` es opcional y se muestra cuando la lista está vacía.
 
+#### Trasladar filas entre listas
+
+Cuando un elemento pasa de una lista a otra (una tarjeta de una columna a otra), su fila **se traslada** en vez de destruirse y crearse de nuevo, si en el mismo cambio:
+
+1. sale de un `{#each}` con clave,
+2. entra en otra instancia de **la misma declaración** `{#each}` (el mismo sitio del mismo `.flux`: por ejemplo, la lista de tarjetas de dos `Columna`, o un `{#each}` dentro de otro `{#each}`),
+3. con la misma clave.
+
+```html
+<!-- Columna.flux: cada columna es una instancia de este {#each} -->
+{#each columna["tarjetas"] as t (t["id"])}
+  <Tarjeta t={t} />
+{/each}
+```
+
+```python
+def mover(tarjeta, desde, hacia):           # un manejador: todo es un mismo cambio
+    desde["tarjetas"].remove(tarjeta)
+    hacia["tarjetas"].insert(0, tarjeta)
+```
+
+- Los componentes de la fila (`<Tarjeta>`) **conservan su estado**, sus `ref`, temporizadores y tareas; `on_mount` no se repite ni llega `on_destroy`. Si tenían el foco, lo recuperan en su nuevo sitio.
+- Sus props y sus `on:` pasan a evaluarse en la fila nueva (con las variables de la columna destino). Lo obtenido con `inject` se conserva.
+- La vista (QML) sí se crea de nuevo en la otra lista. Los elementos de la fila que no son componentes (`<flex>`, `<Text>`) no tienen estado propio y también se recrean.
+- *El mismo cambio* es un manejador (`on:click`, `on:drop`…), un `batch()` o un único cambio de una colección. Quitar en un manejador y añadir más tarde, tras un `await`, son dos cambios: la fila se destruye y se crea otra.
+- No se traslada: entre declaraciones distintas (aunque usen el mismo componente y la misma clave), en `{#each}` sin clave, ni un componente que recibe contenido de slot. Si la misma clave aparece a la vez en las dos listas, son dos filas.
+
 ### Transiciones al entrar y salir
 
 En el elemento raíz de un bloque `{#if}`, `{#each}` o `{#key}`:

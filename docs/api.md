@@ -60,6 +60,7 @@ Se llaman mientras se ejecuta el `<script>` de un componente; fuera de él lanza
 | `ref` | `ref()` crea una referencia para `ref={nombre}` en la plantilla. |
 | `Ref` | Tipo de `ref`: `.value` (reactivo; el objeto Qt o `None`), `.exists`, `.focused` (¿tiene el foco él o algo de dentro?; no reactivo), `.focus()`, `.blur()`, `.select_all()`; en una `<List>`, `.scroll_to_start()`, `.scroll_to_end()`, `.scroll_to(índice)`. |
 | `PointerEvent` | Lo que recibe `on:click`, `on:dblclick`, `on:contextmenu` y `on:pointer*` de las cajas: `.x`, `.y` (respecto al elemento), `.window_x`, `.window_y`, `.button`, `.buttons`, `.pointer` (`"mouse"`, `"touch"`, `"pen"`, `"keyboard"`), `.clicks`, `.ctrl`, `.shift`, `.alt`, `.meta`. Como todos los eventos: `.prevent()`, `.stop()`, `.type`. |
+| `DragEvent` | `on:dragstart`, `on:dragover`, `on:drop`, `on:dragend` de un `<flex draggable>`: lo de `PointerEvent` más `.data` (lo que se arrastra: lo pone `on:dragstart` y llega igual al resto) y `.dropped` (en `on:dragend`: si algún `on:drop` lo recibió). |
 | `KeyEvent` | `on:keydown`, `on:keyup`: `.key` (como en la web: `"a"`, `"Enter"`, `"ArrowUp"`…), `.code`, `.text`, `.repeat` y los modificadores. |
 | `WheelEvent` | `on:wheel`: `.dx`, `.dy` (px; positivo hacia abajo), `.x`, `.y` y los modificadores. |
 | `FocusEvent` | `on:focus`, `on:blur`: `.reason` (`"tab"`, `"click"`, `"code"`). |
@@ -150,8 +151,8 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 | Nombre | Descripción |
 |---|---|
 | `mount` | `with mount("src/App.flux", headless=True) as app:` monta la aplicación sin ventana visible y la desmonta al salir. |
-| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.dialogs()`, `app.answer_dialog(resultado)`, `app.notifications()`, `app.windows()` (las ventanas abiertas con `open_window`, cada una inspeccionable igual). |
-| `Element` | `.tag`, `.id`, `.text`, `.label`, `.value`, `.visible`, `.enabled`, `.prop(nombre)`; acciones `.click()`, `.type(texto)`, `.submit()`, `.check(bool)`, `.slide(valor)`, `.choose(opción)`, `.focus()`, `.hover()`/`.unhover()` (puntero encima: estilos `:hover`), `.press()`/`.release()` (botón del ratón: `:pressed`; soltar encima es un clic real). `.item` es el objeto Qt (no cubierto por la política de versiones). |
+| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.key("Ctrl+Z")` (pulsa una combinación sobre lo que tenga el foco: atajos), `app.dialogs()`, `app.answer_dialog(resultado)`, `app.notifications()`, `app.windows()` (las ventanas abiertas con `open_window`, cada una inspeccionable igual). |
+| `Element` | `.tag`, `.id`, `.text`, `.label`, `.value`, `.visible`, `.enabled`, `.prop(nombre)`; acciones `.click()`, `.type(texto)`, `.submit()`, `.check(bool)`, `.slide(valor)`, `.choose(opción)`, `.focus()`, `.hover()`/`.unhover()` (puntero encima: estilos `:hover`), `.press()`/`.release()` (botón del ratón: `:pressed`; soltar encima es un clic real). `.double_click()`, `.right_click()` (`on:dblclick`, `on:contextmenu`), `.key("Ctrl+D")` (le da el foco y pulsa la combinación). `.drag_to(destino, x=, y=, cancel=False)` arrastra un `<flex draggable>` y lo suelta sobre `destino` (o pulsa Escape con `cancel=True`). `.item` es el objeto Qt (no cubierto por la política de versiones). |
 | `InspectError` | Elemento no encontrado, ambiguo, desactivado o que no admite la acción. Es un `AssertionError`. |
 
 ## Política de versiones

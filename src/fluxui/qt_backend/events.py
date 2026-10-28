@@ -13,17 +13,26 @@ Los manejadores se ejecutan en el momento, en el hilo de la interfaz: por eso
 `on:click` no pasa por el filtro: lo emite el propio `<flex>` (FxBox.qml), con lo
 que un control de Qt que se queda el clic (un `<Button>` dentro de una fila) sigue
 impidiendo el clic de la fila, como hasta ahora.
+
+Arrastrar y soltar también va por el filtro: al pulsar sobre un `<flex draggable>` y
+moverse más que la distancia de arrastre del sistema, el arrastre empieza (on:dragstart)
+y Qt Quick deja de recibir ese puntero (no hay clic al soltar). Una copia de la caja
+sigue al puntero; la caja con on:drop que hay debajo se marca (:drag-over) y recibe
+on:dragover y, al soltar, on:drop. Escape lo cancela. Cerca del borde de una zona con
+desplazamiento (<List>, <Scroll>, overflow: auto), esta se desplaza sola. Todo dentro
+de una ventana.
 """
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from PySide6.QtCore import QEvent, QObject, QPointF, Qt, QTimer, Slot
+from PySide6.QtCore import QByteArray, QEvent, QObject, QPointF, Qt, QTimer, QUrl, Slot
 from PySide6.QtGui import QGuiApplication, QPointingDevice
+from PySide6.QtQml import QQmlComponent, qmlEngine
 
-from ..events import FocusEvent, KeyEvent, PointerEvent, ResizeEvent, WheelEvent
+from ..events import DragEvent, FocusEvent, KeyEvent, PointerEvent, ResizeEvent, WheelEvent
 
 from shiboken6 import Shiboken
 
@@ -39,7 +48,24 @@ def _alive(obj: Any) -> bool:
 POINTER = ("pointerdown", "pointerup", "pointermove", "dblclick", "contextmenu", "wheel")
 HOVER = ("pointerenter", "pointerleave")
 KEYS = ("keydown", "keyup")
-ROUTED = (*POINTER, *HOVER, *KEYS, "focus", "blur", "resize", "click")
+DRAG = ("dragstart", "dragover", "drop", "dragend")
+ROUTED = (*POINTER, *HOVER, *KEYS, *DRAG, "focus", "blur", "resize", "click")
+
+# Desplazamiento automático al arrastrar: a menos de EDGE px del borde de una zona con
+# desplazamiento, esta avanza hasta SPEED px por paso de 16 ms (más cuanto más cerca).
+_EDGE = 40
+_SPEED = 18
+
+# La copia que sigue al puntero: una imagen de la caja, tomada al empezar.
+_GHOST_QML = b"""import QtQuick
+ShaderEffectSource {
+    property bool fxDecoration: true  // events.py no la cuenta como elemento bajo el puntero
+    live: false
+    enabled: false
+    opacity: 0.85
+    z: 1000000
+}
+"""
 
 _BUTTONS = {
     Qt.MouseButton.LeftButton: "left",
@@ -84,6 +110,18 @@ def _modifiers(mods: Any) -> dict[str, bool]:
 
 
 @dataclass
+class _Drag:
+    source: Any  # el <flex draggable>
+    window: Any
+    data: Any = None
+    offset: QPointF | None = None  # del puntero a la esquina de la caja
+    ghost: Any = None
+    zone: Any = None  # caja con on:drop bajo el puntero (:drag-over)
+    pos: QPointF | None = None  # último punto del puntero (en la escena)
+    scrolls: list = field(default_factory=list)  # [(Flickable, dx, dy)] que se desplazan solos
+
+
+@dataclass
 class _Listener:
     item: Any  # QQuickItem
     bridge: Any  # puente de la plantilla (fx)
@@ -109,6 +147,12 @@ class EventRouter(QObject):
         self._reason = "code"
         self._click_stopped = False
         self._resized: dict[int, _Listener] = {}
+        self._press: tuple[Any, QPointF] | None = None  # <flex draggable> pulsado, y dónde
+        self._drag: _Drag | None = None
+        self._ghosts: dict[int, QQmlComponent] = {}  # por motor de QML
+        self._autoscroll = QTimer(self)
+        self._autoscroll.setInterval(16)
+        self._autoscroll.timeout.connect(self._scroll_step)
 
     # -- registro (desde FxBox.qml) ------------------------------------------
     @Slot(QObject)
@@ -202,10 +246,16 @@ class EventRouter(QObject):
     def eventFilter(self, window: QObject, event: QEvent) -> bool:  # noqa: N802 - API de Qt
         kind = event.type()
         T = QEvent.Type
+        if self._drag is not None or self._press is not None:
+            handled = self._dragging(window, event, kind)
+            if handled is not None:
+                return handled
         if kind == T.MouseMove:
             return self._move(window, event)
         if kind in (T.MouseButtonPress, T.MouseButtonDblClick):
             self._set_reason("click")
+            if kind == T.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
+                self._press_draggable(window, event)
             prevented = self._pointer(window, event, "pointerdown")
             if kind == T.MouseButtonDblClick:
                 prevented = self._pointer(window, event, "dblclick") or prevented
@@ -223,6 +273,199 @@ class EventRouter(QObject):
             self._hover([])
         return False
 
+    # -- arrastrar y soltar ----------------------------------------------------
+    def _press_draggable(self, window: Any, event: Any) -> None:
+        if self._counts["drop"] <= 0 and self._counts["dragstart"] <= 0:
+            return
+        pos = event.scenePosition()
+        for item in self._chain_at(window, pos):
+            if item.property("fxDraggable") is True and item.isEnabled():
+                self._press = (item, pos)
+                return
+
+    def _dragging(self, window: Any, event: Any, kind: QEvent.Type) -> bool | None:
+        """El filtro con una caja pulsada o arrastrándose. None: lo de siempre."""
+        T = QEvent.Type
+        if self._drag is None:  # pulsada: ¿empieza el arrastre?
+            if kind == T.MouseMove and event.buttons() & Qt.MouseButton.LeftButton:
+                source, start = self._press
+                pos = event.scenePosition()
+                if (pos - start).manhattanLength() < QGuiApplication.styleHints().startDragDistance():
+                    return None
+                self._press = None
+                if _alive(source) and self._start_drag(window, source, start, event):
+                    return True
+                return None
+            if kind in (T.MouseButtonRelease, T.MouseButtonPress) or (kind == T.MouseMove and not event.buttons()):
+                self._press = None
+            return None
+        if kind == T.MouseMove:
+            self._drag_move(event.scenePosition(), event)
+            return True
+        if kind == T.MouseButtonRelease:
+            self._drop(event.scenePosition(), event)
+            return True
+        if kind in (T.MouseButtonPress, T.MouseButtonDblClick):
+            return True
+        if kind == T.KeyPress and event.key() == Qt.Key.Key_Escape:
+            self._end_drag(dropped=False)
+            return True
+        if kind in (T.KeyPress, T.KeyRelease):
+            return True  # el teclado no hace nada mientras se arrastra
+        return None
+
+    def _drag_event(self, kind: str, item: Any, pos: QPointF, event: Any = None) -> DragEvent:
+        local = item.mapFromScene(pos)
+        mods = _modifiers(event.modifiers() if event is not None else QGuiApplication.keyboardModifiers())
+        data = self._drag.data if self._drag is not None else None
+        return DragEvent(kind, x=local.x(), y=local.y(), window_x=pos.x(), window_y=pos.y(), button="left",
+                         data=data, **mods)
+
+    @staticmethod
+    def _ancestors(item: Any) -> list[Any]:
+        chain = []
+        while item is not None:
+            chain.append(item)
+            item = item.parentItem()
+        return chain
+
+    def _start_drag(self, window: Any, source: Any, start: QPointF, event: Any) -> bool:
+        data = None
+        for item in self._ancestors(source):
+            listener = self._get(item)
+            if listener is None or "dragstart" not in listener.handlers:
+                continue
+            local = item.mapFromScene(start)
+            ev = DragEvent("dragstart", x=local.x(), y=local.y(), window_x=start.x(), window_y=start.y(),
+                           button="left", data=data, **_modifiers(event.modifiers()))
+            listener.call("dragstart", ev)
+            data = ev.data
+            if ev.prevented:
+                return False
+            if ev.stopped:
+                break
+        # Qt Quick deja de seguir este puntero: lo que lo tenía (un clic a medias) se cancela.
+        for point in event.points():
+            event.setExclusiveGrabber(point, None)
+            event.clearPassiveGrabbers(point)
+        self._drag = _Drag(source, window, data, offset=start - source.mapToScene(QPointF(0, 0)))
+        self._drag.ghost = self._make_ghost(source)
+        source.setProperty("fxDragging", True)
+        self._drag_move(event.scenePosition(), event)
+        return True
+
+    def _make_ghost(self, source: Any) -> Any:
+        engine = qmlEngine(source)
+        if engine is None:
+            return None
+        comp = self._ghosts.get(id(engine))
+        if comp is None:
+            comp = QQmlComponent(engine)
+            comp.setData(QByteArray(_GHOST_QML), QUrl("fluxui-drag-ghost.qml"))
+            self._ghosts[id(engine)] = comp
+        ghost = comp.create()
+        if ghost is None:
+            return None
+        ghost.setParentItem(self._drag.window.contentItem())
+        ghost.setProperty("sourceItem", source)
+        ghost.setWidth(source.width())
+        ghost.setHeight(source.height())
+        return ghost
+
+    def _drag_move(self, pos: QPointF, event: Any) -> None:
+        drag = self._drag
+        drag.pos = pos
+        if drag.ghost is not None and _alive(drag.ghost):
+            drag.ghost.setPosition(drag.window.contentItem().mapFromScene(pos - drag.offset))
+        chain = self._chain_at(drag.window, pos)
+        drag.scrolls = [s for item in chain if item.inherits("QQuickFlickable") and (s := self._edge(item, pos))]
+        if drag.scrolls and not self._autoscroll.isActive():
+            self._autoscroll.start()
+        zone = None
+        for item in chain:
+            listener = self._get(item)
+            if listener is not None and "drop" in listener.handlers and item.isEnabled():
+                zone = item
+                break
+        if zone is not drag.zone:
+            if drag.zone is not None and _alive(drag.zone):
+                drag.zone.setProperty("fxDragOver", False)
+            if zone is not None:
+                zone.setProperty("fxDragOver", True)
+            drag.zone = zone
+        if self._counts["dragover"] > 0:
+            self._bubble(chain, "dragover", lambda item: self._drag_event("dragover", item, pos, event))
+
+    @staticmethod
+    def _edge(flick: Any, pos: QPointF) -> tuple[Any, float, float] | None:
+        """(flick, dx, dy) si el punto está cerca de un borde hacia el que aún se puede desplazar."""
+        p = flick.mapFromScene(pos)
+        w, h = flick.width(), flick.height()
+
+        def speed(near: float) -> float:
+            return _SPEED * (1 - max(near, 0) / _EDGE) + 1
+
+        x, y = flick.property("contentX"), flick.property("contentY")
+        ox, oy = flick.property("originX"), flick.property("originY")
+        max_x = ox + max(flick.property("contentWidth") - w, 0)
+        max_y = oy + max(flick.property("contentHeight") - h, 0)
+        dx = -speed(p.x()) if p.x() < _EDGE and x > ox else speed(w - p.x()) if w - p.x() < _EDGE and x < max_x else 0
+        dy = -speed(p.y()) if p.y() < _EDGE and y > oy else speed(h - p.y()) if h - p.y() < _EDGE and y < max_y else 0
+        return (flick, dx, dy) if dx or dy else None
+
+    @Slot()
+    def _scroll_step(self) -> None:
+        drag = self._drag
+        if drag is None or not drag.scrolls:
+            self._autoscroll.stop()
+            return
+        for flick, dx, dy in drag.scrolls:
+            if not _alive(flick):
+                continue
+            w, h = flick.width(), flick.height()
+            ox, oy = flick.property("originX"), flick.property("originY")
+            if dx:
+                x = flick.property("contentX") + dx
+                flick.setProperty("contentX", min(max(x, ox), ox + max(flick.property("contentWidth") - w, 0)))
+            if dy:
+                y = flick.property("contentY") + dy
+                flick.setProperty("contentY", min(max(y, oy), oy + max(flick.property("contentHeight") - h, 0)))
+        self._drag_move(drag.pos, None)  # lo que hay bajo el puntero cambió
+
+    def _drop(self, pos: QPointF, event: Any) -> None:
+        drag = self._drag
+        dropped = False
+        for item in self._chain_at(drag.window, pos):
+            listener = self._get(item)
+            if listener is None or "drop" not in listener.handlers or not item.isEnabled():
+                continue
+            ev = self._drag_event("drop", item, pos, event)
+            listener.call("drop", ev)
+            dropped = True
+            if ev.stopped:
+                break
+        self._end_drag(dropped)
+
+    def _end_drag(self, dropped: bool) -> None:
+        drag, self._drag = self._drag, None
+        self._autoscroll.stop()
+        if drag.ghost is not None and _alive(drag.ghost):
+            drag.ghost.setParentItem(None)
+            drag.ghost.deleteLater()
+        if drag.zone is not None and _alive(drag.zone):
+            drag.zone.setProperty("fxDragOver", False)
+        if not _alive(drag.source):
+            return  # el on:drop la quitó (p. ej. la movió a otra lista): no hay a quién avisar
+        drag.source.setProperty("fxDragging", False)
+        for item in self._ancestors(drag.source):
+            listener = self._get(item)
+            if listener is None or "dragend" not in listener.handlers:
+                continue
+            ev = DragEvent("dragend", data=drag.data, dropped=dropped, button="left")
+            listener.call("dragend", ev)
+            if ev.stopped:
+                break
+
     def _set_reason(self, reason: str) -> None:
         # El foco que cambie mientras Qt entrega este evento cambia «por» él.
         self._reason = reason
@@ -237,24 +480,35 @@ class EventRouter(QObject):
         item = window.contentItem()
         while item is not None:
             items.append(item)
-            local = item.mapFromScene(pos)
-            child = item.childAt(local.x(), local.y())
-            if child is not None and child.property("fxDecoration") is True:
-                child = self._scan(item, local)
-            item = child
+            item = self._scan(item, item.mapFromScene(pos))
         items.reverse()
         return items
 
     @staticmethod
     def _scan(item: Any, local: QPointF) -> Any:
-        """Como childAt, sin las decoraciones de una caja (bordes por lado, contorno)."""
-        for child in reversed(item.childItems()):
-            if not child.isVisible() or child.property("fxDecoration") is True:
+        """Como childAt, pero en el orden en que Qt dibuja (por `z`, y a igual `z` el último)
+        y sin las decoraciones de una caja (bordes por lado, contorno). childAt solo mira el
+        orden de los hijos: en una ListView, un elemento vacío de z 0 tapaba las filas (z 1).
+
+        Si ningún hijo contiene el punto, vale uno cuyo contenido se sale de él y lo
+        contiene (como en Qt, sin `clip` un hijo fuera de su padre recibe el puntero): una
+        fila de <List animate> que aún se desliza fuera del alto nuevo de la lista."""
+        children = [c for c in item.childItems() if c.isVisible() and c.property("fxDecoration") is not True]
+        found = None
+        for child in children:
+            if found is not None and child.z() < found.z():
                 continue
             p = child.mapFromItem(item, local)
             if 0 <= p.x() < child.width() and 0 <= p.y() < child.height():
-                return child
-        return None
+                found = child
+        if found is not None:
+            return found
+        for child in children:
+            if found is not None and child.z() < found.z():
+                continue
+            if not child.clip() and child.childItems() and child.childrenRect().contains(child.mapFromItem(item, local)):
+                found = child
+        return found
 
     def _get(self, item: Any) -> _Listener | None:
         key = _key(item)

@@ -16,6 +16,7 @@ de un manejador `async def`.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -53,6 +54,18 @@ class PointerEvent(_Modifiers, _Event):
     buttons: tuple[str, ...] = ()  # pulsados ahora
     pointer: str = "mouse"  # "mouse", "touch", "pen" o "keyboard" (on:click con Espacio o Intro)
     clicks: int = 1
+
+
+@dataclass
+class DragEvent(PointerEvent):
+    """on:dragstart, on:dragover, on:drop, on:dragend (arrastrar un `<flex draggable>`).
+
+    `data` es lo que se arrastra: lo pone el manejador de on:dragstart (cualquier objeto
+    de Python) y llega igual a on:dragover, on:drop y on:dragend. En on:dragend, `dropped`
+    dice si algún on:drop lo recibió (False si se soltó fuera o se canceló con Escape)."""
+
+    data: Any = None
+    dropped: bool = False
 
 
 @dataclass

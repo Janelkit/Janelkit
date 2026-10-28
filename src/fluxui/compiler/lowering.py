@@ -317,8 +317,8 @@ class _Lowerer:
             [root_ir, *(f.root for f in self.slot_fragments if f.root is not None)],
             self.root_features, self.root_in_engine,
         )
-        # Avisa al runtime de que la vista existe (on_mount).
-        root_ir.handlers.setdefault("Component.onCompleted", []).append("fx.mounted()")
+        # Avisa al runtime de que la vista existe (on_mount) y cuál es su raíz.
+        root_ir.handlers.setdefault("Component.onCompleted", []).append("fx.mounted(this)")
 
         return IRComponent(
             file=sfc.file,

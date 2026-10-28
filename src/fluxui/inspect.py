@@ -50,6 +50,18 @@ def _move_pointer(window: Any, pos: Any) -> None:
     QTest.mouseMove(window, pos)
 
 
+def _send_keys(window: Any, keys: str) -> None:
+    """Pulsa y suelta una combinación como en <Shortcut>: "Ctrl+D", "Alt+Right", "Delete"."""
+    from PySide6.QtGui import QKeySequence
+    from PySide6.QtTest import QTest
+
+    seq = QKeySequence(keys)
+    if seq.count() != 1:
+        raise InspectError(f"no entiendo la combinación de teclas {keys!r} (p. ej. 'Ctrl+D', 'Alt+Right', 'Delete')")
+    combo = seq[0]
+    QTest.keyClick(window, combo.key(), combo.keyboardModifiers())
+
+
 class InspectError(AssertionError):
     """Un elemento no se encontró o no admite la acción pedida."""
 
@@ -209,6 +221,31 @@ class Element:
         self.item.forceActiveFocus()
         return self._settle()
 
+    def key(self, keys: str) -> "Element":
+        """Da el foco al elemento y pulsa una combinación de teclas ("Ctrl+D", "Alt+Right",
+        "Delete", "Escape"): llega a sus on:keydown/on:keyup y a los de sus contenedores."""
+        self.focus()
+        _send_keys(self._app.window, keys)
+        return self._settle()
+
+    def double_click(self) -> "Element":
+        """Doble clic real en el centro del elemento (on:dblclick)."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+
+        self._require_enabled("double_click")
+        QTest.mouseDClick(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center())
+        return self._settle()
+
+    def right_click(self) -> "Element":
+        """Clic con el botón derecho en el centro del elemento (on:contextmenu)."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+
+        self._require_enabled("right_click")
+        QTest.mouseClick(self._app.window, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, self._center())
+        return self._settle()
+
     def hover(self) -> "Element":
         """Pone el puntero del ratón sobre el centro del elemento (activa sus estilos :hover)."""
         from PySide6.QtCore import QPoint
@@ -240,6 +277,31 @@ class Element:
         from PySide6.QtTest import QTest
 
         QTest.mouseRelease(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center())
+        return self._settle()
+
+    def drag_to(self, target: "Element", *, x: float | None = None, y: float | None = None,
+                cancel: bool = False) -> "Element":
+        """Arrastra el elemento (un `<flex draggable>`) y lo suelta sobre `target`: en su
+        centro, o en (`x`, `y`) respecto a él. Con `cancel=True` pulsa Escape en vez de soltar."""
+        from PySide6.QtCore import QPoint, QPointF, Qt
+        from PySide6.QtTest import QTest
+
+        window = self._app.window
+
+        def end() -> QPoint:  # el destino puede estar moviéndose (una lista animada): se le sigue
+            local = QPointF(target.item.width() / 2 if x is None else x, target.item.height() / 2 if y is None else y)
+            return target.item.mapToScene(local).toPoint()
+
+        start = self._center()
+        QTest.mousePress(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+        self._settle()
+        for i in range(1, 6):  # varios pasos: pasa la distancia de arrastre y recorre el camino
+            to = end()
+            QTest.mouseMove(window, start + QPoint((to.x() - start.x()) * i // 5, (to.y() - start.y()) * i // 5))
+            self._settle()
+        if cancel:
+            QTest.keyClick(window, Qt.Key.Key_Escape)
+        QTest.mouseRelease(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, end())
         return self._settle()
 
     def _center(self) -> Any:
@@ -389,6 +451,12 @@ class MountedApp:
         labels.sort(key=lambda i: (round(i.mapToScene(QPointF(0, 0)).y()), i.mapToScene(QPointF(0, 0)).x()))
         return [i.property("text") for i in labels]
 
+    def key(self, keys: str) -> None:
+        """Pulsa una combinación de teclas en la ventana, sobre lo que tenga el foco
+        (atajos de <Shortcut>: "Ctrl+Z", "Ctrl+Shift+Z", "F5")."""
+        _send_keys(self.window, keys)
+        self.process()
+
     # -- tiempo ---------------------------------------------------------------
     def process(self) -> None:
         """Procesa los eventos pendientes de Qt (y la disposición de las listas)."""
@@ -453,11 +521,18 @@ class MountedApp:
     # -- internos -------------------------------------------------------------
     @staticmethod
     def _walk(root: Any) -> list[Any]:
+        from PySide6.QtQml import qmlContext
+
         out, stack = [], [root]
         while stack:
             item = stack.pop()
             out.append(item)
-            stack.extend(reversed(item.childItems()))
+            children = item.childItems()
+            parent = item.parentItem()
+            if parent is not None and parent.inherits("QQuickListView") and item is parent.property("contentItem"):
+                # Filas de <List animate> que salen: ya no cuentan (índice -1), aunque se vean un momento.
+                children = [c for c in children if (ctx := qmlContext(c)) is None or ctx.contextProperty("index") != -1]
+            stack.extend(reversed(children))
         return out
 
 

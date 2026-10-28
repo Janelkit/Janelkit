@@ -20,6 +20,7 @@ _scope_stack: list["Scope"] = []
 _batch_depth = 0
 _flushing = False
 _pending: dict["Effect", None] = {}  # conjunto ordenado
+_settled: list[Callable[[], Any]] = []  # se ejecutan cuando ya no queda ningún efecto pendiente
 _MAX_FLUSH_ITERATIONS = 10_000
 # El sistema reactivo vive en un solo hilo (el de la interfaz). Desde otros hilos
 # (p. ej. código de `background()`) leer no registra dependencias y escribir es un error.
@@ -193,16 +194,28 @@ def _flush() -> None:
     _flushing = True
     try:
         iterations = 0
-        while _pending:
+        while _pending or _settled:
             iterations += 1
             if iterations > _MAX_FLUSH_ITERATIONS:
                 _pending.clear()
+                _settled.clear()
                 raise ReactiveCycleError("ciclo reactivo: los efectos se reactivan entre sí sin estabilizarse")
+            if not _pending:
+                _settled.pop(0)()
+                continue
             effect = next(iter(_pending))
             del _pending[effect]
             effect.run()
     finally:
         _flushing = False
+
+
+def when_settled(fn: Callable[[], Any]) -> None:
+    """Llama a `fn` al terminar el cambio en curso (el lote y todos sus efectos), o ya si no hay ninguno."""
+    if _flushing or _batch_depth:
+        _settled.append(fn)
+    else:
+        fn()
 
 
 @contextmanager

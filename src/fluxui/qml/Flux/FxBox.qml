@@ -68,6 +68,10 @@ Rectangle {
     // El compilador los activa cuando una regla usa :hover o :pressed.
     property bool fxTrackHover: false
     property bool fxTrackPress: false
+    // Arrastrar y soltar (qt_backend/events.py): draggable, :dragging y :drag-over.
+    property bool fxDraggable: false
+    property bool fxDragging: false
+    property bool fxDragOver: false
     property bool fxKeyDown: false
     readonly property bool fxPressed: (fxTap !== null && fxTap.pressed) || fxKeyDown || (fxBlocker !== null && fxBlocker.pressed)
     readonly property bool fxSides: fxBorderTop >= 0 || fxBorderRight >= 0 || fxBorderBottom >= 0 || fxBorderLeft >= 0

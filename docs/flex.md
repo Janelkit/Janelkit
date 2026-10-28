@@ -98,6 +98,7 @@ press = event()
 | `as` | `"box"` (por defecto), `"button"`, `"link"`, `"checkbox"`, `"switch"`, `"tab"`, `"menuitem"`, `"dialog"`, `"listitem"`, `"heading"`… | Papel para la accesibilidad y comportamiento de teclado asociado (ver [Accesibilidad](#accesibilidad)). No cambia el aspecto. |
 | `disabled` | bool | Activa `:disabled`, deja de recibir eventos de puntero y teclado y sale del orden de Tab. |
 | `checked`, `selected`, `expanded` | bool | Estados que exponen `:checked`, `:selected`, `:expanded` a los estilos y a la accesibilidad. |
+| `draggable` | bool | La caja se puede arrastrar: ver [Arrastrar y soltar](#arrastrar-y-soltar). |
 | `tabindex` | `0` (entra en el orden de Tab), `-1` (enfocable solo por código) | Como en HTML. Por defecto, solo los papeles interactivos (`as="button"`…) son enfocables. |
 | `label` | texto | Nombre accesible (como hoy). |
 | `title` | texto | Descripción emergente al dejar el ratón encima (tooltip del sistema). |
@@ -186,6 +187,8 @@ La herencia **atraviesa los componentes y los slots**: el texto que el padre pas
 | `:focus-within` | él o un descendiente tiene el foco |
 | `:disabled` | `disabled={True}` |
 | `:checked`, `:selected`, `:expanded` | el atributo correspondiente es verdadero |
+| `:dragging` | la caja se está arrastrando |
+| `:drag-over` | se arrastra algo encima de esta caja, que tiene `on:drop` |
 | `:first-child`, `:last-child` | primero o último entre sus hermanos (también dentro de `{#each}`) |
 
 - Se combinan con clases: `.boton.primary:hover`.
@@ -238,6 +241,7 @@ Todos se escuchan con `on:` y el manejador está en Python (función o en línea
 | `on:keydown`, `on:keyup` | tecla, con el foco en el `<flex>` o en un descendiente | `KeyEvent` |
 | `on:focus`, `on:blur` | gana o pierde el foco (`focusin`/`focusout` para descendientes) | `FocusEvent` |
 | `on:resize` | cambia su tamaño | `{"width", "height"}` |
+| `on:dragstart`, `on:dragover`, `on:drop`, `on:dragend` | arrastrar y soltar: ver [Arrastrar y soltar](#arrastrar-y-soltar) | `DragEvent` |
 
 ```python
 from fluxui import KeyEvent, PointerEvent   # tipos públicos, para anotar
@@ -267,7 +271,29 @@ Todos tienen:
 
 Un manejador `async def` también se puede usar, pero `prevent()` y `stop()` solo tienen efecto antes de su primer `await`.
 
-**Arrastrar y soltar** (`draggable`, `on:dragstart`, `on:dragover`, `on:drop`) y la captura del puntero no entran en esta versión. Se diseñarán con el reto Kanban, sobre estos mismos eventos.
+### Arrastrar y soltar
+
+Una caja con `draggable` se arrastra al pulsarla y mover el puntero más que la distancia de arrastre del sistema (una pulsación corta sigue siendo un clic). Lo que se arrastra es un valor de Python, no texto:
+
+```html
+<flex class="tarjeta" draggable on:dragstart={event.data = tarjeta["id"]}>…</flex>
+
+<flex class="columna" on:drop={mover(event.data, columna)}>…</flex>
+
+<style>
+.tarjeta:dragging { opacity: 0.4; }      /* la original, mientras su copia sigue al puntero */
+.columna:drag-over { background: var(--surface-alt); }
+</style>
+```
+
+| Evento | Dónde | Cuándo |
+|---|---|---|
+| `on:dragstart` | la caja `draggable` y sus antecesores | Empieza el arrastre. Pon `event.data`; `event.prevent()` lo cancela. |
+| `on:dragover` | las cajas bajo el puntero (propagación) | El puntero se mueve durante el arrastre. `event.x`/`event.y` sirven para decidir en qué posición se soltaría. |
+| `on:drop` | la caja con `on:drop` más profunda bajo el puntero (y las de fuera si no hace `stop()`) | Se suelta. Solo las cajas con `on:drop` son destino y se marcan con `:drag-over`. |
+| `on:dragend` | la caja `draggable` y sus antecesores | Termina, con `event.dropped` (`False` si se soltó fuera o se pulsó Escape). Si `on:drop` quitó la caja (la movió a otra lista), no llega. |
+
+Todos reciben un `DragEvent`: lo de `PointerEvent` más `.data` y `.dropped`. Mientras se arrastra, una imagen de la caja sigue al puntero, el teclado no hace nada más que Escape (cancela) y no hay clic al soltar. Cerca del borde (40 px) de una zona con desplazamiento (`<List>`, `<Scroll>`, `overflow: auto`), esta avanza sola, más deprisa cuanto más cerca. Funciona dentro de una ventana; arrastrar entre ventanas o desde otras aplicaciones (archivos) no entra en esta versión. En pruebas, `Element.drag_to(destino)` (`fluxui.inspect`).
 
 ## Accesibilidad
 
@@ -382,7 +408,7 @@ Además:
 
 - **Paridad:** el `Boton.flux` del ejemplo y el `Button` integrado se comparan en capturas y en el árbol de accesibilidad.
 - **Rendimiento:** con 1 000 `<flex>` en pantalla, crearlos no puede tardar más que con `Column` + 10 %. Pasar el ratón no llama a Python. Una rejilla de 200 tarjetas con `wrap` se recoloca al redimensionar en menos de 4 ms por fotograma (instrumentación de Qt, como en `examples/challenges/panel/bench.py`).
-- **Retos:** el Kanban (reto 3) se construirá sobre `<flex>`. Ahí aparecerá lo que le falte (arrastrar y soltar).
+- **Retos:** el Kanban (reto 3) está hecho sobre `<flex>` y trajo arrastrar y soltar ([hallazgos](../examples/challenges/kanban/HALLAZGOS.md)).
 
 ## Fases de implementación
 

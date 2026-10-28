@@ -212,6 +212,10 @@ class Cascade:
             return f"Fx.within({i}, {i}.Window.activeFocusItem)"
         if name == "disabled":
             return f"!{i}.enabled"
+        if name == "dragging":  # los pone qt_backend/events.py al arrastrar
+            return f"{i}.fxDragging"
+        if name == "drag-over":
+            return f"{i}.fxDragOver"
         if name in ("checked", "selected", "expanded"):
             return f"{i}.{name} === true"
         # :first-child / :last-child: los marca el motor de <flex> (flex.js).

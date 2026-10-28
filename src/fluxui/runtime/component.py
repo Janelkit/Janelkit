@@ -5,6 +5,9 @@
 - `TemplateInstance` da vida a una plantilla: el componente completo o una
   fila de `{#each}` / rama de `{#if}`. Tiene su propio puente `fx` y su propio
   ámbito reactivo, que se libera al desmontarla.
+- Una fila que sale de un `{#each}` con clave y entra, en el mismo cambio, en otra
+  instancia de la misma declaración con la misma clave se *traslada*: sus
+  componentes (con su estado) pasan a la fila nueva en vez de crearse otra vez.
 - Los nombres de las expresiones se resuelven en cadena: variables de la fila
   (`item`, `i`), luego las de los fragmentos que la contienen, luego el script
   y por último los builtins. `state`, `computed` y props se desenvuelven.
@@ -17,6 +20,7 @@ import inspect
 import logging
 import types
 import typing
+import weakref
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import CodeType
@@ -51,6 +55,7 @@ from ..tasks import spawn
 from ..reactivity import Computed, Effect, Event, Prop, PropError, Scope, State, batch, untracked
 from ..reactivity.props import REQUIRED
 from ..reactivity.collections import to_plain
+from ..reactivity.effects import when_settled
 from ..reactivity.state import _same
 from .list_model import LazySlotModel, SlotModel
 from .qt_bridge import make_bridge_class
@@ -160,6 +165,10 @@ class TemplateInstance:
         self.bridge = _bridge_class(component.compiled, template)(self, bridge_parent) if with_bridge else None
         self.regions: list[_Region] = []
         self._attached: list[tuple[Ref, QObject]] = []
+        # Filas de {#each}: componentes creados directamente en la fila (por ordinal), para
+        # poder trasladarlos, y los que llegan de otra fila para adoptarlos en vez de crearlos.
+        self.created: dict[int, ComponentInstance] | None = None
+        self.adopt: dict[int, ComponentInstance] | None = None
 
     def start(self) -> None:
         if self._refs:
@@ -255,9 +264,9 @@ class TemplateInstance:
     def bridge_write(self, binding_id: str, value: Any) -> None:
         self._write(binding_id, value)
 
-    def bridge_mounted(self) -> None:
+    def bridge_mounted(self, item: QObject) -> None:
         if self.parent is None and not self.disposed:
-            self.component.view_created()
+            self.component.view_created(item)
 
     def bridge_ref(self, ref_id: str, item: QObject, attached: bool) -> None:
         use = self._refs[ref_id]
@@ -386,13 +395,24 @@ class TemplateInstance:
 
     def create_child(self, use: ComponentUse, bridge_parent: QObject | None) -> "ComponentInstance":
         compiled = self.component.compiled.component(use.path)
-        incoming: dict[str, State] = {}
+        adopted = self.adopt.pop(use.ordinal, None) if self.adopt else None
+        if adopted is not None and (adopted.compiled is not compiled or use.slots or adopted.disposed):
+            _discard_children({0: adopted})  # el contenido de un slot vive en la fila vieja: no se traslada
+            adopted = None
+        # Un componente trasladado conserva sus fuentes de props: los efectos de esta
+        # fila empiezan a escribir en ellas (con los nombres de su nuevo padre).
+        incoming: dict[str, State] = adopted._incoming if adopted is not None else {}
         with self.scope.active():
             for name, arg in use.props.items():
                 if isinstance(arg, ConstArg):
-                    incoming[name] = State(arg.value)
+                    if name in incoming:
+                        incoming[name].value = arg.value
+                    else:
+                        incoming[name] = State(arg.value)
                     continue
-                source: State = State(None)
+                source: State | None = incoming.get(name)
+                if source is None:
+                    source = State(None)
 
                 def push(arg: Expression = arg, source: State = source) -> None:
                     source.value = self.eval(arg)
@@ -413,11 +433,20 @@ class TemplateInstance:
                 if inst.row_key is not None:
                     rows.append(inst.row_key)
                 inst = inst.parent
-            child = ComponentInstance(
-                compiled, self.component.host, incoming, events, bridge_parent, parent=self.component, slots=slots,
-                prop_locs=locs, hmr_key=(use.tag, use.ordinal, tuple(reversed(rows))),
-            )  # fmt: skip
+            hmr_key = (use.tag, use.ordinal, tuple(reversed(rows)))
+            if adopted is not None:
+                adopted.adopt(self.component, events, hmr_key, bridge_parent)
+                child = adopted
+            else:
+                child = ComponentInstance(
+                    compiled, self.component.host, incoming, events, bridge_parent, parent=self.component, slots=slots,
+                    prop_locs=locs, hmr_key=hmr_key,
+                )  # fmt: skip
         self.scope.add(child.scope)
+        if self.row_key is not None:
+            if self.created is None:
+                self.created = {}
+            self.created[use.ordinal] = child
         return child
 
     def report(self, message: str, loc: SourceLocation | None, exc: BaseException | None = None, hint: str | None = None) -> None:
@@ -434,6 +463,7 @@ class _Row:
     bridge: QObject
     child: "ComponentInstance | None" = None  # si el fragmento es un único componente
     leave_ms: int = 0  # duración de su animación de salida (out:/transition:)
+    carried: "dict[int, ComponentInstance] | None" = None  # trasladados, esperando a que <List> cree la fila
 
 
 class _Region:
@@ -455,6 +485,7 @@ class _Region:
         names: dict[str, Any],
         key: Any = None,
         origin: TemplateInstance | None = None,
+        adopt: "dict[int, ComponentInstance] | None" = None,
     ) -> _Row | None:
         """Crea el fragmento en `model`. `origin` es la plantilla donde se escribió (otra, si es contenido de un slot)."""
         owner = self.owner
@@ -468,6 +499,7 @@ class _Region:
             with_bridge=fragment.root is not None,
         )
         inst.row_key = key
+        inst.adopt = adopt
         owner.scope.add(inst.scope)
         child = None
         try:
@@ -478,11 +510,14 @@ class _Region:
             else:
                 bridge = inst.bridge
         except Exception as exc:  # noqa: BLE001 - p. ej. un error en el script de un hijo
+            _discard_children(inst.adopt)
             inst.dispose()
             owner.scope.discard(inst.scope)
             loc = fragment.component.loc if fragment.component else (fragment.root.loc if fragment.root else None)
             origin.report(f"no se pudo crear el contenido: {type(exc).__name__}: {exc}", loc, exc)
             return None
+        _discard_children(inst.adopt)
+        inst.adopt = None
         model.insert(position, bridge)
         flush_mounts()
         return _Row(key, None, None, inst, bridge, child, fragment.leave_ms)
@@ -508,7 +543,7 @@ class _Region:
         if not row.instance.disposed:
             row.instance.dispose()
         self.owner.scope.discard(row.instance.scope)
-        if Shiboken.isValid(row.bridge):
+        if row.bridge is not None and Shiboken.isValid(row.bridge):
             row.bridge.deleteLater()
 
 
@@ -521,6 +556,10 @@ class _EachRegion(_Region):
         self.empty_model = self.new_model(slot.empty_model_id, slot.empty_fragment) if slot.empty_model_id else None
         self.empty_row: _Row | None = None
         self._reported_keys = False
+        self.started = False  # la primera reconciliación (al montar) no busca traslados
+        self.by_key: dict[Any, _Row] = {}
+        if slot.key is not None:
+            _each_regions.setdefault(id(slot), weakref.WeakSet()).add(self)
 
         def on_error(exc: BaseException) -> None:
             owner.report(f"error en {{#each}}: {type(exc).__name__}: {exc}", slot.iterable.loc, exc)
@@ -533,7 +572,10 @@ class _EachRegion(_Region):
         with untracked():
             if not self.slot.fragment.empty:
                 self.reconcile(items)
+                if self.slot.key is not None:
+                    self.by_key = {row.key: row for row in self.rows}
             self.update_empty(not items)
+        self.started = True
 
     def keys_for(self, items: list) -> list:
         slot = self.slot
@@ -599,10 +641,76 @@ class _EachRegion(_Region):
         index_state = None
         if slot.index:
             index_state = names[slot.index] = State(index)
-        row = self.mount(slot.fragment, self.model, pos, names, key)
+        row = self.mount(slot.fragment, self.model, pos, names, key, adopt=self.arriving(key))
         if row is not None:
             row.item, row.index = item, index_state
         return row
+
+    # -- traslados entre instancias de la misma declaración ------------------------
+    def arriving(self, key: Any) -> "dict[int, ComponentInstance] | None":
+        """Componentes de una fila con esta clave que sale, en este mismo cambio, de otra
+        lista de la misma declaración: aparcada (ya salió) o aún en su lista, si esta ya no la quiere."""
+        if self.slot.key is None or not self.started:
+            return None
+        carried = _parked.pop((id(self.slot), key), None)
+        if carried is not None:
+            return carried
+        for region in list(_each_regions.get(id(self.slot), ())):
+            if region is self or region.slot is not self.slot or region.owner.disposed:
+                continue
+            row = region.by_key.get(key)
+            if row is not None and (row.instance is not None or row.carried):
+                return region.give(row)
+        return None
+
+    def give(self, row: _Row) -> "dict[int, ComponentInstance] | None":
+        """Otra lista reclama `row` antes de que esta se actualice: se la cede si ya no está en sus datos."""
+        with untracked():
+            value = self.owner.eval(self.slot.iterable)
+            if row.key in set(self.keys_for([] if value is None else list(value))):
+                return None  # la misma clave en dos listas a la vez: son dos filas
+        carried = self.carry(row)
+        if not carried:
+            return None
+        position = self.rows.index(row)
+        self.rows.pop(position)
+        self.by_key.pop(row.key, None)
+        self.model.remove(position)
+        if row.instance is not None:
+            self._release(row)
+        return carried
+
+    def carry(self, row: _Row) -> "dict[int, ComponentInstance] | None":
+        """Separa de la fila sus componentes para trasladarlos (antes de quitar su vista)."""
+        if row.instance is None:
+            carried, row.carried = row.carried, None
+            return carried
+        carried, row.instance.created = row.instance.created, None
+        for child in (carried or {}).values():
+            child.remember_focus()
+            row.instance.scope.discard(child.scope)
+            child.bridge.setParent(self.model)  # la fila vieja se libera: su puente no debe arrastrarlo
+            if row.bridge is child.bridge:
+                row.bridge = None
+        return carried
+
+    def park(self, model: SlotModel, position: int, row: _Row) -> bool:
+        """Al quitar una fila con clave, sus componentes esperan hasta el final del cambio
+        por si otra lista de la misma declaración la recibe."""
+        if model is not self.model or self.slot.key is None or self.owner.disposed:
+            return False
+        carried = self.carry(row)
+        if not carried:
+            return False
+        model.remove(position)
+        if row.instance is not None:
+            self._release(row)
+        _park((id(self.slot), row.key), carried)
+        return True
+
+    def unmount(self, model: SlotModel, position: int, row: _Row) -> None:
+        if not self.park(model, position, row):
+            super().unmount(model, position, row)
 
     def update_empty(self, is_empty: bool) -> None:
         if self.empty_model is None:
@@ -633,7 +741,11 @@ class _LazyEachRegion(_EachRegion):
         return row
 
     def placeholder(self, key: Any, value: Any, index: int) -> _Row:
-        return _Row(key, State(value), State(index) if self.slot.index else None, None, None)  # type: ignore[arg-type]
+        row = _Row(key, State(value), State(index) if self.slot.index else None, None, None)  # type: ignore[arg-type]
+        row.carried = self.arriving(key)
+        for child in (row.carried or {}).values():
+            child.bridge.setParent(self.model)  # espera aquí hasta que ListView pida la fila
+        return row
 
     def reconcile(self, items: list) -> None:
         keys = self.keys_for(items)
@@ -654,6 +766,8 @@ class _LazyEachRegion(_EachRegion):
         self.rows = rows
         self.model.reset([row.bridge if row.bridge is not None else row for row in rows])
         for row in old.values():
+            if self.slot.key is not None and (carried := self.carry(row)):
+                _park((id(self.slot), row.key), carried)
             if row.instance is not None:
                 row.instance.dispose()
                 self.owner.scope.discard(row.instance.scope)
@@ -697,14 +811,18 @@ class _LazyEachRegion(_EachRegion):
             names[slot.index] = row.index
         inst = TemplateInstance(owner.component, slot.fragment.template, names, parent=owner, bridge_parent=self.model)
         inst.row_key = row.key
+        inst.adopt, row.carried = row.carried, None
         owner.scope.add(inst.scope)
         try:
             inst.start()
         except Exception as exc:  # noqa: BLE001
+            _discard_children(inst.adopt)
             inst.dispose()
             owner.scope.discard(inst.scope)
             owner.report(f"no se pudo crear la fila: {type(exc).__name__}: {exc}", slot.fragment.root.loc, exc)
             return None
+        _discard_children(inst.adopt)
+        inst.adopt = None
         row.instance, row.bridge = inst, inst.bridge
         _schedule_flush()
         return inst.bridge
@@ -712,6 +830,8 @@ class _LazyEachRegion(_EachRegion):
     LEAVE_MS = 220  # algo más que la animación de salida de <List animate> (FxList.fxAnimMs)
 
     def unmount(self, model: SlotModel, position: int, row: _Row) -> None:
+        if self.park(model, position, row):
+            return
         model.remove(position)
         if row.instance is None:
             return
@@ -804,6 +924,48 @@ class _ComponentRegion(_Region):
         self.child = owner.create_child(slot.use, bridge_parent=self.model)
         self.model.insert(0, self.child.bridge)
         flush_mounts()
+
+
+# -- traslados ---------------------------------------------------------------------
+# Regiones {#each} con clave por declaración (id del EachSlot), y componentes de filas
+# quitadas en el cambio en curso: si ninguna lista los recibe, se liberan al terminar.
+_each_regions: dict[int, "weakref.WeakSet[_EachRegion]"] = {}
+_parked: dict[tuple[int, Any], dict[int, "ComponentInstance"]] = {}
+
+
+def _park(key: tuple[int, Any], carried: dict[int, "ComponentInstance"]) -> None:
+    first = not _parked
+    _discard_children(_parked.pop(key, None))
+    _parked[key] = carried
+    if first:
+        when_settled(_release_parked)
+
+
+def _release_parked() -> None:
+    parked = list(_parked.values())
+    _parked.clear()
+    for carried in parked:
+        _discard_children(carried)
+
+
+def _discard_children(children: "dict[int, ComponentInstance] | None") -> None:
+    for child in (children or {}).values():
+        child.dispose()
+        if Shiboken.isValid(child.bridge):
+            child.bridge.deleteLater()
+
+
+def _restore_focus(root: Any, path: list[int]) -> None:
+    """Da el foco al elemento que lo tenía en la vista anterior (mismo camino desde la raíz)."""
+    if not Shiboken.isValid(root):
+        return
+    target = root
+    for i in path:
+        children = target.childItems()
+        if i >= len(children):
+            break
+        target = children[i]
+    target.forceActiveFocus()
 
 
 # -- ciclo de vida ----------------------------------------------------------------
@@ -938,12 +1100,14 @@ class ComponentInstance:
         self.scope = Scope()
         if parent is not None:
             parent.children.append(self)
-            self.scope.add(_Release(lambda: parent.children.remove(self) if self in parent.children else None))
+            self.scope.add(_Release(lambda: self.parent.children.remove(self) if self in self.parent.children else None))
         self.slot_content = slots or {}
         self.host = host
         self.depth = 0 if parent is None else parent.depth + 1
         self.provided: dict[Any, Any] = {}
         self.mounted = False
+        self.view_item: QObject | None = None  # raíz de su vista QML (cambia si la fila se traslada)
+        self._refocus: list[int] | None = None
         self._on_mount: list[Any] = []
         self._incoming = props or {}
         self._event_handlers = events or {}
@@ -1003,9 +1167,49 @@ class ComponentInstance:
             ancestor = ancestor.parent
         raise LookupError(key)
 
+    # -- traslado entre filas de {#each} -----------------------------------------
+    def adopt(self, parent: "ComponentInstance", events: dict[str, Any], hmr_key: Any, bridge_parent: QObject | None) -> None:
+        """Pasa a una fila de otra lista: nuevo padre, manejadores de sus eventos y puente.
+        Su estado, efectos y lo obtenido con `inject` se conservan; on_mount no se repite."""
+        if self in self.parent.children:
+            self.parent.children.remove(self)
+        self.parent = parent
+        parent.children.append(self)
+        self._event_handlers = events
+        for name, event in self.events.items():
+            event._handler = events.get(name)
+        self._rebase(parent.hmr_path + (hmr_key,))
+        self.bridge.setParent(bridge_parent)
+
+    def _rebase(self, path: tuple) -> None:
+        old, self.hmr_path = self.hmr_path, path
+        for child in self.children:
+            child._rebase(path + child.hmr_path[len(old):])
+
+    def remember_focus(self) -> None:
+        """Si el foco está en su vista, guarda dónde, para devolverlo en la vista nueva."""
+        # Se baja por la cadena de foco (sin root.window(): Shiboken ataría la ventana a
+        # la raíz vieja y la invalidaría al soltarla).
+        item = self.view_item
+        if item is None or not Shiboken.isValid(item) or not item.hasActiveFocus():
+            return
+        path: list[int] = []
+        while True:
+            step = next((i for i, c in enumerate(item.childItems()) if c.hasActiveFocus()), None)
+            if step is None:
+                break
+            path.append(step)
+            item = item.childItems()[step]
+        self._refocus = path
+
     # -- montaje ------------------------------------------------------------
-    def view_created(self) -> None:
+    def view_created(self, item: QObject | None = None) -> None:
         """La vista QML de este componente existe: on_mount se ejecutará al terminar de crearla."""
+        if item is not None:
+            self.view_item = item
+            if self._refocus is not None:
+                path, self._refocus = self._refocus, None
+                QTimer.singleShot(0, lambda: _restore_focus(item, path))
         if not self.mounted and self not in _pending_mounts:
             _pending_mounts.append(self)
             _schedule_flush()

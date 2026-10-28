@@ -15,7 +15,7 @@ from ..diagnostics import Diagnostic, FluxError, SourceLocation
 # Pseudo-clases admitidas (`:active` es otro nombre de `:pressed`).
 PSEUDO_CLASSES = (
     "hover", "pressed", "focus", "focus-visible", "focus-within", "disabled",
-    "checked", "selected", "expanded", "first-child", "last-child",
+    "checked", "selected", "expanded", "first-child", "last-child", "dragging", "drag-over",
 )  # fmt: skip
 _PSEUDO_ALIASES = {"active": "pressed"}
 

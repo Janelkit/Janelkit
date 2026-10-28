@@ -1,6 +1,6 @@
 # Retos para poner FluxUI al límite
 
-Cinco aplicaciones pensadas para encontrar los límites del framework antes de publicarlo. Ninguna es un ejemplo "bonito": cada una apunta a un tipo de aplicación de escritorio real que FluxUI debería poder hacer, y está elegida para que choque con lo que **todavía no existe** o con lo que **no se ha medido**.
+Seis aplicaciones pensadas para encontrar los límites del framework antes de publicarlo. Ninguna es un ejemplo "bonito": cada una apunta a un tipo de aplicación de escritorio real que FluxUI debería poder hacer, y está elegida para que choque con lo que **todavía no existe** o con lo que **no se ha medido**.
 
 El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es FluxUI un framework completo para escritorio o le faltan piezas importantes?*
 
@@ -18,9 +18,10 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 |---|---|---|---|
 | 4 | Chat | ✅ | [examples/challenges/chat](../examples/challenges/chat/) · [hallazgos](../examples/challenges/chat/HALLAZGOS.md). Se añadieron al núcleo el desplazamiento de `<List>`, `<Text format>`, eventos de ventana y `notify`; quedan temporizadores, texto seleccionable y Markdown seguro. |
 | 1 | Panel | ✅ | [examples/challenges/panel](../examples/challenges/panel/) · [hallazgos](../examples/challenges/panel/HALLAZGOS.md). Se añadieron al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`, y se corrigieron cuatro fallos (listas modificadas en el sitio que no llegaban a QML, scroll perdido al reordenar, `flex` en QML propio, `flux build` con ventanas); quedan gráficas (fluxui-kit), rejilla con salto de línea y tabla. |
-| 3 | Kanban | ⏳ | |
+| 3 | Kanban | ✅ | [examples/challenges/kanban](../examples/challenges/kanban/) · [hallazgos](../examples/challenges/kanban/HALLAZGOS.md). Se añadió al núcleo arrastrar y soltar (`draggable`, `on:dragstart/dragover/drop/dragend`, `:dragging`, `:drag-over`, desplazamiento al acercarse al borde) y en `inspect` doble clic, clic derecho, teclas y arrastre; se corrigió que los eventos de puntero no llegaran a las filas de `<List>`. Arrastrar con 20 × 200 cuesta lo mismo que un fotograma vacío. Una fila que pasa a otra lista de la misma declaración `{#each}` se traslada con su estado y su foco (la tarjeta conserva su estado al cambiar de columna). Quedan `<Menu>` y la memoria por elemento (~0,7 MB por tarjeta). |
 | 2 | Hoja de cálculo | ⏳ | |
 | 5 | Editor | ⏳ | |
+| 6 | Gestor de proyectos | ⏸ | Nació del reto 3. Espera a `fluxui-router` (ver [6](#6-gestor-de-proyectos)). |
 
 ## Resumen
 
@@ -31,6 +32,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 | 3 | Tablero Kanban | Arrastrar y soltar, reordenar con animación, menús contextuales | Drag and drop, eventos de puntero, menús |
 | 4 | Cliente de chat | Conexión permanente, lista que crece por los dos extremos, texto enriquecido | Control del desplazamiento, notificaciones del sistema, texto enriquecido |
 | 5 | Editor de código ligero | Documentos grandes, pestañas, árbol de archivos, cierre con cambios sin guardar | Árbol, editor con resaltado, interceptar el cierre de ventana, preferencias persistentes |
+| 6 | Gestor de proyectos | Varias pantallas con navegación, estado compartido entre vistas y ventanas, formularios de gestión | Enrutador (`fluxui-router`), conservar vistas ocultas, eventos en los campos |
 
 ---
 
@@ -163,6 +165,60 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 
 **Hipótesis de carencias:** `<CodeEditor>` o un editor de texto con resaltado y números de línea, `<Tree>`, un modo de `{#if}`/pestañas que oculte en lugar de destruir (`keep-alive`), `on:close` cancelable en `<Window>`, `fluxui.settings`, y generadores asíncronos para ir mostrando resultados.
 
+## 6. Gestor de proyectos
+
+**Estado: siguiente proyecto, en espera de un enrutador.** Nació al ampliar el Kanban (reto 3): de un tablero suelto a una aplicación con varias pantallas. La aplicación es una pieza de la API pública; lo que la frena es la navegación, que [alcance.md](alcance.md) deja fuera del núcleo («enrutado con historial, parámetros o carga diferida» es `fluxui-router`). Se construirá cuando exista ese proyecto, o como su primer caso de uso.
+
+**La aplicación.** Un gestor de proyectos para un equipo pequeño, todo local, en un archivo JSON.
+
+| Vista | Qué hace |
+|---|---|
+| **Proyectos** (inicio) | Rejilla de proyectos con color, nº de tarjetas, progreso y miembros. Crear, renombrar, archivar o recuperar, borrar con confirmación, buscar. |
+| **Proyecto ▸ Tablero** | El tablero del reto 3, con las etiquetas y los miembros del proyecto. El responsable se elige entre los miembros. |
+| **Proyecto ▸ Lista** | Las tarjetas en una tabla que se ordena por cabecera, se filtra con los filtros del tablero y se edita en línea; marca las vencidas. |
+| **Proyecto ▸ Miembros** | Quién participa y con qué rol. Al quitar a alguien con tarjetas: reasignarlas o dejarlas sin responsable. |
+| **Proyecto ▸ Ajustes** | Nombre, color y descripción; etiquetas (en uso: aviso antes de borrar); columnas, incluida la «de hecho» que cuenta para el progreso; exportar a JSON. |
+| **Personas** | Directorio de todas las personas (nombre, iniciales y color, correo, rol): alta, edición y baja, con aviso de cuántas tarjetas tiene en cada proyecto. |
+| **Mi trabajo** | Las tarjetas de una persona en todos los proyectos, por proyecto o por fecha; abrir una lleva a su tablero con ella enfocada. |
+| **Ajustes** | Tema, archivo de datos, pasos de deshacer. |
+| **Otra ventana** | Un proyecto abierto en una ventana aparte, sobre los mismos datos: lo que se mueve en una se ve en la otra. |
+
+Las tarjetas guardan ids de personas y etiquetas, no nombres: renombrar una persona se ve al momento en todos los proyectos. Un solo historial de deshacer para todo, que dice en qué proyecto ocurrió cada paso. El `tablero.json` del reto 3 se importa como un proyecto.
+
+**Por qué necesita un enrutador.** Con lo que hay en el núcleo (`pages`, una pila; `{#if}`; `<Tabs>`) se podría montar a mano, pero el reto quedaría midiendo los rodeos y no la aplicación:
+
+| Necesidad | Con `pages` y `{#if}` | Lo que pediría a `fluxui-router` |
+|---|---|---|
+| Rutas con parámetros (`/proyectos/:id/tablero`, `/personas/:id`) | La página recibe props al apilarla; no hay una dirección que guardar o compartir | Rutas con nombre y parámetros, y la ruta actual como estado reactivo |
+| Atrás **y adelante** (Alt+←/→, botones del ratón) | Solo atrás (`pop`); adelante se pierde | Historial con las dos direcciones |
+| Enlaces profundos («Mi trabajo» → tablero de otro proyecto con una tarjeta enfocada) | Reconstruir la pila a mano (`reset` + `push`) | Navegar a una ruta, con parámetros de consulta (`?tarjeta=t5`) |
+| Secciones paralelas (Proyectos, Personas, Mi trabajo), cada una con su propia pila | Una pila por sección y `{#if}` para elegir; la barra lateral sincronizada a mano | Rutas anidadas: una disposición con la barra lateral y una salida por sección |
+| Conservar una vista al volver (búsqueda y desplazamiento de Proyectos) | `pages` mantiene viva la página de debajo, pero no la de otra sección | Vistas que se conservan (`keep-alive`, ya en las carencias del reto 5) |
+| Salir con cambios sin guardar (Ajustes, Detalle) | Comprobarlo en cada botón | Guardas antes de salir de una ruta |
+| La misma ruta en otra ventana | Pasar el proyecto como prop a `open_window` | Abrir una ruta en una ventana nueva |
+| Restaurar la última vista al reabrir | Guardar y reconstruir a mano | Serializar la ruta actual |
+
+**Qué pone a prueba (además del enrutador)**
+
+| Aspecto | Por qué es difícil | Estado esperado |
+|---|---|---|
+| Estado compartido entre vistas y ventanas | La misma tarjeta en el tablero, la lista, «Mi trabajo» y otra ventana | Colecciones reactivas + `provide`: debería funcionar; sin medir con varias ventanas |
+| `computed` que cruza todos los proyectos | «Mi trabajo» y los contadores de cada proyecto recorren miles de tarjetas | Sin medir |
+| Formularios de gestión | Validación, edición en línea, guardar al salir del campo | `<TextField>` sin `on:keydown` ni `on:blur` (reto 3, hallazgo 14) |
+| Tabla ordenable y editable | Ordenar sin perder la posición, editar con `<Select>` en la fila | Hecha con `<List>` y `<flex>`, como en el reto 1 (la tabla de datos es de `fluxui-kit`) |
+| Fechas | Elegir y validar una fecha | Sin selector (`fluxui-kit`): `<TextField>` con formato `AAAA-MM-DD` |
+| Borrados en cascada | Personas, etiquetas, columnas o proyectos referenciados | De la aplicación |
+| Memoria al navegar | Abrir y cerrar proyectos una y otra vez | Lo cerrado debe liberarse; la memoria por elemento ya es alta (reto 3) |
+
+**Hecho cuando**
+
+- Con 10 proyectos de 4 × 50 tarjetas y 300 personas: abrir un proyecto tarda menos de 150 ms, volver menos de 30 ms y cambiar de pestaña o de sección menos de 100 ms; buscar en Personas cuesta menos de 16 ms por pulsación.
+- Abrir y cerrar los 10 proyectos varias veces no hace crecer la memoria.
+- Atrás, adelante y los enlaces de «Mi trabajo» llevan siempre a la vista correcta, también en una segunda ventana.
+- Toda acción se puede deshacer, y todo se puede hacer con el teclado.
+
+**Hipótesis de carencias:** `fluxui-router` (rutas con parámetros, historial, rutas anidadas, guardas), conservar vistas ocultas (`keep-alive`), eventos de teclado y foco en los campos, `<Menu>`, y el coste de `computed` con colecciones grandes.
+
 ---
 
 ## Carencias que se repiten
@@ -171,11 +227,14 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 
 | Carencia | Retos | Núcleo o proyecto aparte |
 |---|---|---|
-| Eventos de teclado y de puntero (`on:keydown`, doble clic, clic derecho, arrastrar) | 2, 3, 5 | Núcleo: afecta al lenguaje |
+| Eventos de teclado y de puntero (`on:keydown`, doble clic, clic derecho, arrastrar) | 2, 3, 5, 6 | ✅ Núcleo en `<flex>` (fase 3 y reto 3: arrastrar y soltar); faltan en los campos (`<TextField>` sin `on:keydown` ni `on:blur`, reto 3) |
 | Control del desplazamiento (leer y fijar el scroll, anclaje) | 1, 2, 4, 5 | Núcleo · ✅ en `<List>` (retos 4 y 1: también al reordenar); falta en `<Scroll>` |
 | Eventos de ventana (cerrar cancelable, activa) | 4, 5 | Núcleo · ✅ activa (reto 4); falta cerrar cancelable |
-| Menús (contextual y barra) | 3, 5 | Núcleo (controles básicos) |
-| Conservar contenido oculto (`keep-alive`) | 5 | Núcleo: afecta al lenguaje |
+| Menús (contextual y barra) | 3, 5 | Núcleo (controles básicos) · el reto 3 hizo el contextual con `<flex>` (sin submenús ni recolocación junto al borde) |
+| Trasladar una fila entre dos `{#each}` sin recrearla (conserva su estado) | 3, 6 | ✅ Núcleo (reto 3): misma declaración, misma clave, mismo cambio ([lenguaje.md](lenguaje.md#trasladar-filas-entre-listas)) |
+| Memoria por elemento (~30–35 KB por `<Text>` o `<flex>`) | 3 | Núcleo |
+| Conservar contenido oculto (`keep-alive`) | 5, 6 | Núcleo: afecta al lenguaje |
+| Enrutado con parámetros, historial y rutas anidadas | 6 | `fluxui-router` (el núcleo da `pages` para casos sencillos) |
 | Portapapeles, notificaciones, bandeja, ajustes | 2, 4, 5 | Núcleo, como módulos pequeños (`fluxui.clipboard`, …) · ✅ `notify` (reto 4) |
 | Temporizadores ligados al componente | 1, 4 | ✅ Núcleo: `interval`, `timeout` (reto 1) |
 | Texto seleccionable | 4, 5 | Núcleo |
@@ -183,7 +242,7 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 | Canvas, gráficas, editor de código | 1, 5 | `fluxui-kit` (sobre la vía de escape QML) · el reto 1 hizo su gráfica en QML propio sin problemas |
 | Rejilla con salto de línea (tarjetas que se recolocan según el ancho) | 1 | ✅ Núcleo: `flex-wrap` en `<flex>`, `Column` y `Row` ([flex.md](flex.md), fase 1) |
 | Texto enriquecido | 4 | ✅ Núcleo: `<Text format="markdown">` (reto 4) |
-| Deshacer/rehacer y stores | 2, 3 | `fluxui-store` |
+| Deshacer/rehacer y stores | 2, 3 | `fluxui-store` · el reto 3 lo hizo en la aplicación con operaciones que devuelven su inversa (~100 líneas) |
 
 ## Registro de hallazgos (plantilla)
 
@@ -212,3 +271,4 @@ Cada reto termina con un `HALLAZGOS.md` en su carpeta:
 1. **Chat (4)** y **Panel (1):** ponen a prueba la asincronía y la frecuencia de actualización, lo más nuevo y menos medido.
 2. **Kanban (3):** destapa las carencias de interacción (arrastrar, menús, gestos), que afectan al diseño del lenguaje.
 3. **Hoja de cálculo (2)** y **Editor (5):** los más exigentes; conviene abordarlos cuando las decisiones de los anteriores estén tomadas.
+4. **Gestor de proyectos (6):** cuando exista `fluxui-router`; sirve para validarlo con una aplicación real.

@@ -57,7 +57,7 @@ Cada proyecto se apoya en una **API del núcleo** concreta. Esa API es la que el
 | **Biblioteca de componentes** (`fluxui-kit`) | Tablas con ordenación y filtrado, gráficas, selectores de fecha, árboles, paneles acoplables | Slots, `ref`, interoperabilidad con Qt, tokens de tema | Se escribe en `.flux` (y QML propio cuando haga falta), como lo haría un usuario |
 | **Empaquetado** (`flux package`) | Generar ejecutables e instaladores con PyInstaller, Nuitka o Briefcase | Ubicación estable de recursos del paquete (módulo QML, plantillas); `flux build` | Puede ser un plugin de la CLI. El núcleo debe garantizar que las apps sean empaquetables y documentar una receta |
 | **Devtools** | Ventana que muestra el árbol de componentes, el estado de cada instancia y qué bindings se recalculan | API de inspección; ganchos de depuración en la reactividad | Útil cuando haya aplicaciones medianas |
-| **Enrutado** (`fluxui-router`) | Navegación entre pantallas con historial y parámetros | Slots, contexto, ciclo de vida | Para casos sencillos bastan `{#if}` y una pila de páginas en el núcleo |
+| **Enrutado** (`fluxui-router`) | Navegación entre pantallas con historial y parámetros | Slots, contexto, ciclo de vida | Para casos sencillos bastan `{#if}` y una pila de páginas en el núcleo. El reto 6 ([gestor de proyectos](challenges_to_test.md#6-gestor-de-proyectos)) lo necesita y lista qué pediría |
 | **Plantillas y ejemplos** | Galería de aplicaciones de referencia y plantillas para `flux new` | API pública completa | Sirven además para validar el framework con uso real |
 
 ## Puntos de extensión que el núcleo debe ofrecer

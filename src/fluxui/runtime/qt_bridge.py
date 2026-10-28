@@ -22,7 +22,7 @@ class BridgeOwner(Protocol):
     def bridge_invoke(self, handler_id: str, args: list) -> None: ...
     def bridge_write(self, binding_id: str, value: Any) -> None: ...
     def bridge_ref(self, ref_id: str, item: QObject, attached: bool) -> None: ...
-    def bridge_mounted(self) -> None: ...
+    def bridge_mounted(self, item: QObject) -> None: ...
 
 
 # Las clases puente nunca se liberan: QML guarda en caché la información de
@@ -93,8 +93,8 @@ def _make_bridge_class(binding_ids: list[str], model_ids: list[str], name: str) 
     def setRef(self, ref_id: str, item: QObject, attached: bool) -> None:
         self._owner.bridge_ref(ref_id, item, attached)
 
-    def mounted(self) -> None:
-        self._owner.bridge_mounted()
+    def mounted(self, item: QObject) -> None:
+        self._owner.bridge_mounted(item)
 
     # Salida animada (out:/transition:): FxTransition anima la raíz al recibir leave().
     attrs["leave"] = Signal()
@@ -108,6 +108,6 @@ def _make_bridge_class(binding_ids: list[str], model_ids: list[str], name: str) 
         invoke=Slot(str, "QVariantList")(invoke),
         write=Slot(str, "QVariant")(write),
         setRef=Slot(str, QObject, bool)(setRef),
-        mounted=Slot()(mounted),
+        mounted=Slot(QObject)(mounted),
     )
     return type(name, (QObject,), attrs)

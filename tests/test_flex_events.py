@@ -244,3 +244,32 @@ def test_catalog_controls():
             QTest.keyClick(app.window, key)
         app.wait(0.05)
         assert last() == "Última acción: menú: Renombrar" and app.get("menu_open") is False
+
+
+def test_routed_events_reach_list_rows_also_while_they_slide(app_from):
+    # ListView deja un elemento vacío de z 0 debajo de las filas (z 1): childAt lo elegía
+    # y on:contextmenu/on:dblclick no llegaban a las filas de <List>. Y con animate, una
+    # fila que aún se desliza queda fuera del alto nuevo de la lista, y sigue recibiendo.
+    app = app_from("""<script>
+from fluxui import state
+filas = state(["a", "b", "c", "d"])
+log = state([])
+</script>
+<Window>
+  <List animate>
+    {#each filas as f (f)}
+      <flex class="fila" label={f} on:contextmenu={log.append(f"menu {f}")} on:dblclick={log.append(f"doble {f}")}>
+        <Text>{f}</Text>
+      </flex>
+    {/each}
+  </List>
+</Window>
+<style>.fila { height: 40px; }</style>""")
+    app.find("flex", label="a").right_click()
+    app.find("flex", label="b").double_click()
+    assert app.get("log") == ["menu a", "doble b"]
+    filas = app.get("filas")
+    del filas[0:2]  # c y d suben deslizándose
+    app.process()
+    app.find("flex", label="d").right_click()  # todavía en su sitio antiguo
+    assert app.get("log")[-1] == "menu d"

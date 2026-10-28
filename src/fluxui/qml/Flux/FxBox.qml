@@ -73,12 +73,17 @@ Rectangle {
     property bool fxDragging: false
     property bool fxDragOver: false
     property bool fxKeyDown: false
-    readonly property bool fxPressed: (fxTap !== null && fxTap.pressed) || fxKeyDown || (fxBlocker !== null && fxBlocker.pressed)
+    // Lo que solo cambia en cajas interactivas no son bindings (cada uno cuesta memoria en
+    // todas las cajas): los fijan FxTap, FxBlocker y FxRole, que solo existen en esas cajas.
+    property bool fxPressed: false  // :pressed (puntero o Espacio)
+    function fxSyncPressed() { fxPressed = (fxTap !== null && fxTap.pressed) || fxKeyDown || (fxBlocker !== null && fxBlocker.pressed) }
     readonly property bool fxSides: fxBorderTop >= 0 || fxBorderRight >= 0 || fxBorderBottom >= 0 || fxBorderLeft >= 0
-    readonly property real fxBorderTopW: fxBorderTop >= 0 ? fxBorderTop : fxBorderWidth
-    readonly property real fxBorderRightW: fxBorderRight >= 0 ? fxBorderRight : fxBorderWidth
-    readonly property real fxBorderBottomW: fxBorderBottom >= 0 ? fxBorderBottom : fxBorderWidth
-    readonly property real fxBorderLeftW: fxBorderLeft >= 0 ? fxBorderLeft : fxBorderWidth
+    // Ancho de borde de cada lado: 0 en las cajas sin borde; con borde, Fx.flexDecorations
+    // los enlaza a fxBorderTop… o a fxBorderWidth (bit D_BORDER de fxDecor).
+    property real fxBorderTopW: 0
+    property real fxBorderRightW: 0
+    property real fxBorderBottomW: 0
+    property real fxBorderLeftW: 0
 
     // -- como hijo de otro contenedor ---------------------------------------
     property int fxFlex: 0
@@ -90,8 +95,8 @@ Rectangle {
     // Caja exterior de un componente (<Panel flex={1} />): su único hijo la ocupa entera.
     property bool fxFill: false
     // Algún hijo crece (flex). Lo calcula el motor en cada pasada (un binding recorrería
-    // todos los hijos cada vez que se añade uno).
-    property bool fillMain: fxFill
+    // todos los hijos cada vez que se añade uno). Con fxFill, el compilador lo fija también.
+    property bool fillMain: false
 
     // -- motor (flex.js) ----------------------------------------------------
     readonly property bool fxIsFlex: true
@@ -102,6 +107,7 @@ Rectangle {
     property Item fxSideItem: null
     property Item fxShadowItem: null
     property Item fxBlocker: null
+    property bool fxBorderBound: false  // fxBorder*W ya enlazados (Fx.flexDecorations)
     // Texto heredado y variables propias: el contexto propio (si la caja fija algo de eso)
     // o el de su contenedor (FxContext.qml).
     property QtObject fxOwnCtx: null
@@ -134,11 +140,11 @@ Rectangle {
     readonly property int fxDecor: (fxSides ? 1 : 0) | (fxShadow ? 2 : 0) | (fxOutlineWidth > 0 ? 4 : 0)
         | (fxPosition === "absolute" || fxPosition === "fixed" ? 8 : 0) | (fxScrollable ? 16 : 0)
         | (fxClickable || fxTrackHover || fxCursor >= 0 ? 32 : 0) | (fxClickable || fxTrackPress ? 64 : 0)
-        | (fxAs !== "box" ? 128 : 0) | (fxTx !== 0 || fxTy !== 0 ? 256 : 0)
+        | (fxAs !== "box" ? 128 : 0) | (fxTx !== 0 || fxTy !== 0 ? 256 : 0) | (fxSides || fxBorderWidth > 0 ? 512 : 0)
 
     // on:click: el contenedor entero se puede pulsar (tarjetas, filas de lista)
     property bool fxClickable: false
-    readonly property bool hovered: fxHover !== null && fxHover.hovered
+    property bool hovered: false  // lo fija FxHover
     // Activación: clic, Espacio/Intro según el papel, lector de pantalla o pruebas. Avisa a
     // on:click (events.py) con la posición del clic (x < 0: sin puntero, desde el teclado).
     signal clicked()
@@ -187,8 +193,9 @@ Rectangle {
     color: fxHidden ? "transparent" : fxClickable && !fxTrackHover && hovered ? Qt.tint(fxBackground, fxtheme.hover) : fxBackground
     radius: fxRadius
     // Con un papel interactivo (o on:click) se usa con el teclado: Tab para llegar, Espacio o Intro para pulsar.
-    readonly property bool fxKeyFocus: fxAs !== "box" && activeFocus
-    readonly property bool fxFocusRing: fxKeyFocus && !fxCustomOutline
+    // Foco con papel interactivo y anillo de foco (si ninguna regla fija outline): los fija FxRole.
+    property bool fxKeyFocus: false
+    property bool fxFocusRing: false
     border.color: fxFocusRing ? fxtheme.primary : fxBorderColor
     border.width: fxHidden ? 0 : fxFocusRing ? 2 : fxSides ? 0 : fxBorderWidth
     clip: fxOverflow === "hidden"

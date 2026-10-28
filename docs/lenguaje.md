@@ -165,6 +165,24 @@ El contenido de `<Text>`, `<Button>` y `<Checkbox>` es su texto: `<Button>Clicks
 
 El Markdown de Qt también acepta HTML. Si el texto viene de otras personas (un chat, una web), escapa `<` y `&` antes de mostrarlo (`texto.replace("&", "&amp;").replace("<", "&lt;")`).
 
+### Texto seleccionable y portapapeles
+
+Por defecto, un `<Text>` no se puede seleccionar, como una etiqueta de escritorio. Con `selectable` (o `user-select: text` en el estilo) se selecciona arrastrando el ratón y se copia con Ctrl+C; con el foco en él, Ctrl+A lo selecciona todo. Sirve para números de pedido, mensajes de error o el texto de un chat. Los enlaces siguen funcionando, y un clic sin arrastrar sigue pulsando la caja con `on:click` que lo contenga:
+
+```html
+<script>
+from fluxui import clipboard
+</script>
+
+<Text selectable>Pedido {pedido["id"]}</Text>
+<Button on:click={clipboard.copy(pedido["id"])}>Copiar</Button>
+<Text>En el portapapeles: {clipboard.paste() or "nada"}</Text>
+```
+
+`fluxui.clipboard` copia (`copy`), lee (`paste`) y vacía (`clear`) el portapapeles del sistema. `paste()` es reactivo: lo que dependa de él se actualiza cuando el portapapeles cambia, también si se copia en otra aplicación.
+
+Límites de `selectable`: con `text-overflow: ellipsis` corta el texto en el borde, sin puntos suspensivos, y no tiene menú contextual. Además, crear un texto seleccionable cuesta unas 2,8 veces lo que uno normal (unos 0,35 ms frente a 0,12 ms), así que en listas de miles de filas conviene usarlo solo donde haga falta. Un texto sin `selectable` no paga nada.
+
 ## Bloques
 
 ### `{#if}`
@@ -789,7 +807,7 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 | `Row` | `<flex direction="row">` | `gap`, `padding` | `on:click` | — |
 | `Scroll` | `ScrollView` + columna | `gap`, `padding` | — | — |
 | `List` | `ListView` | `gap`, `padding`, `animate`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
-| `Text` | `Label` | `text`, `color`, `format` (`plain`, `markdown`, `html`) | `on:link(url)` | — |
+| `Text` | `Label` | `text`, `color`, `format` (`plain`, `markdown`, `html`), `selectable` | `on:link(url)` | — |
 | `Button` | `Button` | `text`, `variant` (`default`, `primary`, `danger`, `ghost`), `flat` | `on:click` | — |
 | `TextField` | `TextField` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:submit(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
 | `TextArea` | `TextArea` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |

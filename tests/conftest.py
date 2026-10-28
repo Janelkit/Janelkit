@@ -88,5 +88,17 @@ def find_all(mounted, name: str):
 
 
 def texts(mounted):
-    """Textos visibles de los elementos <Text> (FxText es un Label), en orden."""
-    return [i.property("text") for i in visual_items(mounted) if i.inherits("QQuickLabel") and i.isVisible()]
+    """Textos visibles de los elementos <Text> (FxText), en orden."""
+    return [i.property("text") for i in visual_items(mounted) if _is_fx_text(i) and i.isVisible()]
+
+
+def _is_fx_text(item) -> bool:
+    """Un FxText, también la raíz de un componente cuyo elemento exterior es un <Text>."""
+    if not item.inherits("QQuickText"):
+        return False
+    meta = item.metaObject()
+    while meta is not None:
+        if meta.className().startswith("FxText_"):
+            return True
+        meta = meta.superClass()
+    return False

@@ -112,7 +112,7 @@ function alignFlags(align, horizontal) {
 // :pressed, cursor), papel interactivo (accesibilidad y teclado) y translate().
 // FxBox.fxDecor dice qué hace falta; al cambiar, se llama a flexDecorations.
 const D_SIDES = 1, D_SHADOW = 2, D_OUTLINE = 4, D_BLOCKER = 8, D_SCROLL = 16
-const D_HOVER = 32, D_TAP = 64, D_ROLE = 128, D_TRANSLATE = 256
+const D_HOVER = 32, D_TAP = 64, D_ROLE = 128, D_TRANSLATE = 256, D_BORDER = 512
 let hoverComponent = null
 let tapComponent = null
 let roleComponent = null
@@ -148,6 +148,13 @@ function flexDecorations(box) {
         translateComponent = component(translateComponent, "FxTranslate.qml")
         box.fxTranslate = translateComponent.createObject(box, { box: box })
         box.transform = [box.fxTranslate]
+    }
+    if (d & D_BORDER && !box.fxBorderBound) {
+        box.fxBorderBound = true
+        box.fxBorderTopW = Qt.binding(function () { return box.fxBorderTop >= 0 ? box.fxBorderTop : box.fxBorderWidth })
+        box.fxBorderRightW = Qt.binding(function () { return box.fxBorderRight >= 0 ? box.fxBorderRight : box.fxBorderWidth })
+        box.fxBorderBottomW = Qt.binding(function () { return box.fxBorderBottom >= 0 ? box.fxBorderBottom : box.fxBorderWidth })
+        box.fxBorderLeftW = Qt.binding(function () { return box.fxBorderLeft >= 0 ? box.fxBorderLeft : box.fxBorderWidth })
     }
     if (box.fxSides && !box.fxSideItem) {
         sidesComponent = component(sidesComponent, "FxSides.qml")
@@ -229,23 +236,68 @@ function cssVar(ctx, name, fallback, dflt) {
 // Fondo y borde de un <Text>, y la mano sobre sus enlaces: solo los que los usan (FxText.fxDecor).
 let textBoxComponent = null
 let textLinksComponent = null
+let textSelectComponent = null
 function textDecorations(label) {
-    if (label.fxDecor & 1 && !label.background) {
+    if (label.fxDecor & 1 && !label.fxBack) {
         textBoxComponent = component(textBoxComponent, "FxTextBox.qml")
-        label.background = textBoxComponent.createObject(label, { label: label })
+        label.fxBack = textBoxComponent.createObject(label, { label: label })
     }
     if (label.fxDecor & 2 && !label.fxLinks) {
         textLinksComponent = component(textLinksComponent, "FxTextLinks.qml")
         label.fxLinks = textLinksComponent.createObject(label, { label: label })
     }
+    if (label.fxSelect) {
+        label.fxSelect.visible = (label.fxDecor & 4) !== 0
+    } else if (label.fxDecor & 4) {
+        textSelectComponent = component(textSelectComponent, "FxTextSelect.qml")
+        label.fxSelect = textSelectComponent.createObject(label, { label: label })
+    }
+}
+
+// Texto heredable: clave de fxT_<clave> en las cajas -> propiedad del <Text>.
+const TEXT_PROPS = {
+    color: "fxColor", family: "font.family", size: "font.pixelSize", weight: "font.weight",
+    italic: "font.italic", letterSpacing: "font.letterSpacing", capitalization: "font.capitalization",
+    align: "horizontalAlignment", lineHeight: "lineHeight", wrap: "wrapMode", elide: "elide",
+}
+
+// Claves de texto que fija la caja de un contexto o alguna de fuera (" color size "), en un
+// orden fijo: solo cambia si cambia el conjunto. El compilador declara fxT_<clave> solo en
+// las cajas cuyo estilo la fija.
+function ctxKeys(box, up) {
+    const outer = up ? up.keys : ""
+    let out = ""
+    for (const k in TEXT_PROPS)
+        if (outer.indexOf(" " + k + " ") >= 0 || (box && ("fxT_" + k) in box)) out += " " + k + " "
+    return out
+}
+
+// El valor heredado de `key`: el de la caja más cercana que lo fija; undefined si ninguna.
+function inherited(ctx, key) {
+    const name = "fxT_" + key
+    for (let c = ctx; c; c = c.up) {
+        const v = c.box ? c.box[name] : undefined
+        if (v !== undefined) return v
+    }
+    return undefined
 }
 
 let inheritComponent = null
-// Un <Text> con contexto recibe el texto heredado (FxTextInherit.qml), solo entonces.
+// Un <Text> con contexto recibe un FxTextInherit (un Binding) por cada clave que alguna caja
+// de fuera fija y él no (fxOwn): los demás textos y las demás claves no pagan nada. Si el
+// texto cambia de sitio se añaden las que falten; las que ya no hay no aplican nada.
 function textInherit(label) {
-    if (!label.fxCtx || label.fxInherit) return
-    inheritComponent = component(inheritComponent, "FxTextInherit.qml")
-    label.fxInherit = inheritComponent.createObject(label, { target: label })
+    const keys = label.fxCtx ? label.fxCtx.keys : ""
+    if (!keys) return
+    const have = label.fxInherit || {}
+    let added = false
+    for (const k in TEXT_PROPS) {
+        if (have[k] || keys.indexOf(" " + k + " ") < 0 || label.fxOwn.indexOf(" " + k + " ") >= 0) continue
+        inheritComponent = component(inheritComponent, "FxTextInherit.qml")
+        have[k] = inheritComponent.createObject(label, { target: label, property: TEXT_PROPS[k], key: k })
+        added = true
+    }
+    if (added) label.fxInherit = have
 }
 
 // style={{...}}: valores que llegan de Python como texto CSS o números.

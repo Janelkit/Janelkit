@@ -139,3 +139,41 @@ def test_catalog_table_and_tabs():
         assert [e.label for e in app.elements() if e.tag == "flex" and e.prop("fxRole") == "option"] == ["base-de-datos"]
         # El texto del botón primario hereda --on-primary de la caja.
         assert app.find(text="Guardar").prop("color").name() != app.find(text="Cancelar").prop("color").name()
+
+
+def test_inherited_text_follows_a_row_moved_to_another_box():
+    # La fila (un componente) pasa de una columna roja a una grande: el <Text> deja el color
+    # heredado (vuelve al del tema) y toma el tamaño. Solo hay un enlace por clave usada.
+    d = Path(tempfile.mkdtemp())
+    (d / "components").mkdir()
+    (d / "components" / "Item.flux").write_text("""<script>
+from fluxui import prop
+texto = prop("")
+</script>
+<Text>{texto}</Text>""", encoding="utf-8")
+    (d / "App.flux").write_text("""<script>
+from fluxui import state
+from components.Item import Item
+cols = state([{"id": "a", "items": ["x"]}, {"id": "b", "items": []}])
+def mover():
+    a, b = cols.value
+    b["items"].append(a["items"].pop())
+</script>
+<Column>
+  <Row>{#each cols as c (c["id"])}<flex class="col" class:rojo={c["id"] == "a"} class:grande={c["id"] == "b"}>{#each c["items"] as it (it)}<Item texto={it} />{/each}</flex>{/each}</Row>
+  <Text id="suelto">fuera</Text>
+  <Button text="mover" on:click={mover()} />
+</Column>
+<style>.col { padding: 2px; } .rojo { color: #ff0000; } .grande { font-size: 22px; }</style>""", encoding="utf-8")
+    with mount(d / "App.flux") as app:
+        app.wait(0.05)
+        x = app.find(text="x").item
+        theme_size = app.find(text="fuera").item.property("font").pixelSize()
+        assert x.property("color").name() == "#ff0000" and x.property("font").pixelSize() == theme_size
+        assert sorted(x.property("fxInherit").toVariant()) == ["color", "size"]
+        assert app.find(text="fuera").item.property("fxInherit") is None  # sin caja con texto: nada
+        app.find("Button").click()
+        app.wait(0.05)
+        x = app.find(text="x").item
+        assert x.property("color").name() == app.find(text="fuera").item.property("color").name()
+        assert x.property("font").pixelSize() == 22

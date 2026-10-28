@@ -114,6 +114,12 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 |---|---|
 | `dialogs` | Módulo de diálogos del sistema, todos asíncronos (`await`): `open_file`, `open_files`, `save_file`, `choose_folder` (devuelven `Path`, lista o `None` si se cancela), `message` y `confirm` (devuelve `bool`). `pending()` lista los abiertos y `kind(d)` dice el tipo de uno (`"MessageDialog"`, `"FileDialog"`, `"FolderDialog"`), para pruebas. |
 
+### Portapapeles
+
+| Nombre | Descripción |
+|---|---|
+| `clipboard` | Módulo del portapapeles del sistema (texto): `copy(texto)`, `paste()` (el texto que hay, `""` si no hay; reactivo: se actualiza cuando cambia, también desde otra aplicación) y `clear()`. Necesita la aplicación en marcha. |
+
 ### Notificaciones
 
 | Nombre | Descripción |

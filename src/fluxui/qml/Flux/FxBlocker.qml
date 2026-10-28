@@ -13,5 +13,6 @@ MouseArea {
     hoverEnabled: true
     cursorShape: box && box.fxCursor >= 0 ? box.fxCursor : Qt.ArrowCursor
     onWheel: (wheel) => { wheel.accepted = true }
+    onPressedChanged: if (box) box.fxSyncPressed()
     onClicked: (mouse) => { if (box.fxClickable && mouse.button === Qt.LeftButton) box.fxActivate(mouse.x, mouse.y, mouse.button) }
 }

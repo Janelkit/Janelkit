@@ -36,7 +36,7 @@ def test_a_plain_box_creates_nothing_extra(mount):
     m = mount(APP)
     assert parts(find(m, "quieta")) == {"fxHover": False, "fxTap": False, "fxRoleItem": False, "fxTranslate": False}
     plano = find(m, "plano")
-    assert plano.property("background") is None and plano.property("fxLinks") is None
+    assert plano.property("fxBack") is None and plano.property("fxLinks") is None
 
 
 def test_each_part_appears_when_used(mount):
@@ -45,7 +45,7 @@ def test_each_part_appears_when_used(mount):
     assert parts(find(m, "encima")) == {"fxHover": True, "fxTap": False, "fxRoleItem": False, "fxTranslate": False}
     movida = find(m, "movida")
     assert movida.property("fxTranslate") is not None and movida.mapToScene(movida.position() * 0).x() == 4
-    assert find(m, "fondo").property("background") is not None
+    assert find(m, "fondo").property("fxBack") is not None
     assert find(m, "enlaces").property("fxLinks") is not None
 
 

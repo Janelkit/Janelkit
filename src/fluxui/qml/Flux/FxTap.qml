@@ -8,6 +8,7 @@ TapHandler {
     // los dos, Qt deja pasar la pulsación a lo que hay debajo.
     enabled: box !== null && box.fxPointerEvents && (box.fxClickable || box.fxTrackPress) && box.fxBlocker === null
     acceptedButtons: Qt.LeftButton
+    onPressedChanged: if (box) box.fxSyncPressed()
     onTapped: (eventPoint, button) => {
         if (box.fxClickable) box.fxActivate(eventPoint.position.x, eventPoint.position.y, button)
     }

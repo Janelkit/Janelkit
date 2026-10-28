@@ -4,6 +4,8 @@ import QtQuick
 
 Rectangle {
     property Item label: null
+    anchors.fill: parent
+    z: -1
     visible: label !== null && (label.fxBackground.a > 0 || label.fxBorderWidth > 0)
     color: label ? label.fxBackground : "transparent"
     border.color: label ? label.fxBorderColor : "transparent"

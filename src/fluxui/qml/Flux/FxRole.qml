@@ -9,6 +9,19 @@ QtObject {
     readonly property string kind: box ? box.fxAs : "box"
     readonly property bool spaceActivates: ["button", "checkbox", "switch", "tab", "menuitem", "option"].indexOf(kind) >= 0
     readonly property bool enterActivates: ["button", "link", "tab", "menuitem", "option"].indexOf(kind) >= 0
+    // Foco de una caja con papel: fxKeyFocus y el anillo de foco (fxFocusRing) de la caja.
+    readonly property bool keyFocus: box !== null && kind !== "box" && box.activeFocus
+    onKeyFocusChanged: sync()
+    Component.onCompleted: sync()
+    function sync() {
+        if (!box) return
+        box.fxKeyFocus = keyFocus
+        box.fxFocusRing = keyFocus && !box.fxCustomOutline
+    }
+    function setKeyDown(down) {
+        box.fxKeyDown = down
+        box.fxSyncPressed()
+    }
 
     readonly property Binding fxRoleBinding: Binding {
         target: role.box ? role.box.Accessible : null
@@ -37,7 +50,7 @@ QtObject {
         target: role.box ? role.box.Keys : null
         function onPressed(event) {
             if (event.key === Qt.Key_Space && role.spaceActivates) {
-                if (!event.isAutoRepeat) role.box.fxKeyDown = true
+                if (!event.isAutoRepeat) role.setKeyDown(true)
                 event.accepted = true
             } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && role.enterActivates) {
                 role.box.fxActivate(-1, -1, Qt.LeftButton)
@@ -46,7 +59,7 @@ QtObject {
         }
         function onReleased(event) {
             if (event.key === Qt.Key_Space && role.box.fxKeyDown && !event.isAutoRepeat) {
-                role.box.fxKeyDown = false
+                role.setKeyDown(false)
                 role.box.fxActivate(-1, -1, Qt.LeftButton)
                 event.accepted = true
             }
@@ -54,6 +67,6 @@ QtObject {
     }
     readonly property Connections fxFocus: Connections {
         target: role.box
-        function onActiveFocusChanged() { if (!role.box.activeFocus) role.box.fxKeyDown = false }
+        function onActiveFocusChanged() { if (!role.box.activeFocus && role.box.fxKeyDown) role.setKeyDown(false) }
     }
 }

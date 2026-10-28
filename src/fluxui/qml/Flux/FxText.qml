@@ -2,18 +2,22 @@
 // format: "plain" (por defecto) | "markdown" | "html". Los enlaces emiten on:link o,
 // si nadie lo escucha, se abren en el navegador.
 import QtQuick
-import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import "fx.js" as Fx
 
-Label {
+// Text y no Label (de Controls): un Label cuesta ~2 KB más por texto. Lo único que daba,
+// la fuente de la ventana, se fija aquí con la del tema.
+Text {
     id: label
+    font.family: fxtheme.font_family
+    font.pixelSize: fxtheme.font_size
     property int fxFlex: 0
     property string fxSelfAlign: ""
     property bool fxSelfStretch: false
     property color fxColor: fxtheme.text
     property string format: "plain"
     property bool fxLinkHandled: false
+    property bool selectable: false  // se puede seleccionar y copiar (FxTextSelect)
     // Fondo y borde (etiquetas, contadores): transparentes salvo que el estilo los fije.
     property color fxBackground: "transparent"
     property color fxBorderColor: "transparent"
@@ -23,14 +27,18 @@ Label {
     // fija el propio texto (" color size "), que gana a lo heredado.
     readonly property QtObject fxCtx: Fx.ctxOf(label)
     property string fxOwn: ""
-    property Item fxInherit: null
-    onFxCtxChanged: if (fxCtx) Fx.textInherit(label)
-    // Fondo y borde (FxTextBox) y mano sobre los enlaces (FxTextLinks): solo si se usan.
-    readonly property int fxDecor: (fxBackground.a > 0 || fxBorderWidth > 0 ? 1 : 0) | (format !== "plain" ? 2 : 0)
+    property var fxInherit: null  // {clave: FxTextInherit}
+    readonly property string fxCtxKeys: fxCtx ? fxCtx.keys : ""
+    onFxCtxKeysChanged: Fx.textInherit(label)
+    // Fondo y borde (FxTextBox), mano sobre los enlaces (FxTextLinks) y selección (FxTextSelect):
+    // solo si se usan.
+    readonly property int fxDecor: (fxBackground.a > 0 || fxBorderWidth > 0 ? 1 : 0) | (format !== "plain" ? 2 : 0) | (selectable ? 4 : 0)
+    property Item fxBack: null  // FxTextBox
     property QtObject fxLinks: null
+    property Item fxSelect: null
     onFxDecorChanged: Fx.textDecorations(label)
     Component.onCompleted: {
-        if (fxCtx) Fx.textInherit(label)
+        if (fxCtxKeys) Fx.textInherit(label)
         if (fxDecor) Fx.textDecorations(label)
     }
 
@@ -49,7 +57,7 @@ Label {
     onImplicitWidthChanged: Fx.resized(parent)
     onImplicitHeightChanged: Fx.resized(parent)
 
-    color: fxColor
+    color: fxSelect && fxSelect.visible ? "transparent" : fxColor  // con selectable, lo dibuja la copia
     linkColor: fxtheme.primary
     wrapMode: Text.Wrap
     readonly property bool fxWraps: wrapMode !== Text.NoWrap  // puede estrecharse en una fila

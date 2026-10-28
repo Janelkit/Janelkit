@@ -2,7 +2,7 @@
 import time
 
 import pytest
-from conftest import click, visual_items
+from conftest import _is_fx_text, click, visual_items
 from PySide6.QtCore import QMetaObject
 
 from fluxui.compiler import compile_source
@@ -42,7 +42,7 @@ def visible_texts(m):
     for view in (i for i in visual_items(m) if i.inherits("QQuickListView")):
         QMetaObject.invokeMethod(view, "forceLayout")
     QCoreApplication.processEvents()
-    labels = [i for i in visual_items(m) if i.inherits("QQuickLabel") and i.isVisible() and ":" in i.property("text")]
+    labels = [i for i in visual_items(m) if _is_fx_text(i) and i.isVisible() and ":" in i.property("text")]
     labels.sort(key=lambda i: i.mapToScene(QPointF(0, 0)).y())
     return [i.property("text") for i in labels]
 

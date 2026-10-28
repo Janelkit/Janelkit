@@ -355,6 +355,10 @@ def _white_space(value: str, ctx: _Context) -> dict[str, str]:
     return {"wrapMode": _keyword(value, {"normal": "Text.Wrap", "nowrap": "Text.NoWrap", "pre-wrap": "Text.Wrap"}, "white-space")}
 
 
+def _user_select(value: str, ctx: _Context) -> dict[str, str]:
+    return {"selectable": _keyword(value, {"text": "true", "auto": "false", "none": "false"}, "user-select")}
+
+
 def _text_overflow(value: str, ctx: _Context) -> dict[str, str]:
     return {"elide": _keyword(value, {"ellipsis": "Text.ElideRight", "clip": "Text.ElideNone"}, "text-overflow")}
 
@@ -693,6 +697,7 @@ SUPPORTED: dict[str, tuple[set[str], Converter]] = {
     "line-height": ({"Text"} | FLEXES, _line_height),
     "white-space": ({"Text"} | FLEXES, _white_space),
     "text-overflow": ({"Text"} | FLEXES, _text_overflow),
+    "user-select": ({"Text"}, _user_select),
     "flex": (ITEMS, _flex),
     "flex-grow": (ITEMS, _flex_grow),
     "flex-shrink": (ITEMS, _flex_shrink),

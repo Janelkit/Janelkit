@@ -151,6 +151,7 @@ CONTROLS: dict[str, ControlSpec] = {
             "text": PropSpec("text", "string"),
             "color": PropSpec("fxColor", "color"),
             "format": PropSpec("format", "string"),  # "plain" | "markdown" | "html"
+            "selectable": PropSpec("selectable", "bool"),  # se puede seleccionar y copiar
         },
         # Sin on:link, los enlaces se abren en el navegador.
         events={"link": EventSpec("onLinkActivated", ("link",), enables="fxLinkHandled", params=("link",))},

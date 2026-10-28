@@ -63,6 +63,7 @@ Los estilos son **locales al componente**: afectan a los elementos escritos en s
 | `line-height` | Text, flex, Column, Row | factor sin unidades (`1.4`) |
 | `white-space` | Text, flex, Column, Row | `normal`, `nowrap` (una sola línea) |
 | `text-overflow` | Text, flex, Column, Row | `ellipsis` (puntos suspensivos al cortar), `clip` |
+| `user-select` | Text | `text` (se puede seleccionar y copiar, como `selectable`), `auto`, `none` |
 | `--nombre` | flex, Column, Row | variable propia: `--acento: var(--primary)`; se lee con `var(--acento)` (ver abajo) |
 | `align-items` | flex, Column, Row, Scroll | `start`, `center`, `end`, `stretch`; `baseline` en flex, Column y Row |
 | `justify-content` | flex, Column, Row, Scroll | `start`, `center`, `end`, `space-between`, `space-around`, `space-evenly` |

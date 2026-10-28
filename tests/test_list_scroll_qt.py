@@ -1,6 +1,6 @@
 """Control del desplazamiento en <List>: follow, on:top/on:bottom, ref.scroll_to_*,
 y las piezas de un chat: texto con Markdown, on:link y eventos de activación de la ventana."""
-from conftest import find, visual_items
+from conftest import _is_fx_text, find, visual_items
 from PySide6.QtCore import Q_ARG, Q_RETURN_ARG, QCoreApplication, QMetaObject, QPointF
 
 from fluxui.compiler import compile_source
@@ -49,7 +49,7 @@ def shown(m):
     top = view.mapToScene(QPointF(0, 0)).y()
     rows = []
     for item in visual_items(m):
-        if item.inherits("QQuickLabel") and item.isVisible() and item.property("text").startswith("mensaje"):
+        if _is_fx_text(item) and item.isVisible() and item.property("text").startswith("mensaje"):
             y = item.mapToScene(QPointF(0, 0)).y() - top
             if -item.height() < y < view.height():
                 rows.append((round(y), item.property("text")))

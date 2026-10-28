@@ -19,7 +19,7 @@ from .reactivity import (
     state,
     untracked,
 )
-from . import dialogs
+from . import clipboard, dialogs
 from .events import DragEvent, FocusEvent, KeyEvent, PointerEvent, ResizeEvent, WheelEvent
 from .i18n import i18n, t
 from .lifecycle import Ref, before_leave, inject, on_destroy, on_mount, provide, ref
@@ -58,6 +58,7 @@ __all__ = [
     "background",
     "batch",
     "before_leave",
+    "clipboard",
     "computed",
     "dialogs",
     "effect",

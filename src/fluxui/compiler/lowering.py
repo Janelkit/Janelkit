@@ -1156,6 +1156,7 @@ class _Lowerer:
             if box is None:
                 return repeater
         box.props["fxFill"] = Literal("true")  # la raíz del componente ocupa toda la caja
+        box.props["fillMain"] = Literal("true")
         box.children.append(repeater)
         return box
 

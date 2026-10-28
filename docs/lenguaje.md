@@ -473,6 +473,37 @@ def abrir(ruta):
 
 Ejemplo: `apps/examples/preferencias` (nombre, tema, tamaño de letra, notas y un contador de aperturas; `python apps/examples/preferencias/main.py`, ciérrala y vuelve a abrirla).
 
+## Deshacer y rehacer: `History`
+
+Un `History` anota los cambios en pasos con nombre que se deshacen y rehacen. Lo que cambia dentro de `step` se anota solo: cada `state` asignado y cada lista, diccionario o conjunto reactivo modificado.
+
+```python
+from janelkit import History, state
+
+historial = History()
+columnas = state([{"nombre": "Pendiente", "tarjetas": []}, {"nombre": "Hecho", "tarjetas": []}])
+
+def mover(tarjeta, origen, destino):
+    with historial.step(f"mover «{tarjeta['titulo']}»"):
+        origen["tarjetas"].remove(tarjeta)
+        destino["tarjetas"].insert(0, tarjeta)
+```
+
+```html
+<Button text="Deshacer" enabled={historial.can_undo} label={f"Deshacer {historial.undo_label}"} on:click={historial.undo()} />
+<Shortcut keys="Ctrl+Z" on:activate={historial.undo()} />
+<Shortcut keys="Ctrl+Y" on:activate={historial.redo()} />
+```
+
+- Deshacer devuelve cada `state` y cada colección que el paso tocó a como estaba antes del paso, en un solo `batch`; rehacer, a como quedó. Los objetos son los mismos (no copias), así que `{#each}` con clave mueve las filas y conserva su estado.
+- Un paso guarda una copia superficial de cada colección que toca (la lista de tarjetas, no cada tarjeta). Una tarjeta modificada es otra colección y se anota aparte, solo si cambia. Un paso que acaba como empezó no se anota.
+- Un `step` dentro de otro se suma a él; un paso nuevo vacía lo que había para rehacer. `History(limit=100)` olvida los más antiguos.
+- Lo que cambia **fuera** de un `step` no se anota: el cursor, la selección o lo que se escribe en un campo no se deshacen. No pongas en el paso lo que no quieras deshacer.
+- Para lo que el historial no ve (un diccionario normal, un archivo, un objeto propio), `historial.add(nombre, undo=…, redo=…)` anota algo que ya hiciste con dos funciones. Dentro de un `step`, se suman a ese paso. Lo que hagan esas funciones al deshacer o rehacer no se anota.
+- `can_undo`, `can_redo`, `undo_label`, `redo_label` y `modified` son reactivos. `mark_saved()` marca lo actual como guardado: `modified` es `False` mientras se vuelva a ese punto (también deshaciendo). `clear()` olvida los pasos (al abrir otro documento).
+
+Ejemplos: `apps/challenges/kanban` (todo con `step`) y `apps/challenges/hoja` (con `add`, porque lo escrito vive en un diccionario normal por rendimiento).
+
 ## Listas grandes: `<List>`
 
 `<Scroll>` crea todas sus filas. Para cientos o miles de elementos, `<List>` solo crea las que se ven (más un margen):

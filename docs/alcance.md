@@ -16,7 +16,7 @@ Si algo puede construirse **solo con la API pública** y no todas las aplicacion
 
 Dos casos que el criterio resuelve y conviene recordar:
 
-- **La gestión de estado es del núcleo**, también la que vendrá (stores con acciones, deshacer/rehacer): se apoya en la semántica de `batch`, de los efectos y del ciclo de vida, y un paquete aparte acabaría duplicándola o dependiendo de detalles internos. `persisted` ya está dentro.
+- **La gestión de estado es del núcleo**, también la que vendrá (stores con acciones): se apoya en la semántica de `batch`, de los efectos y del ciclo de vida, y un paquete aparte acabaría duplicándola o dependiendo de detalles internos. `persisted` y `History` (deshacer/rehacer) ya están dentro.
 - **El idioma de la interfaz es del núcleo; las traducciones, no.** La dirección de escritura (derecha a izquierda) y el `QLocale` cambian la disposición de todo, así que `janelkit.locale` está en el núcleo. Los catálogos, plurales y formatos son de `janelkit-i18n`, que cambia ese idioma.
 
 ## Organización del repositorio
@@ -44,7 +44,7 @@ spikes/                     validaciones técnicas previas
 |---|---|---|
 | **Lenguaje `.janel`** | Archivo único (`<script lang="python">`, plantilla, `<style>`), interpolación, `on:`, `bind:`, `class:`, `transition:`, `{#if}`, `{#each}`, `{#key}`, `{#hidden}`, slots; `FORMAT_VERSION` | ✅ |
 | **Compilador** | Parser con ubicaciones, análisis del script, IR, generación de QML, diagnósticos con sugerencias; `check_source`/`check_file` para herramientas | ✅ |
-| **Reactividad y estado** | `state`, `computed`, `effect`, `batch`, colecciones reactivas, props, eventos, contexto (`provide`/`inject`), `persisted` | ✅ · stores con acciones y deshacer/rehacer: pendientes |
+| **Reactividad y estado** | `state`, `computed`, `effect`, `batch`, colecciones reactivas, props, eventos, contexto (`provide`/`inject`), `persisted`, deshacer/rehacer (`History`) | ✅ · stores con acciones: pendientes |
 | **Runtime de componentes** | Instancias, regiones dinámicas, reconciliación por clave, ciclo de vida, referencias a elementos | ✅ |
 | **Asincronía** | Manejadores `async def`, `@task`, `background`, `spawn`, temporizadores; todo ligado al componente | ✅ |
 | **Disposición y controles** | Motor `<flex>` y vía rápida con layouts de Qt; texto, botón, campos, casilla, select, switch, slider, radio, imagen, progreso, pestañas, lista virtualizada | ✅ |

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+from . import history as _history
 from .effects import Source, batch, check_thread
 
 
@@ -80,6 +81,7 @@ def _writer(base: type, name: str):
 
     def write(self, *args, **kwargs):
         check_thread()
+        self._jk_before()
         result = method(self, *args, **kwargs)
         self._jk_changed()
         return result
@@ -96,6 +98,11 @@ class _Mixin:
         with batch():
             self._jk_src._notify()
 
+    def _jk_before(self) -> None:
+        """Antes de modificarse: si hay un paso de `History` abierto, anota el contenido."""
+        if _history._step is not None:
+            _history._step.touch(self)
+
 
 _LIST_READS = (
     "__getitem__", "__iter__", "__reversed__", "__len__", "__contains__", "__eq__", "__ne__",
@@ -111,11 +118,19 @@ class ReactiveList(_Mixin, list):
         list.__init__(self, (reactive(v) for v in iterable))
         self._jk_src = Source()
 
+    def _jk_snapshot(self) -> list:
+        return list(list.__iter__(self))
+
+    def _jk_restore(self, content: list) -> None:
+        list.__setitem__(self, slice(None), content)
+        self._jk_changed()
+
     def __reduce_ex__(self, protocol):
         return (ReactiveList, (list(list.__iter__(self)),))
 
     def __setitem__(self, index, value):
         check_thread()
+        self._jk_before()
         if isinstance(index, slice):
             value = [reactive(v) for v in value]
         else:
@@ -131,22 +146,26 @@ class ReactiveList(_Mixin, list):
 
     def __imul__(self, n):
         check_thread()
+        self._jk_before()
         list.__imul__(self, n)
         self._jk_changed()
         return self
 
     def append(self, value):
         check_thread()
+        self._jk_before()
         list.append(self, reactive(value))
         self._jk_changed()
 
     def extend(self, values):
         check_thread()
+        self._jk_before()
         list.extend(self, [reactive(v) for v in values])
         self._jk_changed()
 
     def insert(self, index, value):
         check_thread()
+        self._jk_before()
         list.insert(self, index, reactive(value))
         self._jk_changed()
 
@@ -176,11 +195,20 @@ class ReactiveDict(_Mixin, dict):
         self._jk_src = Source()
         dict.update(self, ((k, reactive(v)) for k, v in dict(*args, **kwargs).items()))
 
+    def _jk_snapshot(self) -> dict:
+        return dict(dict.items(self))
+
+    def _jk_restore(self, content: dict) -> None:
+        dict.clear(self)
+        dict.update(self, content)
+        self._jk_changed()
+
     def __reduce_ex__(self, protocol):
         return (ReactiveDict, (dict(dict.items(self)),))
 
     def __setitem__(self, key, value):
         check_thread()
+        self._jk_before()
         value = reactive(value)
         if dict.__contains__(self, key) and _same(dict.__getitem__(self, key), value):
             return
@@ -228,6 +256,14 @@ class ReactiveSet(_Mixin, set):
     def __init__(self, iterable: Iterable = ()):
         set.__init__(self, iterable)
         self._jk_src = Source()
+
+    def _jk_snapshot(self) -> set:
+        return set(set.__iter__(self))
+
+    def _jk_restore(self, content: set) -> None:
+        set.clear(self)
+        set.update(self, content)
+        self._jk_changed()
 
     def __reduce_ex__(self, protocol):
         return (ReactiveSet, (set(set.__iter__(self)),))

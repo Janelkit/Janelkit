@@ -36,7 +36,7 @@ python bench.py --cols 4 --cards 200
 | `src/components/Tarjeta.janel` | Una tarjeta: arrastre, destino de otras tarjetas, teclas y descripción desplegable. |
 | `src/components/Detalle.janel` | Panel de detalle con borrador y «Guardar». |
 | `src/components/MenuContextual.janel` | Menú hecho con `<flex>` (foco, flechas, Escape, clic fuera). |
-| `src/services/tablero.py` | Columnas y tarjetas, operaciones con su inversa (deshacer/rehacer), JSON y datos de ejemplo. |
+| `src/services/tablero.py` | Columnas y tarjetas, cada acción como un paso de `History` (deshacer/rehacer), JSON y datos de ejemplo. |
 | `src/services/interfaz.py` | Estado compartido de la ventana: detalle, menú, foco pendiente y filtro. |
 | `bench.py` | Mediciones con 20 × 200. |
 

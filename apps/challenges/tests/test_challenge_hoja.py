@@ -188,6 +188,6 @@ def test_save_writes_the_same_csv_format(app, archivo):
     teclas(app, "Down", "Right", "2")
     editor(app).key("Enter")
     app.find("Button", text="Guardar").click()
-    app.wait(until=lambda: not app.get("modificada"))
+    app.wait(until=lambda: not app.get("historial").modified)
     assert archivo.read_text(encoding="utf-8").splitlines()[1] == "Pan,2,4,=B2*C2"
     assert app.get("titulo") == "compra.csv — Hoja"

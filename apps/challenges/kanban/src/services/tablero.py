@@ -1,22 +1,20 @@
 """El tablero: columnas con tarjetas, deshacer/rehacer y el archivo JSON.
 
-Todo cambio pasa por `Tablero.hacer(...)`: aplica una operación y guarda la inversa.
-Deshacer aplica la inversa (que devuelve a su vez la suya, para rehacer). Las
-operaciones mueven las tarjetas en sitio dentro de las listas reactivas, así que
-`{#each}` mueve una fila en vez de volver a crear la columna entera.
-
-Deshacer todavía no está en JanelKit (docs/alcance.md: los stores con deshacer serán del núcleo); por
-eso vive aquí, en la aplicación.
+Cada acción es un paso del historial (`janelkit.History`): mueve las tarjetas en
+sitio dentro de las listas reactivas, y deshacer devuelve esas listas a como
+estaban. Como los objetos son los mismos, `{#each}` mueve una fila en vez de
+volver a crear la columna entera.
 """
 from __future__ import annotations
 
 import datetime as dt
 import json
 import random
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Iterator
 
-from janelkit import batch, state, timeout
+from janelkit import History, state, timeout
 
 ETIQUETAS = {
     "error": "#e03131", "mejora": "#2f9e44", "diseño": "#ae3ec9",
@@ -33,10 +31,7 @@ class Tablero:
         self.columnas = state(datos["columnas"])
         self._siguiente = 1 + max((int(t["id"][1:]) for c in datos["columnas"] for t in c["tarjetas"]), default=0)
         self._siguiente_col = 1 + max((int(c["id"][1:]) for c in datos["columnas"]), default=0)
-        self._deshacer: list[tuple[str, Callable, tuple]] = []
-        self._rehacer: list[tuple[str, Callable, tuple]] = []
-        self.puede_deshacer = state("")  # descripción de lo que se desharía ("" si nada)
-        self.puede_rehacer = state("")
+        self.historial = History()
         self._guardado = None
 
     # -- consultas -------------------------------------------------------------
@@ -56,28 +51,21 @@ class Tablero:
         return c["tarjetas"][i]
 
     # -- deshacer ----------------------------------------------------------------
-    def hacer(self, que: str, op: Callable, *args: Any) -> None:
-        """Aplica `op(*args)`, que devuelve su inversa como (op, args)."""
-        inversa = op(*args)
-        self._deshacer.append((que, *inversa))
-        self._rehacer.clear()
+    @contextmanager
+    def _paso(self, que: str) -> Iterator[None]:
+        with self.historial.step(que):
+            yield
         self._cambio()
 
     def deshacer(self) -> None:
-        if self._deshacer:
-            que, op, args = self._deshacer.pop()
-            self._rehacer.append((que, *op(*args)))
+        if self.historial.undo() is not None:
             self._cambio()
 
     def rehacer(self) -> None:
-        if self._rehacer:
-            que, op, args = self._rehacer.pop()
-            self._deshacer.append((que, *op(*args)))
+        if self.historial.redo() is not None:
             self._cambio()
 
     def _cambio(self) -> None:
-        self.puede_deshacer.value = self._deshacer[-1][0] if self._deshacer else ""
-        self.puede_rehacer.value = self._rehacer[-1][0] if self._rehacer else ""
         if self.archivo is not None and self._guardado is None:  # un guardado por ráfaga de cambios
             self._guardado = timeout(300)(self.guardar)
 
@@ -87,64 +75,19 @@ class Tablero:
             datos = {"columnas": self.columnas.peek()}  # las colecciones reactivas son list y dict
             self.archivo.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
 
-    # -- operaciones (cada una devuelve su inversa) --------------------------------
-    def _mover(self, tarjeta_id: str, col_id: str, indice: int) -> tuple[Callable, tuple]:
-        origen, i = self.donde(tarjeta_id)
-        destino = self.columna(col_id)
-        with batch():
-            if origen is destino:
-                lista = origen["tarjetas"]
-                indice = max(0, min(indice, len(lista) - 1))
-                lista.insert(indice, lista.pop(i))
-            else:
-                t = origen["tarjetas"].pop(i)
-                destino["tarjetas"].insert(max(0, min(indice, len(destino["tarjetas"]))), t)
-        return self._mover, (tarjeta_id, origen["id"], i)
-
-    def _poner(self, col_id: str, indice: int, tarjeta: dict) -> tuple[Callable, tuple]:
-        self.columna(col_id)["tarjetas"].insert(indice, tarjeta)
-        return self._quitar, (tarjeta["id"],)
-
-    def _quitar(self, tarjeta_id: str) -> tuple[Callable, tuple]:
-        c, i = self.donde(tarjeta_id)
-        t = c["tarjetas"].pop(i)
-        return self._poner, (c["id"], i, dict(t))
-
-    def _editar(self, tarjeta_id: str, campos: dict) -> tuple[Callable, tuple]:
-        t = self.tarjeta(tarjeta_id)
-        antes = {k: t[k] for k in campos}
-        with batch():
-            for k, v in campos.items():
-                t[k] = v
-        return self._editar, (tarjeta_id, antes)
-
-    def _poner_columna(self, indice: int, columna: dict) -> tuple[Callable, tuple]:
-        self.columnas.peek().insert(indice, columna)
-        return self._quitar_columna, (columna["id"],)
-
-    def _quitar_columna(self, col_id: str) -> tuple[Callable, tuple]:
-        cols = self.columnas.peek()
-        i = next(i for i, c in enumerate(cols) if c["id"] == col_id)
-        c = cols.pop(i)
-        return self._poner_columna, (i, c)
-
-    def _mover_columna(self, col_id: str, indice: int) -> tuple[Callable, tuple]:
-        cols = self.columnas.peek()
-        i = next(i for i, c in enumerate(cols) if c["id"] == col_id)
-        cols.insert(max(0, min(indice, len(cols) - 1)), cols.pop(i))
-        return self._mover_columna, (col_id, i)
-
-    def _renombrar(self, col_id: str, nombre: str) -> tuple[Callable, tuple]:
-        c = self.columna(col_id)
-        antes, c["nombre"] = c["nombre"], nombre
-        return self._renombrar, (col_id, antes)
-
     # -- acciones de la interfaz ------------------------------------------------------
     def mover(self, tarjeta_id: str, col_id: str, indice: int) -> None:
         origen, i = self.donde(tarjeta_id)
         if origen["id"] == col_id and i == indice:
             return
-        self.hacer(f"mover «{self.tarjeta(tarjeta_id)['titulo']}»", self._mover, tarjeta_id, col_id, indice)
+        destino = self.columna(col_id)
+        with self._paso(f"mover «{self.tarjeta(tarjeta_id)['titulo']}»"):
+            if origen is destino:
+                lista = origen["tarjetas"]
+                lista.insert(max(0, min(indice, len(lista) - 1)), lista.pop(i))
+            else:
+                t = origen["tarjetas"].pop(i)
+                destino["tarjetas"].insert(max(0, min(indice, len(destino["tarjetas"]))), t)
 
     def mover_a(self, tarjeta_id: str, paso: int) -> None:
         """A la columna anterior (-1) o siguiente (+1), arriba del todo."""
@@ -161,42 +104,54 @@ class Tablero:
 
     def nueva(self, col_id: str, titulo: str = "Nueva tarjeta") -> str:
         t = {"id": self._id(), "titulo": titulo, "descripcion": "", "etiquetas": [], "responsable": "", "fecha": ""}
-        self.hacer("añadir tarjeta", self._poner, col_id, len(self.columna(col_id)["tarjetas"]), t)
+        with self._paso("añadir tarjeta"):
+            self.columna(col_id)["tarjetas"].append(t)
         return t["id"]
 
     def duplicar(self, tarjeta_id: str) -> str:
         c, i = self.donde(tarjeta_id)
         t = dict(self.tarjeta(tarjeta_id), id=self._id())
         t["etiquetas"] = list(t["etiquetas"])
-        self.hacer(f"duplicar «{t['titulo']}»", self._poner, c["id"], i + 1, t)
+        with self._paso(f"duplicar «{t['titulo']}»"):
+            c["tarjetas"].insert(i + 1, t)
         return t["id"]
 
     def borrar(self, tarjeta_id: str) -> None:
-        self.hacer(f"borrar «{self.tarjeta(tarjeta_id)['titulo']}»", self._quitar, tarjeta_id)
+        c, i = self.donde(tarjeta_id)
+        with self._paso(f"borrar «{c['tarjetas'][i]['titulo']}»"):
+            del c["tarjetas"][i]
 
     def editar(self, tarjeta_id: str, **campos: Any) -> None:
         t = self.tarjeta(tarjeta_id)
         campos = {k: v for k, v in campos.items() if t[k] != v}
         if campos:
-            self.hacer(f"editar «{t['titulo']}»", self._editar, tarjeta_id, campos)
+            with self._paso(f"editar «{t['titulo']}»"):
+                t.update(campos)
 
     def nueva_columna(self, nombre: str = "Nueva columna") -> str:
         c = {"id": f"c{self._siguiente_col}", "nombre": nombre, "tarjetas": []}
         self._siguiente_col += 1
-        self.hacer("añadir columna", self._poner_columna, len(self.columnas.peek()), c)
+        with self._paso("añadir columna"):
+            self.columnas.peek().append(c)
         return c["id"]
 
     def borrar_columna(self, col_id: str) -> None:
-        self.hacer(f"borrar columna «{self.columna(col_id)['nombre']}»", self._quitar_columna, col_id)
+        cols = self.columnas.peek()
+        with self._paso(f"borrar columna «{self.columna(col_id)['nombre']}»"):
+            cols.remove(self.columna(col_id))
 
     def renombrar(self, col_id: str, nombre: str) -> None:
-        if nombre and nombre != self.columna(col_id)["nombre"]:
-            self.hacer("renombrar columna", self._renombrar, col_id, nombre)
+        c = self.columna(col_id)
+        if nombre and nombre != c["nombre"]:
+            with self._paso("renombrar columna"):
+                c["nombre"] = nombre
 
     def mover_columna(self, col_id: str, indice: int) -> None:
         cols = self.columnas.peek()
-        if next(i for i, c in enumerate(cols) if c["id"] == col_id) != indice:
-            self.hacer(f"mover columna «{self.columna(col_id)['nombre']}»", self._mover_columna, col_id, indice)
+        i = next(i for i, c in enumerate(cols) if c["id"] == col_id)
+        if i != indice:
+            with self._paso(f"mover columna «{cols[i]['nombre']}»"):
+                cols.insert(max(0, min(indice, len(cols) - 1)), cols.pop(i))
 
     def _id(self) -> str:
         self._siguiente += 1

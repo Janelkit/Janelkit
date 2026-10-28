@@ -29,8 +29,7 @@ provide("ui", ui)
 columnas = tablero.columnas
 detalle = ui.detalle
 menu = ui.menu
-deshacer = tablero.puede_deshacer
-rehacer = tablero.puede_rehacer
+historial = tablero.historial
 ETIQUETAS_OPC = [{"label": "Todas las etiquetas", "value": ""}] + [{"label": e, "value": e} for e in ETIQUETAS]
 PERSONAS_OPC = [{"label": "Todas las personas", "value": ""}] + [{"label": p, "value": p} for p in PERSONAS]
 
@@ -80,8 +79,8 @@ def limpiar_filtros():
         <Button text="Quitar filtros" variant="ghost" on:click={limpiar_filtros()} />
       {/if}
       <Spacer />
-      <Button text="Deshacer" enabled={bool(deshacer)} label={f"Deshacer {deshacer} (Ctrl+Z)"} on:click={tablero.deshacer()} />
-      <Button text="Rehacer" enabled={bool(rehacer)} label={f"Rehacer {rehacer} (Ctrl+Y)"} on:click={tablero.rehacer()} />
+      <Button text="Deshacer" enabled={historial.can_undo} label={f"Deshacer {historial.undo_label} (Ctrl+Z)"} on:click={tablero.deshacer()} />
+      <Button text="Rehacer" enabled={historial.can_redo} label={f"Rehacer {historial.redo_label} (Ctrl+Y)"} on:click={tablero.rehacer()} />
       <Button text="+ Columna" variant="primary" on:click={tablero.nueva_columna()} />
     </flex>
     <flex class="cuerpo">

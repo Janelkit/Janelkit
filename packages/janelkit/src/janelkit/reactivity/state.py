@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Generic, TypeVar
 
+from . import history as _history
 from .collections import reactive
 from .effects import Source, batch, check_thread, untracked
 
@@ -44,6 +45,8 @@ class State(Source, Generic[T]):
         new = reactive(new)
         if _same(self._value, new):
             return
+        if _history._step is not None:
+            _history._step.touch_state(self, self._value)
         self._value = new
         with batch():
             self._notify()

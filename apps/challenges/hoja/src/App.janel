@@ -33,9 +33,7 @@ provide("enfocar", lambda: rejilla.focus())
 cols = vista.visibles
 congelar_fila = vista.congelar_fila
 congelar_col = vista.congelar_col
-deshacer = hoja.puede_deshacer
-rehacer = hoja.puede_rehacer
-modificada = hoja.modificada
+historial = hoja.historial
 
 
 @computed
@@ -64,7 +62,7 @@ def resumen():
 @computed
 def titulo():
     nombre = archivo.value.name if archivo.value else "Sin título"
-    return f"{'• ' if modificada.value else ''}{nombre} — Hoja"
+    return f"{'• ' if historial.modified else ''}{nombre} — Hoja"
 
 
 @effect
@@ -154,8 +152,8 @@ def ordenar(descendente):
     <flex class="barra">
       <Button text="Abrir…" on:click={abrir} />
       <Button text="Guardar" on:click={guardar} />
-      <Button text="Deshacer" enabled={bool(deshacer)} label={f"Deshacer {deshacer} (Ctrl+Z)"} on:click={hoja.deshacer()} />
-      <Button text="Rehacer" enabled={bool(rehacer)} label={f"Rehacer {rehacer} (Ctrl+Y)"} on:click={hoja.rehacer()} />
+      <Button text="Deshacer" enabled={historial.can_undo} label={f"Deshacer {historial.undo_label} (Ctrl+Z)"} on:click={hoja.deshacer()} />
+      <Button text="Rehacer" enabled={historial.can_redo} label={f"Rehacer {historial.redo_label} (Ctrl+Y)"} on:click={hoja.rehacer()} />
       <Button text="Ordenar A→Z" on:click={ordenar(False)} />
       <Button text="Ordenar Z→A" on:click={ordenar(True)} />
       <Checkbox text="Congelar fila 1" bind:checked={congelar_fila} />

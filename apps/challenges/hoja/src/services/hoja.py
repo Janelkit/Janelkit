@@ -6,8 +6,9 @@ escrito y un `computed` con su valor) se crea la primera vez que alguien la lee:
 al mostrarla o una fórmula que la usa. Como los `computed` son perezosos, cambiar una
 celda de la que dependen mil fórmulas solo recalcula las que están a la vista.
 
-Todo cambio pasa por `escribir()`, que guarda lo que había para deshacerlo. Deshacer
-todavía no está en el núcleo (docs/alcance.md); como en el reto 3, vive en la aplicación.
+Todo cambio pasa por `escribir()`, que anota en el historial (`janelkit.History`) lo
+que había y lo que hay. Como el diccionario de lo escrito no es reactivo, el historial
+no lo ve: el paso se anota con `add()` y dos funciones que aplican cada versión.
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ import io
 from pathlib import Path
 from typing import Any
 
-from janelkit import Computed, State, batch, computed, state, untracked
+from janelkit import Computed, History, State, batch, computed, state, untracked
 
 from services.formulas import Error, FalloFormula, evaluar, mostrar, nombre
 
@@ -40,12 +41,8 @@ class Hoja:
         self._raw: dict[Pos, str] = {k: v for k, v in (datos or {}).items() if v}
         self._celdas: dict[Pos, Celda] = {}
         self._evaluando: set[Pos] = set()
-        self._deshacer: list[tuple[str, dict[Pos, str], dict[Pos, str]]] = []
-        self._rehacer: list[tuple[str, dict[Pos, str], dict[Pos, str]]] = []
-        self.puede_deshacer = state("")  # descripción de lo que se desharía ("" si nada)
-        self.puede_rehacer = state("")
+        self.historial = History(limit=LIMITE_DESHACER)
         self.separador = ","  # el del último CSV abierto; se usa al guardar
-        self.modificada = state(False)
 
     # -- lectura ------------------------------------------------------------------
     def celda(self, r: int, c: int) -> Celda:
@@ -99,25 +96,15 @@ class Hoja:
         cambios = {pos: v for pos, v in cambios.items() if antes[pos] != v}
         if not cambios:
             return
+        antes = {pos: antes[pos] for pos in cambios}
         self._aplicar(cambios)
-        self._deshacer.append((que, {pos: antes[pos] for pos in cambios}, cambios))
-        del self._deshacer[:-LIMITE_DESHACER]
-        self._rehacer.clear()
-        self._avisar()
+        self.historial.add(que, undo=lambda: self._aplicar(antes), redo=lambda: self._aplicar(cambios))
 
     def deshacer(self) -> None:
-        if self._deshacer:
-            que, antes, despues = self._deshacer.pop()
-            self._aplicar(antes)
-            self._rehacer.append((que, antes, despues))
-            self._avisar()
+        self.historial.undo()
 
     def rehacer(self) -> None:
-        if self._rehacer:
-            que, antes, despues = self._rehacer.pop()
-            self._aplicar(despues)
-            self._deshacer.append((que, antes, despues))
-            self._avisar()
+        self.historial.redo()
 
     def _aplicar(self, cambios: dict[Pos, str]) -> None:
         with batch():
@@ -129,11 +116,6 @@ class Hoja:
                 celda = self._celdas.get(pos)
                 if celda is not None:  # si no existe, nadie la lee todavía: se creará con el texto nuevo
                     celda.raw.value = texto
-
-    def _avisar(self) -> None:
-        self.puede_deshacer.value = self._deshacer[-1][0] if self._deshacer else ""
-        self.puede_rehacer.value = self._rehacer[-1][0] if self._rehacer else ""
-        self.modificada.value = True
 
     def borrar(self, r0: int, c0: int, r1: int, c1: int) -> None:
         cambios = {(r, c): "" for r in range(r0, r1 + 1) for c in range(c0, c1 + 1) if (r, c) in self._raw}
@@ -218,10 +200,8 @@ class Hoja:
         with batch():
             for pos, celda in self._celdas.items():
                 celda.raw.value = self._raw.get(pos, "")
-        self._deshacer.clear()
-        self._rehacer.clear()
-        self._avisar()
-        self.modificada.value = False
+        self.historial.clear()
+        self.historial.mark_saved()
 
     def guardar(self, archivo: Path) -> None:
         filas, cols = self.usadas()
@@ -230,7 +210,7 @@ class Hoja:
         for r in range(filas):
             w.writerow([self._raw.get((r, c), "") for c in range(cols)])
         archivo.write_text(out.getvalue(), encoding="utf-8")
-        self.modificada.value = False
+        self.historial.mark_saved()
 
 
 def _separador(texto: str) -> str:

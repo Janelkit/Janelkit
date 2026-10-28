@@ -74,7 +74,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 | Teclado | Flechas, Tab, Intro, Esc, Mayús+flechas sobre celdas | ✅ `on:keydown`/`on:keyup` con tecla y modificadores en `<flex>` y en los campos; `event.prevent()` |
 | Edición en el sitio | Pasar de mostrar a editar una celda y volver, con el foco correcto | `ref.focus()`, `tabindex`, `on:focus`/`on:blur`; sin medir el foco entre miles de celdas |
 | Portapapeles | Copiar y pegar rangos como texto tabulado | ✅ `janelkit_desktop.clipboard` (texto); falta probar el reto de rangos tabulados |
-| Deshacer / rehacer | Historial de cambios de celdas | Todavía no existe (previsto en el núcleo, con los stores) |
+| Deshacer / rehacer | Historial de cambios de celdas | ✅ `History` en el núcleo (pasos propios con `add` para lo que no es reactivo) |
 | Selección con el ratón | Arrastrar para seleccionar un rango | ✅ `on:pointerdown`/`pointermove`/`pointerup` en `<flex>` |
 
 **Hecho cuando**
@@ -101,7 +101,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 | Menús contextuales y barra de menús | Menú emergente con submenús y atajos | **No existen** |
 | Listas anidadas | `{#each}` de columnas que contiene `{#each}` de tarjetas, con claves | Debería funcionar; sin medir con 20 columnas × 200 tarjetas |
 | Mover entre listas | Una tarjeta pasa de una lista reactiva a otra conservando su componente | Hoy se destruye y se crea otra: se pierde su estado local |
-| Estado compartido y deshacer | Muchas acciones que deben poder deshacerse | Sin ayuda del núcleo |
+| Estado compartido y deshacer | Muchas acciones que deben poder deshacerse | ✅ `History`: cada acción es un `step` |
 
 **Hecho cuando**
 
@@ -244,7 +244,7 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 | Canvas, gráficas, editor de código | 1, 5 | `janelkit-kit` (sobre la vía de escape QML) · el reto 1 hizo su gráfica en QML propio sin problemas |
 | Rejilla con salto de línea (tarjetas que se recolocan según el ancho) | 1 | ✅ Núcleo: `flex-wrap` en `<flex>`, `Column` y `Row` ([flex.md](flex.md), fase 1) |
 | Texto enriquecido | 4 | ✅ Núcleo: `<Text format="markdown">` (reto 4) · falta que no interprete HTML, para mostrar texto de otras personas sin escaparlo a mano; decidirlo antes de publicar |
-| Deshacer/rehacer y stores | 2, 3 | núcleo, pendiente · el reto 3 lo hizo en la aplicación con operaciones que devuelven su inversa (~100 líneas) y el reto 2 con instantáneas por celda (~40 líneas): el del núcleo debe admitir los dos ([hallazgo 7](../apps/challenges/hoja/HALLAZGOS.md)) |
+| Deshacer/rehacer y stores | 2, 3 | ✅ deshacer/rehacer: `History` en el núcleo, con pasos que se anotan solos (`step`, lo usa el reto 3) y pasos propios (`add`, lo usa el reto 2); stores con acciones: pendientes |
 
 ## Registro de hallazgos (plantilla)
 

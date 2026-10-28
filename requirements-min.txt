@@ -1,0 +1,15 @@
+# Versiones mínimas que admite FluxUI (pyproject.toml), con las que también pasa
+# la suite: Python 3.10 y PySide6 6.8 (LTS de Qt). Sirve para comprobar que no se
+# usa nada más nuevo de lo declarado.
+#
+#   py -3.10 -m venv .venv310
+#   .venv310\Scripts\python -m pip install -r requirements-min.txt
+
+PySide6==6.8.3
+qasync==0.28.0
+
+-e .
+pytest==9.1.1
+pyflakes==4.0.3
+psutil==7.2.2
+websockets==16.1.1

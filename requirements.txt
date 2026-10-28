@@ -1,0 +1,11 @@
+# Dependencias de FluxUI para ejecutar aplicaciones, con las versiones exactas
+# con las que pasa la suite (Python 3.13, Windows).
+#
+# pyproject.toml declara los rangos que admite la biblioteca (PySide6>=6.8,
+# qasync>=0.27); este archivo fija un entorno reproducible.
+# Versión mínima probada: requirements-min.txt. Desarrollo: requirements-dev.txt.
+#
+#   python -m pip install -r requirements.txt
+
+PySide6==6.12.0          # trae PySide6_Essentials, PySide6_Addons y shiboken6 de la misma versión
+qasync==0.28.0           # bucle asyncio sobre el de Qt (async/await en los componentes)

@@ -61,7 +61,7 @@ def remove(todo_id):
 ```bash
 python -m venv .venv
 .venv\Scripts\activate          # Windows  (Linux/macOS: source .venv/bin/activate)
-python -m pip install -e ".[dev]"
+python -m pip install -r requirements-dev.txt   # versiones probadas; o: pip install -e ".[dev]"
 
 flux new mi-app
 cd mi-app

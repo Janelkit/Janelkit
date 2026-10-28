@@ -79,6 +79,22 @@ Cierran de forma **provisional** puntos del «Registro de decisiones pendientes�
 20. **Asincronía con `qasync`:** el bucle de `asyncio` corre sobre el de Qt (QtAsyncio, incluido en PySide6, aún no implementa red). Dependencia nueva: `qasync>=0.27` (BSD). Las tareas se registran en el ámbito reactivo activo y se cancelan al liberarlo.
 21. **Contenido de slots como documentos QML aparte:** se generan en la compilación del padre y se cargan como delegado del `Repeater` del hijo.
 22. **Elementos propios = archivos `.qml` importados como componentes:** el compilador lee las `property`/`signal` del objeto raíz (análisis léxico, sin motor QML) y genera un `import "<carpeta>" as FxUserN`. Con `bind:` se usa `Binding on` y solo se devuelven valores distintos, porque `<prop>Changed` también salta con los cambios de Python. Al cambiar un `.qml`, `flux dev` desmonta y vacía la caché de componentes de QML.
+23. **Nombre definitivo: JanelKit** (28 de octubre de 2026; de *janela*, «ventana» en portugués). Sustituye al provisional FluxUI: «Flux UI» ya es una biblioteca comercial de componentes para Laravel Livewire (fluxui.dev), el paquete `flux` de PyPI está ocupado y el comando `flux` choca con la CLI de Flux CD. Verificado libre: `janelkit` en PyPI, npm y GitHub; `janel` en PyPI. Equivalencias:
+
+    | Qué | Antes | Ahora | Público |
+    |---|---|---|---|
+    | Paquete PyPI e import | `fluxui` | `janelkit` | sí |
+    | Comando | `flux` | `janel` | sí |
+    | Extensión de componentes | `.flux` | `.janel` | sí |
+    | Variables de entorno | `FLUXUI_*` | `JANELKIT_*` | sí |
+    | Objetos en `.qml` propios | `fxtheme`, `fxi18n` | `jktheme`, `jki18n` | sí |
+    | Excepción de diagnósticos | `FluxError` | `JanelError` | sí |
+    | Módulo QML interno | `Flux` | `Janel` | no |
+    | Prefijo de tipos QML internos | `Fx` (`FxBox`…) | `Jk` (`JkBox`…) | no |
+    | Logger | `fluxui` | `janelkit` | — |
+    | Extensión de editor | `editors/vscode`, lenguaje `flux` | `janelkit-vscode`, lenguaje `janel` | sí |
+
+    Como no se ha publicado nada, no se mantienen alias del nombre anterior (ni `import fluxui` ni archivos `.flux`).
 
 ## Rendimiento medido (indicativo)
 
@@ -166,7 +182,7 @@ Explorador (`examples/files`) sobre una carpeta de 5000 archivos:
 
 - Los objetos propios modificados en el sitio no se detectan (las listas, diccionarios y conjuntos sí): llama a `estado.notify()`.
 - Sin empaquetado de aplicaciones (`.exe`, `.app`).
-- Nombre `fluxui`/`flux` y extensión `.flux` siguen siendo provisionales y **no se han verificado en PyPI**. No se ha publicado nada.
+- Nombre decidido, **JanelKit** (decisión 23), pero el renombrado del código y la documentación está pendiente: hasta aplicarlo, todo sigue diciendo `fluxui`/`flux`/`.flux`. No se ha publicado nada.
 - Licencia sin decidir.
 
 ## Siguientes pasos

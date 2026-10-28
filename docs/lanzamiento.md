@@ -24,7 +24,7 @@ Situación de partida: incrementos 0–7 completos; detalle en [estado.md](estad
 | 14 | Accesibilidad básica | P1 | ✅ | `tests/test_accessibility_qt.py`: orden de Tab, Espacio/Intro en cajas pulsables, foco visible, nombres accesibles (`label`, `alt`) |
 | 11 | Linux, macOS y CI | P1 | 🟡 | CI con matriz preparada (`.github/workflows/ci.yml`); versiones mínimas (Python 3.10 + PySide6 6.8) verificadas en Windows. **Falta:** ejecutarla en GitHub (necesita un remoto) para probar Linux y macOS. |
 | 16 | Documentación de lanzamiento | P1 | ✅ | [tutorial.md](tutorial.md) (con `examples/compra` probado), [api.md](api.md), [cambios.md](cambios.md), [empaquetado.md](empaquetado.md) (receta verificada con PyInstaller) |
-| 17 | Nombre, licencia y publicación | P1 | ⏳ | Necesita decisiones del autor: nombre en PyPI, licencia. |
+| 17 | Nombre, licencia y publicación | P1 | 🟡 | Nombre decidido: **JanelKit** (`janelkit`, comando `janel`, archivos `.janel`; [estado.md](estado.md#decisiones-provisionales-tomadas-al-implementar), decisión 23). **Falta:** aplicar el renombrado, elegir licencia y publicar en TestPyPI. |
 | 18 | Tipos en props | P2 | ✅ | `edad: int = prop(0)`; literales al compilar, valores dinámicos al ejecutar (`tests/test_components_qt.py`) |
 | 20 | Transiciones y animaciones | P2 | ✅ | `transition:`/`in:`/`out:`, `transition` en CSS, `<List animate>` (`tests/test_transitions_qt.py`) |
 | 23 | `class={expr}` dinámico | P2 | ✅ | `tests/test_runtime_qt.py::test_dynamic_class_expression` |

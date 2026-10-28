@@ -16,8 +16,8 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 
 | # | Reto | Estado | Resultado |
 |---|---|---|---|
-| 4 | Chat | ✅ | [apps/challenges/chat](../apps/challenges/chat/) · [hallazgos](../apps/challenges/chat/HALLAZGOS.md). Se añadieron al núcleo el desplazamiento de `<List>`, `<Text format>`, eventos de ventana y `notify`; quedan temporizadores, texto seleccionable y Markdown seguro. |
-| 1 | Panel | ✅ | [apps/challenges/panel](../apps/challenges/panel/) · [hallazgos](../apps/challenges/panel/HALLAZGOS.md). Se añadieron al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`, y se corrigieron cuatro fallos (listas modificadas en el sitio que no llegaban a QML, scroll perdido al reordenar, `flex` en QML propio, `janel build` con ventanas); quedan gráficas (janelkit-kit), rejilla con salto de línea y tabla. |
+| 4 | Chat | ✅ | [apps/challenges/chat](../apps/challenges/chat/) · [hallazgos](../apps/challenges/chat/HALLAZGOS.md). Se añadieron al núcleo el desplazamiento de `<List>`, `<Text format>`, eventos de ventana y `notify`; después llegaron los temporizadores (reto 1) y el texto seleccionable (`<Text selectable>`). Queda el Markdown seguro (que `format="markdown"` no interprete HTML). |
+| 1 | Panel | ✅ | [apps/challenges/panel](../apps/challenges/panel/) · [hallazgos](../apps/challenges/panel/HALLAZGOS.md). Se añadieron al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`, y se corrigieron cuatro fallos (listas modificadas en el sitio que no llegaban a QML, scroll perdido al reordenar, `flex` en QML propio, `janel build` con ventanas); después llegó la rejilla con salto de línea (`flex-wrap`); quedan gráficas (janelkit-kit) y tabla. |
 | 3 | Kanban | ✅ | [apps/challenges/kanban](../apps/challenges/kanban/) · [hallazgos](../apps/challenges/kanban/HALLAZGOS.md). Se añadió al núcleo arrastrar y soltar (`draggable`, `on:dragstart/dragover/drop/dragend`, `:dragging`, `:drag-over`, desplazamiento al acercarse al borde) y en `inspect` doble clic, clic derecho, teclas y arrastre; se corrigió que los eventos de puntero no llegaran a las filas de `<List>`. Arrastrar con 20 × 200 cuesta lo mismo que un fotograma vacío. Una fila que pasa a otra lista de la misma declaración `{#each}` se traslada con su estado y su foco (la tarjeta conserva su estado al cambiar de columna). Quedan `<Menu>` y la memoria por elemento (~0,65 MB por tarjeta, antes ~0,77; ver la fila de la tabla de abajo). |
 | 2 | Hoja de cálculo | ⏳ | |
 | 5 | Editor | ⏳ | |
@@ -71,11 +71,11 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 |---|---|---|
 | Rejilla virtualizada en 2D | 260 000 celdas: solo pueden existir las visibles, en filas **y** columnas | `<List>` virtualiza filas, no columnas: **no hay tabla** |
 | Reactividad a gran escala | Una celda con dependencias que cambia y recalcula cientos de fórmulas | `computed` por celda: sin medir con miles de nodos |
-| Teclado | Flechas, Tab, Intro, Esc, Mayús+flechas sobre celdas | **No existe** `on:keydown`; solo `<Shortcut>` global |
-| Edición en el sitio | Pasar de mostrar a editar una celda y volver, con el foco correcto | `ref.focus()` existe; falta gestionar el foco entre muchos elementos |
+| Teclado | Flechas, Tab, Intro, Esc, Mayús+flechas sobre celdas | ✅ `on:keydown`/`on:keyup` con tecla y modificadores en `<flex>` y en los campos; `event.prevent()` |
+| Edición en el sitio | Pasar de mostrar a editar una celda y volver, con el foco correcto | `ref.focus()`, `tabindex`, `on:focus`/`on:blur`; sin medir el foco entre miles de celdas |
 | Portapapeles | Copiar y pegar rangos como texto tabulado | ✅ `janelkit_desktop.clipboard` (texto); falta probar el reto de rangos tabulados |
 | Deshacer / rehacer | Historial de cambios de celdas | Todavía no existe (previsto en el núcleo, con los stores) |
-| Selección con el ratón | Arrastrar para seleccionar un rango | Solo hay `on:click`: faltan eventos de puntero |
+| Selección con el ratón | Arrastrar para seleccionar un rango | ✅ `on:pointerdown`/`pointermove`/`pointerup` en `<flex>` |
 
 **Hecho cuando**
 
@@ -83,7 +83,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 - Editar una celda de la que dependen 1 000 fórmulas actualiza la vista en menos de 100 ms.
 - Todo el flujo (navegar, editar, seleccionar, copiar, pegar, deshacer) funciona sin ratón.
 
-**Hipótesis de carencias:** un elemento de tabla virtualizado (`<Table>` sobre `TableView`), `on:keydown`/`on:keyup` con tecla y modificadores, `janelkit_desktop.clipboard`, eventos de puntero (`on:press`, `on:drag`), y quizá un `computed` más barato cuando hay miles.
+**Hipótesis de carencias:** un elemento de tabla virtualizado (`<Table>` sobre `TableView`), deshacer/rehacer en el núcleo y quizá un `computed` más barato cuando hay miles. El teclado, los eventos de puntero y el portapapeles ya existen.
 
 ---
 
@@ -150,8 +150,8 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 | Archivos grandes | Abrir y editar un archivo de 50 000 líneas | `<TextArea>` crece con el contenido: sin virtualizar, sin medir |
 | Resaltado y números de línea | Colorear mientras se escribe | **No existe**; solo con QML propio (`QSyntaxHighlighter` desde Python) |
 | Árbol de archivos | Nodos que se expanden bajo demanda | Se puede imitar con `{#each}` y sangría; **no hay** `<Tree>` virtualizado |
-| Pestañas de documentos | Cada pestaña conserva su texto, cursor y scroll | `<Tabs>` es solo la barra; el contenido con `{#if}` se **destruye** al cambiar |
-| Cerrar con cambios | Preguntar antes de cerrar y poder cancelar | **No hay** forma de interceptar el cierre de la ventana |
+| Pestañas de documentos | Cada pestaña conserva su texto, cursor y scroll | ✅ `<Tabs>` es solo la barra, pero con `{#hidden}` el contenido se oculta sin destruirse (reto 6); sin medir con documentos grandes |
+| Cerrar con cambios | Preguntar antes de cerrar y poder cancelar | ✅ cerrar con la X consulta `before_leave` (reto 6) |
 | Preferencias persistentes | Guardar y cargar ajustes en la carpeta del usuario | ✅ `persisted(clave, valor)` (antes, a mano con JSON) |
 | Búsqueda en el proyecto | Miles de archivos en segundo plano, resultados incrementales | `background` devuelve un único resultado; faltan resultados por partes |
 | Empaquetado | Un ejecutable con Python, Qt y los recursos | Receta verificada; sin probar `--onefile` ni instalador |
@@ -163,7 +163,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 - Cerrar la ventana con cambios pregunta y permite cancelar; las preferencias sobreviven a reiniciar la aplicación.
 - El ejecutable funciona en un equipo sin Python.
 
-**Hipótesis de carencias:** `<CodeEditor>` o un editor de texto con resaltado y números de línea, `<Tree>`, un modo de `{#if}`/pestañas que oculte en lugar de destruir (`keep-alive`), `on:close` cancelable en `<Window>`, `janelkit.settings`, y generadores asíncronos para ir mostrando resultados.
+**Hipótesis de carencias:** `<CodeEditor>` o un editor de texto con resaltado y números de línea, `<Tree>`, un `<TextArea>` que aguante 50 000 líneas, y generadores asíncronos para ir mostrando resultados. Conservar pestañas ocultas (`{#hidden}`), el cierre cancelable (`before_leave`) y las preferencias (`persisted`) ya existen.
 
 ## 6. Gestor de proyectos
 
@@ -237,11 +237,11 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 | Enrutado con parámetros, historial y rutas anidadas | 6 | `janelkit-router`. El núcleo da la navegación básica (reto 6): `pages`, `sections`, `navigation()`, resultados, atrás y `before_leave` |
 | Portapapeles, notificaciones, bandeja, ajustes | 2, 4, 5 | Núcleo, como módulos pequeños (`janelkit_desktop.clipboard`, …) · ✅ `notify` (reto 4) · ✅ `clipboard` (texto) |
 | Temporizadores ligados al componente | 1, 4 | ✅ Núcleo: `interval`, `timeout` (reto 1) |
-| Texto seleccionable | 4, 5 | Núcleo |
+| Texto seleccionable | 4, 5 | ✅ Núcleo: `<Text selectable>` o `user-select: text` |
 | Tabla 2D y árbol virtualizados | 1, 2, 5 | Núcleo o `janelkit-kit` · el reto 1 hizo su tabla con `<List>` y anchos repetidos en cabecera y filas |
 | Canvas, gráficas, editor de código | 1, 5 | `janelkit-kit` (sobre la vía de escape QML) · el reto 1 hizo su gráfica en QML propio sin problemas |
 | Rejilla con salto de línea (tarjetas que se recolocan según el ancho) | 1 | ✅ Núcleo: `flex-wrap` en `<flex>`, `Column` y `Row` ([flex.md](flex.md), fase 1) |
-| Texto enriquecido | 4 | ✅ Núcleo: `<Text format="markdown">` (reto 4) |
+| Texto enriquecido | 4 | ✅ Núcleo: `<Text format="markdown">` (reto 4) · falta que no interprete HTML, para mostrar texto de otras personas sin escaparlo a mano; decidirlo antes de publicar |
 | Deshacer/rehacer y stores | 2, 3 | núcleo, pendiente · el reto 3 lo hizo en la aplicación con operaciones que devuelven su inversa (~100 líneas) |
 
 ## Registro de hallazgos (plantilla)

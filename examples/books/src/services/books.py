@@ -16,7 +16,7 @@ def search(query: str, limit: int = 15) -> list[dict]:
     params = urllib.parse.urlencode(
         {"q": query, "limit": limit, "fields": "key,title,author_name,first_publish_year"}
     )
-    request = urllib.request.Request(f"{API}?{params}", headers={"User-Agent": "FluxUI-ejemplo/0.1"})
+    request = urllib.request.Request(f"{API}?{params}", headers={"User-Agent": "JanelKit-ejemplo/0.1"})
     with urllib.request.urlopen(request, timeout=15) as response:
         data = json.load(response)
     return [

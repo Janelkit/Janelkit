@@ -20,18 +20,18 @@ Situación de partida: incrementos 0–7 completos; detalle en [estado.md](estad
 | 10 | Lista virtualizada | P1 | ✅ | `<List>`; `tests/test_list_qt.py`; 10 000 filas en ~40 ms (`tools/bench.py`) |
 | 12 | Aplicaciones de validación | P1 | ✅ | `examples/files`, `examples/books`; hallazgos en [estado.md](estado.md#validación-con-aplicaciones-reales) |
 | 13 | Rendimiento de una aplicación mediana | P1 | ✅ | `tools/bench_app.py`; arranque < 300 ms, interacciones < 70 ms |
-| 15 | API de inspección pública | P1 | ✅ | `fluxui.inspect`; `tests/test_inspect.py` |
+| 15 | API de inspección pública | P1 | ✅ | `janelkit.inspect`; `tests/test_inspect.py` |
 | 14 | Accesibilidad básica | P1 | ✅ | `tests/test_accessibility_qt.py`: orden de Tab, Espacio/Intro en cajas pulsables, foco visible, nombres accesibles (`label`, `alt`) |
 | 11 | Linux, macOS y CI | P1 | 🟡 | CI con matriz preparada (`.github/workflows/ci.yml`); versiones mínimas (Python 3.10 + PySide6 6.8) verificadas en Windows. **Falta:** ejecutarla en GitHub (necesita un remoto) para probar Linux y macOS. |
 | 16 | Documentación de lanzamiento | P1 | ✅ | [tutorial.md](tutorial.md) (con `examples/compra` probado), [api.md](api.md), [cambios.md](cambios.md), [empaquetado.md](empaquetado.md) (receta verificada con PyInstaller) |
-| 17 | Nombre, licencia y publicación | P1 | 🟡 | Nombre decidido: **JanelKit** (`janelkit`, comando `janel`, archivos `.janel`; [estado.md](estado.md#decisiones-provisionales-tomadas-al-implementar), decisión 23). **Falta:** aplicar el renombrado, elegir licencia y publicar en TestPyPI. |
+| 17 | Nombre, licencia y publicación | P1 | 🟡 | Nombre decidido: **JanelKit** (`janelkit`, comando `janel`, archivos `.janel`; [estado.md](estado.md#decisiones-provisionales-tomadas-al-implementar), decisión 23). Renombrado aplicado. **Falta:** elegir licencia y publicar en TestPyPI. |
 | 18 | Tipos en props | P2 | ✅ | `edad: int = prop(0)`; literales al compilar, valores dinámicos al ejecutar (`tests/test_components_qt.py`) |
 | 20 | Transiciones y animaciones | P2 | ✅ | `transition:`/`in:`/`out:`, `transition` en CSS, `<List animate>` (`tests/test_transitions_qt.py`) |
 | 23 | `class={expr}` dinámico | P2 | ✅ | `tests/test_runtime_qt.py::test_dynamic_class_expression` |
 | 19 | Varias ventanas y tema por ventana | P2 | ✅ | `open_window`; `tests/test_windows_qt.py` |
 | 24 | Navegación entre pantallas | P2 | ✅ | `pages()` y `<Pages>`; `tests/test_pages_qt.py` |
 | 21 | Internacionalización | P2 | ✅ | `t`, `i18n`; formatos con QLocale; RTL; `examples/idiomas`; `tests/test_i18n_qt.py` |
-| 22 | `flux dev` conservando el estado (HMR) | P2 | ✅ | `tests/test_dev.py::test_reload_keeps_state_unless_the_script_changed` |
+| 22 | `janel dev` conservando el estado (HMR) | P2 | ✅ | `tests/test_dev.py::test_reload_keeps_state_unless_the_script_changed` |
 | 25 | Secciones que conservan sus vistas | P0 | ✅ | `sections()`/`<Sections>` y `{#hidden}`; `tests/test_navigation.py`. Cambiar de sección con 500 filas: ~13 ms (crearla, ~80 ms) |
 | 26 | Salir de una vista o cerrar una ventana con cambios sin guardar | P1 | ✅ | `before_leave` (también `async`); `tests/test_navigation.py` |
 | 27 | Experiencia de navegación | P1 | ✅ | `navigation()`, `await push` / `back(valor)`, Alt+← y botón «atrás» del ratón; `tests/test_navigation.py`. `<Pages transition:slide>`. Pendiente opcional: `open_window(..., single=True)` |
@@ -68,7 +68,7 @@ Tamaño estimado: **S** (días), **M** (1–2 semanas), **L** (más de 2 semanas
 ### 4. Ciclo de vida y referencias · M
 - **Problema:** no hay forma pública de ejecutar código al montar o desmontar, ni de llegar a un elemento para darle el foco o desplazar la vista.
 - **Propuesta:** `on_mount(fn)`, `on_destroy(fn)`, efectos con limpieza ligados al componente, y `ref` (`<TextField ref={campo} />` → `campo.focus()`), con un conjunto pequeño de métodos soportados.
-- **Hecho cuando:** los recursos registrados en un componente se liberan siempre al desmontar (probado con `{#if}`, `{#each}` y recarga de `flux dev`).
+- **Hecho cuando:** los recursos registrados en un componente se liberan siempre al desmontar (probado con `{#if}`, `{#each}` y recarga de `janel dev`).
 
 ### 5. Asincronía y trabajo en segundo plano · L
 - **Problema:** todo ocurre en el hilo de Qt; una petición de red o una lectura grande congela la ventana.
@@ -77,18 +77,18 @@ Tamaño estimado: **S** (días), **M** (1–2 semanas), **L** (más de 2 semanas
 
 ### 6. Contexto (compartir estado entre componentes) · S
 - **Problema:** hoy se comparte estado importando un módulo de `services/`, que es global al proceso; no hay forma de compartir algo solo con un subárbol, y el tema es global.
-- **Propuesta:** `provide(clave, valor)` / `inject(clave)` como primitivas. Los stores avanzados quedan para `fluxui-store`.
+- **Propuesta:** `provide(clave, valor)` / `inject(clave)` como primitivas. Los stores avanzados quedan para `janelkit-store`.
 - **Hecho cuando:** dos subárboles pueden recibir valores distintos para la misma clave, y está documentado cuándo usar contexto y cuándo un módulo.
 
 ### 7. Superficie pública y versionado · S
 - **Problema:** no está definido qué es público; cualquier refactor interno podría romper a los usuarios.
-- **Propuesta:** listar la API pública (`fluxui`, `fluxui.inspect`, API del compilador para herramientas); marcar el resto como interno; definir versión del formato `.flux` y política de cambios para la serie 0.x.
+- **Propuesta:** listar la API pública (`janelkit`, `janelkit.inspect`, API del compilador para herramientas); marcar el resto como interno; definir versión del formato `.janel` y política de cambios para la serie 0.x.
 - **Hecho cuando:** existe `docs/api.md` (o equivalente) y una prueba que falla si cambia la superficie pública sin intención.
 
 ### 8. Interoperabilidad con Qt · M
 - **Problema:** si a un usuario le falta un control, no tiene salida y debe abandonar el framework.
 - **Propuesta:** registrar elementos propios respaldados por un archivo QML del proyecto o por un tipo Qt, declarando sus props y eventos para que el compilador los valide.
-- **Hecho cuando:** un ejemplo usa un control QML propio con props, eventos y `bind:`, sin modificar FluxUI.
+- **Hecho cuando:** un ejemplo usa un control QML propio con props, eventos y `bind:`, sin modificar JanelKit.
 
 ## P1 — Necesario para una primera versión utilizable
 
@@ -102,7 +102,7 @@ Un `{#each}` (o elemento `List`) basado en `ListView` que solo crea las filas vi
 Probar en las tres plataformas (fuentes, escalado, estilo *Basic*); CI con matriz de sistemas y de versiones Python (3.10–3.13) y PySide6 (mínima declarada y actual), incluido `tools/check_wheel.py`.
 
 ### 12. Aplicaciones de validación · M
-Construir dos aplicaciones medianas con FluxUI antes de publicar, por ejemplo un cliente de una API (asincronía, listas, formularios) y un gestor de archivos (diálogos, lista grande, atajos). Todo lo que falte o cueste se convierte en pendiente. Sirven también como ejemplos.
+Construir dos aplicaciones medianas con JanelKit antes de publicar, por ejemplo un cliente de una API (asincronía, listas, formularios) y un gestor de archivos (diálogos, lista grande, atajos). Todo lo que falte o cueste se convierte en pendiente. Sirven también como ejemplos.
 
 ### 13. Rendimiento de una aplicación mediana · S
 Medir arranque, tiempo de compilación y respuesta de las aplicaciones de validación; cachear lo compilado si el arranque lo justifica. Publicar las cifras en `estado.md`.
@@ -111,13 +111,13 @@ Medir arranque, tiempo de compilación y respuesta de las aplicaciones de valida
 Navegación completa con teclado, orden del foco, foco visible y nombres accesibles en los controles básicos.
 
 ### 15. API de inspección pública · S
-Pasar de `tests/conftest.py` a una API pública: montar sin ventana visible, buscar elementos, disparar eventos y leer el estado. Es la base de `fluxui-testing` y de las pruebas de los propios usuarios.
+Pasar de `tests/conftest.py` a una API pública: montar sin ventana visible, buscar elementos, disparar eventos y leer el estado. Es la base de `janelkit-testing` y de las pruebas de los propios usuarios.
 
 ### 16. Documentación de lanzamiento · M
 Tutorial de inicio de principio a fin; referencia de la API pública; guía de migración entre versiones 0.x; receta documentada para empaquetar con PyInstaller (sin comando propio).
 
 ### 17. Nombre, licencia y publicación · S
-Verificar disponibilidad de `fluxui`/`flux` en PyPI (y conflictos con el comando `flux` de otras herramientas); elegir licencia; publicar primero en TestPyPI y repetir `check_wheel.py` contra lo publicado.
+Verificar disponibilidad de `janelkit`/`janel` en PyPI (y conflictos con el comando `janel` de otras herramientas); elegir licencia; publicar primero en TestPyPI y repetir `check_wheel.py` contra lo publicado.
 
 ## P2 — Completar la primera versión
 
@@ -141,9 +141,9 @@ Verificar disponibilidad de `fluxui`/`flux` en PyPI (y conflictos con el comando
 - **Propuesta:** función de traducción reactiva (`t("clave")`) con catálogos por idioma, cambio de idioma en caliente, formatos de número y fecha según la configuración regional, y disposición RTL.
 - **Hecho cuando:** un ejemplo cambia de idioma en ejecución, incluido uno RTL, sin reiniciar.
 
-### 22. `flux dev` conservando el estado (HMR) · L
+### 22. `janel dev` conservando el estado (HMR) · L
 - **Problema:** cada recarga devuelve la interfaz a su estado inicial; en formularios largos o flujos de varios pasos hace perder tiempo.
-- **Propuesta:** al recargar un `.flux`, conservar los `state` de las instancias cuyo componente no cambió de forma incompatible (mismos nombres y tipos); remontar el resto. Depende del ciclo de vida (4).
+- **Propuesta:** al recargar un `.janel`, conservar los `state` de las instancias cuyo componente no cambió de forma incompatible (mismos nombres y tipos); remontar el resto. Depende del ciclo de vida (4).
 - **Hecho cuando:** editar el estilo o la plantilla de un componente conserva lo escrito en sus campos; cambiar su script lo reinicia de forma predecible y lo indica en la consola.
 
 ### 23. `class={expr}` dinámico · S
@@ -190,6 +190,6 @@ Se publica la 0.1 cuando:
 - [ ] Todos los P0, P1 y P2 están hechos o descartados de forma explícita y documentada.
 - [ ] Las aplicaciones de validación funcionan sin modificar el framework a mano.
 - [ ] La CI pasa en Windows, Linux y macOS.
-- [ ] `pip install` → `flux new` → `python main.py` funciona desde TestPyPI en un entorno limpio.
+- [ ] `pip install` → `janel new` → `python main.py` funciona desde TestPyPI en un entorno limpio.
 - [ ] La API pública está documentada y protegida por pruebas.
 - [ ] Hay licencia, nombre verificado y tutorial de inicio.

@@ -3,7 +3,7 @@ import pytest
 from conftest import texts
 
 HOME = """<script>
-from fluxui import state, inject
+from janelkit import state, inject
 clicks = state(0)
 session = inject("session", "-")
 </script>
@@ -11,7 +11,7 @@ session = inject("session", "-")
 """
 
 DETAIL = """<script>
-from fluxui import prop, event, on_destroy
+from janelkit import prop, event, on_destroy
 import tests_pages_log as log
 item = prop()
 done = event()
@@ -21,7 +21,7 @@ on_destroy(lambda: log.EVENTS.append(("destroy", item.value)))
 """
 
 APP = """<script>
-from fluxui import state, pages, provide
+from janelkit import state, pages, provide
 from screens.Home import Home
 from screens.Detail import Detail
 provide("session", "S1")
@@ -50,12 +50,12 @@ def log(monkeypatch):
 
 @pytest.fixture
 def app(mount, tmp_path, log):
-    files = {"App.flux": APP, "screens/Home.flux": HOME, "screens/Detail.flux": DETAIL}
+    files = {"App.janel": APP, "screens/Home.janel": HOME, "screens/Detail.janel": DETAIL}
     for rel, text in files.items():
         path = tmp_path / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
-    return mount(tmp_path / "App.flux")
+    return mount(tmp_path / "App.janel")
 
 
 def test_first_page_and_context(app):
@@ -92,10 +92,10 @@ def test_replace_and_reset_release_discarded_pages(app, log):
     assert nav.depth == 1
 
 
-def test_unmounting_the_app_releases_all_pages(app, flux_app, log):
+def test_unmounting_the_app_releases_all_pages(app, janel_app, log):
     ns = app.instance.namespace
     ns["nav"].push(ns["Detail"], item="x")
-    flux_app.unmount(app)
+    janel_app.unmount(app)
     assert log == [("destroy", "x")]
 
 

@@ -1,0 +1,128 @@
+<script lang="python">
+# Pestaña Miembros de un proyecto: quién participa y con qué rol. Quitar a alguien con
+# tarjetas en el proyecto pregunta antes; sus tarjetas se quedan sin responsable.
+from janelkit import dialogs, inject, prop, state
+from services.datos import ROLES, cuenta
+
+pid = prop("")
+datos = inject("datos")
+tablero = datos.tablero(pid.value)
+proyecto = tablero.proyecto
+nueva = state("")
+ROLES_OPC = [{"label": r, "value": r} for r in ROLES]
+
+
+def candidatas():
+    dentro = {m["persona"] for m in proyecto["miembros"]}
+    return [{"label": "Añadir a…", "value": ""}] + [
+        {"label": p["nombre"], "value": p["id"]} for p in datos.personas.value if p["id"] not in dentro]
+
+
+def tarjetas_de(ident):
+    return [t for c in proyecto["columnas"] for t in c["tarjetas"] if t["responsable"] == ident]
+
+
+def añadir():
+    if nueva.value:
+        datos.poner_miembro(pid.value, nueva.value, "Colaborador")
+        nueva.value = ""
+
+
+def por_rol():
+    return [(r, sum(1 for m in proyecto["miembros"] if m["rol"] == r)) for r in ROLES]
+
+
+async def quitar(ident):
+    suyas = tarjetas_de(ident)
+    if suyas and not await dialogs.confirm(
+        f"{datos.nombre(ident)} es responsable de {cuenta(len(suyas), 'tarjeta')} en este proyecto. "
+        f"¿Quitar a {datos.nombre(ident)} del proyecto? Sus tarjetas se quedarán sin responsable."
+    ):
+        return
+    datos.poner_miembro(pid.value, ident, None)  # un solo paso para deshacer, también sus tarjetas
+</script>
+
+<flex class="miembros">
+  <flex class="principal">
+    <flex class="tabla" label="Miembros del proyecto">
+      <flex class="encabezado">
+        <Text class="c-persona">Persona</Text>
+        <Text class="c-tarjetas">Tarjetas</Text>
+        <Text class="c-rol">Rol</Text>
+        <flex class="c-accion" />
+      </flex>
+      {#each proyecto["miembros"] as m (m["persona"])}
+        <flex as="listitem" class="fila" label={datos.nombre(m["persona"])}>
+          <flex class="c-persona">
+            <flex class="avatar" style={{"background": (datos.persona(m["persona"]) or {}).get("color", "#868e96")}}>
+              <Text>{datos.iniciales(m["persona"])}</Text>
+            </flex>
+            <flex class="quien">
+              <Text class="nombre">{datos.nombre(m["persona"])}</Text>
+              <Text class="correo">{(datos.persona(m["persona"]) or {}).get("correo", "")}</Text>
+            </flex>
+          </flex>
+          <Text class="c-tarjetas">{cuenta(len(tarjetas_de(m["persona"])), "tarjeta")}</Text>
+          <flex class="c-rol">
+            <Select options={ROLES_OPC} value={m["rol"]} label={f"Rol de {datos.nombre(m['persona'])}"}
+                    on:change={datos.poner_miembro(pid, m["persona"], event)} flex={1} />
+          </flex>
+          <flex class="c-accion">
+            <Button text="Quitar" variant="ghost" on:click={quitar(m["persona"])} />
+          </flex>
+        </flex>
+      {:else}
+        <flex class="vacio">
+          <Text class="vacio-titulo">Nadie participa todavía</Text>
+          <Text class="dato">Añade personas desde el panel de la derecha.</Text>
+        </flex>
+      {/each}
+    </flex>
+  </flex>
+  <flex class="lateral">
+    <flex class="panel">
+      <Text class="panel-titulo">Añadir al proyecto</Text>
+      <Select options={candidatas()} bind:value={nueva} label="Persona que añadir" />
+      <Button text="Añadir" variant="primary" enabled={bool(nueva)} on:click={añadir()} />
+    </flex>
+    <flex class="panel">
+      <Text class="panel-titulo">{f"Equipo · {cuenta(len(proyecto['miembros']), 'persona')}"}</Text>
+      {#each por_rol() as r (r[0])}
+        <flex class="rol-fila">
+          <Text>{r[0]}</Text>
+          <Spacer />
+          <Text class="cifra">{r[1]}</Text>
+        </flex>
+      {/each}
+    </flex>
+  </flex>
+</flex>
+
+<style>
+.miembros { flex: 1; flex-wrap: wrap; gap: 20px; padding: 20px 24px; overflow: auto; align-items: start; align-content: start; }
+.principal { direction: column; flex: 1 1 420px; }
+.tabla { direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.encabezado {
+  gap: 12px; padding: 10px 16px; background: var(--surface-alt); border-bottom: 1px solid var(--border);
+  color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.fila { gap: 12px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+.fila:last-child { border-bottom: none; }
+.fila:hover { background: var(--surface-alt); }
+.c-persona { flex: 1; gap: 10px; align-items: center; }
+.c-tarjetas { width: 100px; }
+.c-rol { width: 170px; }
+.c-accion { width: 80px; justify-content: end; }
+.quien { direction: column; flex: 1; }
+.avatar { width: 32px; height: 32px; border-radius: 16px; align-items: center; justify-content: center; color: #ffffff; font-size: 11px; font-weight: 600; }
+.nombre { font-weight: 600; }
+.correo { color: var(--text-muted); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.lateral { direction: column; flex: 0 1 280px; min-width: 240px; gap: 16px; }
+.panel { direction: column; gap: 10px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.panel-titulo { font-weight: 700; }
+.rol-fila { align-items: center; padding: 4px 0; }
+.cifra { font-weight: 700; }
+.dato { color: var(--text-muted); font-size: 12px; }
+.vacio { direction: column; gap: 4px; align-items: center; padding: 40px; }
+.vacio-titulo { font-weight: 600; }
+</style>

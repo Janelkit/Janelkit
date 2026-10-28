@@ -1,12 +1,12 @@
 """Control del desplazamiento en <List>: follow, on:top/on:bottom, ref.scroll_to_*,
 y las piezas de un chat: texto con Markdown, on:link y eventos de activación de la ventana."""
-from conftest import _is_fx_text, find, visual_items
+from conftest import _is_jk_text, find, visual_items
 from PySide6.QtCore import Q_ARG, Q_RETURN_ARG, QCoreApplication, QMetaObject, QPointF
 
-from fluxui.compiler import compile_source
+from janelkit.compiler import compile_source
 
 CHAT = """<script>
-from fluxui import state, ref
+from janelkit import state, ref
 msgs = state([{"id": i, "t": f"mensaje {i}"} for i in range(%d)])
 tops = state(0)
 bottoms = state(0)
@@ -49,7 +49,7 @@ def shown(m):
     top = view.mapToScene(QPointF(0, 0)).y()
     rows = []
     for item in visual_items(m):
-        if _is_fx_text(item) and item.isVisible() and item.property("text").startswith("mensaje"):
+        if _is_jk_text(item) and item.isVisible() and item.property("text").startswith("mensaje"):
             y = item.mapToScene(QPointF(0, 0)).y() - top
             if -item.height() < y < view.height():
                 rows.append((round(y), item.property("text")))
@@ -118,7 +118,7 @@ def test_reaching_the_top_emits_on_top(mount):
 def test_markdown_text_and_links(mount):
     m = mount(
         """<script>
-from fluxui import state
+from janelkit import state
 opened = state("")
 </script>
 <Window>
@@ -147,13 +147,13 @@ opened = state("")
 def test_window_activation_events():
     compiled = compile_source(
         """<script>
-from fluxui import state
+from janelkit import state
 active = state(None)
 </script>
 <Window on:activate={active = True} on:deactivate={active = False}><Text>x</Text></Window>"""
     )
-    assert "onActiveChanged: { if (active) fx.invoke(" in compiled.qml
-    assert "if (!active) fx.invoke(" in compiled.qml
+    assert "onActiveChanged: { if (active) jk.invoke(" in compiled.qml
+    assert "if (!active) jk.invoke(" in compiled.qml
 
 
 def test_text_accepts_background_border_and_radius(mount):
@@ -162,13 +162,13 @@ def test_text_accepts_background_border_and_radius(mount):
 <style>.badge { background: #ff0000; border: 1px solid #00ff00; border-radius: 9px; padding: 0 6px; }</style>"""
     )
     badge = find(m, "badge")
-    assert badge.property("fxBackground").name() == "#ff0000"
-    assert badge.property("fxRadius") == 9
+    assert badge.property("jkBackground").name() == "#ff0000"
+    assert badge.property("jkRadius") == 9
     assert badge.property("leftPadding") == 6
 
 
 TABLE = """<script>
-from fluxui import state
+from janelkit import state
 rows = state([{"id": i, "v": i} for i in range(300)])
 
 def shuffle():

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from PySide6.QtCore import Q_ARG, Q_RETURN_ARG, QMetaObject
 
-from fluxui.inspect import mount
+from janelkit.inspect import mount
 
 PANEL = Path(__file__).parent.parent / "examples" / "challenges" / "panel"
 
@@ -18,7 +18,7 @@ def panel(monkeypatch):
     monkeypatch.setenv("PANEL_METRICS", "14")  # 6 generales + 8 núcleos
     monkeypatch.setenv("PANEL_RATE_MS", "50")
     monkeypatch.setenv("PANEL_HISTORY", "20")
-    with mount(PANEL / "src" / "App.flux") as app:
+    with mount(PANEL / "src" / "App.janel") as app:
         monitor = app.get("monitor")
         app.wait(until=lambda: len(monitor.processes.value) == 300)
         yield app
@@ -101,7 +101,7 @@ def test_sorting_and_filtering_keep_the_selection_and_the_scroll(panel):
     assert [p["pid"] for p in rows()] == [1002]
 
 
-def test_chart_in_its_own_window_shares_the_same_state(panel, flux_app):
+def test_chart_in_its_own_window_shares_the_same_state(panel, janel_app):
     app = panel
     cpu = app.get("monitor").series["cpu"]
     app.find("Button", label="Abrir CPU").click()

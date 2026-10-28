@@ -4,7 +4,7 @@ from PySide6.QtCore import QCoreApplication, QEvent, Qt
 from PySide6.QtGui import QAccessible, QKeyEvent
 
 APP = """<script>
-from fluxui import state
+from janelkit import state
 opened = state(0)
 </script>
 <Column>
@@ -49,7 +49,7 @@ def test_focus_is_visible_on_clickable_boxes(mount):
     card = find(m, "card")
     card.forceActiveFocus()
     if card.hasActiveFocus():  # sin ventana activa (offscreen) el foco puede no llegar
-        assert card.property("fxKeyFocus") is True
+        assert card.property("jkKeyFocus") is True
     assert card.property("activeFocusOnTab") is True
 
 

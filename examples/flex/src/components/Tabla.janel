@@ -1,0 +1,43 @@
+<script lang="python">
+# Tabla hecha con <flex>. La fila elegida cambia el fondo y el color en la fila, y todo
+# su texto lo hereda (fase 4 de docs/flex.md). El color del estado es una variable
+# (--estado): cada fila la fija según su estado, y la fila elegida la sustituye.
+from janelkit import event, prop
+
+rows = prop([])
+selected = prop(None)
+select = event()
+</script>
+
+<flex class="tabla">
+  <flex class="fila cabecera">
+    <Text class="nombre">Nombre</Text>
+    <Text class="estado">Estado</Text>
+    <Text class="cpu">CPU</Text>
+  </flex>
+  {#each rows as row (row["id"])}
+    <flex as="option" class={["fila", row["estado"]]} selected={row["id"] == selected}
+          label={row["nombre"]} on:click={select.emit(row["id"])}>
+      <Text class="nombre">{row["nombre"]}</Text>
+      <Text class="estado">● {row["estado"]}</Text>
+      <Text class="cpu">{row["cpu"]} %</Text>
+    </flex>
+  {/each}
+</flex>
+
+<style>
+.tabla { direction: column; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.fila { padding: 6px 12px; gap: 12px; align-items: center; border-bottom: 1px solid var(--border); cursor: pointer; }
+.fila:last-child { border-bottom: 0; }
+.fila:hover { background: var(--surface-alt); }
+.cabecera { font-weight: 600; color: var(--text-muted); font-size: 12px; text-transform: uppercase; cursor: default; }
+.cabecera:hover { background: transparent; }
+.nombre { flex: 1; }
+.estado { width: 110px; color: var(--estado, var(--text-muted)); }
+.cpu { width: 60px; text-align: right; }
+.fila.activo { --estado: var(--success); }
+.fila.alerta { --estado: var(--danger); }
+.fila.parado { --estado: var(--text-muted); }
+/* Después de los estados: gana a .fila.alerta (misma especificidad, va después). */
+.fila:selected { background: var(--primary); color: var(--on-primary); --estado: var(--on-primary); }
+</style>

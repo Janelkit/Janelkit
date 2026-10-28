@@ -1,6 +1,6 @@
 # Tutorial: una lista de la compra
 
-En este tutorial se construye, de principio a fin, una aplicación de escritorio con FluxUI: una lista de la compra que se guarda sola en disco. Por el camino aparecen el estado reactivo, las listas, los componentes, los estilos, el trabajo en segundo plano y las pruebas.
+En este tutorial se construye, de principio a fin, una aplicación de escritorio con JanelKit: una lista de la compra que se guarda sola en disco. Por el camino aparecen el estado reactivo, las listas, los componentes, los estilos, el trabajo en segundo plano y las pruebas.
 
 Necesitas Python 3.10 o posterior. Tiempo estimado: 30 minutos. El código completo está en `examples/compra`.
 
@@ -11,33 +11,33 @@ Necesitas Python 3.10 o posterior. Tiempo estimado: 30 minutos. El código compl
 ```bash
 python -m venv .venv
 .venv\Scripts\activate            # Linux/macOS: source .venv/bin/activate
-pip install fluxui                 # mientras no esté en PyPI: pip install -e <carpeta de FluxUI>
+pip install janelkit                 # mientras no esté en PyPI: pip install -e <carpeta de JanelKit>
 
-flux new compra
+janel new compra
 cd compra
-flux dev
+janel dev
 ```
 
-`flux new` crea el proyecto y `flux dev` lo abre. Déjalo abierto: cada vez que guardes un `.flux`, la ventana se actualiza sola.
+`janel new` crea el proyecto y `janel dev` lo abre. Déjalo abierto: cada vez que guardes un `.janel`, la ventana se actualiza sola.
 
 ```
 compra/
   main.py              ← arranque: python main.py
   src/
-    App.flux           ← el componente raíz
-    components/        ← otros componentes .flux
+    App.janel           ← el componente raíz
+    components/        ← otros componentes .janel
     services/          ← código Python normal
 ```
 
-Borra `src/components/Counter.flux` y `src/services/users.py`, que son del ejemplo inicial.
+Borra `src/components/Counter.janel` y `src/services/users.py`, que son del ejemplo inicial.
 
 ## 2. Estado y eventos
 
-Sustituye `src/App.flux` por esto:
+Sustituye `src/App.janel` por esto:
 
 ```html
 <script lang="python">
-from fluxui import state
+from janelkit import state
 
 items = state([])
 draft = state("")
@@ -101,7 +101,7 @@ y añade a `<style>`: `.row { gap: 8px; align-items: center; }` y `.muted { colo
 Para contar lo pendiente, añade al script:
 
 ```python
-from fluxui import state, computed
+from janelkit import state, computed
 
 @computed
 def pending():
@@ -112,11 +112,11 @@ y úsalo en la plantilla: `<Text>Pendientes: {pending}</Text>`. Un `computed` se
 
 ## 5. Componentes
 
-Cuando una parte de la interfaz crece, sepárala en un componente. Crea `src/components/ItemRow.flux`:
+Cuando una parte de la interfaz crece, sepárala en un componente. Crea `src/components/ItemRow.janel`:
 
 ```html
 <script lang="python">
-from fluxui import prop, event
+from janelkit import prop, event
 
 item = prop()        # lo pasa el padre
 toggled = event()    # avisos hacia el padre
@@ -133,11 +133,11 @@ removed = event()
 </style>
 ```
 
-Y `src/components/Card.flux`, una tarjeta que recibe contenido con `<Slot />`:
+Y `src/components/Card.janel`, una tarjeta que recibe contenido con `<Slot />`:
 
 ```html
 <script lang="python">
-from fluxui import prop
+from janelkit import prop
 
 title = prop()
 </script>
@@ -153,7 +153,7 @@ title = prop()
 </style>
 ```
 
-En `App.flux`, impórtalos y úsalos:
+En `App.janel`, impórtalos y úsalos:
 
 ```python
 from components.Card import Card
@@ -179,7 +179,7 @@ from components.ItemRow import ItemRow
 Los colores de `var(--surface)`, `var(--border)`… vienen del tema. Añade un botón para cambiarlo:
 
 ```python
-from fluxui import theme
+from janelkit import theme
 ```
 
 ```html
@@ -219,10 +219,10 @@ def save(items: list[dict]) -> None:
     data_file().write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
 ```
 
-En el script de `App.flux`:
+En el script de `App.janel`:
 
 ```python
-from fluxui import state, computed, effect, task, background, on_mount, theme
+from janelkit import state, computed, effect, task, background, on_mount, theme
 from services import storage
 
 loaded = state(False)  # no guardar nada hasta haber leído lo que ya había
@@ -269,19 +269,19 @@ effect(autosave)
 
 ## 8. Probar la aplicación
 
-`fluxui.inspect` monta la aplicación sin ventana y la maneja como lo haría un usuario. Crea `tests/test_app.py`:
+`janelkit.inspect` monta la aplicación sin ventana y la maneja como lo haría un usuario. Crea `tests/test_app.py`:
 
 ```python
 import json
 
-from fluxui.inspect import mount
+from janelkit.inspect import mount
 
 
 def test_add_check_and_remove(tmp_path, monkeypatch):
     file = tmp_path / "lista.json"
     monkeypatch.setenv("COMPRA_FILE", str(file))
 
-    with mount("src/App.flux") as app:
+    with mount("src/App.janel") as app:
         app.wait(until=lambda: app.get("loaded"))
         assert "La lista está vacía." in app.texts()
 
@@ -305,7 +305,7 @@ def test_loads_the_saved_list(tmp_path, monkeypatch):
     file.write_text('[{"id": 7, "name": "Café", "done": false}]', encoding="utf-8")
     monkeypatch.setenv("COMPRA_FILE", str(file))
 
-    with mount("src/App.flux") as app:
+    with mount("src/App.janel") as app:
         app.wait(until=lambda: app.get("loaded"))
         assert app.find("Checkbox", text="Café").value is False
 ```
@@ -319,12 +319,12 @@ Estas pruebas encontraron, al escribir este tutorial, el error de guardar antes 
 
 ## 9. Distribuirla
 
-- `flux build` comprueba todos los componentes sin abrir la ventana: útil antes de publicar o en la CI.
+- `janel build` comprueba todos los componentes sin abrir la ventana: útil antes de publicar o en la CI.
 - Para crear un ejecutable que se pueda dar a quien no tiene Python, sigue la receta de [empaquetado.md](empaquetado.md).
 
 ## Siguientes pasos
 
-- [lenguaje.md](lenguaje.md): todo el formato `.flux`, los elementos disponibles, `<List>` para listas grandes, diálogos, accesibilidad y elementos propios en QML.
+- [lenguaje.md](lenguaje.md): todo el formato `.janel`, los elementos disponibles, `<List>` para listas grandes, diálogos, accesibilidad y elementos propios en QML.
 - [estilos.md](estilos.md): propiedades de estilo, `flex` y temas.
-- [desarrollo.md](desarrollo.md): `flux dev`, errores y pruebas.
+- [desarrollo.md](desarrollo.md): `janel dev`, errores y pruebas.
 - Los ejemplos de `examples/`, en especial `files` (explorador de archivos) y `books` (cliente de una API).

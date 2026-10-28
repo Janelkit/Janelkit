@@ -8,7 +8,7 @@ from pathlib import Path
 
 PREVIEW_BYTES = 20_000
 TEXT_SUFFIXES = {
-    ".txt", ".md", ".py", ".flux", ".qml", ".json", ".toml", ".yaml", ".yml", ".ini", ".cfg",
+    ".txt", ".md", ".py", ".janel", ".qml", ".json", ".toml", ".yaml", ".yml", ".ini", ".cfg",
     ".csv", ".html", ".css", ".js", ".ts", ".xml", ".log", ".rst", ".bat", ".sh", ".ps1",
 }  # fmt: skip
 

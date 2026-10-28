@@ -19,8 +19,8 @@ def _regexes(node):
 
 
 def test_grammar_is_valid():
-    grammar = json.loads((VSCODE / "syntaxes" / "flux.tmLanguage.json").read_text(encoding="utf-8"))
-    assert grammar["scopeName"] == "source.flux"
+    grammar = json.loads((VSCODE / "syntaxes" / "janel.tmLanguage.json").read_text(encoding="utf-8"))
+    assert grammar["scopeName"] == "source.janel"
     patterns = list(_regexes(grammar))
     assert len(patterns) > 10
     for pattern in patterns:
@@ -30,7 +30,7 @@ def test_grammar_is_valid():
 
 
 def test_block_pattern_matches_directives():
-    grammar = json.loads((VSCODE / "syntaxes" / "flux.tmLanguage.json").read_text(encoding="utf-8"))
+    grammar = json.loads((VSCODE / "syntaxes" / "janel.tmLanguage.json").read_text(encoding="utf-8"))
     block = re.compile(grammar["repository"]["block"]["begin"])
     for text in ("{#if a}", "{:else if b}", "{:else}", "{/if}", "{#each xs as x}", "{#key k}", "{/key}"):
         assert block.match(text), text
@@ -44,4 +44,4 @@ def test_extension_manifest_points_to_grammar():
     manifest = json.loads((VSCODE / "package.json").read_text(encoding="utf-8"))
     grammar = manifest["contributes"]["grammars"][0]
     assert (VSCODE / grammar["path"]).is_file()
-    assert manifest["contributes"]["languages"][0]["extensions"] == [".flux"]
+    assert manifest["contributes"]["languages"][0]["extensions"] == [".janel"]

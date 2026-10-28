@@ -1,4 +1,4 @@
-"""Composición de componentes .flux: props, eventos, estado local y ciclo de vida."""
+"""Composición de componentes .janel: props, eventos, estado local y ciclo de vida."""
 import logging
 from pathlib import Path
 
@@ -7,12 +7,12 @@ from conftest import click as press
 from conftest import find, find_all, texts
 from PySide6.QtGui import QColor
 
-from fluxui import theme
-from fluxui.compiler import compile_file
-from fluxui.diagnostics import FluxError
+from janelkit import theme
+from janelkit.compiler import compile_file
+from janelkit.diagnostics import JanelError
 
 ITEM = """<script>
-from fluxui import prop, event, state
+from janelkit import prop, event, state
 todo = prop()
 prefix = prop("-")
 removed = event()
@@ -33,7 +33,7 @@ def bump():
 """
 
 APP = """<script>
-from fluxui import state
+from janelkit import state
 from components.Item import Item
 todos = state([{"id": 1, "t": "a"}, {"id": 2, "t": "b"}, {"id": 3, "t": "c"}])
 prefix = state(">")
@@ -57,7 +57,7 @@ def project(tmp_path):
             path = tmp_path / rel
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
-        return tmp_path / "App.flux"
+        return tmp_path / "App.janel"
 
     return make
 
@@ -67,7 +67,7 @@ def click(item):
 
 
 def test_props_flow_down_and_update(mount, project):
-    m = mount(project({"App.flux": APP, "components/Item.flux": ITEM}))
+    m = mount(project({"App.janel": APP, "components/Item.janel": ITEM}))
     assert texts(m) == [">a#0", ">b#0", ">c#0"]
     m.instance.namespace["prefix"].value = "*"
     assert texts(m) == ["*a#0", "*b#0", "*c#0"]
@@ -77,14 +77,14 @@ def test_props_flow_down_and_update(mount, project):
 
 
 def test_child_events_reach_the_parent(mount, project):
-    m = mount(project({"App.flux": APP, "components/Item.flux": ITEM}))
+    m = mount(project({"App.janel": APP, "components/Item.janel": ITEM}))
     click(find_all(m, "remove")[1])
     assert m.instance.namespace["log"].value == [2]
     assert texts(m) == [">a#0", ">c#0"]
 
 
 def test_removing_a_row_keeps_local_state_of_the_others(mount, project):
-    m = mount(project({"App.flux": APP, "components/Item.flux": ITEM}))
+    m = mount(project({"App.janel": APP, "components/Item.janel": ITEM}))
     bumps = find_all(m, "bump")
     click(bumps[0])
     click(bumps[2])
@@ -98,7 +98,7 @@ def test_removing_a_row_keeps_local_state_of_the_others(mount, project):
 
 
 def test_unmounted_child_stops_receiving_notifications(mount, project):
-    m = mount(project({"App.flux": APP, "components/Item.flux": ITEM}))
+    m = mount(project({"App.janel": APP, "components/Item.janel": ITEM}))
     prefix = m.instance.namespace["prefix"]
     assert prefix.subscriber_count == 3  # un efecto de prop por fila
     m.instance.namespace["todos"].value = []
@@ -113,43 +113,43 @@ from components.Item import Item
   <Item todo={{"id": 1, "t": "x"}} />
   <Item todo={{"id": 2, "t": "y"}} prefix="+" />
 </Column>"""
-    m = mount(project({"App.flux": app, "components/Item.flux": ITEM}))
+    m = mount(project({"App.janel": app, "components/Item.janel": ITEM}))
     click(find_all(m, "bump")[1])
     assert texts(m) == ["-x#0", "+y#1"]
 
 
 def test_props_are_read_only_in_the_child(mount, project, caplog):
     child = """<script>
-from fluxui import prop
+from janelkit import prop
 v = prop(1)
 def change():
     v.value = 2
 </script>
 <Button id="b" on:click={change}>{v}</Button>"""
-    m = mount(project({"App.flux": "<script>\nfrom C import C\n</script>\n<Column><C /></Column>", "C.flux": child}))
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
+    m = mount(project({"App.janel": "<script>\nfrom C import C\n</script>\n<Column><C /></Column>", "C.janel": child}))
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
         click(find(m, "b"))
     assert "solo lectura" in caplog.text
 
 
 def test_unconnected_event_is_a_noop(mount, project):
     child = """<script>
-from fluxui import event
+from janelkit import event
 done = event()
 </script>
 <Button id="b" on:click={lambda: done.emit(1)}>ok</Button>"""
-    m = mount(project({"App.flux": "<script>\nfrom C import C\n</script>\n<C />", "C.flux": child}))
+    m = mount(project({"App.janel": "<script>\nfrom C import C\n</script>\n<C />", "C.janel": child}))
     click(find(m, "b"))
 
 
 def test_child_component_can_toggle_with_if(mount, project):
     app = """<script>
-from fluxui import state
+from janelkit import state
 from components.Item import Item
 show = state(True)
 </script>
 <Column>{#if show}<Item todo={{"id": 1, "t": "x"}} />{:else}<Text>oculto</Text>{/if}</Column>"""
-    m = mount(project({"App.flux": app, "components/Item.flux": ITEM}))
+    m = mount(project({"App.janel": app, "components/Item.janel": ITEM}))
     assert texts(m) == ["-x#0"]
     m.instance.namespace["show"].value = False
     assert texts(m) == ["oculto"]
@@ -159,7 +159,7 @@ show = state(True)
 
 def test_recursive_component_renders_a_tree(mount, project):
     tree = """<script>
-from fluxui import prop
+from janelkit import prop
 from Tree import Tree
 node = prop()
 </script>
@@ -168,29 +168,29 @@ node = prop()
   {#each node.get("kids", []) as k (k["n"])}<Tree node={k} />{/each}
 </Column>"""
     app = '<script>\nfrom Tree import Tree\n</script>\n<Tree node={{"n": "r", "kids": [{"n": "a", "kids": [{"n": "a1"}]}, {"n": "b"}]}} />'
-    m = mount(project({"App.flux": app, "Tree.flux": tree}))
+    m = mount(project({"App.janel": app, "Tree.janel": tree}))
     assert texts(m) == ["r", "a", "a1", "b"]
 
 
 def test_error_in_child_script_is_reported_and_row_skipped(mount, project, caplog):
-    child = "<script>\nfrom fluxui import prop\nv = prop()\nif v.value == 2:\n    raise ValueError('dos')\n</script>\n<Text>{v}</Text>"
+    child = "<script>\nfrom janelkit import prop\nv = prop()\nif v.value == 2:\n    raise ValueError('dos')\n</script>\n<Text>{v}</Text>"
     app = "<script>\nfrom C import C\n</script>\n<Column>{#each [1, 2, 3] as v (v)}<C v={v} />{/each}</Column>"
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
-        m = mount(project({"App.flux": app, "C.flux": child}))
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
+        m = mount(project({"App.janel": app, "C.janel": child}))
     assert "ValueError: dos" in caplog.text
     assert texts(m) == ["1", "3"]
 
 
 def test_compile_errors_in_children_point_to_the_child_file(project):
-    with pytest.raises(FluxError) as info:
-        compile_file(project({"App.flux": "<script>\nfrom C import C\n</script>\n<C />", "C.flux": "<Text>{nada}</Text>"}))
-    assert info.value.first.location.file.endswith("C.flux")
+    with pytest.raises(JanelError) as info:
+        compile_file(project({"App.janel": "<script>\nfrom C import C\n</script>\n<C />", "C.janel": "<Text>{nada}</Text>"}))
+    assert info.value.first.location.file.endswith("C.janel")
 
 
 # -- temas ---------------------------------------------------------------------------
 
 
-def test_theme_switch_updates_tokens_in_qml(mount, flux_app):
+def test_theme_switch_updates_tokens_in_qml(mount, janel_app):
     m = mount('<Column class="c"><Text id="t" class="t">x</Text></Column>\n<style>.c { background: var(--surface); }\n.t { color: var(--primary); }</style>')
     label = find(m, "t")
     assert label.property("color") == QColor(theme.tokens["primary"])
@@ -204,19 +204,19 @@ def test_theme_switch_updates_tokens_in_qml(mount, flux_app):
 
 def test_custom_theme_and_reactive_name(mount):
     theme.define("sepia", base="light", bg="#f4ecd8")
-    m = mount("<script>\nfrom fluxui import theme\n</script>\n<Text id=\"t\">{theme.name}</Text>")
+    m = mount("<script>\nfrom janelkit import theme\n</script>\n<Text id=\"t\">{theme.name}</Text>")
     assert find(m, "t").property("text") == "light"
     theme.set("sepia")
     assert find(m, "t").property("text") == "sepia"
     assert m.root.property("color") == QColor("#f4ecd8")
 
 
-def test_unknown_token_is_a_warning_at_mount(flux_app, project):
-    compiled = compile_file(project({"App.flux": '<Text class="t">x</Text>\n<style>.t { color: var(--brnad); }</style>'}))
-    warnings = flux_app.check_tokens(compiled)
+def test_unknown_token_is_a_warning_at_mount(janel_app, project):
+    compiled = compile_file(project({"App.janel": '<Text class="t">x</Text>\n<style>.t { color: var(--brnad); }</style>'}))
+    warnings = janel_app.check_tokens(compiled)
     assert len(warnings) == 1 and "--brnad" in warnings[0].message
     theme.extend(brnad="#000")
-    assert flux_app.check_tokens(compiled) == []
+    assert janel_app.check_tokens(compiled) == []
 
 
 def test_theme_validation():
@@ -229,7 +229,7 @@ def test_theme_validation():
 # -- props con tipo ------------------------------------------------------------------
 TYPED = """<script>
 from typing import Optional
-from fluxui import prop
+from janelkit import prop
 count: int = prop(0)
 label: str = prop("")
 ratio: float = prop(1.0)
@@ -248,8 +248,8 @@ def test_literal_props_are_checked_against_annotations(project):
         ("<Typed tags={3} />", "espera list[str] y recibe int (3)", "tags: list[str] = prop(...)"),
     ]:
         app = f"<script>\nfrom components.Typed import Typed\n</script>\n<Column>{usage}</Column>"
-        with pytest.raises(FluxError) as info:
-            compile_file(project({"App.flux": app, "components/Typed.flux": TYPED}))
+        with pytest.raises(JanelError) as info:
+            compile_file(project({"App.janel": app, "components/Typed.janel": TYPED}))
         assert message in info.value.first.message
         assert hint in info.value.first.hint
 
@@ -259,22 +259,22 @@ def test_compatible_literals_compile(project):
         "<script>\nfrom components.Typed import Typed\n</script>\n"
         '<Column><Typed count={True} ratio={2} note={None} label="x" tags={["a"]} anything={3} /></Column>'
     )
-    compile_file(project({"App.flux": app, "components/Typed.flux": TYPED}))
+    compile_file(project({"App.janel": app, "components/Typed.janel": TYPED}))
 
 
 def test_dynamic_values_are_checked_at_runtime(mount, project, caplog):
     app = """<script>
-from fluxui import state
+from janelkit import state
 from components.Typed import Typed
 n = state(1)
 </script>
 <Column><Typed count={n} /></Column>
 """
-    m = mount(project({"App.flux": app, "components/Typed.flux": TYPED}))
+    m = mount(project({"App.janel": app, "components/Typed.janel": TYPED}))
     assert texts(m) == [":1:1.0::0"]  # None se muestra vacío
     assert caplog.text == ""
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
         m.instance.namespace["n"].value = "dos"
     assert "la prop 'count' de <Typed> espera int y recibió str ('dos')" in caplog.text
-    assert "App.flux:6" in caplog.text  # señala el uso en el padre
+    assert "App.janel:6" in caplog.text  # señala el uso en el padre
     assert texts(m) == [":dos:1.0::0"]  # avisa, pero no rompe la aplicación

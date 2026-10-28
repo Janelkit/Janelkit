@@ -13,7 +13,7 @@ import datetime as dt
 import random
 from typing import Any, Callable
 
-from fluxui import batch, computed
+from janelkit import batch, computed
 
 ETIQUETAS = {
     "error": "#e03131", "mejora": "#2f9e44", "diseño": "#ae3ec9",

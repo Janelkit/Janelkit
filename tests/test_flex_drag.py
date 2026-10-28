@@ -2,10 +2,10 @@
 on:dragstart/dragover/drop/dragend, :dragging y :drag-over, Escape para cancelar."""
 import pytest
 
-from fluxui.inspect import mount
+from janelkit.inspect import mount
 
 APP = """<script>
-from fluxui import state
+from janelkit import state
 
 zonas = state({"a": ["uno", "dos"], "b": []})
 log = state([])
@@ -67,8 +67,8 @@ def app():
     from pathlib import Path
 
     d = Path(tempfile.mkdtemp())
-    (d / "App.flux").write_text(APP, encoding="utf-8")
-    with mount(d / "App.flux") as app:
+    (d / "App.janel").write_text(APP, encoding="utf-8")
+    with mount(d / "App.janel") as app:
         yield app
 
 
@@ -97,17 +97,17 @@ def test_states_while_dragging_and_no_click_at_the_end(app):
     QTest.mouseMove(app.window, start + QPoint(30, 0))
     QTest.mouseMove(app.window, end)
     app.process()
-    assert uno.prop("fxDragging") is True and b.prop("fxDragOver") is True
-    assert b.prop("fxBackground").name() == "#ddeeff"  # :drag-over
+    assert uno.prop("jkDragging") is True and b.prop("jkDragOver") is True
+    assert b.prop("jkBackground").name() == "#ddeeff"  # :drag-over
     assert uno.prop("opacity") == pytest.approx(0.4)  # :dragging
     QTest.mouseMove(app.window, start)  # de vuelta a su zona
     app.process()
-    assert b.prop("fxDragOver") is False and zona(app, "a").prop("fxDragOver") is True
+    assert b.prop("jkDragOver") is False and zona(app, "a").prop("jkDragOver") is True
     QTest.mouseRelease(app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
     app.process()
     assert "click uno" not in app.get("log")  # soltar no es hacer clic
     assert app.get("log")[-1] == "end uno True"  # soltada en su misma zona: sigue viva
-    assert uno.prop("fxDragging") is False
+    assert uno.prop("jkDragging") is False
 
 
 def test_escape_cancels_and_prevent_blocks(app):
@@ -124,8 +124,8 @@ def test_a_short_press_is_still_a_click(app):
 
 
 def test_dragging_near_the_edge_scrolls_the_list(tmp_path):
-    (tmp_path / "App.flux").write_text("""<script>
-from fluxui import state
+    (tmp_path / "App.janel").write_text("""<script>
+from janelkit import state
 filas = state([f"f{i}" for i in range(60)])
 soltada = state("")
 </script>
@@ -140,7 +140,7 @@ soltada = state("")
     from PySide6.QtCore import QPoint, Qt
     from PySide6.QtTest import QTest
 
-    with mount(tmp_path / "App.flux") as app:
+    with mount(tmp_path / "App.janel") as app:
         view = next(i for i in app._walk(app.window.contentItem()) if i.inherits("QQuickListView"))
         start = app.find("flex", label="f1")._center()
         bottom = view.mapToScene(view.boundingRect().bottomLeft()).toPoint() + QPoint(start.x(), -5)

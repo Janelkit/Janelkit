@@ -3,8 +3,8 @@
 1. Construye wheel y sdist.
 2. Comprueba que ambos incluyen runtime, compilador y plantillas.
 3. Instala el wheel en un entorno virtual nuevo, fuera del repositorio.
-4. Ejecuta `flux --help`, `flux new demo` y `python main.py` (Qt offscreen)
-   y confirma que `fluxui` se importa desde el entorno, no desde el checkout.
+4. Ejecuta `janel --help`, `janel new demo` y `python main.py` (Qt offscreen)
+   y confirma que `janelkit` se importa desde el entorno, no desde el checkout.
 
 Uso:  python tools/check_wheel.py [--keep]
 """
@@ -22,17 +22,17 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 REQUIRED = [
-    "fluxui/__init__.py",
-    "fluxui/compiler/qml_generator.py",
-    "fluxui/runtime/component.py",
-    "fluxui/cli/main.py",
-    "fluxui/templates/starter/main.py.tmpl",
-    "fluxui/templates/starter/src/App.flux.tmpl",
-    "fluxui/templates/starter/dot-gitignore.tmpl",
-    "fluxui/qml/Flux/qmldir",
-    "fluxui/qml/Flux/fx.js",
-    "fluxui/qml/Flux/FxWindow.qml",
-    "fluxui/qml/Flux/FxButton.qml",
+    "janelkit/__init__.py",
+    "janelkit/compiler/qml_generator.py",
+    "janelkit/runtime/component.py",
+    "janelkit/cli/main.py",
+    "janelkit/templates/starter/main.py.tmpl",
+    "janelkit/templates/starter/src/App.janel.tmpl",
+    "janelkit/templates/starter/dot-gitignore.tmpl",
+    "janelkit/qml/Janel/qmldir",
+    "janelkit/qml/Janel/jk.js",
+    "janelkit/qml/Janel/JkWindow.qml",
+    "janelkit/qml/Janel/JkButton.qml",
 ]
 
 
@@ -62,7 +62,7 @@ def main() -> int:
     parser.add_argument("--keep", action="store_true", help="no borrar el directorio temporal")
     args = parser.parse_args()
 
-    work = Path(tempfile.mkdtemp(prefix="fluxui-check-"))
+    work = Path(tempfile.mkdtemp(prefix="janelkit-check-"))
     try:
         step("Construyendo wheel y sdist")
         dist = work / "dist"
@@ -82,46 +82,46 @@ def main() -> int:
         run([sys.executable, "-m", "venv", str(venv)])
         bindir = venv / ("Scripts" if os.name == "nt" else "bin")
         py = bindir / ("python.exe" if os.name == "nt" else "python")
-        flux = bindir / ("flux.exe" if os.name == "nt" else "flux")
+        janel = bindir / ("janel.exe" if os.name == "nt" else "janel")
         run([str(py), "-m", "pip", "install", "--quiet", str(wheel)])
 
         outside = work / "proyectos"
         outside.mkdir()
         env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "VIRTUAL_ENV")}
-        env.update(QT_QPA_PLATFORM="offscreen", FLUXUI_EXIT_AFTER_MS="500")
+        env.update(QT_QPA_PLATFORM="offscreen", JANELKIT_EXIT_AFTER_MS="500")
 
-        step("Comprobando que fluxui se importa desde el entorno instalado")
-        origin = run([str(py), "-c", "import fluxui; print(fluxui.__file__)"], cwd=outside, env=env).stdout.strip()
+        step("Comprobando que janelkit se importa desde el entorno instalado")
+        origin = run([str(py), "-c", "import janelkit; print(janelkit.__file__)"], cwd=outside, env=env).stdout.strip()
         print(f"   {origin}")
         if Path(origin).resolve().is_relative_to(REPO):
-            raise SystemExit("fluxui se está importando desde el repositorio, no desde el wheel")
+            raise SystemExit("janelkit se está importando desde el repositorio, no desde el wheel")
 
-        step("flux --help / --version")
-        run([str(flux), "--help"], cwd=outside, env=env)
-        print("   " + run([str(flux), "--version"], cwd=outside, env=env).stdout.strip())
+        step("janel --help / --version")
+        run([str(janel), "--help"], cwd=outside, env=env)
+        print("   " + run([str(janel), "--version"], cwd=outside, env=env).stdout.strip())
 
-        step("flux new demo")
-        run([str(flux), "new", "demo"], cwd=outside, env=env)
+        step("janel new demo")
+        run([str(janel), "new", "demo"], cwd=outside, env=env)
         demo = outside / "demo"
-        for rel in ("main.py", "src/App.flux", "pyproject.toml", ".gitignore"):
+        for rel in ("main.py", "src/App.janel", "pyproject.toml", ".gitignore"):
             if not (demo / rel).is_file():
-                raise SystemExit(f"flux new no creó {rel}")
-        print("   main.py y src/App.flux creados")
+                raise SystemExit(f"janel new no creó {rel}")
+        print("   main.py y src/App.janel creados")
 
         step("python main.py")
         proc = run([str(py), "main.py"], cwd=demo, env=env)
         noise = [ln for ln in proc.stderr.splitlines() if ln.strip() and not ln.startswith("qt.qpa")]
         if noise:
             raise SystemExit("la aplicación emitió avisos o errores:\n" + "\n".join(noise))
-        print("   la ventana se abrió (controles del módulo Flux incluidos) y terminó con código 0, sin avisos")
+        print("   la ventana se abrió (controles del módulo Janel incluidos) y terminó con código 0, sin avisos")
 
-        step("flux build")
-        run([str(flux), "build"], cwd=demo, env=env)
+        step("janel build")
+        run([str(janel), "build"], cwd=demo, env=env)
         if not (demo / "build" / "qml" / "App.qml").is_file():
-            raise SystemExit("flux build no generó build/qml/App.qml")
+            raise SystemExit("janel build no generó build/qml/App.qml")
         print("   todos los componentes compilan; QML en build/qml")
 
-        print("\nOK: el recorrido pip install -> flux new -> python main.py funciona fuera del repositorio.")
+        print("\nOK: el recorrido pip install -> janel new -> python main.py funciona fuera del repositorio.")
         return 0
     finally:
         if args.keep:

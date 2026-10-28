@@ -16,8 +16,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QMetaObject  # noqa: E402
 
-from fluxui.compiler import compile_source  # noqa: E402
-from fluxui.qt_backend.application import Application  # noqa: E402
+from janelkit.compiler import compile_source  # noqa: E402
+from janelkit.qt_backend.application import Application  # noqa: E402
 
 ROW = """
   {#each todos as todo (todo["id"])}
@@ -27,7 +27,7 @@ ROW = """
     </Row>
   {/each}
 """
-HEAD = "<script>\nfrom fluxui import state\ntodos = state([])\n</script>\n"
+HEAD = "<script>\nfrom janelkit import state\ntodos = state([])\n</script>\n"
 APPS = {
     "Scroll": HEAD + "<Scroll>" + ROW + "</Scroll>",  # todas las filas existen
     "List": HEAD + "<Window width={400} height={600}><List>" + ROW + "</List></Window>",  # virtualizada
@@ -35,7 +35,7 @@ APPS = {
 
 
 def measure(app: Application, n: int, kind: str = "Scroll") -> dict[str, float]:
-    mounted = app.mount(compile_source(APPS[kind], "Bench.flux"))
+    mounted = app.mount(compile_source(APPS[kind], "Bench.janel"))
     todos = mounted.instance.namespace["todos"]
 
     def items(k: int, start: int = 0) -> list[dict]:

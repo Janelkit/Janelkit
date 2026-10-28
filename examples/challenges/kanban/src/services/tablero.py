@@ -5,7 +5,7 @@ Deshacer aplica la inversa (que devuelve a su vez la suya, para rehacer). Las
 operaciones mueven las tarjetas en sitio dentro de las listas reactivas, así que
 `{#each}` mueve una fila en vez de volver a crear la columna entera.
 
-Deshacer no está en el núcleo de FluxUI (docs/alcance.md: es de `fluxui-store`); por
+Deshacer no está en el núcleo de JanelKit (docs/alcance.md: es de `janelkit-store`); por
 eso vive aquí, en la aplicación.
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ import random
 from pathlib import Path
 from typing import Any, Callable
 
-from fluxui import batch, state, timeout
+from janelkit import batch, state, timeout
 
 ETIQUETAS = {
     "error": "#e03131", "mejora": "#2f9e44", "diseño": "#ae3ec9",

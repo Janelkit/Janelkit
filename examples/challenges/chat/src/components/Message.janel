@@ -1,0 +1,57 @@
+<script lang="python">
+from datetime import datetime
+
+from janelkit import event, prop
+
+msg = prop()
+mine = prop(False)
+base = prop("")  # http://host:puerto del servidor, para las imágenes
+react = event()
+
+EMOJIS = ["👍", "❤️", "😂"]
+
+
+def hour(ts):
+    return datetime.fromtimestamp(ts).strftime("%H:%M")
+
+
+def safe(text):
+    # format="markdown" también interpreta HTML: se escapa lo que llega de otros usuarios.
+    return text.replace("&", "&amp;").replace("<", "&lt;")
+</script>
+
+<Row class="line">
+  {#if mine}
+    <Spacer />
+  {/if}
+  <Column class={"bubble mine" if mine else "bubble"}>
+    {#if not mine}
+      <Text class="author">{msg["author"]}</Text>
+    {/if}
+    <Text format="markdown" class="body">{safe(msg["text"])}</Text>
+    {#if msg.get("image")}
+      <Image src={base + msg["image"]} width={240} height={140} fit="cover" alt={msg["author"]} />
+    {/if}
+    <Row class="meta">
+      {#each list(msg["reactions"].items()) as r (r[0])}
+        <Text class="reaction">{r[0]} {r[1]}</Text>
+      {/each}
+      <Spacer />
+      {#each EMOJIS as e (e)}
+        <Button variant="ghost" class="add" on:click={react.emit(msg["id"], e)} label={e}>{e}</Button>
+      {/each}
+      <Text class="time">{hour(msg["ts"])}</Text>
+    </Row>
+  </Column>
+</Row>
+
+<style>
+.line { padding: 3px 12px; }
+.bubble { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; gap: 4px; max-width: 460px; }
+.mine { background: var(--surface-alt); border-color: var(--primary); }
+.author { font-weight: 600; color: var(--primary); font-size: var(--font-size-sm); }
+.meta { gap: 4px; align-items: center; }
+.reaction { background: var(--surface-alt); border-radius: 8px; padding: 0 4px; font-size: var(--font-size-sm); }
+.add { font-size: var(--font-size-sm); padding: 0 4px; }
+.time { color: var(--text-muted); font-size: var(--font-size-sm); }
+</style>

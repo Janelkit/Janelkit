@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from fluxui.inspect import mount
+from janelkit.inspect import mount
 
 CONTADOR = """
-from fluxui import state
+from janelkit import state
 veces = []
 
 
@@ -23,12 +23,12 @@ def project(tmp_path):
     def write(files: dict[str, str]) -> Path:
         for name, text in files.items():
             (tmp_path / name).write_text(text, encoding="utf-8")
-        return tmp_path / "App.flux"
+        return tmp_path / "App.janel"
     return write
 
 
 def test_hidden_waits_and_catches_up_once(project):
-    app_file = project({"App.flux": f"""<script>
+    app_file = project({"App.janel": f"""<script>
 {CONTADOR}
 oculto = state(False)
 n = state(0)
@@ -57,7 +57,7 @@ n = state(0)
 
 
 def test_else_branch_and_nested_hidden(project):
-    app_file = project({"App.flux": f"""<script>
+    app_file = project({"App.janel": f"""<script>
 {CONTADOR}
 fuera = state(False)
 dentro = state(False)
@@ -90,8 +90,8 @@ n = state(0)
 
 def test_script_effects_and_timers_keep_running_while_hidden(project):
     app_file = project({
-        "Reloj.flux": """<script>
-from fluxui import effect, interval, inject, state
+        "Reloj.janel": """<script>
+from janelkit import effect, interval, inject, state
 n = inject("n")
 ticks = inject("ticks")
 vistos = inject("vistos")
@@ -100,8 +100,8 @@ interval(20, lambda: ticks.set(ticks.peek() + 1))
 </script>
 <Text>{n}</Text>
 """,
-        "App.flux": """<script>
-from fluxui import provide, state
+        "App.janel": """<script>
+from janelkit import provide, state
 from Reloj import Reloj
 oculto = state(False)
 n = state(0)
@@ -124,20 +124,20 @@ provide("vistos", vistos)
 
 
 PAGINAS = {
-    "Inicio.flux": f"""<script>
+    "Inicio.janel": f"""<script>
 {CONTADOR}
-from fluxui import inject
+from janelkit import inject
 n = inject("n")
 </script>
 <flex><Text>{{f"inicio {{visto(n)}}"}}</Text></flex>
 """,
-    "Otra.flux": "<Text>otra</Text>\n",
+    "Otra.janel": "<Text>otra</Text>\n",
 }
 
 
 def test_pages_below_and_other_sections_wait(project):
-    app_file = project({**PAGINAS, "App.flux": """<script>
-from fluxui import provide, sections, state
+    app_file = project({**PAGINAS, "App.janel": """<script>
+from janelkit import provide, sections, state
 from Inicio import Inicio
 from Otra import Otra
 n = state(0)

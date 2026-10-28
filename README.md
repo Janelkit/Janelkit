@@ -1,15 +1,15 @@
-# FluxUI
+# JanelKit
 
-> **Prealfa.** Nombre, extensión y API son provisionales. No está publicado en PyPI.
+> **Prealfa.** La API es provisional. No está publicado en PyPI.
 
-Componentes de archivo único (`.flux`) para aplicaciones de escritorio: **Python** para la lógica, una plantilla declarativa reactiva y **Qt Quick** (PySide6) para el renderizado. Sin JavaScript ni QML escrito a mano.
+Componentes de archivo único (`.janel`) para aplicaciones de escritorio: **Python** para la lógica, una plantilla declarativa reactiva y **Qt Quick** (PySide6) para el renderizado. Sin JavaScript ni QML escrito a mano.
 
 ```html
 <script lang="python">
-from fluxui import state, computed
-from components.TodoItem import TodoItem   # otro .flux (ver examples/todo-components)
+from janelkit import state, computed
+from components.TodoItem import TodoItem   # otro .janel (ver examples/todo-components)
 
-todos = state([{"id": 1, "title": "Probar FluxUI", "done": False}])
+todos = state([{"id": 1, "title": "Probar JanelKit", "done": False}])
 draft = state("")
 
 @computed
@@ -50,11 +50,11 @@ def remove(todo_id):
 
 - **Reactividad:** `state` (con listas y diccionarios reactivos), `@computed`, `effect`, interpolación `{expr}`, `on:evento` (también en línea: `on:click={n += 1}`), `bind:value`/`bind:checked`. Solo se actualiza lo que depende de lo que cambió.
 - **Control de flujo:** `{#if}`/`{:else if}`/`{:else}` (desmonta de verdad), `{#each items as item, i (clave)}` con `{:else}`, `{#key}`.
-- **Componentes:** imports Python de otros `.flux`, `prop()` y `event()`, slots, estado local por instancia, ciclo de vida (`on_mount`, `on_destroy`), referencias a elementos (`ref`), contexto (`provide`/`inject`), componentes recursivos.
+- **Componentes:** imports Python de otros `.janel`, `prop()` y `event()`, slots, estado local por instancia, ciclo de vida (`on_mount`, `on_destroy`), referencias a elementos (`ref`), contexto (`provide`/`inject`), componentes recursivos.
 - **Asincronía:** manejadores `async def`, `@task` con estados de carga y error, `background()` para trabajo bloqueante; todo se cancela al desmontar.
 - **Estilos:** subconjunto CSS (colores, tipografía, espaciado, bordes, radios, alineación, `flex`), clases condicionales `class:x={cond}`, tokens `var(--primary)` y temas claro/oscuro intercambiables en caliente.
 - **Diagnósticos:** errores con archivo, línea, columna y sugerencias («¿quisiste decir…?»), también para errores de Qt y de ejecución.
-- **Herramientas:** `flux new`, `flux dev` (recarga al guardar), `flux build`, `flux compile`, `flux parse`; resaltado para VS Code.
+- **Herramientas:** `janel new`, `janel dev` (recarga al guardar), `janel build`, `janel compile`, `janel parse`; resaltado para VS Code.
 
 ## Probarlo (desde el repositorio)
 
@@ -63,9 +63,9 @@ python -m venv .venv
 .venv\Scripts\activate          # Windows  (Linux/macOS: source .venv/bin/activate)
 python -m pip install -r requirements-dev.txt   # versiones probadas; o: pip install -e ".[dev]"
 
-flux new mi-app
+janel new mi-app
 cd mi-app
-python main.py                  # o: flux dev
+python main.py                  # o: janel dev
 ```
 
 Ejemplos incluidos (cada uno se ejecuta con `python examples/<nombre>/main.py`):
@@ -85,17 +85,17 @@ Ejemplos incluidos (cada uno se ejecuta con `python examples/<nombre>/main.py`):
 
 | Comando | Qué hace |
 |---|---|
-| `flux new <nombre> [--path DIR]` | Crea un proyecto con `main.py` y `src/App.flux`. No sobrescribe carpetas con contenido. |
+| `janel new <nombre> [--path DIR]` | Crea un proyecto con `main.py` y `src/App.janel`. No sobrescribe carpetas con contenido. |
 | `python main.py` | Forma canónica de ejecutar una aplicación. |
-| `flux dev [carpeta]` | Ejecuta la app y la recarga al guardar (`.flux`) o la reinicia (`.py`). |
-| `flux build [carpeta]` | Valida todos los componentes y guarda el QML generado en `build/qml`. No crea ejecutables. |
-| `flux compile <archivo.flux>` | Muestra el QML generado. |
-| `flux parse <archivo.flux>` | Muestra el AST o los errores con línea y columna. |
+| `janel dev [carpeta]` | Ejecuta la app y la recarga al guardar (`.janel`) o la reinicia (`.py`). |
+| `janel build [carpeta]` | Valida todos los componentes y guarda el QML generado en `build/qml`. No crea ejecutables. |
+| `janel compile <archivo.janel>` | Muestra el QML generado. |
+| `janel parse <archivo.janel>` | Muestra el AST o los errores con línea y columna. |
 
 ## Cómo funciona
 
 ```
-App.flux ─► parser (AST con ubicaciones) ─► IR ─┬─► QML generado (controles del módulo interno Flux)
+App.janel ─► parser (AST con ubicaciones) ─► IR ─┬─► QML generado (controles del módulo interno Janel)
   + componentes importados                       └─► runtime Python: script por instancia, bindings reactivos
                                                           │
                      puente QObject por plantilla (propiedad notificable por binding)
@@ -107,9 +107,9 @@ Las expresiones de la plantilla se evalúan en **Python**; cuando cambia un `sta
 ## Documentación
 
 - [docs/tutorial.md](docs/tutorial.md) — **empieza aquí**: una aplicación completa paso a paso (código en `examples/compra`).
-- [docs/lenguaje.md](docs/lenguaje.md) — formato `.flux`, expresiones, bloques, componentes y elementos.
+- [docs/lenguaje.md](docs/lenguaje.md) — formato `.janel`, expresiones, bloques, componentes y elementos.
 - [docs/estilos.md](docs/estilos.md) — CSS soportado, disposición (flex), tokens y temas.
-- [docs/desarrollo.md](docs/desarrollo.md) — `flux dev`, `flux build`, errores y editor.
+- [docs/desarrollo.md](docs/desarrollo.md) — `janel dev`, `janel build`, errores y editor.
 - [docs/api.md](docs/api.md) — qué es API pública y política de versiones.
 - [docs/cambios.md](docs/cambios.md) — cambios entre versiones y cómo migrar.
 - [docs/empaquetado.md](docs/empaquetado.md) — crear un ejecutable con PyInstaller.
@@ -118,9 +118,9 @@ Las expresiones de la plantilla se evalúan en **Python**; cuando cambia un `sta
 - [docs/lanzamiento.md](docs/lanzamiento.md) — pendientes priorizados antes de la primera versión pública.
 - [spikes/qt_bridge_counter/NOTES.md](spikes/qt_bridge_counter/NOTES.md) — validación técnica del puente Python ↔ Qt Quick.
 
-## Desarrollo de FluxUI
+## Desarrollo de JanelKit
 
 ```bash
 python -m pytest                 # pruebas (Qt en modo offscreen)
-python tools/check_wheel.py      # construye wheel/sdist, instala en un venv limpio y prueba flux new + python main.py
+python tools/check_wheel.py      # construye wheel/sdist, instala en un venv limpio y prueba janel new + python main.py
 ```

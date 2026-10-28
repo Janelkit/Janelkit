@@ -6,9 +6,9 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 
-from fluxui.compiler import compile_source
-from fluxui.diagnostics import FluxError
-from fluxui.inspect import mount
+from janelkit.compiler import compile_source
+from janelkit.diagnostics import JanelError
+from janelkit.inspect import mount
 
 FLEX = Path(__file__).parent.parent / "examples" / "flex"
 
@@ -17,7 +17,7 @@ CAJA = """<flex class="caja"><Text>hijo</Text><Slot /></flex>
 """
 
 APP = """<script>
-from fluxui import state
+from janelkit import state
 from components.Caja import Caja
 sel = state(False)
 pct = state(30)
@@ -49,9 +49,9 @@ acento = state("#00ff00")
 def app():
     d = Path(tempfile.mkdtemp())
     (d / "components").mkdir()
-    (d / "components" / "Caja.flux").write_text(CAJA, encoding="utf-8")
-    (d / "App.flux").write_text(APP, encoding="utf-8")
-    with mount(d / "App.flux") as app:
+    (d / "components" / "Caja.janel").write_text(CAJA, encoding="utf-8")
+    (d / "App.janel").write_text(APP, encoding="utf-8")
+    with mount(d / "App.janel") as app:
         app.window.resize(400, 400)
         app.wait(0.05)
         yield app
@@ -78,48 +78,48 @@ def test_variables_follow_states_and_cross_components(app):
     app.find("flex", label="tarjeta").hover()
     assert color(app, "t") == "#00aa00"
     cajas = [e for e in app.elements() if e.tag == "Caja"]
-    assert [c.prop("fxBackground").name() for c in cajas] == ["#eeeeee", "#00ff00"]
+    assert [c.prop("jkBackground").name() for c in cajas] == ["#eeeeee", "#00ff00"]
     app.namespace["acento"].set("#0000aa")
     app.wait(0.02)
-    assert cajas[1].prop("fxBackground").name() == "#0000aa"
+    assert cajas[1].prop("jkBackground").name() == "#0000aa"
 
 
 def test_inline_style_wins_and_reacts(app):
     inline = app.find("flex", label="inline")
-    assert inline.prop("fxWidthPct") == 30 and inline.item.width() == pytest.approx(120)
+    assert inline.prop("jkWidthPct") == 30 and inline.item.width() == pytest.approx(120)
     app.namespace["pct"].set(50)
     app.wait(0.05)
     assert inline.item.width() == pytest.approx(200)
     fijo = app.find("flex", label="fijo")
-    assert fijo.prop("fxBackground").name() == "#123456" and fijo.prop("gap") == 3
+    assert fijo.prop("jkBackground").name() == "#123456" and fijo.prop("gap") == 3
     fijo.hover()
-    assert fijo.prop("fxBackground").name() == "#123456"  # el estilo en línea gana también a :hover
+    assert fijo.prop("jkBackground").name() == "#123456"  # el estilo en línea gana también a :hover
 
 
 def test_style_errors_and_theme_tokens_stay_static():
-    with pytest.raises(FluxError, match="style=\\{...\\} espera un diccionario"):
+    with pytest.raises(JanelError, match="style=\\{...\\} espera un diccionario"):
         compile_source("<Column><flex style={estilo} /></Column>\n<script>\nestilo = {}\n</script>")
-    with pytest.raises(FluxError, match="no admite 'transform'"):
+    with pytest.raises(JanelError, match="no admite 'transform'"):
         compile_source('<Column><flex style={{"transform": "scale(2)"}} /></Column>')
     qml = compile_source("""<Column><flex class="a"><Text>x</Text></flex></Column>
 <style>.a { background: var(--surface); --propia: 4px; gap: var(--propia); }</style>""").qml
-    assert "fxBackground: fxtheme.surface" in qml  # token del tema: como siempre
-    assert 'gap: Fx.cssVar(fxCtx, "propia", fxtheme.propia, 0)' in qml
-    assert "FxContext {" in qml and "property var fxV_propia: 4" in qml
+    assert "jkBackground: jktheme.surface" in qml  # token del tema: como siempre
+    assert 'gap: Jk.cssVar(jkCtx, "propia", jktheme.propia, 0)' in qml
+    assert "JkContext {" in qml and "property var jkV_propia: 4" in qml
     # Sin contexto, los textos no crean nada extra.
     plain = compile_source("<Column><Text>hola</Text></Column>").qml
-    assert "FxContext" not in plain and "fxOwn" not in plain
+    assert "JkContext" not in plain and "jkOwn" not in plain
 
 
 def test_white_space_and_text_overflow():
     qml = compile_source("""<Column><Text class="t">x</Text><flex class="f"><Text>y</Text></flex></Column>
 <style>.t { white-space: nowrap; text-overflow: ellipsis; } .f { white-space: nowrap; }</style>""").qml
     assert "wrapMode: Text.NoWrap" in qml and "elide: Text.ElideRight" in qml
-    assert "property var fxT_wrap: Text.NoWrap" in qml
+    assert "property var jkT_wrap: Text.NoWrap" in qml
 
 
 def test_catalog_table_and_tabs():
-    with mount(FLEX / "src" / "App.flux") as app:
+    with mount(FLEX / "src" / "App.janel") as app:
         app.window.resize(900, 760)
         app.wait(0.1)
         fila = app.find("flex", label="base-de-datos")
@@ -136,7 +136,7 @@ def test_catalog_table_and_tabs():
         QTest.keyClick(app.window, Qt.Key.Key_Right)
         app.wait(0.05)
         assert app.get("view") == "Alertas"
-        assert [e.label for e in app.elements() if e.tag == "flex" and e.prop("fxRole") == "option"] == ["base-de-datos"]
+        assert [e.label for e in app.elements() if e.tag == "flex" and e.prop("jkRole") == "option"] == ["base-de-datos"]
         # El texto del botón primario hereda --on-primary de la caja.
         assert app.find(text="Guardar").prop("color").name() != app.find(text="Cancelar").prop("color").name()
 
@@ -146,13 +146,13 @@ def test_inherited_text_follows_a_row_moved_to_another_box():
     # heredado (vuelve al del tema) y toma el tamaño. Solo hay un enlace por clave usada.
     d = Path(tempfile.mkdtemp())
     (d / "components").mkdir()
-    (d / "components" / "Item.flux").write_text("""<script>
-from fluxui import prop
+    (d / "components" / "Item.janel").write_text("""<script>
+from janelkit import prop
 texto = prop("")
 </script>
 <Text>{texto}</Text>""", encoding="utf-8")
-    (d / "App.flux").write_text("""<script>
-from fluxui import state
+    (d / "App.janel").write_text("""<script>
+from janelkit import state
 from components.Item import Item
 cols = state([{"id": "a", "items": ["x"]}, {"id": "b", "items": []}])
 def mover():
@@ -165,13 +165,13 @@ def mover():
   <Button text="mover" on:click={mover()} />
 </Column>
 <style>.col { padding: 2px; } .rojo { color: #ff0000; } .grande { font-size: 22px; }</style>""", encoding="utf-8")
-    with mount(d / "App.flux") as app:
+    with mount(d / "App.janel") as app:
         app.wait(0.05)
         x = app.find(text="x").item
         theme_size = app.find(text="fuera").item.property("font").pixelSize()
         assert x.property("color").name() == "#ff0000" and x.property("font").pixelSize() == theme_size
-        assert sorted(x.property("fxInherit").toVariant()) == ["color", "size"]
-        assert app.find(text="fuera").item.property("fxInherit") is None  # sin caja con texto: nada
+        assert sorted(x.property("jkInherit").toVariant()) == ["color", "size"]
+        assert app.find(text="fuera").item.property("jkInherit") is None  # sin caja con texto: nada
         app.find("Button").click()
         app.wait(0.05)
         x = app.find(text="x").item

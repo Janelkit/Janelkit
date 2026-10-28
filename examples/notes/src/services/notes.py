@@ -15,7 +15,7 @@ def new_note(title: str = "", body: str = "", tag: str = "general") -> dict:
 
 def samples() -> list[dict]:
     return [
-        new_note("Bienvenida", "FluxUI compila cada archivo .flux a Qt Quick.\nLa lógica sigue siendo Python.", "general"),
+        new_note("Bienvenida", "JanelKit compila cada archivo .janel a Qt Quick.\nLa lógica sigue siendo Python.", "general"),
         new_note("Componentes", "Esta app usa Sidebar, NoteCard y NoteEditor: props hacia abajo, eventos hacia arriba.", "ideas"),
         new_note("Temas", "Prueba el botón de tema: todos los colores salen de tokens como var(--surface).", "trabajo"),
     ]

@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from fluxui.inspect import mount
+from janelkit.inspect import mount
 
 FICHA = """<script>
-from fluxui import event, inject, on_destroy, on_mount, prop, state
+from janelkit import event, inject, on_destroy, on_mount, prop, state
 
 n = prop("")
 col = prop("")
@@ -30,7 +30,7 @@ on_destroy(lambda: log.append(f"destroy {n.value}"))
 """
 
 SCRIPT = """<script>
-from fluxui import batch, provide, state
+from janelkit import batch, provide, state
 from Ficha import Ficha
 
 listas = state({"a": ["uno", "dos"], "b": [], "otra": []})
@@ -86,9 +86,9 @@ LISTAS = SCRIPT + """<Window width={600} height={400}>
 
 def montar(app_source: str):
     d = Path(tempfile.mkdtemp())
-    (d / "Ficha.flux").write_text(FICHA, encoding="utf-8")
-    (d / "App.flux").write_text(app_source, encoding="utf-8")
-    return mount(d / "App.flux")
+    (d / "Ficha.janel").write_text(FICHA, encoding="utf-8")
+    (d / "App.janel").write_text(app_source, encoding="utf-8")
+    return mount(d / "App.janel")
 
 
 @pytest.fixture(params=["cajas", "listas"])
@@ -149,7 +149,7 @@ def test_the_moved_row_keeps_the_focus(app):
     app.find("Ficha", label="uno").focus()
     mover(app, "uno", "a", "b")
     app.wait(0.1)
-    from fluxui.inspect import Element
+    from janelkit.inspect import Element
 
     focused = app.window.activeFocusItem()
     assert focused is not None and Element(app, focused).label == "uno"
@@ -157,14 +157,14 @@ def test_the_moved_row_keeps_the_focus(app):
 
 
 def test_no_leaks_after_many_moves(app):
-    from fluxui.runtime import component
+    from janelkit.runtime import component
 
     for i in range(100):
         mover_rapido = app.namespace["mover"]
         mover_rapido("uno", "a", "b") if i % 2 == 0 else mover_rapido("uno", "b", "a", destino_primero=True)
     app.wait(0.3)
     raiz = app.mounted.instance
-    fichas = [c for c in raiz.children if c.compiled.file.endswith("Ficha.flux")]
+    fichas = [c for c in raiz.children if c.compiled.file.endswith("Ficha.janel")]
     assert len(fichas) == 2 and not component._parked
     assert app.get("log") == ["mount uno", "mount dos"]
 

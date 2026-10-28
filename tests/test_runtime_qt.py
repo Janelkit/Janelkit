@@ -6,11 +6,11 @@ from conftest import click as press
 from conftest import find, find_all, texts, visual_items
 from PySide6.QtCore import QMetaObject, QObject
 
-from fluxui.compiler import compile_source
-from fluxui.diagnostics import FluxError
+from janelkit.compiler import compile_source
+from janelkit.diagnostics import JanelError
 
 COUNTER = """<script lang="python">
-from fluxui import state, computed
+from janelkit import state, computed
 
 count = state(0)
 name = state("")
@@ -105,7 +105,7 @@ def test_bind_to_a_state_inside_an_object(mount, caplog):
     """bind:value={prefs.nombre}: el state de un módulo (o de un objeto) sin importarlo por su nombre."""
     m = mount("""<script>
 from types import SimpleNamespace
-from fluxui import state
+from janelkit import state
 prefs = SimpleNamespace(nombre=state("Ana"), ajustes=SimpleNamespace(tema=state("claro")), fijo="x")
 </script>
 <Column>
@@ -123,7 +123,7 @@ prefs = SimpleNamespace(nombre=state("Ana"), ajustes=SimpleNamespace(tema=state(
     assert find(m, "saludo").property("text") == "Hola, Bea"
     prefs.nombre.value = "Carla"
     assert nombre.property("text") == "Carla"
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
         type_text(find(m, "fijo"), "y")
     assert "bind: 'prefs.fijo' es str, no un state" in caplog.text
     assert prefs.fijo == "x"
@@ -132,7 +132,7 @@ prefs = SimpleNamespace(nombre=state("Ana"), ajustes=SimpleNamespace(tema=state(
 def test_bind_to_a_state_of_each_row(mount):
     m = mount("""<script>
 from types import SimpleNamespace
-from fluxui import state
+from janelkit import state
 tareas = state([SimpleNamespace(id=i, hecha=state(False)) for i in range(2)])
 </script>
 <Column>
@@ -141,7 +141,7 @@ tareas = state([SimpleNamespace(id=i, hecha=state(False)) for i in range(2)])
   {/each}
 </Column>""")
     tareas = m.instance.namespace["tareas"].value
-    casillas = [i for i in visual_items(m) if "FxCheckBox" in i.metaObject().className()]
+    casillas = [i for i in visual_items(m) if "JkCheckBox" in i.metaObject().className()]
     press(casillas[1])
     assert [t.hecha.value for t in tareas] == [False, True]
     tareas[0].hecha.value = True
@@ -168,11 +168,11 @@ def test_two_instances_keep_independent_state(mount):
     assert a.instance.namespace["count"] is not b.instance.namespace["count"]
 
 
-def test_unmount_releases_subscriptions(mount, flux_app):
+def test_unmount_releases_subscriptions(mount, janel_app):
     m = mount(COUNTER)
     count = m.instance.namespace["count"]
     assert count.subscriber_count > 0
-    flux_app.unmount(m)
+    janel_app.unmount(m)
     assert count.subscriber_count == 0
     count.value = 99  # no debe tocar el puente de la instancia desmontada
     assert m.instance.bridge.value("b3") == "Clicks: 0"
@@ -181,7 +181,7 @@ def test_unmount_releases_subscriptions(mount, flux_app):
 def test_handler_receives_event_arguments(mount):
     m = mount(
         """<script>
-from fluxui import state
+from janelkit import state
 last = state("")
 def submitted(text):
     last.value = text
@@ -200,7 +200,7 @@ def submitted(text):
 def test_checkbox_and_textarea_two_way(mount):
     m = mount(
         """<script>
-from fluxui import state
+from janelkit import state
 done = state(False)
 notes = state("a")
 </script>
@@ -222,18 +222,18 @@ notes = state("a")
 
 
 def test_runtime_error_in_binding_is_reported_with_location(mount, caplog):
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
         m = mount(
             """<script>
-from fluxui import state
+from janelkit import state
 d = state(0)
 </script>
 <Column>
   <Text id="t">{10 // d}</Text>
 </Column>""",
-            "Div.flux",
+            "Div.janel",
         )
-    assert "Div.flux:6:" in caplog.text and "ZeroDivisionError" in caplog.text
+    assert "Div.janel:6:" in caplog.text and "ZeroDivisionError" in caplog.text
     m.instance.namespace["d"].value = 5
     assert find(m, "t").property("text") == "2"
 
@@ -246,31 +246,31 @@ def boom():
 </script>
 <Button id="b" on:click={boom}>x</Button>"""
     )
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
         click(find(m, "b"))
     assert "ValueError: fallo" in caplog.text
 
 
 def test_handler_must_be_callable(mount, caplog):
     m = mount("<script>\nx = 3\n</script>\n<Button id=\"b\" on:click={x}>x</Button>")
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
         click(find(m, "b"))
     assert "debe recibir una función" in caplog.text
 
 
 def test_mutating_unwrapped_state_in_template_gives_a_hint(mount, caplog):
-    m = mount("<script>\nfrom fluxui import state\nn = state(0)\n</script>\n<Button id=\"b\" on:click={lambda: n.set(1)}>x</Button>")
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
+    m = mount("<script>\nfrom janelkit import state\nn = state(0)\n</script>\n<Button id=\"b\" on:click={lambda: n.set(1)}>x</Button>")
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
         click(find(m, "b"))
     assert "desenvueltos" in caplog.text
 
 
-def test_qt_rejection_is_mapped_to_flux_location(flux_app):
-    c = compile_source("<Window>\n  <Column>\n    <Text>x</Text>\n  </Column>\n</Window>", "Bad.flux")
+def test_qt_rejection_is_mapped_to_janel_location(janel_app):
+    c = compile_source("<Window>\n  <Column>\n    <Text>x</Text>\n  </Column>\n</Window>", "Bad.janel")
     # Simular un fallo de Qt corrompiendo el QML del texto.
-    c.qml = c.qml.replace("FxText {", "FxText { noExiste: 1;")
-    with pytest.raises(FluxError) as info:
-        flux_app.mount(c)
+    c.qml = c.qml.replace("JkText {", "JkText { noExiste: 1;")
+    with pytest.raises(JanelError) as info:
+        janel_app.mount(c)
     d = info.value.first
     assert "Qt rechazó el QML generado" in d.message
     assert d.location is not None and d.location.line == 3
@@ -279,7 +279,7 @@ def test_qt_rejection_is_mapped_to_flux_location(flux_app):
 # -- listas ------------------------------------------------------------------------
 
 TODOS = """<script>
-from fluxui import state
+from janelkit import state
 todos = state([{"id": 1, "t": "a"}, {"id": 2, "t": "b"}, {"id": 3, "t": "c"}])
 removed = state([])
 def remove(i):
@@ -336,7 +336,7 @@ def test_row_handlers_use_the_current_item(mount):
 def test_removed_rows_release_their_subscriptions(mount):
     m = mount(
         """<script>
-from fluxui import state
+from janelkit import state
 items = state([1, 2, 3])
 suffix = state("!")
 </script>
@@ -351,23 +351,23 @@ suffix = state("!")
 
 
 def test_duplicate_keys_are_reported_and_still_render(mount, caplog):
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
         m = mount(
             """<script>
-from fluxui import state
+from janelkit import state
 items = state([1, 1, 2])
 </script>
 <Column>{#each items as x (x)}<Text>{x}</Text>{/each}</Column>""",
-            "Dup.flux",
+            "Dup.janel",
         )
-    assert "clave repetida" in caplog.text and "Dup.flux:5:" in caplog.text
+    assert "clave repetida" in caplog.text and "Dup.janel:5:" in caplog.text
     assert texts(m) == ["1", "1", "2"]
 
 
 def test_nested_each_and_if(mount):
     m = mount(
         """<script>
-from fluxui import state
+from janelkit import state
 groups = state([{"n": "A", "xs": [1, 2]}, {"n": "B", "xs": []}])
 show = state(True)
 </script>
@@ -392,8 +392,8 @@ show = state(True)
 
 
 def test_each_over_non_iterable_reports_error(mount, caplog):
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
-        mount("<script>\nfrom fluxui import state\nn = state(3)\n</script>\n<Column>{#each n as x}<Text>{x}</Text>{/each}</Column>")
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
+        mount("<script>\nfrom janelkit import state\nn = state(3)\n</script>\n<Column>{#each n as x}<Text>{x}</Text>{/each}</Column>")
     assert "error en {#each}" in caplog.text and "TypeError" in caplog.text
 
 
@@ -416,24 +416,24 @@ def test_conditional_class_toggles_style(mount):
 
     m = mount(
         """<script>
-from fluxui import state
+from janelkit import state
 sel = state(False)
 </script>
 <Column><Text id="t" class="base" class:sel={sel}>x</Text></Column>
 <style>.base { color: #00ff00; }\n.sel { color: #ff0000; font-size: 30px; }</style>"""
     )
     t = find(m, "t")
-    assert t.property("fxColor") == QColor("#00ff00")
+    assert t.property("jkColor") == QColor("#00ff00")
     m.instance.namespace["sel"].value = True
-    assert t.property("fxColor") == QColor("#ff0000") and t.property("font").pixelSize() == 30
+    assert t.property("jkColor") == QColor("#ff0000") and t.property("font").pixelSize() == 30
     m.instance.namespace["sel"].value = False
-    assert t.property("fxColor") == QColor("#00ff00")
+    assert t.property("jkColor") == QColor("#00ff00")
 
 
 def test_key_block_recreates_content(mount):
     m = mount(
         """<script>
-from fluxui import state
+from janelkit import state
 k = state(1)
 other = state("a")
 </script>
@@ -464,7 +464,7 @@ def test_in_place_mutations_update_the_view(mount):
 
 
 INLINE = """<script>
-from fluxui import state
+from janelkit import state
 n = state(0)
 last = state("")
 todos = state([{"id": 1, "done": False}])
@@ -492,7 +492,7 @@ def test_inline_handlers_assign_state(mount, caplog):
     assert ns["n"].value == 0 and ns["last"].value == "reset"
     type_text(find(m, "field"), "hola")
     assert ns["last"].value == "hola"
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
         click(find(m, "plain"))
     assert "'plain' es int, no un state" in caplog.text
 
@@ -508,12 +508,12 @@ def test_inline_handlers_mutate_collections(mount):
     assert len(todos.value) == 2 and len(find_all(m, "check")) == 2
 
 
-def test_unmount_releases_bindings_of_a_script_without_effects(mount, flux_app):
+def test_unmount_releases_bindings_of_a_script_without_effects(mount, janel_app):
     # Regresión: un ámbito vacío es falso (len 0) y la raíz creaba otro ámbito sin registrar.
-    m = mount("<script>\nfrom fluxui import state\nn = state(1)\n</script>\n<Text>{n}</Text>")
+    m = mount("<script>\nfrom janelkit import state\nn = state(1)\n</script>\n<Text>{n}</Text>")
     n = m.instance.namespace["n"]
     assert n.subscriber_count == 1
-    flux_app.unmount(m)
+    janel_app.unmount(m)
     assert n.subscriber_count == 0
 
 
@@ -543,7 +543,7 @@ def test_dynamic_class_expression(mount, caplog):
 
     m = mount(
         """<script>
-from fluxui import state
+from janelkit import state
 kind = state("info")
 big = state(False)
 </script>
@@ -557,14 +557,14 @@ big = state(False)
 </style>"""
     )
     t, ns = find(m, "t"), m.instance.namespace
-    assert t.property("fxColor") == QColor("#0000ff")  # .info gana a .base: va después en <style>
+    assert t.property("jkColor") == QColor("#0000ff")  # .info gana a .base: va después en <style>
     ns["kind"].value = "error"
-    assert t.property("fxColor") == QColor("#ff0000") and t.property("font").bold()
+    assert t.property("jkColor") == QColor("#ff0000") and t.property("font").bold()
     ns["big"].value = True
     assert t.property("font").pixelSize() == 30
     ns["kind"].value = ""
-    assert t.property("fxColor") == QColor("#000000") and not t.property("font").bold()
-    with caplog.at_level(logging.WARNING, logger="fluxui"):
+    assert t.property("jkColor") == QColor("#000000") and not t.property("font").bold()
+    with caplog.at_level(logging.WARNING, logger="janelkit"):
         ns["kind"].value = "nada"
     assert "la clase 'nada' no tiene reglas en <style>" in caplog.text
 
@@ -573,7 +573,7 @@ def test_text_interpolation_accepts_conversion_and_format_spec(mount):
     """`{x:.1f}`, `{x!r}`, `{x:>5}` como en un f-string; los dos puntos dentro de corchetes o
     cadenas no cuentan, y None sigue mostrándose vacío."""
     m = mount("""<script>
-from fluxui import state
+from janelkit import state
 cpu = state(12.345)
 name = state("ana")
 items = state([1, 2, 3, 4])
@@ -594,7 +594,7 @@ nada = state(None)
 
 
 def test_split_format_rules():
-    from fluxui.compiler.template_parser import split_format
+    from janelkit.compiler.template_parser import split_format
 
     assert split_format("x") == ("x", "", None)
     assert split_format("x:.1f") == ("x", "", ".1f")

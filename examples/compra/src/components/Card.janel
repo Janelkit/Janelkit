@@ -1,0 +1,15 @@
+<script lang="python">
+from janelkit import prop
+
+title = prop()
+</script>
+
+<Column class="card">
+  <Text class="title">{title}</Text>
+  <Slot />
+</Column>
+
+<style>
+.card { padding: 16px; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.title { font-weight: 600; }
+</style>

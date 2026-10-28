@@ -1,6 +1,6 @@
 # Reto 4: cliente de chat
 
-Cliente de chat por WebSocket hecho solo con la API pública de FluxUI. Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
+Cliente de chat por WebSocket hecho solo con la API pública de JanelKit. Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
 
 ## Ejecutar
 
@@ -36,8 +36,8 @@ python bench.py --rate 20 --seconds 300
 | Archivo | Contenido |
 |---|---|
 | `server.py` | Servidor de pruebas (`websockets`): salas, historial, bots, reacciones e imágenes por HTTP. |
-| `src/App.flux` | La ventana: salas, lista de mensajes, redacción. |
-| `src/components/Message.flux` | Una burbuja de mensaje. |
+| `src/App.janel` | La ventana: salas, lista de mensajes, redacción. |
+| `src/components/Message.janel` | Una burbuja de mensaje. |
 | `src/services/chat.py` | Conexión, reconexión y estado reactivo de las salas. |
 | `bench.py` | Prueba de carga: memoria, CPU y retraso del bucle de eventos. |
-| `../../../tests/test_challenge_chat.py` | Pruebas con `fluxui.inspect`. |
+| `../../../tests/test_challenge_chat.py` | Pruebas con `janelkit.inspect`. |

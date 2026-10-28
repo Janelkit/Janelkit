@@ -1,12 +1,12 @@
-"""Cajas y textos ligeros: cada pieza se crea solo si se usa (FxHover, FxTap, FxRole,
-FxTranslate, FxTextBox, FxTextLinks). Ver "Vía rápida" en docs/flex.md."""
+"""Cajas y textos ligeros: cada pieza se crea solo si se usa (JkHover, JkTap, JkRole,
+JkTranslate, JkTextBox, JkTextLinks). Ver "Vía rápida" en docs/flex.md."""
 from conftest import find
-from fluxui.compiler import compile_source
+from janelkit.compiler import compile_source
 from PySide6.QtCore import QCoreApplication, QEvent, Qt
 from PySide6.QtGui import QAccessible, QKeyEvent
 
 APP = """<script>
-from fluxui import state
+from janelkit import state
 papel = state("")
 x = state(0)
 </script>
@@ -29,47 +29,47 @@ x = state(0)
 
 
 def parts(item):
-    return {k: item.property(k) is not None for k in ("fxHover", "fxTap", "fxRoleItem", "fxTranslate")}
+    return {k: item.property(k) is not None for k in ("jkHover", "jkTap", "jkRoleItem", "jkTranslate")}
 
 
 def test_a_plain_box_creates_nothing_extra(mount):
     m = mount(APP)
-    assert parts(find(m, "quieta")) == {"fxHover": False, "fxTap": False, "fxRoleItem": False, "fxTranslate": False}
+    assert parts(find(m, "quieta")) == {"jkHover": False, "jkTap": False, "jkRoleItem": False, "jkTranslate": False}
     plano = find(m, "plano")
-    assert plano.property("fxBack") is None and plano.property("fxLinks") is None
+    assert plano.property("jkBack") is None and plano.property("jkLinks") is None
 
 
 def test_each_part_appears_when_used(mount):
     m = mount(APP)
-    assert parts(find(m, "pulsable")) == {"fxHover": True, "fxTap": True, "fxRoleItem": True, "fxTranslate": False}
-    assert parts(find(m, "encima")) == {"fxHover": True, "fxTap": False, "fxRoleItem": False, "fxTranslate": False}
+    assert parts(find(m, "pulsable")) == {"jkHover": True, "jkTap": True, "jkRoleItem": True, "jkTranslate": False}
+    assert parts(find(m, "encima")) == {"jkHover": True, "jkTap": False, "jkRoleItem": False, "jkTranslate": False}
     movida = find(m, "movida")
-    assert movida.property("fxTranslate") is not None and movida.mapToScene(movida.position() * 0).x() == 4
-    assert find(m, "fondo").property("fxBack") is not None
-    assert find(m, "enlaces").property("fxLinks") is not None
+    assert movida.property("jkTranslate") is not None and movida.mapToScene(movida.position() * 0).x() == 4
+    assert find(m, "fondo").property("jkBack") is not None
+    assert find(m, "enlaces").property("jkLinks") is not None
 
 
 def test_role_is_created_when_it_changes_and_works_with_the_keyboard(mount):
     m = mount(APP)
     caja = find(m, "dinamica")
-    assert caja.property("fxRoleItem") is None
+    assert caja.property("jkRoleItem") is None
     m.instance.namespace["papel"].set("button")
     QCoreApplication.processEvents()
-    assert caja.property("fxRoleItem") is not None
+    assert caja.property("jkRoleItem") is not None
     iface = QAccessible.queryAccessibleInterface(caja)
     assert iface is not None and iface.role() == QAccessible.Role.Button
-    # Espacio la pulsa (lo lleva FxRole): sube :pressed mientras se mantiene.
+    # Espacio la pulsa (lo lleva JkRole): sube :pressed mientras se mantiene.
     QCoreApplication.sendEvent(caja, QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Space, Qt.KeyboardModifier.NoModifier))
-    assert caja.property("fxPressed") is True
+    assert caja.property("jkPressed") is True
     QCoreApplication.sendEvent(caja, QKeyEvent(QEvent.Type.KeyRelease, Qt.Key.Key_Space, Qt.KeyboardModifier.NoModifier))
-    assert caja.property("fxPressed") is False
+    assert caja.property("jkPressed") is False
 
 
 def test_label_on_a_box_without_role_stays_hidden_from_screen_readers(mount):
     qml = compile_source(APP).qml
     i = qml.index('objectName: "etiqueta"')
-    block = qml[i:qml.index("FxText {", i)]
-    assert 'Accessible.ignored: ' in block and '.fxAs === "box"' in block  # como antes de FxRole
+    block = qml[i:qml.index("JkText {", i)]
+    assert 'Accessible.ignored: ' in block and '.jkAs === "box"' in block  # como antes de JkRole
     m = mount(APP)
     pulsable = QAccessible.queryAccessibleInterface(find(m, "pulsable"))
     assert pulsable is not None and pulsable.role() == QAccessible.Role.Button

@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from fluxui import storage, theme
-from fluxui.inspect import mount
+from janelkit import storage, theme
+from janelkit.inspect import mount
 
-APP = Path(__file__).parent.parent / "examples" / "preferencias" / "src" / "App.flux"
+APP = Path(__file__).parent.parent / "examples" / "preferencias" / "src" / "App.janel"
 
 
 @pytest.fixture

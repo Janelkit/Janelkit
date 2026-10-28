@@ -11,7 +11,7 @@ import json
 import time
 from typing import Any, Callable
 
-from fluxui import Timer, batch, state, timeout
+from janelkit import Timer, batch, state, timeout
 
 MAX_KEPT = 600  # mensajes que se guardan por sala cuando se está abajo (la memoria no crece sin fin)
 PAGE = 50

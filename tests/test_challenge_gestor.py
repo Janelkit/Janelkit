@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from fluxui.inspect import mount
+from janelkit.inspect import mount
 
 GESTOR = Path(__file__).parent.parent / "examples" / "challenges" / "gestor"
 
@@ -55,7 +55,7 @@ def archivo(tmp_path, monkeypatch):
 
 @pytest.fixture
 def app(archivo):
-    with mount(GESTOR / "src" / "App.flux") as app:
+    with mount(GESTOR / "src" / "App.janel") as app:
         yield app
 
 

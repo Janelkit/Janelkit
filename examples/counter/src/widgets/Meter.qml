@@ -1,9 +1,9 @@
 import QtQuick
 
 // Elemento propio escrito en QML: una barra de progreso que se puede pulsar.
-// FluxUI lee sus `property` y `signal` para validar el uso desde App.flux:
+// JanelKit lee sus `property` y `signal` para validar el uso desde App.janel:
 //   <Meter value={count} max={5} on:picked={count = event} />
-// Los tokens del tema están disponibles como `fxtheme`.
+// Los tokens del tema están disponibles como `jktheme`.
 Rectangle {
     id: root
     property real value: 0
@@ -13,13 +13,13 @@ Rectangle {
     implicitWidth: 320
     implicitHeight: 14
     radius: height / 2
-    color: fxtheme.border
+    color: jktheme.border
 
     Rectangle {
         width: parent.width * Math.max(0, Math.min(root.value / root.max, 1))
         height: parent.height
         radius: parent.radius
-        color: root.value >= root.max ? fxtheme.success : fxtheme.primary
+        color: root.value >= root.max ? jktheme.success : jktheme.primary
         Behavior on width { NumberAnimation { duration: 150 } }
     }
 

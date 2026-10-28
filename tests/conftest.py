@@ -7,48 +7,48 @@ import pytest  # noqa: E402
 
 
 @pytest.fixture(scope="session")
-def flux_app():
-    from fluxui.qt_backend.application import Application
+def janel_app():
+    from janelkit.qt_backend.application import Application
 
     return Application([])
 
 
 @pytest.fixture
-def mount(flux_app):
+def mount(janel_app):
     """Monta componentes desde código fuente (o un archivo) y los desmonta al terminar la prueba."""
-    from fluxui.compiler import compile_file, compile_source
+    from janelkit.compiler import compile_file, compile_source
 
     mounted = []
 
-    def _mount(source, file: str = "App.flux"):
+    def _mount(source, file: str = "App.janel"):
         compiled = compile_file(source) if hasattr(source, "read_text") else compile_source(source, file)
-        m = flux_app.mount(compiled)
-        flux_app.qt_app.processEvents()
+        m = janel_app.mount(compiled)
+        janel_app.qt_app.processEvents()
         mounted.append(m)
         return m
 
     yield _mount
     for m in mounted:
-        if m in flux_app.mounted:
-            flux_app.unmount(m)
-    flux_app.qt_app.processEvents()
+        if m in janel_app.mounted:
+            janel_app.unmount(m)
+    janel_app.qt_app.processEvents()
 
 
 @pytest.fixture(autouse=True, scope="session")
 def _example_data(tmp_path_factory):
     """Los ejemplos que guardan datos (examples/compra, persisted) escriben en una carpeta temporal, no en $HOME."""
     os.environ["COMPRA_FILE"] = str(tmp_path_factory.mktemp("datos") / "lista-compra.json")
-    os.environ["FLUXUI_DATA_DIR"] = str(tmp_path_factory.mktemp("persisted"))
+    os.environ["JANELKIT_DATA_DIR"] = str(tmp_path_factory.mktemp("persisted"))
     yield
 
 
 @pytest.fixture(autouse=True)
 def _reset_theme():
-    from fluxui import theme
+    from janelkit import theme
 
     yield
     theme.reset()
-    from fluxui import i18n
+    from janelkit import i18n
 
     i18n.reset()
 
@@ -71,7 +71,7 @@ def visual_items(mounted):
 
 def click(item) -> None:
     """Pulsa un botón como el usuario (también en Qt < 6.8, sin click() invocable)."""
-    from fluxui.inspect import press
+    from janelkit.inspect import press
 
     press(item)
 
@@ -88,17 +88,17 @@ def find_all(mounted, name: str):
 
 
 def texts(mounted):
-    """Textos visibles de los elementos <Text> (FxText), en orden."""
-    return [i.property("text") for i in visual_items(mounted) if _is_fx_text(i) and i.isVisible()]
+    """Textos visibles de los elementos <Text> (JkText), en orden."""
+    return [i.property("text") for i in visual_items(mounted) if _is_jk_text(i) and i.isVisible()]
 
 
-def _is_fx_text(item) -> bool:
-    """Un FxText, también la raíz de un componente cuyo elemento exterior es un <Text>."""
+def _is_jk_text(item) -> bool:
+    """Un JkText, también la raíz de un componente cuyo elemento exterior es un <Text>."""
     if not item.inherits("QQuickText"):
         return False
     meta = item.metaObject()
     while meta is not None:
-        if meta.className().startswith("FxText_"):
+        if meta.className().startswith("JkText_"):
             return True
         meta = meta.superClass()
     return False

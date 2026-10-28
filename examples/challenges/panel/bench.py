@@ -78,8 +78,8 @@ def main() -> None:
 
     previous = qInstallMessageHandler(on_qt_message)
 
-    from fluxui import notifications
-    from fluxui.inspect import mount
+    from janelkit import notifications
+    from janelkit.inspect import mount
 
     notifications._tray_icon = lambda: None  # sin avisos reales del sistema durante la medición
 
@@ -102,7 +102,7 @@ def main() -> None:
             await asyncio.sleep(0.05)
             lags.append((time.perf_counter() - t - 0.05) * 1000)
 
-    with mount(HERE / "src" / "App.flux", headless=args.headless) as app:
+    with mount(HERE / "src" / "App.janel", headless=args.headless) as app:
         monitor = app.get("monitor")
         app.wait(until=lambda: len(monitor.processes.value) > 0)
         series = len(monitor.series)

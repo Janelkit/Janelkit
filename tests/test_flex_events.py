@@ -8,8 +8,8 @@ from PySide6.QtCore import QPoint, QPointF, Qt
 from PySide6.QtGui import QGuiApplication, QWheelEvent
 from PySide6.QtTest import QTest
 
-from fluxui.compiler import compile_source
-from fluxui.inspect import mount
+from janelkit.compiler import compile_source
+from janelkit.inspect import mount
 
 FLEX = Path(__file__).parent.parent / "examples" / "flex"
 
@@ -20,8 +20,8 @@ def app_from():
 
     def run(source: str, width=300, height=300):
         d = Path(tempfile.mkdtemp())
-        (d / "App.flux").write_text(source, encoding="utf-8")
-        ctx = mount(d / "App.flux")
+        (d / "App.janel").write_text(source, encoding="utf-8")
+        ctx = mount(d / "App.janel")
         app = ctx.__enter__()
         apps.append(ctx)
         app.window.resize(width, height)
@@ -104,7 +104,7 @@ def test_keydown_bubbles_from_focus_and_prevent_blocks_typing(app_from):
 
 def test_fields_get_keyboard_and_focus_events(app_from):
     app = app_from("""<script>
-from fluxui import state
+from janelkit import state
 log = []
 texto = state("")
 def tecla(event):
@@ -151,7 +151,7 @@ def rueda(event):
 <Column><flex class="zona" on:wheel={rueda}><Text>{"\\n".join(str(i) for i in range(80))}</Text></flex></Column>
 <style>.zona { height: 100px; overflow: auto; }</style>""")
     zona = [e for e in app.elements() if e.tag == "flex"][0]
-    flick = zona.item.property("fxScroller")
+    flick = zona.item.property("jkScroller")
     pos = QPointF(zona._center())
     ev = QWheelEvent(pos, app.window.mapToGlobal(pos), QPoint(0, 0), QPoint(0, -120), Qt.MouseButton.NoButton,
                      Qt.KeyboardModifier.NoModifier, Qt.ScrollPhase.NoScrollPhase, False)
@@ -163,7 +163,7 @@ def rueda(event):
 
 def test_focus_blur_resize_and_hover_events(app_from):
     app = app_from("""<script>
-from fluxui import state
+from janelkit import state
 log = []
 wide = state(True)
 </script>
@@ -234,7 +234,7 @@ def test_pointer_events_none_and_visibility_hidden(app_from):
     assert app.get("log") == [("fuera", "pointerdown")]
     oculta = app.find("flex", label="oculta")
     assert oculta.visible and oculta.item.height() == 40
-    assert oculta.item.property("fxLay").property("opacity") == 0
+    assert oculta.item.property("jkLay").property("opacity") == 0
 
 
 def test_title_and_accessibility_warning_compile():
@@ -249,14 +249,14 @@ def test_title_and_accessibility_warning_compile():
 
 
 def test_invalid_role_is_an_error():
-    from fluxui.diagnostics import FluxError
+    from janelkit.diagnostics import JanelError
 
-    with pytest.raises(FluxError, match="valor no válido para 'as'"):
+    with pytest.raises(JanelError, match="valor no válido para 'as'"):
         compile_source('<Column><flex as="botón" /></Column>')
 
 
 def test_catalog_controls():
-    with mount(FLEX / "src" / "App.flux") as app:
+    with mount(FLEX / "src" / "App.janel") as app:
         app.window.resize(900, 640)
         app.wait(0.1)
         last = lambda: next(t for t in app.texts() if t.startswith("Última"))  # noqa: E731
@@ -290,7 +290,7 @@ def test_routed_events_reach_list_rows_also_while_they_slide(app_from):
     # y on:contextmenu/on:dblclick no llegaban a las filas de <List>. Y con animate, una
     # fila que aún se desliza queda fuera del alto nuevo de la lista, y sigue recibiendo.
     app = app_from("""<script>
-from fluxui import state
+from janelkit import state
 filas = state(["a", "b", "c", "d"])
 log = state([])
 </script>

@@ -3,8 +3,8 @@ import pytest
 from conftest import find, visual_items
 from PySide6.QtCore import QCoreApplication
 
-from fluxui.compiler import compile_source
-from fluxui.diagnostics import FluxError
+from janelkit.compiler import compile_source
+from janelkit.diagnostics import JanelError
 
 
 def settle(m, rounds=3):
@@ -141,19 +141,19 @@ def test_per_side_borders_and_corner_radii(mount):
     ))
     settle(m)
     caja = find(m, "caja")
-    assert caja.property("fxBorderLeftW") == 3 and caja.property("fxBorderTopW") == 0
+    assert caja.property("jkBorderLeftW") == 3 and caja.property("jkBorderTopW") == 0
     assert caja.property("topLeftRadius") == 8 and caja.property("topRightRadius") == 0
-    assert any(i.metaObject().className().startswith("FxSides") for i in visual_items(m))
+    assert any(i.metaObject().className().startswith("JkSides") for i in visual_items(m))
 
 
 def test_lowercase_tags_are_base_elements():
-    with pytest.raises(FluxError) as exc:
+    with pytest.raises(JanelError) as exc:
         compile_source("<flx />")
     assert "elemento base desconocido <flx>" in str(exc.value) and "<flex>" in str(exc.value)
 
 
 def test_flex_attribute_values_are_checked():
-    with pytest.raises(FluxError) as exc:
+    with pytest.raises(JanelError) as exc:
         compile_source('<flex direction="diagonal" />')
     assert "row-reverse" in str(exc.value)
 
@@ -167,8 +167,8 @@ def test_new_style_properties_compile_without_warnings():
     )
     assert [w.message for w in c.warnings] == ["align-self no soportado: 'baseline'; valores admitidos: start, center, end, stretch, auto"]
     for expected in ('direction: "column"', "wrap: true", "rowGap: 4", "columnGap: 8", 'justifyContent: "space-around"',
-                     'alignContent: "center"', 'fxOverflow: "hidden"', "property real fxShrink: 0",
-                     "property real fxBasis: 120", "property int fxOrder: 2", "property int fxAutoMargin: 10",
+                     'alignContent: "center"', 'jkOverflow: "hidden"', "property real jkShrink: 0",
+                     "property real jkBasis: 120", "property int jkOrder: 2", "property int jkAutoMargin: 10",
                      "Layout.topMargin: 4"):
         assert expected in c.qml, expected
 
@@ -202,7 +202,7 @@ def test_late_content_of_unstretched_child_in_sized_column(mount):
 def test_reordered_element_rows_are_placed_again(mount):
     # Al mover filas, el modelo avisa al contenedor (una vez por movimiento, no cada fila).
     m = mount("""<script>
-from fluxui import state
+from janelkit import state
 items = state([1, 2, 3])
 </script>
 <flex>{#each items as i (i)}<flex class="c"><Text>{i}</Text></flex>{/each}</flex>
@@ -223,7 +223,7 @@ def test_hidden_subtree_keeps_its_layout_and_catches_up_when_shown(mount):
     # Oculto no se recoloca (cuesta y daría tamaños 0: una lista de dentro crearía todas sus
     # filas); lo que cambió mientras tanto se coloca al volver a verse.
     m = mount("""<script>
-from fluxui import state
+from janelkit import state
 oculto = state(False)
 items = state(["uno", "dos"])
 ancho = state(60)
@@ -248,7 +248,7 @@ ancho = state(60)
     settle(m)
     ns["oculto"].value = False
     settle(m)
-    filas = [i for i in visual_items(m) if i.parentItem() is not None and i.property("fxState") is not None
+    filas = [i for i in visual_items(m) if i.parentItem() is not None and i.property("jkState") is not None
              and i is not col and i.mapToItem(col, 0, 0).y() >= 0 and i.height() == 20]
     assert (col.width(), col.height()) == (90, 60) and len(filas) == 3
     assert sorted(round(f.mapToItem(col, 0, 0).y()) for f in filas) == [0, 20, 40]

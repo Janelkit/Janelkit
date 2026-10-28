@@ -8,7 +8,7 @@ común y el archivo JSON.
 
 Las tarjetas guardan el id de su responsable: renombrar a una persona se ve al momento
 en todos los proyectos. La última columna de un proyecto es la «de hecho» (su progreso).
-Deshacer no está en el núcleo de FluxUI (docs/alcance.md: es de `fluxui-store`).
+Deshacer no está en el núcleo de JanelKit (docs/alcance.md: es de `janelkit-store`).
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ import re
 from pathlib import Path
 from typing import Any, Callable
 
-from fluxui import batch, state, timeout
+from janelkit import batch, state, timeout
 from services.tablero import ETIQUETAS, Tablero, columnas_ejemplo
 
 def cuenta(n: int, nombre: str, plural: str | None = None) -> str:

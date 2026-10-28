@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from fluxui.compiler import compile_file
+from janelkit.compiler import compile_file
 
-EXAMPLES = sorted((Path(__file__).parent.parent / "examples").glob("*/src/App.flux"))
+EXAMPLES = sorted((Path(__file__).parent.parent / "examples").glob("*/src/App.janel"))
 
 
 @pytest.fixture
@@ -31,12 +31,12 @@ def test_example_compiles_without_warnings(app):
 
 
 @pytest.mark.parametrize("app", EXAMPLES, ids=lambda p: p.parent.parent.name)
-def test_example_mounts(app, flux_app, app_path, caplog):
+def test_example_mounts(app, janel_app, app_path, caplog):
     compiled = compile_file(app_path(app))
-    assert flux_app.check_tokens(compiled) == []
-    m = flux_app.mount(compiled)
-    flux_app.qt_app.processEvents()
-    flux_app.unmount(m)
+    assert janel_app.check_tokens(compiled) == []
+    m = janel_app.mount(compiled)
+    janel_app.qt_app.processEvents()
+    janel_app.unmount(m)
     assert "error" not in caplog.text.lower()
 
 
@@ -45,23 +45,23 @@ def test_there_are_examples():
     assert {"counter", "todo", "todo-components"} <= names
 
 
-def test_notes_example_flow(flux_app, app_path):
+def test_notes_example_flow(janel_app, app_path):
     """Recorrido de la app de notas: seleccionar, editar, guardar, crear, borrar y cambiar de tema."""
     from conftest import texts, visual_items
     from PySide6.QtCore import QMetaObject
 
-    from fluxui import theme
+    from janelkit import theme
 
     app = next(p for p in EXAMPLES if p.parent.parent.name == "notes")
-    m = flux_app.mount(compile_file(app_path(app)))
-    flux_app.qt_app.processEvents()
+    m = janel_app.mount(compile_file(app_path(app)))
+    janel_app.qt_app.processEvents()
     ns = m.instance.namespace
 
     def items(kind):
         return [i for i in visual_items(m) if kind in i.metaObject().className() and i.isVisible()]
 
     def button(text):
-        return next(b for b in items("FxButton") if b.property("text") == text)
+        return next(b for b in items("JkButton") if b.property("text") == text)
 
     def press(item, method="click"):
         from conftest import click
@@ -70,22 +70,22 @@ def test_notes_example_flow(flux_app, app_path):
             click(item)
         else:
             assert QMetaObject.invokeMethod(item, method)
-        flux_app.qt_app.processEvents()
+        janel_app.qt_app.processEvents()
 
     try:
         cards = items("NoteCard")
         assert len(cards) == 3
         press(cards[1], "clicked")  # seleccionar la segunda tarjeta
         assert ns["current"].value["title"] == "Componentes"
-        title_field = next(f for f in items("FxTextField") if f.property("text") == "Componentes")
+        title_field = next(f for f in items("JkTextField") if f.property("text") == "Componentes")
 
         assert button("Guardar").property("enabled") is False
-        title_field.setProperty("text", "Componentes .flux")
+        title_field.setProperty("text", "Componentes .janel")
         assert QMetaObject.invokeMethod(title_field, "textEdited")
         assert "Cambios sin guardar" in texts(m)
         press(button("Guardar"))
-        assert ns["notes"].value[0]["title"] == "Componentes .flux"  # la editada sube
-        assert "Componentes .flux" in texts(m)
+        assert ns["notes"].value[0]["title"] == "Componentes .janel"  # la editada sube
+        assert "Componentes .janel" in texts(m)
         assert "Cambios sin guardar" not in texts(m)
 
         press(button("Nueva"))
@@ -93,7 +93,7 @@ def test_notes_example_flow(flux_app, app_path):
         press(button("Eliminar"))
         assert len(ns["notes"].value) == 3
 
-        search = next(f for f in items("FxTextField") if f.property("placeholderText") == "Buscar en las notas")
+        search = next(f for f in items("JkTextField") if f.property("placeholderText") == "Buscar en las notas")
         search.setProperty("text", "tokens")
         assert QMetaObject.invokeMethod(search, "textEdited")
         assert len(items("NoteCard")) == 1 and "1 de 3 notas" in texts(m)
@@ -104,7 +104,7 @@ def test_notes_example_flow(flux_app, app_path):
         press(button("Tema oscuro"))
         assert theme.name == "dark" and button("Tema claro")
     finally:
-        flux_app.unmount(m)
+        janel_app.unmount(m)
 
 
 @pytest.mark.parametrize("app", EXAMPLES, ids=lambda p: p.parent.parent.name)
@@ -113,7 +113,7 @@ def test_example_runs_with_python_main(app):
     import os
     import subprocess
 
-    env = {**os.environ, "QT_QPA_PLATFORM": "offscreen", "FLUXUI_EXIT_AFTER_MS": "500"}
+    env = {**os.environ, "QT_QPA_PLATFORM": "offscreen", "JANELKIT_EXIT_AFTER_MS": "500"}
     proc = subprocess.run(
         [sys.executable, "main.py"], cwd=app.parent.parent, env=env, capture_output=True, text=True, timeout=60
     )
@@ -122,7 +122,7 @@ def test_example_runs_with_python_main(app):
     assert noise == []
 
 
-def test_books_example_flow_without_network(flux_app, app_path):
+def test_books_example_flow_without_network(janel_app, app_path):
     """Búsqueda asíncrona: cargando, resultados, error y reintento (búsqueda simulada, sin red)."""
     import asyncio
     import time
@@ -130,7 +130,7 @@ def test_books_example_flow_without_network(flux_app, app_path):
     from conftest import click, texts, visual_items
 
     app = next(p for p in EXAMPLES if p.parent.parent.name == "books")
-    m = flux_app.mount(compile_file(app_path(app)))
+    m = janel_app.mount(compile_file(app_path(app)))
     calls = []
 
     def fake_search(q):
@@ -152,11 +152,11 @@ def test_books_example_flow_without_network(flux_app, app_path):
         assert texts(m)[-1] == "Escribe algo y pulsa Intro."
         search("dune")
         assert "Buscando «dune»…" in texts(m)
-        flux_app.run_until(asyncio.sleep(0.3))
+        janel_app.run_until(asyncio.sleep(0.3))
         assert "dune 0" in texts(m) and "Ana · 2001" in texts(m)
         search("mal")
-        flux_app.run_until(asyncio.sleep(0.3))
+        janel_app.run_until(asyncio.sleep(0.3))
         assert "No se pudo completar la búsqueda" in texts(m) and "sin conexión" in texts(m)
         assert calls == ["dune", "mal"]
     finally:
-        flux_app.unmount(m)
+        janel_app.unmount(m)

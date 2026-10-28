@@ -5,10 +5,10 @@ import asyncio
 from conftest import find, texts, visual_items
 from PySide6.QtCore import QMetaObject, QUrl, Q_ARG
 
-from fluxui import dialogs
+from janelkit import dialogs
 
 FORM = """<script>
-from fluxui import state
+from janelkit import state
 on = state(False)
 volume = state(30)
 color = state("verde")
@@ -45,7 +45,7 @@ def ns(m):
 
 
 def test_controls_mount_without_qml_warnings(mount, caplog, tmp_path):
-    app = tmp_path / "App.flux"
+    app = tmp_path / "App.janel"
     app.write_text(FORM.replace('src="logo.png"', 'src=""'), encoding="utf-8")
     mount(app)
     assert caplog.text == ""
@@ -132,13 +132,13 @@ def test_shortcut_activates(mount):
     assert ns(m)["saved"].value == 1
 
 
-def test_image_resolves_relative_paths_from_the_flux_folder(mount, tmp_path):
+def test_image_resolves_relative_paths_from_the_janel_folder(mount, tmp_path):
     from PySide6.QtGui import QColor, QImage
 
     image = QImage(4, 4, QImage.Format.Format_RGB32)
     image.fill(QColor("red"))
     image.save(str(tmp_path / "logo.png"))
-    app = tmp_path / "App.flux"
+    app = tmp_path / "App.janel"
     app.write_text(FORM, encoding="utf-8")
     m = mount(app)
     img = find(m, "img")
@@ -148,7 +148,7 @@ def test_image_resolves_relative_paths_from_the_flux_folder(mount, tmp_path):
 
 def test_image_url_forms(mount):
     m = mount(
-        "<script>\nfrom fluxui import state\nsrc = state('C:\\\\fotos\\\\a.png')\n</script>\n"
+        "<script>\nfrom janelkit import state\nsrc = state('C:\\\\fotos\\\\a.png')\n</script>\n"
         '<Image id="img" src={src} fit="cover" />'
     )
     img = find(m, "img")
@@ -159,7 +159,7 @@ def test_image_url_forms(mount):
 
 
 # -- diálogos ------------------------------------------------------------------------
-def test_open_file_dialog_returns_the_selected_path(flux_app, mount, tmp_path):
+def test_open_file_dialog_returns_the_selected_path(janel_app, mount, tmp_path):
     mount("<Text>x</Text>")
     target = tmp_path / "nota.txt"
     target.write_text("x", encoding="utf-8")  # FileDialog solo acepta archivos que existen
@@ -173,11 +173,11 @@ def test_open_file_dialog_returns_the_selected_path(flux_app, mount, tmp_path):
         QMetaObject.invokeMethod(dialog, "done", Q_ARG(int, 1))  # como si el usuario aceptara
         return await task
 
-    assert flux_app.run_until(scenario()) == target
+    assert janel_app.run_until(scenario()) == target
     assert dialogs.pending() == []
 
 
-def test_cancelled_dialogs_return_none_or_false(flux_app, mount):
+def test_cancelled_dialogs_return_none_or_false(janel_app, mount):
     mount("<Text>x</Text>")
 
     async def cancel_next(coro):
@@ -186,13 +186,13 @@ def test_cancelled_dialogs_return_none_or_false(flux_app, mount):
         QMetaObject.invokeMethod(dialogs.pending()[0], "reject")
         return await task
 
-    assert flux_app.run_until(cancel_next(dialogs.save_file(name="a.txt"))) is None
-    assert flux_app.run_until(cancel_next(dialogs.choose_folder())) is None
-    assert flux_app.run_until(cancel_next(dialogs.confirm("¿Seguro?"))) is False
-    assert flux_app.run_until(cancel_next(dialogs.open_files())) == []
+    assert janel_app.run_until(cancel_next(dialogs.save_file(name="a.txt"))) is None
+    assert janel_app.run_until(cancel_next(dialogs.choose_folder())) is None
+    assert janel_app.run_until(cancel_next(dialogs.confirm("¿Seguro?"))) is False
+    assert janel_app.run_until(cancel_next(dialogs.open_files())) == []
 
 
-def test_confirm_accepts(flux_app, mount):
+def test_confirm_accepts(janel_app, mount):
     mount("<Text>x</Text>")
 
     async def scenario():
@@ -203,4 +203,4 @@ def test_confirm_accepts(flux_app, mount):
         QMetaObject.invokeMethod(dialog, "done", Q_ARG(int, 0x400))  # botón Aceptar
         return await task
 
-    assert flux_app.run_until(scenario()) is True
+    assert janel_app.run_until(scenario()) is True

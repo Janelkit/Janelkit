@@ -2,14 +2,14 @@ from pathlib import Path
 
 import pytest
 
-from fluxui.compiler import compile_file, compile_source
-from fluxui.compiler.ir import ComponentSlot, EachSlot, ExprBinding, IfSlot, TextBinding
-from fluxui.diagnostics import FluxError
+from janelkit.compiler import compile_file, compile_source
+from janelkit.compiler.ir import ComponentSlot, EachSlot, ExprBinding, IfSlot, TextBinding
+from janelkit.diagnostics import JanelError
 
 
-def compile_error(source: str) -> FluxError:
-    with pytest.raises(FluxError) as info:
-        compile_source(source, "App.flux")
+def compile_error(source: str) -> JanelError:
+    with pytest.raises(JanelError) as info:
+        compile_source(source, "App.janel")
     return info.value
 
 
@@ -24,11 +24,11 @@ def test_static_window_generates_qml_literals():
     qml = compile_source(
         '<Window title="Hola" width={800} height="600"><Column><Text>Uno</Text><Button>Dos</Button></Column></Window>'
     ).qml
-    assert "import QtQuick\nimport QtQuick.Controls\nimport QtQuick.Layouts\nimport Flux" in qml
-    assert "FxWindow {" in qml
+    assert "import QtQuick\nimport QtQuick.Controls\nimport QtQuick.Layouts\nimport Janel" in qml
+    assert "JkWindow {" in qml
     assert 'title: "Hola"' in qml
     assert "width: 800" in qml and "height: 600" in qml
-    assert 'FxText {\n            text: "Uno"' in qml
+    assert 'JkText {\n            text: "Uno"' in qml
     assert 'text: "Dos"' in qml
 
 
@@ -38,13 +38,13 @@ def test_non_ascii_text_is_kept_readable():
 
 def test_root_that_is_not_a_window_gets_wrapped_and_fills_it():
     qml = compile_source("<Column><Text>x</Text></Column>").qml
-    assert qml.index("FxWindow") < qml.index("FxColumn {")
+    assert qml.index("JkWindow") < qml.index("JkColumn {")
     assert "anchors.fill: parent" in qml
 
 
 def test_window_with_several_children_gets_a_column():
     qml = compile_source("<Window><Text>a</Text><Text>b</Text></Window>").qml
-    assert qml.index("FxColumn {") < qml.index('text: "a"')
+    assert qml.index("JkColumn {") < qml.index('text: "a"')
 
 
 def test_window_only_as_root():
@@ -60,7 +60,7 @@ def test_text_whitespace_is_collapsed():
 def test_dynamic_props_text_events_and_bind():
     c = compile_source(
         """<script>
-from fluxui import state
+from janelkit import state
 n = state(0)
 name = state("")
 def inc(): pass
@@ -71,15 +71,15 @@ def inc(): pass
     <TextField bind:value={name} on:input={inc} placeholder="Nombre" />
   </Column>
 </Window>""",
-        "App.flux",
+        "App.janel",
     )
     kinds = [type(b) for b in c.ir.template.bindings]
     assert kinds == [ExprBinding, TextBinding, ExprBinding]
-    assert "enabled: fx.b0" in c.qml
-    assert "text: fx.b1" in c.qml
-    assert 'onClicked: fx.invoke("h0", [])' in c.qml
+    assert "enabled: jk.b0" in c.qml
+    assert "text: jk.b1" in c.qml
+    assert 'onClicked: jk.invoke("h0", [])' in c.qml
     # bind:value escribe primero y luego llama al manejador on:input
-    assert 'onTextEdited: { fx.write("b2", text); fx.invoke("h1", [text]) }' in c.qml
+    assert 'onTextEdited: { jk.write("b2", text); jk.invoke("h1", [text]) }' in c.qml
     assert [w.binding_id for w in c.ir.template.writes] == ["b2"]
 
 
@@ -92,13 +92,13 @@ def test_literal_expression_attributes_are_inlined():
 def test_width_attribute_maps_to_layout_and_disables_fill():
     qml = compile_source("<Column><TextField width={200} flex={1} /></Column>").qml
     assert "Layout.preferredWidth: 200" in qml and "Layout.fillWidth: false" in qml
-    assert "fxFlex: 1" in qml
+    assert "jkFlex: 1" in qml
 
 
 # -- control de flujo ----------------------------------------------------------------
 
 SCRIPT = """<script>
-from fluxui import state
+from janelkit import state
 a = state(True)
 b = state(1)
 items = state([])
@@ -113,7 +113,7 @@ def test_if_else_creates_one_repeater_per_branch():
     assert isinstance(slot, IfSlot)
     assert [br.condition.code if br.condition else None for br in slot.branches] == ["a", "b", None]
     assert c.qml.count("Repeater {") == 3
-    assert "model: fx.m0" in c.qml and "delegate: FxText {" in c.qml
+    assert "model: jk.m0" in c.qml and "delegate: JkText {" in c.qml
     # el texto de la rama {:else} pertenece al fragmento, no a la plantilla raíz
     assert c.ir.template.bindings == []
     assert isinstance(slot.branches[2].fragment.template.bindings[0], TextBinding)
@@ -142,17 +142,17 @@ def test_each_with_key_index_and_else():
     assert (slot.item, slot.index, slot.key.code) == ("item", "i", 'item["id"]')
     assert slot.empty_model_id is not None
     frag = slot.fragment
-    assert frag.root.qml_type == "FxRow"
+    assert frag.root.qml_type == "JkRow"
     assert [h.expression.code for h in frag.template.handlers] == ["lambda: remove(item)"]
-    assert "delegate: FxRow {" in c.qml
+    assert "delegate: JkRow {" in c.qml
 
 
 def test_each_with_several_nodes_gets_an_implicit_container_matching_the_parent():
     c = compile_source(SCRIPT + "<Row>{#each items as x}<Text>{x}</Text><Text>-</Text>{/each}</Row>")
     root = c.ir.template.slots[0].fragment.root
-    assert root.qml_type == "FxFlexRow" and len(root.children) == 2  # caja implícita: motor de <flex>
-    assert "Fx.mainGap(parent)" in root.props["gap"].qml
-    assert root.props["fxFlex"].qml == "fillMain ? 1 : 0"
+    assert root.qml_type == "JkFlexRow" and len(root.children) == 2  # caja implícita: motor de <flex>
+    assert "Jk.mainGap(parent)" in root.props["gap"].qml
+    assert root.props["jkFlex"].qml == "fillMain ? 1 : 0"
 
 
 def test_loop_variables_are_scoped_to_the_block():
@@ -210,7 +210,7 @@ Text { color: #333; }
     assert "padding: 24" in c.qml and "gap: 12" in c.qml
     assert "font.pixelSize: 32" in c.qml  # la última regla de clase gana
     assert "font.weight: 700" in c.qml
-    assert 'fxColor: "#333"' in c.qml
+    assert 'jkColor: "#333"' in c.qml
     assert c.warnings == []
 
 
@@ -227,14 +227,14 @@ def test_box_styles_tokens_and_alignment():
     for expected in (
         "topPadding: 8",
         "rightPadding: 16",
-        "fxBackground: fxtheme.surface",
-        "fxBorderWidth: 1",
-        "fxBorderColor: fxtheme.border",
-        "fxRadius: fxtheme.radius_lg",
+        "jkBackground: jktheme.surface",
+        "jkBorderWidth: 1",
+        "jkBorderColor: jktheme.border",
+        "jkRadius: jktheme.radius_lg",
         'alignItems: "center"',
         'justifyContent: "end"',
-        "fxFlex: 1",
-        "fxSelfStretch: true",
+        "jkFlex: 1",
+        "jkSelfStretch: true",
         "Layout.fillWidth: true",
         "font.capitalization: Font.AllUppercase",
     ):
@@ -254,7 +254,7 @@ def test_explicit_attribute_overrides_style():
 
 
 def test_unsupported_style_property_is_a_warning_with_location():
-    c = compile_source("<Text class=\"t\">x</Text>\n<style>\n.t { text-shadow: 1px; }\n</style>", "App.flux")
+    c = compile_source("<Text class=\"t\">x</Text>\n<style>\n.t { text-shadow: 1px; }\n</style>", "App.janel")
     assert len(c.warnings) == 1
     w = c.warnings[0]
     assert w.severity == "warning" and "text-shadow" in w.message
@@ -272,17 +272,17 @@ def test_unsupported_style_values_are_warnings():
     assert "justify-content no soportado" in messages and "número" in messages
 
 
-def test_source_map_points_back_to_flux_lines():
-    c = compile_source("<Window>\n  <Column>\n    <Button>Ok</Button>\n  </Column>\n</Window>", "App.flux")
-    button_line = next(i for i, line in enumerate(c.qml.splitlines(), 1) if "FxButton {" in line)
-    loc = c.flux_location(button_line + 1)
+def test_source_map_points_back_to_janel_lines():
+    c = compile_source("<Window>\n  <Column>\n    <Button>Ok</Button>\n  </Column>\n</Window>", "App.janel")
+    button_line = next(i for i, line in enumerate(c.qml.splitlines(), 1) if "JkButton {" in line)
+    loc = c.janel_location(button_line + 1)
     assert (loc.line, loc.column) == (3, 5)
 
 
 # -- componentes -----------------------------------------------------------------------
 
 CARD = """<script>
-from fluxui import prop, event
+from janelkit import prop, event
 title = prop()
 compact = prop(False)
 closed = event()
@@ -292,12 +292,12 @@ closed = event()
 
 
 def test_component_import_props_and_events(tmp_path):
-    write(tmp_path, "components/Card.flux", CARD)
+    write(tmp_path, "components/Card.janel", CARD)
     app = write(
         tmp_path,
-        "App.flux",
+        "App.janel",
         """<script>
-from fluxui import state
+from janelkit import state
 from components.Card import Card
 name = state("x")
 def on_close(): pass
@@ -316,25 +316,25 @@ def on_close(): pass
     assert list(slot.use.events) == ["closed"]
     each = c.ir.template.slots[1]
     assert each.fragment.component is not None and each.fragment.root is None
-    assert "delegate: fx.m0.delegate" in c.qml
-    child = c.component(str((tmp_path / "components" / "Card.flux").resolve()))
-    assert child.ir.is_window is False and "FxWindow" not in child.qml
-    assert "Card.flux" in " ".join(c.files)
+    assert "delegate: jk.m0.delegate" in c.qml
+    child = c.component(str((tmp_path / "components" / "Card.janel").resolve()))
+    assert child.ir.is_window is False and "JkWindow" not in child.qml
+    assert "Card.janel" in " ".join(c.files)
 
 
 def test_component_import_forms(tmp_path):
-    write(tmp_path, "components/Card.flux", CARD)
-    write(tmp_path, "pages/Home.flux", '<script>\nfrom ..components import Card\n</script>\n<Card title="a" />')
-    app = write(tmp_path, "App.flux", "<script>\nfrom pages import Home\n</script>\n<Home />")
+    write(tmp_path, "components/Card.janel", CARD)
+    write(tmp_path, "pages/Home.janel", '<script>\nfrom ..components import Card\n</script>\n<Card title="a" />')
+    app = write(tmp_path, "App.janel", "<script>\nfrom pages import Home\n</script>\n<Home />")
     c = compile_file(app)
     assert len(c.registry) == 3
 
 
 def test_component_usage_errors(tmp_path):
-    write(tmp_path, "components/Card.flux", CARD)
+    write(tmp_path, "components/Card.janel", CARD)
     app = write(
         tmp_path,
-        "App.flux",
+        "App.janel",
         """<script>
 from components.Card import Card
 </script>
@@ -342,7 +342,7 @@ from components.Card import Card
   <Card titel="x" on:open={print} bind:title={x} />
 </Column>""",
     )
-    with pytest.raises(FluxError) as info:
+    with pytest.raises(JanelError) as info:
         compile_file(app)
     messages = [d.message for d in info.value.diagnostics]
     assert "<Card> no declara la prop 'titel'" in messages
@@ -354,20 +354,20 @@ from components.Card import Card
 
 
 def test_child_component_cannot_be_a_window(tmp_path):
-    write(tmp_path, "W.flux", "<Window />")
-    app = write(tmp_path, "App.flux", "<script>\nfrom W import W\n</script>\n<W />")
-    with pytest.raises(FluxError) as info:
+    write(tmp_path, "W.janel", "<Window />")
+    app = write(tmp_path, "App.janel", "<script>\nfrom W import W\n</script>\n<W />")
+    with pytest.raises(JanelError) as info:
         compile_file(app)
     assert "no puede tener <Window> como raíz" in info.value.first.message
-    assert info.value.first.location.file.endswith("W.flux")
+    assert info.value.first.location.file.endswith("W.janel")
 
 
 def test_recursive_component(tmp_path):
     write(
         tmp_path,
-        "Tree.flux",
+        "Tree.janel",
         """<script>
-from fluxui import prop
+from janelkit import prop
 from Tree import Tree
 node = prop()
 </script>
@@ -376,7 +376,7 @@ node = prop()
   {#each node.get("children", []) as child (child["name"])}<Tree node={child} />{/each}
 </Column>""",
     )
-    app = write(tmp_path, "App.flux", '<script>\nfrom Tree import Tree\n</script>\n<Tree node={{"name": "r"}} />')
+    app = write(tmp_path, "App.janel", '<script>\nfrom Tree import Tree\n</script>\n<Tree node={{"name": "r"}} />')
     c = compile_file(app)
     assert len(c.registry) == 2
 
@@ -387,13 +387,13 @@ def test_unknown_uppercase_tag_suggests_import():
 
 
 def test_prop_and_event_declarations_must_be_top_level():
-    err = compile_error("<script>\nfrom fluxui import prop\ndef f():\n    x = prop(1)\n</script>\n<Text>a</Text>")
+    err = compile_error("<script>\nfrom janelkit import prop\ndef f():\n    x = prop(1)\n</script>\n<Text>a</Text>")
     assert "nivel superior" in err.first.message
     assert err.first.location.line == 4
 
 
 def test_bind_cannot_target_a_prop():
-    err = compile_error("<script>\nfrom fluxui import prop\nv = prop('')\n</script>\n<TextField bind:value={v} />")
+    err = compile_error("<script>\nfrom janelkit import prop\nv = prop('')\n</script>\n<TextField bind:value={v} />")
     assert "solo lectura" in err.first.message
 
 
@@ -486,13 +486,13 @@ def test_conditional_classes_generate_bindings_and_last_wins():
 </style>"""
     )
     qml = c.qml
-    assert "fxBackground: fxtheme.surface" in qml
+    assert "jkBackground: jktheme.surface" in qml
     # Un solo Binding por propiedad: gana la última clase activa.
     assert (
-        "Binding on fxBackground { when: !!fx.b0 || !!fx.b1; value: !!fx.b1 ? fxtheme.danger : fxtheme.primary }"
+        "Binding on jkBackground { when: !!jk.b0 || !!jk.b1; value: !!jk.b1 ? jktheme.danger : jktheme.primary }"
         in qml
     )
-    assert "Binding on fxBorderWidth { when: !!fx.b0; value: 2 }" in qml
+    assert "Binding on jkBorderWidth { when: !!jk.b0; value: 2 }" in qml
     assert c.warnings == []
 
 
@@ -505,11 +505,11 @@ def test_key_block():
     c = compile_source(SCRIPT + "<Column>{#key b}<Text>{b}</Text>{/key}</Column>")
     (slot,) = c.ir.template.slots
     assert type(slot).__name__ == "KeySlot" and slot.expression.code == "b"
-    assert "model: fx.m0" in c.qml
+    assert "model: jk.m0" in c.qml
 
 
 # -- manejadores en línea -------------------------------------------------------------
-INLINE_SCRIPT = "<script>\nfrom fluxui import state, prop\nn = state(0)\nitems = state([1])\nlimit = prop(3)\n</script>\n"
+INLINE_SCRIPT = "<script>\nfrom janelkit import state, prop\nn = state(0)\nitems = state([1])\nlimit = prop(3)\n</script>\n"
 
 
 def test_handlers_accept_calls_and_simple_statements():

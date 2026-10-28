@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fluxui import batch, computed, state
+from janelkit import batch, computed, state
 
 
 class Interfaz:

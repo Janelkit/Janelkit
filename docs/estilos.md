@@ -1,6 +1,6 @@
 # Estilos, disposición y temas
 
-Qt Quick no es un navegador y FluxUI **no implementa CSS**. `<style>` admite una lista corta de propiedades que se traducen a propiedades de Qt Quick. Todo lo demás produce una **advertencia** con su ubicación y se ignora.
+Qt Quick no es un navegador y JanelKit **no implementa CSS**. `<style>` admite una lista corta de propiedades que se traducen a propiedades de Qt Quick. Todo lo demás produce una **advertencia** con su ubicación y se ignora.
 
 ## Selectores
 
@@ -171,7 +171,7 @@ Un bloque `{#if}` o `{#each}` con varios elementos se agrupa en una caja que cop
 
 ## Controles base y temas
 
-Los elementos se dibujan con un conjunto propio de controles (módulo QML interno `Flux`) que usa los tokens del tema: el mismo código se ve coherente en Windows, macOS y Linux, y cambia de aspecto al cambiar de tema.
+Los elementos se dibujan con un conjunto propio de controles (módulo QML interno `Janel`) que usa los tokens del tema: el mismo código se ve coherente en Windows, macOS y Linux, y cambia de aspecto al cambiar de tema.
 
 `Button` tiene variantes: `variant="primary"`, `"danger"`, `"ghost"` (sin fondo) y `"default"`.
 
@@ -194,7 +194,7 @@ Un `var(--x)` que no existe en el tema activo produce una advertencia al arranca
 ### API de temas
 
 ```python
-from fluxui import theme
+from janelkit import theme
 
 theme.set("dark")                      # "light" (por defecto) o "dark"
 theme.toggle()                         # alterna claro/oscuro

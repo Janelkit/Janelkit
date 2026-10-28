@@ -13,7 +13,7 @@ eventos, Python, polish y disposición; sin el dibujado):
   proyectos); mover una tarjeta y deshacer;
 - la memoria al abrir y cerrar todos los proyectos varias veces.
 
-Usa fluxui.inspect con la plataforma offscreen.
+Usa janelkit.inspect con la plataforma offscreen.
 """
 from __future__ import annotations
 
@@ -52,11 +52,11 @@ def main() -> None:
     import psutil
     from PySide6.QtCore import QCoreApplication, QEvent, Qt
 
-    from fluxui.inspect import mount
+    from janelkit.inspect import mount
 
     proc = psutil.Process()
     t0 = time.perf_counter()
-    with mount(HERE / "src" / "App.flux") as app:
+    with mount(HERE / "src" / "App.janel") as app:
         app.window.resize(1400, 850)
         QCoreApplication.processEvents()
         montar = (time.perf_counter() - t0) * 1000

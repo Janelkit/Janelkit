@@ -1,0 +1,32 @@
+<script lang="python">
+# Interruptor hecho con <flex as="switch">: Tab para llegar, Espacio para cambiarlo, y
+# los lectores de pantalla lo anuncian como casilla marcada o no (checked).
+# El pomo se mueve con transform (no cambia la disposición) y una transición.
+from janelkit import event, prop
+
+checked = prop(False)
+text = prop("")
+change = event()
+</script>
+
+<flex as="switch" class="interruptor" checked={checked} label={text} on:click={change.emit(not checked)}>
+  <flex class="pista"><flex class="pomo" /></flex>
+  <Text>{text}</Text>
+</flex>
+
+<style>
+/* outline: none quita el anillo de foco por defecto: se dibuja en la pista. */
+.interruptor { align-items: center; gap: 8px; cursor: pointer; outline: none; }
+.pista {
+  width: 36px; height: 20px; padding: 2px; border-radius: 10px;
+  background: var(--border); transition: background 150ms;
+}
+.pomo {
+  width: 16px; height: 16px; border-radius: 8px; background: #ffffff;
+  transition: transform 150ms;
+}
+.interruptor:checked .pista { background: var(--primary); }
+.interruptor:checked .pomo { transform: translateX(16px); }
+.interruptor:hover .pista { box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08); }
+.interruptor:focus-visible .pista { outline: 2px solid var(--primary); outline-offset: 2px; }
+</style>

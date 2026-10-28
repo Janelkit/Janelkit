@@ -11,7 +11,7 @@ Mide, en el hilo de la interfaz (procesando eventos hasta que no queda nada):
 - soltar en otra columna (mover la fila entre dos <List>) y dentro de la misma;
 - deshacer, filtrar (escribir en la búsqueda) y la memoria del proceso.
 
-Usa fluxui.inspect con la plataforma offscreen: los tiempos incluyen el trabajo de
+Usa janelkit.inspect con la plataforma offscreen: los tiempos incluyen el trabajo de
 Python y de Qt Quick (polish, disposición) y no el dibujado en pantalla.
 """
 from __future__ import annotations
@@ -49,12 +49,12 @@ def main() -> None:
     from PySide6.QtCore import QCoreApplication, QPoint, Qt
     from PySide6.QtTest import QTest
 
-    from fluxui.inspect import mount
+    from janelkit.inspect import mount
 
     proc = psutil.Process()
     rss0 = proc.memory_info().rss
     t0 = time.perf_counter()
-    with mount(HERE / "src" / "App.flux") as app:
+    with mount(HERE / "src" / "App.janel") as app:
         app.window.resize(1600, 900)
         QCoreApplication.processEvents()
         montar = (time.perf_counter() - t0) * 1000

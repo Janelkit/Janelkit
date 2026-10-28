@@ -1,0 +1,43 @@
+<script lang="python">
+# Pestañas segmentadas hechas con <flex>: as="tablist" y as="tab" para los lectores
+# de pantalla; las flechas cambian de pestaña (on:keydown). El texto hereda el color
+# y el peso de su pestaña: la elegida solo cambia `color` y `font-weight` en la caja.
+from janelkit import event, prop
+
+options = prop([])
+value = prop("")
+label = prop("")
+change = event()
+
+
+def tecla(event):
+    items = list(options.value)
+    if event.key not in ("ArrowLeft", "ArrowRight") or value.value not in items:
+        return
+    step = 1 if event.key == "ArrowRight" else -1
+    change.emit(items[(items.index(value.value) + step) % len(items)])
+    event.prevent()
+</script>
+
+<flex as="tablist" class="segmentado" label={label} on:keydown={tecla}>
+  {#each options as option}
+    <flex as="tab" class="pestana" selected={option == value} tabindex={0 if option == value else -1}
+          label={option} on:click={change.emit(option)}>
+      <Text>{option}</Text>
+    </flex>
+  {/each}
+</flex>
+
+<style>
+.segmentado {
+  padding: 3px; gap: 2px; border-radius: 8px;
+  background: var(--surface-alt); color: var(--text-muted);
+}
+.pestana { padding: 4px 14px; border-radius: 6px; cursor: pointer; transition: background 120ms, box-shadow 120ms; }
+.pestana:hover { color: var(--text); }
+.pestana:selected {
+  background: var(--surface); color: var(--text); font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.pestana:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+</style>

@@ -1,16 +1,16 @@
-"""API pública de inspección (fluxui.inspect): montar sin ventana, buscar, actuar y esperar."""
+"""API pública de inspección (janelkit.inspect): montar sin ventana, buscar, actuar y esperar."""
 import sys
 from pathlib import Path
 
 import pytest
 
-from fluxui.inspect import InspectError, mount
+from janelkit.inspect import InspectError, mount
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 
 
 @pytest.fixture(autouse=True)
-def _isolate_modules(monkeypatch, flux_app):
+def _isolate_modules(monkeypatch, janel_app):
     """Cada ejemplo trae sus propios `services`/`components`: no compartirlos entre pruebas."""
     before = set(sys.modules)
     monkeypatch.setattr(sys, "path", list(sys.path))
@@ -21,7 +21,7 @@ def _isolate_modules(monkeypatch, flux_app):
 
 
 def test_counter_like_a_user():
-    with mount(EXAMPLES / "counter" / "src" / "App.flux") as app:
+    with mount(EXAMPLES / "counter" / "src" / "App.janel") as app:
         assert app.texts()[0] == "Hola, invitado"
         app.find(placeholder="Tu nombre").type("Ana")
         assert app.texts()[0] == "Hola, Ana"
@@ -36,7 +36,7 @@ def test_counter_like_a_user():
 
 
 def test_todo_flow():
-    with mount(EXAMPLES / "todo" / "src" / "App.flux") as app:
+    with mount(EXAMPLES / "todo" / "src" / "App.janel") as app:
         field = app.find(placeholder="¿Qué hay que hacer?")
         field.type("Comprar pan").submit()
         assert app.find("Checkbox", text="Comprar pan").value is False
@@ -50,7 +50,7 @@ def test_todo_flow():
 
 
 def test_disabled_controls_cannot_be_used():
-    with mount(EXAMPLES / "todo" / "src" / "App.flux") as app:
+    with mount(EXAMPLES / "todo" / "src" / "App.janel") as app:
         add = app.find("Button", text="Añadir")
         assert not add.enabled
         with pytest.raises(InspectError, match="desactivado"):
@@ -58,11 +58,11 @@ def test_disabled_controls_cannot_be_used():
 
 
 def test_async_example_with_wait(tmp_path):
-    app_file = tmp_path / "App.flux"
+    app_file = tmp_path / "App.janel"
     app_file.write_text(
         """<script>
 import asyncio
-from fluxui import state, task, dialogs
+from janelkit import state, task, dialogs
 
 @task
 async def load(q):
@@ -107,7 +107,7 @@ async def pick():
 
 
 def test_unknown_option_is_reported(tmp_path):
-    app_file = tmp_path / "App.flux"
+    app_file = tmp_path / "App.janel"
     app_file.write_text('<Select id="s" options={["a"]} />', encoding="utf-8")
     with mount(app_file) as app:
         with pytest.raises(InspectError, match="no tiene la opción 'z'"):
@@ -122,9 +122,9 @@ def test_files_example_validation_app(tmp_path, monkeypatch):
     (tmp_path / "a.py").write_text("print('a')", encoding="utf-8")
     (tmp_path / ".oculto").write_text("x", encoding="utf-8")
     (tmp_path / "foto.png").write_bytes(b"\x89PNG")
-    monkeypatch.setenv("FLUX_FILES_START", str(tmp_path))
+    monkeypatch.setenv("JANEL_FILES_START", str(tmp_path))
 
-    with mount(EXAMPLES / "files" / "src" / "App.flux") as app:
+    with mount(EXAMPLES / "files" / "src" / "App.janel") as app:
         app.wait(until=lambda: app.get("listing").value is not None)
         names = lambda: [e["name"] for e in app.get("visible")]  # noqa: E731
         assert names() == ["docs", "a.py", "b.txt", "foto.png"]  # carpetas primero, sin ocultos
@@ -168,7 +168,7 @@ def test_tutorial_app(tmp_path, monkeypatch):
 
     file = tmp_path / "lista.json"
     monkeypatch.setenv("COMPRA_FILE", str(file))
-    with mount(EXAMPLES / "compra" / "src" / "App.flux") as app:
+    with mount(EXAMPLES / "compra" / "src" / "App.janel") as app:
         app.wait(until=lambda: app.get("loaded"))
         assert "La lista está vacía." in app.texts()
         app.find(placeholder="¿Qué falta?").type("Pan").submit()
@@ -179,16 +179,16 @@ def test_tutorial_app(tmp_path, monkeypatch):
         app.find_all("Button", text="Quitar")[1].click()
         app.wait(until=lambda: not app.get("save").loading)
         assert json.loads(file.read_text(encoding="utf-8")) == [{"id": 1, "name": "Pan", "done": True}]
-    with mount(EXAMPLES / "compra" / "src" / "App.flux") as app:  # vuelve a cargar lo guardado
+    with mount(EXAMPLES / "compra" / "src" / "App.janel") as app:  # vuelve a cargar lo guardado
         app.wait(until=lambda: app.get("loaded"))
         assert app.find("Checkbox", text="Pan").value is True
 
 
 def test_answer_dialog_accepts_or_cancels_a_confirm(tmp_path):
-    app_file = tmp_path / "App.flux"
+    app_file = tmp_path / "App.janel"
     app_file.write_text(
         """<script lang="python">
-from fluxui import dialogs, state
+from janelkit import dialogs, state
 answers = state([])
 
 async def ask():
@@ -210,10 +210,10 @@ def test_apps_with_modules_of_the_same_name_do_not_mix(tmp_path):
     for name in ("una", "otra"):
         (tmp_path / name / "services").mkdir(parents=True)
         (tmp_path / name / "services" / "datos.py").write_text(f"NOMBRE = {name!r}\n", encoding="utf-8")
-        (tmp_path / name / "App.flux").write_text(
+        (tmp_path / name / "App.janel").write_text(
             '<script lang="python">\nfrom services.datos import NOMBRE\n</script>\n<Window><Text>{NOMBRE}</Text></Window>\n',
             encoding="utf-8",
         )
     for name in ("una", "otra", "una"):
-        with mount(tmp_path / name / "App.flux") as app:
+        with mount(tmp_path / name / "App.janel") as app:
             assert app.texts() == [name]

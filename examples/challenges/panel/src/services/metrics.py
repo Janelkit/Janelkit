@@ -17,7 +17,7 @@ import random
 import time
 from typing import Any
 
-from fluxui import batch, state
+from janelkit import batch, state
 
 
 class Series:
@@ -200,7 +200,7 @@ class Monitor:
         self.samples += 1
 
     async def refresh_processes(self) -> None:
-        from fluxui import background
+        from janelkit import background
 
         procs = await background(self.source.processes)
         self.processes.value = procs

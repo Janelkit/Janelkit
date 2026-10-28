@@ -8,7 +8,7 @@ import pytest
 
 pytest.importorskip("websockets")
 
-from fluxui.inspect import mount  # noqa: E402
+from janelkit.inspect import mount  # noqa: E402
 
 CHAT = Path(__file__).parent.parent / "examples" / "challenges" / "chat"
 sys.path.insert(0, str(CHAT))
@@ -67,7 +67,7 @@ def chat(monkeypatch):
     srv.start()
     monkeypatch.setenv("CHAT_URL", f"ws://127.0.0.1:{srv.port}")
     monkeypatch.setenv("CHAT_LANG", "es")
-    with mount(CHAT / "src" / "App.flux") as app:
+    with mount(CHAT / "src" / "App.janel") as app:
         client = app.get("client")
         app.wait(until=lambda: len(client.room_list.value) == 4 and len(client.rooms["general"].messages.value) == 50)
         yield app, srv
@@ -162,7 +162,7 @@ def test_reconnects_and_recovers_missed_messages(chat):
 
 def test_arabic_mirrors_the_layout(chat):
     app, _ = chat
-    from fluxui import i18n
+    from janelkit import i18n
 
     app.find("Select").choose("العربية")
     assert i18n.rtl

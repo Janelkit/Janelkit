@@ -1,0 +1,25 @@
+# {{project_name}}
+
+Aplicación de escritorio creada con JanelKit {{janelkit_version}}.
+
+## Ejecutar
+
+```bash
+python main.py      # forma canónica de arrancar la aplicación
+janel dev            # desarrollo: recarga la vista al guardar un .janel
+janel build          # valida todos los componentes y guarda el QML en build/qml
+```
+
+Usa el mismo entorno de Python en el que está instalado JanelKit.
+
+## Estructura
+
+- `main.py`: punto de entrada; inicia JanelKit y carga `src/App.janel`.
+- `src/App.janel`: componente raíz de la interfaz (script Python, plantilla y estilos).
+- `src/components/`: componentes reutilizables. Se importan desde el script:
+  `from components.Counter import Counter` y se usan como `<Counter goal={5} />`.
+- `src/pages/`: pantallas completas (también son componentes `.janel`).
+- `src/services/`: lógica Python sin interfaz que los componentes pueden importar.
+- `assets/`: imágenes y otros recursos.
+
+`janel build` no crea un ejecutable: comprueba el proyecto y deja el QML generado para inspeccionarlo.

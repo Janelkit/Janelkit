@@ -1,10 +1,10 @@
-# Formato `.flux` — especificación v0 (provisional)
+# Formato `.janel` — especificación v0 (provisional)
 
 Esta especificación describe **lo que el compilador acepta hoy**. Es provisional y puede cambiar antes de declarar estable el lenguaje (ver «Registro de decisiones pendientes» en el plan).
 
 ## Secciones
 
-Un archivo `.flux` tiene hasta tres partes, en cualquier orden:
+Un archivo `.janel` tiene hasta tres partes, en cualquier orden:
 
 | Sección | Obligatoria | Reglas |
 |---|---|---|
@@ -14,19 +14,19 @@ Un archivo `.flux` tiene hasta tres partes, en cualquier orden:
 
 Los comentarios `<!-- … -->` se ignoran en la plantilla.
 
-El componente raíz de la aplicación (`src/App.flux`) puede tener `<Window>` como raíz; si no la tiene, el compilador lo envuelve en una ventana de 640×480 y su contenido ocupa toda la ventana. Los componentes usados dentro de otros **no** pueden tener `<Window>` como raíz.
+El componente raíz de la aplicación (`src/App.janel`) puede tener `<Window>` como raíz; si no la tiene, el compilador lo envuelve en una ventana de 640×480 y su contenido ocupa toda la ventana. Los componentes usados dentro de otros **no** pueden tener `<Window>` como raíz.
 
 ## El script
 
 - Se ejecuta **una vez por instancia** del componente, en un espacio de nombres propio: dos instancias nunca comparten estado local.
 - Es Python normal: puede importar módulos del proyecto. La carpeta del componente raíz (`src/`) se añade a `sys.path`, de modo que `from services.users import display_name` funciona.
-- Los errores de sintaxis se detectan al compilar, con archivo, línea y columna. Los errores al ejecutarse apuntan a la línea real del `.flux` en el traceback.
+- Los errores de sintaxis se detectan al compilar, con archivo, línea y columna. Los errores al ejecutarse apuntan a la línea real del `.janel` en el traceback.
 - **El código del componente se ejecuta como código del proyecto.** No hay aislamiento: no cargues componentes no confiables.
 
 ### Estado reactivo
 
 ```python
-from fluxui import state, computed, batch
+from janelkit import state, computed, batch
 
 count = state(0)          # leer: count.value · escribir: count.value = 1
 items = state([])         # listas, diccionarios y conjuntos son reactivos:
@@ -56,10 +56,10 @@ Un `list`, `dict` o `set` guardado en un `state` se convierte (también los anid
 
 ### Trabajo asíncrono
 
-Las corrutinas se ejecutan en el **hilo de la interfaz**, sobre el bucle de Qt (FluxUI integra `asyncio` con `qasync`): tras cada `await` se puede modificar el estado directamente, y mientras esperan la ventana sigue respondiendo.
+Las corrutinas se ejecutan en el **hilo de la interfaz**, sobre el bucle de Qt (JanelKit integra `asyncio` con `qasync`): tras cada `await` se puede modificar el estado directamente, y mientras esperan la ventana sigue respondiendo.
 
 ```python
-from fluxui import state, task, background, spawn
+from janelkit import state, task, background, spawn
 
 async def guardar():                  # on:click={guardar}: se lanza sola
     estado.value = "guardando…"
@@ -91,7 +91,7 @@ Ejemplo completo: `examples/books` (busca en la API de Open Library).
 ### Temporizadores
 
 ```python
-from fluxui import interval, timeout
+from janelkit import interval, timeout
 
 @interval(250)                        # cada 250 ms mientras exista el componente
 def muestrear():
@@ -108,7 +108,7 @@ ocultar.restart()                     # vuelve a contar los 3 s (p. ej. con cada
 - Se detienen solos al desmontar el componente que los creó. Fuera de un componente (en un servicio), viven hasta `.stop()`.
 - Cada ejecución agrupa sus cambios de estado en un solo `batch`: actualizar 50 métricas en un tic recalcula la interfaz una vez.
 - `.active` es reactivo (`{#if muestrear.active}`); `.stop()`, `.start()` y `.restart()` lo controlan. Para cambiar el periodo: `muestrear.ms = 500` y `muestrear.restart()`.
-- Un error en la función se registra con su nombre en el logger `fluxui` y el temporizador sigue.
+- Un error en la función se registra con su nombre en el logger `janelkit` y el temporizador sigue.
 
 ## Expresiones en la plantilla
 
@@ -121,7 +121,7 @@ ocultar.restart()                     # vuelve a contar los 3 s (p. ej. con cada
 - **Nombres no definidos:** si una expresión usa un nombre que no define el script (ni un `{#each}` que la contenga, ni Python), es un error de compilación con sugerencia: `'cuont' no está definido — ¿quisiste decir 'count'?`. Si el script usa `from x import *` o `globals()`, esta comprobación se desactiva.
 - `None` se muestra como texto vacío.
 - **Formato** (solo en el texto, como en un f-string): `{cpu:.1f} %`, `{total:,}`, `{nombre!r}`, `{n:>4}`. Los dos puntos dentro de corchetes, paréntesis o cadenas no cuentan (`{lista[1:3]}`); una `lambda` necesita paréntesis.
-- Si una expresión lanza una excepción al ejecutarse, se registra un error con archivo y línea en el logger `fluxui` y la aplicación sigue funcionando.
+- Si una expresión lanza una excepción al ejecutarse, se registra un error con archivo y línea en el logger `janelkit` y la aplicación sigue funcionando.
 
 Las llaves pueden contener cadenas y diccionarios con llaves: `{ {"a": "}"}["a"] }`.
 
@@ -171,7 +171,7 @@ Por defecto, un `<Text>` no se puede seleccionar, como una etiqueta de escritori
 
 ```html
 <script>
-from fluxui import clipboard
+from janelkit import clipboard
 </script>
 
 <Text selectable>Pedido {pedido["id"]}</Text>
@@ -179,7 +179,7 @@ from fluxui import clipboard
 <Text>En el portapapeles: {clipboard.paste() or "nada"}</Text>
 ```
 
-`fluxui.clipboard` copia (`copy`), lee (`paste`) y vacía (`clear`) el portapapeles del sistema. `paste()` es reactivo: lo que dependa de él se actualiza cuando el portapapeles cambia, también si se copia en otra aplicación.
+`janelkit.clipboard` copia (`copy`), lee (`paste`) y vacía (`clear`) el portapapeles del sistema. `paste()` es reactivo: lo que dependa de él se actualiza cuando el portapapeles cambia, también si se copia en otra aplicación.
 
 Límites de `selectable`: con `text-overflow: ellipsis` corta el texto en el borde, sin puntos suspensivos, y no tiene menú contextual. Además, crear un texto seleccionable cuesta unas 2,8 veces lo que uno normal (unos 0,35 ms frente a 0,12 ms), así que en listas de miles de filas conviene usarlo solo donde haga falta. Un texto sin `selectable` no paga nada.
 
@@ -223,11 +223,11 @@ Solo existe la rama activa: al cambiar de rama, los elementos de la anterior se 
 Cuando un elemento pasa de una lista a otra (una tarjeta de una columna a otra), su fila **se traslada** en vez de destruirse y crearse de nuevo, si en el mismo cambio:
 
 1. sale de un `{#each}` con clave,
-2. entra en otra instancia de **la misma declaración** `{#each}` (el mismo sitio del mismo `.flux`: por ejemplo, la lista de tarjetas de dos `Columna`, o un `{#each}` dentro de otro `{#each}`),
+2. entra en otra instancia de **la misma declaración** `{#each}` (el mismo sitio del mismo `.janel`: por ejemplo, la lista de tarjetas de dos `Columna`, o un `{#each}` dentro de otro `{#each}`),
 3. con la misma clave.
 
 ```html
-<!-- Columna.flux: cada columna es una instancia de este {#each} -->
+<!-- Columna.janel: cada columna es una instancia de este {#each} -->
 {#each columna["tarjetas"] as t (t["id"])}
   <Tarjeta t={t} />
 {/each}
@@ -306,10 +306,10 @@ Si una rama o una fila tiene varios elementos, se agrupan en un contenedor impl�
 
 ## Componentes
 
-Un componente es otro archivo `.flux`. Se importa desde el script con sintaxis Python y se usa como una etiqueta que empieza por mayúscula:
+Un componente es otro archivo `.janel`. Se importa desde el script con sintaxis Python y se usa como una etiqueta que empieza por mayúscula:
 
 ```python
-from components.TodoItem import TodoItem      # src/components/TodoItem.flux
+from components.TodoItem import TodoItem      # src/components/TodoItem.janel
 from components import TodoItem               # equivalente
 from .TodoItem import TodoItem                # relativo al archivo actual
 ```
@@ -324,7 +324,7 @@ from .TodoItem import TodoItem                # relativo al archivo actual
 ### Props y eventos (en el hijo)
 
 ```python
-from fluxui import prop, event, state
+from janelkit import prop, event, state
 
 todo = prop()          # obligatoria
 compact = prop(False)  # opcional, con valor por defecto
@@ -347,7 +347,7 @@ def remove():
 Un componente puede recibir contenido del padre. En el hijo, `<Slot />` marca dónde va; `<Slot name="x" />` es un slot con nombre, y lo que haya dentro de `<Slot>` es el contenido de reserva si el padre no pasa nada:
 
 ```html
-<!-- components/Card.flux -->
+<!-- components/Card.janel -->
 <Column class="card">
   <Text class="title">{title}</Text>
   <Slot />
@@ -380,7 +380,7 @@ Lo que la etiqueta lleva y el componente no declara como prop o evento se aplica
 
 - Pasan a la raíz: `class` y `class:x={...}`, `style`, `id`, `label`, `title`, `tabindex`, `disabled`, `as`, `flex`, `width`, `height`, `visible`, `ref` y los eventos nativos (`on:click`, `on:keydown`, `on:contextmenu`…).
 - Las reglas de `<style>` del padre se aplican a la raíz, también sus estados: `.celda:hover` en el padre reacciona al ratón sobre la raíz del componente. Lo que fija la etiqueta gana a los estilos propios del componente.
-- Las clases de la etiqueta activan además las reglas del componente que las combinan con la clase de su raíz: con `<Boton class="primary">`, la regla `.boton.primary` de `Boton.flux` se aplica.
+- Las clases de la etiqueta activan además las reglas del componente que las combinan con la clase de su raíz: con `<Boton class="primary">`, la regla `.boton.primary` de `Boton.janel` se aplica.
 - `ref` en la etiqueta apunta a la raíz (`boton.focus()` enfoca el `<flex>` del botón); `disabled` activa `:disabled` en la raíz.
 - Si el componente declara una prop o un evento con ese nombre, gana lo declarado.
 - `inherit_attrs = False` en el script del componente lo desactiva: la etiqueta solo admite sus props y eventos, y `class`, `id`, `flex`, `width`, `height` y `visible` van a una caja exterior que lo envuelve, como cuando la raíz no es una caja.
@@ -393,7 +393,7 @@ Lo que la etiqueta lleva y el componente no declara como prop o evento se aplica
 - Al desmontarse (rama `{#if}` inactiva, fila de `{#each}` eliminada, recarga), se liberan sus bindings, sus props dejan de escuchar al padre y sus hijos se desmontan también.
 
 ```python
-from fluxui import on_mount, on_destroy, effect, ref
+from janelkit import on_mount, on_destroy, effect, ref
 
 campo = ref()                 # <TextField ref={campo} />
 
@@ -426,7 +426,7 @@ effect(sincronizar)
 | `focus()` / `blur()` | Da o quita el foco del teclado. |
 | `select_all()` | Selecciona todo el texto (`TextField`, `TextArea`). |
 | `exists` | `True` si el elemento existe. |
-| `value` | El objeto Qt Quick (`QQuickItem`). Es interfaz de Qt, no de FluxUI: úsalo como último recurso. |
+| `value` | El objeto Qt Quick (`QQuickItem`). Es interfaz de Qt, no de JanelKit: úsalo como último recurso. |
 
 Los métodos no hacen nada si el elemento aún no existe. Dentro de un `{#each}`, la referencia apunta a la última fila creada.
 
@@ -434,12 +434,12 @@ Los métodos no hacen nada si el elemento aún no existe. Dentro de un `{#each}`
 
 ```python
 # En un componente antecesor
-from fluxui import provide, state
+from janelkit import provide, state
 sesion = state({"usuario": "ana"})
 provide("sesion", sesion)
 
 # En cualquier descendiente, a cualquier profundidad
-from fluxui import inject
+from janelkit import inject
 sesion = inject("sesion")            # LookupError si nadie la provee
 tema = inject("tema", "claro")       # con valor por defecto
 ```
@@ -453,7 +453,7 @@ tema = inject("tema", "claro")       # con valor por defecto
 Lo que la aplicación debe recordar al volver a abrirse (el tema, la última sección, el tamaño de un panel, los archivos recientes) es un `persisted`: un `state` que se guarda solo.
 
 ```python
-from fluxui import persisted
+from janelkit import persisted
 
 tema = persisted("tema", "claro")
 recientes = persisted("recientes", [])
@@ -466,8 +466,8 @@ def abrir(ruta):
 - Los cambios se escriben agrupados (como mucho cada 300 ms) y al cerrar la aplicación. La escritura es atómica: un corte no deja el archivo a medias.
 - La clave es de toda la aplicación: `persisted("tema", ...)` en dos módulos es el mismo objeto. Letras, cifras, `.`, `_` y `-`; para agrupar, `prefs.tema`.
 - Solo valores JSON: textos, números, booleanos, `None`, listas y diccionarios con claves de texto. Otro valor da `TypeError` al crearlo o al asignarlo.
-- Cada clave es un archivo `<clave>.json` en la carpeta de datos del usuario más el nombre del proyecto (`%APPDATA%\gestor` en Windows, `~/Library/Application Support/gestor` en macOS, `~/.config/gestor` en Linux). `FLUXUI_DATA_DIR` la cambia.
-- En las pruebas con `fluxui.inspect.mount`, cada montaje usa una carpeta temporal vacía: no se tocan los datos reales. Para probar que algo se recuerda entre dos montajes, fija `FLUXUI_DATA_DIR`.
+- Cada clave es un archivo `<clave>.json` en la carpeta de datos del usuario más el nombre del proyecto (`%APPDATA%\gestor` en Windows, `~/Library/Application Support/gestor` en macOS, `~/.config/gestor` en Linux). `JANELKIT_DATA_DIR` la cambia.
+- En las pruebas con `janelkit.inspect.mount`, cada montaje usa una carpeta temporal vacía: no se tocan los datos reales. Para probar que algo se recuerda entre dos montajes, fija `JANELKIT_DATA_DIR`.
 - Es para preferencias y datos pequeños: cada cambio reescribe el archivo de esa clave. Los datos grandes de la aplicación (documentos, bases de datos) siguen en sus propios archivos.
 - Lo habitual es reunirlos en un módulo (`services/prefs.py`). `bind:value={prefs.tema}` enlaza con el del módulo; para leerlo en la plantilla sin `.value`, impórtalo por su nombre (`from services.prefs import tema`): la plantilla desenvuelve nombres, no atributos (`{prefs.tema}` es el `state`, `{prefs.tema.value}` su valor).
 
@@ -528,7 +528,7 @@ Con 10 000 filas, crear la lista tarda unos 40 ms (ver `python tools/bench.py`).
 
 ```python
 from pathlib import Path
-from fluxui import i18n, t
+from janelkit import i18n, t
 
 i18n.load(Path(__file__).parent / "locales")   # locales/es.json, en.json, ar.json…
 i18n.set("es")
@@ -546,7 +546,7 @@ i18n.set("es")
 
 - `t` lee el idioma activo: al llamar a `i18n.set("en")` se actualiza todo lo que traduce, sin reiniciar.
 - Plurales: un diccionario con `zero` (opcional), `one` y `other`, elegido con el parámetro `n`.
-- Si falta una clave en el idioma activo, se usa la de `i18n.default` (por defecto `"es"`) y, si tampoco está, la propia clave, con un aviso en el logger `fluxui`.
+- Si falta una clave en el idioma activo, se usa la de `i18n.default` (por defecto `"es"`) y, si tampoco está, la propia clave, con un aviso en el logger `janelkit`.
 - `i18n.number(x, decimales)`, `i18n.currency(x, "€")` e `i18n.date(fecha, "short" | "long")` dan formato según el idioma activo (separadores, nombres de meses, cifras árabes…).
 - En idiomas de **derecha a izquierda** (`ar`, `he`, `fa`, `ur`…) toda la interfaz se refleja: filas, alineación del texto e indicadores de los controles. `i18n.rtl` dice si el idioma activo lo es.
 
@@ -555,7 +555,7 @@ Ejemplo: `examples/idiomas` (español, inglés y árabe).
 ## Navegación entre pantallas
 
 ```python
-from fluxui import pages
+from janelkit import pages
 from pages.Inicio import Inicio
 from pages.Detalle import Detalle
 
@@ -593,7 +593,7 @@ def abrir(item):
 Dentro de una página (o de cualquier componente que contenga), `navigation()` da su pila, sin pasarla como prop:
 
 ```python
-from fluxui import navigation
+from janelkit import navigation
 from pages.Detalle import Detalle
 
 nav = navigation()
@@ -614,7 +614,7 @@ async def elegir_responsable():                  # en la página que pregunta
 ```
 
 ```html
-<!-- en ElegirPersona.flux -->
+<!-- en ElegirPersona.janel -->
 <Button on:click={nav.back(p)}>{p["nombre"]}</Button>
 ```
 
@@ -623,7 +623,7 @@ async def elegir_responsable():                  # en la página que pregunta
 Una aplicación con barra lateral o pestañas tiene varias secciones, y cada una necesita su pila. `sections()` las crea; `<Sections of={...} />` muestra la actual:
 
 ```python
-from fluxui import sections
+from janelkit import sections
 from pages.Proyectos import Proyectos
 from pages.Personas import Personas
 
@@ -649,7 +649,7 @@ secciones = sections(proyectos=Proyectos, personas=Personas)
 `before_leave(fn)` en el script de un componente registra una pregunta: si `fn()` devuelve `False`, no se sale. Puede ser `async`, para preguntar con un diálogo:
 
 ```python
-from fluxui import before_leave, dialogs
+from janelkit import before_leave, dialogs
 
 @before_leave
 async def salir():
@@ -672,8 +672,8 @@ async def ir_a_tarjeta(pid, tid):
 Cualquier componente importado se puede abrir en una ventana propia:
 
 ```python
-from fluxui import open_window
-from components.Ajustes import Ajustes      # un .flux (con <Window> como raíz, o sin ella)
+from janelkit import open_window
+from components.Ajustes import Ajustes      # un .janel (con <Window> como raíz, o sin ella)
 
 def abrir_ajustes():
     ventana = open_window(Ajustes, usuario=usuario, on_guardado=guardar, modal=True)
@@ -687,7 +687,7 @@ def abrir_ajustes():
 ## Diálogos del sistema
 
 ```python
-from fluxui import dialogs
+from janelkit import dialogs
 
 async def abrir():                                # on:click={abrir}
     ruta = await dialogs.open_file("Abrir nota", filters=["Notas (*.md *.txt)", "Todos (*)"])
@@ -712,7 +712,7 @@ Son nativos cuando la plataforma los ofrece y se muestran sobre la ventana de la
 
 ## Elementos propios en QML
 
-Cuando FluxUI no ofrece un control, se puede escribir en QML y usarlo como un elemento más. Un archivo `.qml` del proyecto se importa igual que un componente:
+Cuando JanelKit no ofrece un control, se puede escribir en QML y usarlo como un elemento más. Un archivo `.qml` del proyecto se importa igual que un componente:
 
 ```qml
 // src/widgets/Meter.qml
@@ -725,7 +725,7 @@ Rectangle {
     readonly property bool full: value >= max   // solo lectura: no se puede pasar
     signal picked(int step)         // evento: on:picked={...}  (event = step)
     implicitWidth: 320; implicitHeight: 14
-    color: fxtheme.border           // los tokens del tema están en `fxtheme`
+    color: jktheme.border           // los tokens del tema están en `jktheme`
     // ...
 }
 ```
@@ -738,12 +738,12 @@ from widgets.Meter import Meter
 ```
 
 - El compilador lee las `property` y `signal` del **objeto raíz** del archivo (sin ejecutarlo) y valida el uso: una prop o un evento que no existe es un error con sugerencia.
-- Disposición: sin `width`/`height` toma su tamaño natural (`implicitWidth`/`implicitHeight`), como un botón. `flex={1}` lo hace crecer en el eje del contenedor igual que a los elementos de FluxUI (`<LineChart flex={1} />` ocupa el alto libre de una columna).
+- Disposición: sin `width`/`height` toma su tamaño natural (`implicitWidth`/`implicitHeight`), como un botón. `flex={1}` lo hace crecer en el eje del contenedor igual que a los elementos de JanelKit (`<LineChart flex={1} />` ocupa el alto libre de una columna).
 - Props: las propiedades que no son `readonly`, con su tipo (`string`, `int`, `real`, `bool`, `color`; el resto acepta cualquier valor). Además, las comunes: `width`, `height`, `flex`, `visible`, `enabled`, `opacity`, y `id`, `class`, `ref`.
 - Eventos: cada `signal`. El manejador recibe sus parámetros (`def elegido(step):`; en línea, `event`).
 - `bind:prop={estado}` funciona con cualquier propiedad escribible: los cambios que haga el QML (también por asignación, `root.value = 3`) vuelven al `state`. Los números de QML (`real`) llegan como `float`.
-- `flux dev` reinicia la aplicación al guardar el `.qml` (Qt no siempre vuelve a leer en el mismo proceso un `.qml` ya cargado).
-- El QML es **interfaz de Qt, no de FluxUI**: su contenido no está cubierto por la política de versiones, y sus errores se muestran tal como los da Qt.
+- `janel dev` reinicia la aplicación al guardar el `.qml` (Qt no siempre vuelve a leer en el mismo proceso un `.qml` ya cargado).
+- El QML es **interfaz de Qt, no de JanelKit**: su contenido no está cubierto por la política de versiones, y sus errores se muestran tal como los da Qt.
 
 **Tipos escritos en Python.** Un `QQuickItem` (o `QQuickPaintedItem`) registrado con `@QmlElement` se usa desde un `.qml` como cualquier tipo QML (`import dials` → `PyDial { ... }`). El módulo que lo registra debe importarse **antes** de `run()`, en `main.py`, porque Qt resuelve los imports al cargar la vista.
 
@@ -751,11 +751,11 @@ Ejemplo: `examples/counter` (`src/widgets/Meter.qml`).
 
 ## Elementos disponibles
 
-**Elementos base, en minúscula; componentes y controles, en mayúscula.** Las etiquetas en minúscula están reservadas para los elementos base de FluxUI, a partir de los que se construyen otros elementos sin escribir QML (como `<div>` frente a `<Boton>` en la web). Hoy hay uno, [`<flex>`](flex.md); el de la entrada de datos llegará después. Una etiqueta en minúscula desconocida es un error que lista los elementos base.
+**Elementos base, en minúscula; componentes y controles, en mayúscula.** Las etiquetas en minúscula están reservadas para los elementos base de JanelKit, a partir de los que se construyen otros elementos sin escribir QML (como `<div>` frente a `<Boton>` en la web). Hoy hay uno, [`<flex>`](flex.md); el de la entrada de datos llegará después. Una etiqueta en minúscula desconocida es un error que lista los elementos base.
 
 | Elemento base | Qt Quick | Propiedades | Eventos |
 |---|---|---|---|
-| `flex` | caja propia con el motor flexbox (`FxFlex`) | `direction` (`row` por defecto, `column`, `row-reverse`, `column-reverse`), `wrap`, `gap`, `padding`, `align` (`align-items`), `justify` (`justify-content`), `as`, `tabindex`, `disabled`, `title`, `checked`, `selected`, `expanded`, `style` | `on:click`, `on:dblclick`, `on:contextmenu`, `on:pointerdown`, `on:pointerup`, `on:pointermove`, `on:pointerenter`, `on:pointerleave`, `on:wheel`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur`, `on:resize` |
+| `flex` | caja propia con el motor flexbox (`JkFlex`) | `direction` (`row` por defecto, `column`, `row-reverse`, `column-reverse`), `wrap`, `gap`, `padding`, `align` (`align-items`), `justify` (`justify-content`), `as`, `tabindex`, `disabled`, `title`, `checked`, `selected`, `expanded`, `style` | `on:click`, `on:dblclick`, `on:contextmenu`, `on:pointerdown`, `on:pointerup`, `on:pointermove`, `on:pointerenter`, `on:pointerleave`, `on:wheel`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur`, `on:resize` |
 
 `<flex>` es la caja de la web: fila por defecto, `align-items: stretch` y el resto del flexbox de CSS en `<style>` (`flex-wrap`, márgenes y `margin: auto`, `space-between`, `order`, `%`, bordes por lado, radio por esquina, `overflow`), con estados (`:hover`, `:pressed`, `:focus-visible`…), selectores de descendiente (`.tarjeta:hover .acciones`), sombra, `outline`, `transform` y `cursor`. Ver [estilos.md](estilos.md) y el diseño completo, con lo que llegará en las fases siguientes, en [flex.md](flex.md). Los atributos de texto se comprueban al compilar: `<flex direction="diagonal">` es un error.
 
@@ -826,7 +826,7 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 - **`Window`**: `on:activate` y `on:deactivate` avisan cuando la ventana pasa a primer plano o deja de estarlo (para marcar como leído o decidir si mostrar una notificación con `notify`).
 - **Opciones** (`Select`, `RadioGroup`, `Tabs`): `options` es una lista de textos (`["rojo", "verde"]`) o de diccionarios `{"label": "Mediano", "value": 2}`; `value` es el valor elegido. La elección del usuario se ve al momento; si Python cambia `value`, manda Python.
 - `Tabs` es solo la barra: el contenido de cada pestaña se elige con `{#if pestaña == "general"}`.
-- `Image`: `src` puede ser una ruta relativa a la carpeta del `.flux`, una ruta absoluta o una URL (`https:`, `qrc:`, `data:`). Sin `width`/`height`, toma el tamaño de la imagen.
+- `Image`: `src` puede ser una ruta relativa a la carpeta del `.janel`, una ruta absoluta o una URL (`https:`, `qrc:`, `data:`). Sin `width`/`height`, toma el tamaño de la imagen.
 - `Shortcut` no ocupa espacio: escucha el teclado de su ventana mientras existe (`<Shortcut keys="Ctrl+S" on:activate={guardar} />`; teclas como en Qt: `Ctrl+Shift+N`, `F5`, `Esc`). Dentro de un `{#if}`, solo está activo con la rama.
 - `TextArea` emite `on:input` solo con los cambios del usuario, no con los que llegan de Python.
 - **Teclado y foco en los campos** (`TextField`, `TextArea`, `Select`): `on:keydown`, `on:keyup`, `on:focus` y `on:blur` funcionan como en `<flex>` ([eventos](flex.md)): suben a los contenedores, `event.stop()` corta la subida y `event.prevent()` hace que la tecla no llegue al campo (no se escribe). Por ejemplo, Escape para cancelar una edición y guardar al salir del campo:
@@ -844,6 +844,6 @@ Un elemento, propiedad, evento o directiva desconocidos producen un error con la
 
 ## Diagnósticos
 
-Todos los errores siguen el formato `archivo:línea:columna: error: mensaje`, con la línea de origen, un `^` y, cuando existe, una sugerencia. Si Qt rechaza el QML generado, el error se remite al elemento `.flux` correspondiente y muestra además la línea QML implicada.
+Todos los errores siguen el formato `archivo:línea:columna: error: mensaje`, con la línea de origen, un `^` y, cuando existe, una sugerencia. Si Qt rechaza el QML generado, el error se remite al elemento `.janel` correspondiente y muestra además la línea QML implicada.
 
-Para depurar: `flux parse src/App.flux` muestra el AST, `flux compile src/App.flux` el QML generado y `flux build` valida todos los componentes del proyecto.
+Para depurar: `janel parse src/App.janel` muestra el AST, `janel compile src/App.janel` el QML generado y `janel build` valida todos los componentes del proyecto.

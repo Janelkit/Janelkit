@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "fluxui"  # nombre provisional, pendiente de verificar en PyPI
+name = "janelkit"  # libre en PyPI (verificado el 28-10-2026; ver docs/estado.md, decisión 23)
 version = "0.0.1.dev0"
-description = "Componentes de archivo único (.flux) para aplicaciones de escritorio con Python y Qt Quick"
+description = "Componentes de archivo único (.janel) para aplicaciones de escritorio con Python y Qt Quick"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["PySide6>=6.8", "qasync>=0.27"]
@@ -19,13 +19,13 @@ classifiers = [
 dev = ["pytest>=8", "build>=1", "pyflakes>=3", "websockets>=13", "psutil>=5.9"]
 
 [project.scripts]
-flux = "fluxui.cli.main:main"
+janel = "janelkit.cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-fluxui = ["templates/**/*", "qml/**/*"]
+janelkit = ["templates/**/*", "qml/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,6 +1,6 @@
 # Reto 3: tablero Kanban
 
-Tablero de tareas hecho con la API pública de FluxUI. Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
+Tablero de tareas hecho con la API pública de JanelKit. Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
 
 ## Ejecutar
 
@@ -31,11 +31,11 @@ python bench.py --cols 4 --cards 200
 
 | Archivo | Contenido |
 |---|---|
-| `src/App.flux` | La ventana: barra (búsqueda, filtros, deshacer), tablero, detalle y menú contextual. |
-| `src/components/Columna.flux` | Una columna: cabecera arrastrable y renombrable, `<List animate>` de tarjetas, «Añadir tarjeta». |
-| `src/components/Tarjeta.flux` | Una tarjeta: arrastre, destino de otras tarjetas, teclas y descripción desplegable. |
-| `src/components/Detalle.flux` | Panel de detalle con borrador y «Guardar». |
-| `src/components/MenuContextual.flux` | Menú hecho con `<flex>` (foco, flechas, Escape, clic fuera). |
+| `src/App.janel` | La ventana: barra (búsqueda, filtros, deshacer), tablero, detalle y menú contextual. |
+| `src/components/Columna.janel` | Una columna: cabecera arrastrable y renombrable, `<List animate>` de tarjetas, «Añadir tarjeta». |
+| `src/components/Tarjeta.janel` | Una tarjeta: arrastre, destino de otras tarjetas, teclas y descripción desplegable. |
+| `src/components/Detalle.janel` | Panel de detalle con borrador y «Guardar». |
+| `src/components/MenuContextual.janel` | Menú hecho con `<flex>` (foco, flechas, Escape, clic fuera). |
 | `src/services/tablero.py` | Columnas y tarjetas, operaciones con su inversa (deshacer/rehacer), JSON y datos de ejemplo. |
 | `src/services/interfaz.py` | Estado compartido de la ventana: detalle, menú, foco pendiente y filtro. |
 | `bench.py` | Mediciones con 20 × 200. |

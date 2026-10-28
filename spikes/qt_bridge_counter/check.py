@@ -23,7 +23,7 @@ assert m.name == "Ana" and echo.property("text") == "Hola, Ana", (m.name, echo.p
 assert m.writes == 1, m.writes  # sin bucle: una sola escritura
 m.name = "Bea"; m.sync()
 assert field.property("text") == "Bea" and echo.property("text") == "Hola, Bea"
-# el binding text: fx.name sigue vivo tras una edición del usuario
+# el binding text: jk.name sigue vivo tras una edición del usuario
 field.setProperty("text", "Bea2"); QMetaObject.invokeMethod(field, "textEdited")
 m.name = "Carla"; m.sync()
 assert field.property("text") == "Carla", field.property("text")

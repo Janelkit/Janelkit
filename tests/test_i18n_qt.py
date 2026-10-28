@@ -6,11 +6,11 @@ from datetime import date
 import pytest
 from conftest import find, texts
 
-from fluxui import i18n, t
-from fluxui.i18n import I18nError
+from janelkit import i18n, t
+from janelkit.i18n import I18nError
 
 APP = """<script>
-from fluxui import state, t, i18n
+from janelkit import state, t, i18n
 n = state(1)
 name = state("Ana")
 </script>
@@ -43,7 +43,7 @@ def test_translate_with_params_plurals_and_fallback(caplog):
     i18n.set("en")
     assert t("tasks", n=0) == "0 tasks"  # sin forma "zero": "other"
     assert t("only_es") == "solo es"  # reserva: el idioma por defecto
-    with caplog.at_level(logging.WARNING, logger="fluxui"):
+    with caplog.at_level(logging.WARNING, logger="janelkit"):
         assert t("missing") == "missing"
     assert "falta la traducción de 'missing'" in caplog.text
     with pytest.raises(I18nError, match="idioma sin catálogo: 'fr'"):
@@ -59,22 +59,22 @@ def test_language_switch_updates_the_view(mount):
     assert texts(m)[1] == "2 tasks"
 
 
-def settle(flux_app):
+def settle(janel_app):
     """Los layouts se recolocan en su siguiente pasada: dejar correr el bucle un momento."""
     for _ in range(5):
-        flux_app.process_events()
+        janel_app.process_events()
         time.sleep(0.01)
 
 
-def test_rtl_language_mirrors_the_layout(mount, flux_app):
+def test_rtl_language_mirrors_the_layout(mount, janel_app):
     m = mount(APP)
     a, row = find(m, "a"), find(m, "row")
     i18n.set("ar")
-    settle(flux_app)
+    settle(janel_app)
     assert i18n.rtl and texts(m)[0] == "مرحبا Ana"
     assert a.x() > row.width() / 2  # el primer elemento de la fila pasa a la derecha
     i18n.set("es")
-    settle(flux_app)
+    settle(janel_app)
     assert a.x() < row.width() / 2
 
 

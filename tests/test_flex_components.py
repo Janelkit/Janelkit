@@ -6,12 +6,12 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 
-from fluxui.compiler import compile_file
-from fluxui.diagnostics import FluxError
-from fluxui.inspect import mount
+from janelkit.compiler import compile_file
+from janelkit.diagnostics import JanelError
+from janelkit.inspect import mount
 
 CAJA = """<script>
-from fluxui import prop
+from janelkit import prop
 texto = prop("")
 </script>
 <flex class="caja" as="button" label={texto}><Text>{texto}</Text></flex>
@@ -22,7 +22,7 @@ texto = prop("")
 """
 
 CERRADA = """<script>
-from fluxui import prop
+from janelkit import prop
 inherit_attrs = False
 texto = prop("")
 </script>
@@ -30,7 +30,7 @@ texto = prop("")
 """
 
 APP = """<script>
-from fluxui import state, ref
+from janelkit import state, ref
 from components.Caja import Caja
 from components.Cerrada import Cerrada
 log = state([])
@@ -64,15 +64,15 @@ def foco():
 def project():
     d = Path(tempfile.mkdtemp())
     (d / "components").mkdir()
-    (d / "components" / "Caja.flux").write_text(CAJA, encoding="utf-8")
-    (d / "components" / "Cerrada.flux").write_text(CERRADA, encoding="utf-8")
-    (d / "App.flux").write_text(APP, encoding="utf-8")
+    (d / "components" / "Caja.janel").write_text(CAJA, encoding="utf-8")
+    (d / "components" / "Cerrada.janel").write_text(CERRADA, encoding="utf-8")
+    (d / "App.janel").write_text(APP, encoding="utf-8")
     return d
 
 
 @pytest.fixture
 def app(project):
-    with mount(project / "App.flux") as app:
+    with mount(project / "App.janel") as app:
         app.window.resize(500, 400)
         app.wait(0.05)
         yield app
@@ -83,20 +83,20 @@ def cajas(app):
 
 
 def test_no_wrapper_box_for_box_roots(project):
-    qml = compile_file(project / "App.flux").qml
-    assert qml.count("FxRemote {") == 3  # uno, dos y las filas; tres no lleva atributos
-    assert 'property: "fxInClass"' in qml
+    qml = compile_file(project / "App.janel").qml
+    assert qml.count("JkRemote {") == 3  # uno, dos y las filas; tres no lleva atributos
+    assert 'property: "jkInClass"' in qml
     # inherit_attrs = False: como antes, con caja exterior.
-    assert "fxFill: true" in qml
+    assert "jkFill: true" in qml
 
 
 def test_tag_styles_and_states_apply_to_root(app):
     uno = cajas(app)["uno"]
     assert uno.item.width() == pytest.approx(150)
     uno.unhover()
-    assert uno.prop("fxBackground").name() == "#eeeeee"
+    assert uno.prop("jkBackground").name() == "#eeeeee"
     uno.hover()
-    assert uno.prop("fxBackground").name() == "#00ff00"  # :hover de la etiqueta, en la raíz
+    assert uno.prop("jkBackground").name() == "#00ff00"  # :hover de la etiqueta, en la raíz
 
 
 def test_native_events_ref_and_disabled_reach_root(app):
@@ -117,8 +117,8 @@ def test_native_events_ref_and_disabled_reach_root(app):
 
 def test_class_on_tag_activates_component_rules(app):
     c = cajas(app)
-    assert c["dos"].prop("fxBackground").name() == "#000000"  # .caja.fuerte del componente
-    assert c["tres"].prop("fxBackground").name() == "#eeeeee"
+    assert c["dos"].prop("jkBackground").name() == "#000000"  # .caja.fuerte del componente
+    assert c["tres"].prop("jkBackground").name() == "#eeeeee"
 
 
 def test_reordered_rows_keep_their_place(app):
@@ -132,12 +132,12 @@ def test_reordered_rows_keep_their_place(app):
 
 
 def test_undeclared_attrs_still_error_without_box_root(project):
-    (project / "components" / "Boton2.flux").write_text(
-        '<script>\nfrom fluxui import prop\ntext = prop("")\n</script>\n<Button text={text} />\n', encoding="utf-8"
+    (project / "components" / "Boton2.janel").write_text(
+        '<script>\nfrom janelkit import prop\ntext = prop("")\n</script>\n<Button text={text} />\n', encoding="utf-8"
     )
-    (project / "B.flux").write_text(
+    (project / "B.janel").write_text(
         "<script>\nfrom components.Boton2 import Boton2\n</script>\n<Column><Boton2 text=\"x\" on:click={print(1)} /></Column>\n",
         encoding="utf-8",
     )
-    with pytest.raises(FluxError, match="no declara el evento 'click'"):
-        compile_file(project / "B.flux")
+    with pytest.raises(JanelError, match="no declara el evento 'click'"):
+        compile_file(project / "B.janel")

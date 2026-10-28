@@ -1,30 +1,30 @@
 {
-  "name": "fluxui-flux",
-  "displayName": "FluxUI (.flux)",
-  "description": "Resaltado de sintaxis para componentes .flux de FluxUI: Python en <script> y {expresiones}, CSS en <style>.",
+  "name": "janelkit-janel",
+  "displayName": "JanelKit (.janel)",
+  "description": "Resaltado de sintaxis para componentes .janel de JanelKit: Python en <script> y {expresiones}, CSS en <style>.",
   "version": "0.0.1",
-  "publisher": "fluxui",
+  "publisher": "janelkit",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.80.0" },
   "categories": ["Programming Languages"],
   "contributes": {
     "languages": [
       {
-        "id": "flux",
-        "aliases": ["FluxUI", "flux"],
-        "extensions": [".flux"],
+        "id": "janel",
+        "aliases": ["JanelKit", "janel"],
+        "extensions": [".janel"],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "flux",
-        "scopeName": "source.flux",
-        "path": "./syntaxes/flux.tmLanguage.json",
+        "language": "janel",
+        "scopeName": "source.janel",
+        "path": "./syntaxes/janel.tmLanguage.json",
         "embeddedLanguages": {
-          "source.python.embedded.flux": "python",
-          "meta.embedded.expression.flux": "python",
-          "source.css.embedded.flux": "css"
+          "source.python.embedded.janel": "python",
+          "meta.embedded.expression.janel": "python",
+          "source.css.embedded.janel": "css"
         }
       }
     ]

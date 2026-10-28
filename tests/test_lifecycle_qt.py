@@ -5,11 +5,11 @@ from pathlib import Path
 import pytest
 from conftest import find, texts
 
-from fluxui import effect, on_mount, provide, ref, state
-from fluxui.compiler import compile_source
+from janelkit import effect, on_mount, provide, ref, state
+from janelkit.compiler import compile_source
 
 CHILD = """<script>
-from fluxui import prop, on_mount, on_destroy, effect, inject
+from janelkit import prop, on_mount, on_destroy, effect, inject
 import tests_lifecycle_log as log
 name = prop()
 theme = inject("tema", "claro")
@@ -32,7 +32,7 @@ effect(watch)
 """
 
 APP = """<script>
-from fluxui import state, provide, on_mount
+from janelkit import state, provide, on_mount
 import tests_lifecycle_log as log
 from components.Child import Child
 items = state(["a", "b"])
@@ -68,20 +68,20 @@ def project(tmp_path):
             path = tmp_path / rel
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
-        return tmp_path / "App.flux"
+        return tmp_path / "App.janel"
 
     return make
 
 
 def test_on_mount_runs_after_the_view_exists_children_first(mount, project, log):
-    mount(project({"App.flux": APP, "components/Child.flux": CHILD}))
+    mount(project({"App.janel": APP, "components/Child.janel": CHILD}))
     mounts = [e for e in log if e[0] == "mount"]
     assert mounts == [("mount", "a"), ("mount", "b"), ("mount", "app")]
     assert log.index(("effect", "a")) < log.index(("mount", "a"))  # el script corre antes que la vista
 
 
 def test_dynamic_rows_mount_and_destroy_with_cleanups(mount, project, log):
-    m = mount(project({"App.flux": APP, "components/Child.flux": CHILD}))
+    m = mount(project({"App.janel": APP, "components/Child.janel": CHILD}))
     items = m.instance.namespace["items"]
     log.clear()
     items.value.append("c")
@@ -92,21 +92,21 @@ def test_dynamic_rows_mount_and_destroy_with_cleanups(mount, project, log):
     assert log == [("cleanup", "a"), ("effect-cleanup", "a"), ("destroy", "a")]
 
 
-def test_unmounting_the_app_destroys_everything(mount, project, log, flux_app):
-    m = mount(project({"App.flux": APP, "components/Child.flux": CHILD}))
+def test_unmounting_the_app_destroys_everything(mount, project, log, janel_app):
+    m = mount(project({"App.janel": APP, "components/Child.janel": CHILD}))
     log.clear()
-    flux_app.unmount(m)
+    janel_app.unmount(m)
     assert {e for e in log if e[0] == "destroy"} == {("destroy", "a"), ("destroy", "b")}
 
 
 def test_inject_reads_the_nearest_provider_or_default(mount, project, log):
-    m = mount(project({"App.flux": APP, "components/Child.flux": CHILD}))
+    m = mount(project({"App.janel": APP, "components/Child.janel": CHILD}))
     assert texts(m) == ["a:oscuro:0", "b:oscuro:0"]
 
 
 def test_provide_shadows_for_a_subtree(mount, project, log):
     middle = """<script>
-from fluxui import provide, inject
+from janelkit import provide, inject
 from components.Child import Child
 provide("profundidad", inject("profundidad", 0) + 1)
 provide("tema", "sepia")
@@ -116,7 +116,7 @@ provide("tema", "sepia")
     app = APP.replace("<Child name={it} />", "<Child name={it} />\n    <Middle />").replace(
         "from components.Child import Child", "from components.Child import Child\nfrom components.Middle import Middle"
     )
-    m = mount(project({"App.flux": app, "components/Child.flux": CHILD, "components/Middle.flux": middle}))
+    m = mount(project({"App.janel": app, "components/Child.janel": CHILD, "components/Middle.janel": middle}))
     assert texts(m) == ["a:oscuro:0", "m:sepia:1", "b:oscuro:0", "m:sepia:1"]
 
 
@@ -129,12 +129,12 @@ def test_lifecycle_functions_outside_a_component_explain_themselves():
 
 def test_missing_provider_without_default_is_an_error(mount, caplog):
     with pytest.raises(LookupError, match="ningún componente antecesor provee 'sesion'"):
-        mount("<script>\nfrom fluxui import inject\ns = inject('sesion')\n</script>\n<Text>x</Text>")
+        mount("<script>\nfrom janelkit import inject\ns = inject('sesion')\n</script>\n<Text>x</Text>")
 
 
 def test_error_in_on_mount_is_reported(mount, caplog):
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
-        mount("<script>\nfrom fluxui import on_mount\n@on_mount\ndef boom():\n    raise ValueError('mal')\n</script>\n<Text>x</Text>")
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
+        mount("<script>\nfrom janelkit import on_mount\n@on_mount\ndef boom():\n    raise ValueError('mal')\n</script>\n<Text>x</Text>")
     assert "error en on_mount (boom): ValueError: mal" in caplog.text
 
 
@@ -155,7 +155,7 @@ def test_effect_cleanup_runs_before_rerun_and_on_dispose():
 
 # -- referencias -------------------------------------------------------------------
 REFS = """<script>
-from fluxui import state, ref, on_mount
+from janelkit import state, ref, on_mount
 field = ref()
 row_ref = ref()
 show = state(True)
@@ -207,15 +207,15 @@ def test_ref_is_reactive():
 
 
 def test_ref_must_name_a_script_ref():
-    from fluxui.diagnostics import FluxError
+    from janelkit.diagnostics import JanelError
 
-    with pytest.raises(FluxError, match="ref necesita el nombre"):
+    with pytest.raises(JanelError, match="ref necesita el nombre"):
         compile_source("<Text ref={1}>x</Text>")
-    with pytest.raises(FluxError, match="variable de \\{#each\\}"):
+    with pytest.raises(JanelError, match="variable de \\{#each\\}"):
         compile_source("<script>\nxs = [1]\n</script>\n<Column>{#each xs as x}<Text ref={x}>x</Text>{/each}</Column>")
 
 
 def test_ref_to_something_else_is_reported(mount, caplog):
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
         mount("<script>\nr = 3\n</script>\n<Text ref={r}>x</Text>")
     assert "ref: 'r' es int; declara r = ref()" in caplog.text

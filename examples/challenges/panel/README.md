@@ -1,6 +1,6 @@
 # Reto 1: panel de monitorización
 
-Panel del sistema en tiempo real hecho con la API pública de FluxUI. Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
+Panel del sistema en tiempo real hecho con la API pública de JanelKit. Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
 
 ## Ejecutar
 
@@ -33,10 +33,10 @@ python bench.py --metrics 50 --rate 10 --seconds 60
 
 | Archivo | Contenido |
 |---|---|
-| `src/App.flux` | La ventana: barra de herramientas, tarjetas, núcleos y tabla de procesos. |
-| `src/components/Card.flux` | Tarjeta de una métrica (valor, gráfica, aviso por umbral). |
-| `src/components/ChartWindow.flux` | Una gráfica en su propia ventana. |
-| `src/widgets/LineChart.qml` | La gráfica de línea (QML propio: FluxUI no tiene gráficas, ver hallazgos). |
+| `src/App.janel` | La ventana: barra de herramientas, tarjetas, núcleos y tabla de procesos. |
+| `src/components/Card.janel` | Tarjeta de una métrica (valor, gráfica, aviso por umbral). |
+| `src/components/ChartWindow.janel` | Una gráfica en su propia ventana. |
+| `src/widgets/LineChart.qml` | La gráfica de línea (QML propio: JanelKit no tiene gráficas, ver hallazgos). |
 | `src/services/metrics.py` | Series con historia, fuentes (psutil y simulada) y lista de procesos. |
 | `bench.py` | Prueba de carga: CPU del hilo de la interfaz, memoria, latencia hasta la pantalla y coste por fotograma. |
-| `../../../tests/test_challenge_panel.py` | Pruebas con `fluxui.inspect`. |
+| `../../../tests/test_challenge_panel.py` | Pruebas con `janelkit.inspect`. |

@@ -1,4 +1,4 @@
-# Dependencias de FluxUI para ejecutar aplicaciones, con las versiones exactas
+# Dependencias de JanelKit para ejecutar aplicaciones, con las versiones exactas
 # con las que pasa la suite (Python 3.13, Windows).
 #
 # pyproject.toml declara los rangos que admite la biblioteca (PySide6>=6.8,

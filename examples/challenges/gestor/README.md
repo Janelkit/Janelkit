@@ -1,6 +1,6 @@
 # Reto 6: gestor de proyectos
 
-Gestor de proyectos para un equipo pequeño, todo local, hecho con la API pública de FluxUI a partir del tablero del reto 3 (Kanban). Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
+Gestor de proyectos para un equipo pequeño, todo local, hecho con la API pública de JanelKit a partir del tablero del reto 3 (Kanban). Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
 
 ## Ejecutar
 
@@ -38,13 +38,13 @@ Del plan del reto quedan sin hacer la pestaña Lista (tabla ordenable y editable
 
 | Archivo | Contenido |
 |---|---|
-| `src/App.flux` | La ventana: cabecera con las secciones, `sections(...)`, deshacer y el enlace a una tarjeta desde cualquier sección. |
-| `src/vistas/Proyectos.flux` | Inicio de la sección Proyectos: la rejilla. |
-| `src/vistas/Proyecto.flux` | Un proyecto: cabecera, pestañas con `{#hidden}`, tablero, detalle y menú contextual. |
-| `src/vistas/Personas.flux`, `Persona.flux` | El directorio y la ficha de una persona. |
-| `src/vistas/MiTrabajo.flux` | Las tarjetas de una persona en todos los proyectos. |
-| `src/components/Miembros.flux`, `AjustesProyecto.flux` | Las pestañas Miembros y Ajustes. |
-| `src/components/Columna.flux`, `Tarjeta.flux`, `Detalle.flux`, `MenuContextual.flux` | El tablero del reto 3, adaptado a etiquetas y miembros por proyecto. |
+| `src/App.janel` | La ventana: cabecera con las secciones, `sections(...)`, deshacer y el enlace a una tarjeta desde cualquier sección. |
+| `src/vistas/Proyectos.janel` | Inicio de la sección Proyectos: la rejilla. |
+| `src/vistas/Proyecto.janel` | Un proyecto: cabecera, pestañas con `{#hidden}`, tablero, detalle y menú contextual. |
+| `src/vistas/Personas.janel`, `Persona.janel` | El directorio y la ficha de una persona. |
+| `src/vistas/MiTrabajo.janel` | Las tarjetas de una persona en todos los proyectos. |
+| `src/components/Miembros.janel`, `AjustesProyecto.janel` | Las pestañas Miembros y Ajustes. |
+| `src/components/Columna.janel`, `Tarjeta.janel`, `Detalle.janel`, `MenuContextual.janel` | El tablero del reto 3, adaptado a etiquetas y miembros por proyecto. |
 | `src/services/datos.py` | Proyectos, personas, el historial común, el archivo, importar el reto 3 y los datos de ejemplo. |
 | `src/services/tablero.py` | Las operaciones del tablero de un proyecto (con su inversa, sobre el historial común). |
 | `src/services/interfaz.py` | Estado de un proyecto abierto: detalle, menú, tarjeta que enfocar y filtro. |

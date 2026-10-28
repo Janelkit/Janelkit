@@ -35,10 +35,10 @@ def main() -> None:
 
     qInstallMessageHandler(on_qt_message)
 
-    from fluxui.inspect import mount
+    from janelkit.inspect import mount
 
     t = time.perf_counter()
-    with mount(Path(__file__).parent / "src" / "App.flux", headless=False) as app:
+    with mount(Path(__file__).parent / "src" / "App.janel", headless=False) as app:
         app.wait(0.2)
         print(f"{args.cards} tarjetas: montar {(time.perf_counter() - t) * 1000:.0f} ms (con 0,2 s de espera)")
         win = app.window

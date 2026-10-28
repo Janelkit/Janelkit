@@ -6,13 +6,13 @@ import pytest
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtTest import QTest
 
-from fluxui.compiler import compile_source
-from fluxui.inspect import mount
+from janelkit.compiler import compile_source
+from janelkit.inspect import mount
 
 FLEX = Path(__file__).parent.parent / "examples" / "flex"
 
 APP = """<script>
-from fluxui import state
+from janelkit import state
 mx = state(30)
 abierto = state(False)
 </script>
@@ -54,8 +54,8 @@ abierto = state(False)
 @pytest.fixture
 def app():
     d = Path(tempfile.mkdtemp())
-    (d / "App.flux").write_text(APP, encoding="utf-8")
-    with mount(d / "App.flux") as app:
+    (d / "App.janel").write_text(APP, encoding="utf-8")
+    with mount(d / "App.janel") as app:
         app.window.resize(400, 400)
         app.wait(0.05)
         yield app
@@ -106,14 +106,14 @@ def test_fixed_covers_window_and_follows_resize(app):
 def test_position_compiles_and_validates():
     qml = compile_source("""<Column><Text class="t">x</Text></Column>
 <style>.t { position: absolute; inset: 0 10px; z-index: 3; }</style>""").qml
-    assert 'property string fxPosition: "absolute"' in qml and "z: 3" in qml
-    assert "property var fxLeft: 10" in qml and "Fx.positionDeps(" in qml
+    assert 'property string jkPosition: "absolute"' in qml and "z: 3" in qml
+    assert "property var jkLeft: 10" in qml and "Jk.positionDeps(" in qml
     c = compile_source('<Column class="c" />\n<style>.c { position: sticky; }</style>')
     assert any("position" in w.message for w in c.warnings)
 
 
 def test_catalog_dialog_menu_and_badge():
-    with mount(FLEX / "src" / "App.flux") as app:
+    with mount(FLEX / "src" / "App.janel") as app:
         app.window.resize(900, 640)
         app.wait(0.2)
         zona = app.find("flex", label="Zona con menú contextual")
@@ -139,7 +139,7 @@ def test_catalog_dialog_menu_and_badge():
         QTest.keyClick(app.window, Qt.Key.Key_Backtab, Qt.KeyboardModifier.ShiftModifier)
         assert cancelar.item.hasActiveFocus()
 
-        dialogo = [e for e in app.elements() if e.tag == "flex" and e.prop("fxRole") == "dialog"][0]
+        dialogo = [e for e in app.elements() if e.tag == "flex" and e.prop("jkRole") == "dialog"][0]
         QTest.mouseClick(app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
                          dialogo.item.mapToScene(QPointF(15, 15)).toPoint())
         app.wait(0.05)

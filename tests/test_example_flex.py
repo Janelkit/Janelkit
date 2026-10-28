@@ -3,14 +3,14 @@ from pathlib import Path
 
 import pytest
 
-from fluxui.inspect import mount
+from janelkit.inspect import mount
 
 FLEX = Path(__file__).parent.parent / "examples" / "flex"
 
 
 @pytest.fixture
 def catalog():
-    with mount(FLEX / "src" / "App.flux") as app:
+    with mount(FLEX / "src" / "App.janel") as app:
         yield app
 
 

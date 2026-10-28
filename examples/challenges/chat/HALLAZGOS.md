@@ -16,7 +16,7 @@ Gravedad: **Bloquea** (no se podía hacer), **Molesta** (había que dar un rodeo
 | 6 | Cambiar de sala (`{#key}` recrea la lista) | `Qt.callLater` sobre una lista que se estaba destruyendo daba `TypeError` | Molesta | Temporizadores propios que mueren con la lista |
 | 7 | Negrita, enlaces y código en los mensajes | `<Text>` solo mostraba texto plano | Bloquea | `<Text format="markdown">` (y `"html"`), cursor de mano y `on:link`; sin manejador, el enlace se abre en el navegador |
 | 8 | Saber si el usuario está mirando la ventana | No había eventos de ventana | Bloquea | `<Window on:activate on:deactivate>` |
-| 9 | Avisar de mensajes con la ventana en segundo plano | No había notificaciones | Bloquea | `fluxui.notify(título, mensaje, on_click=)` con la bandeja nativa de Qt (sin QtWidgets); `MountedApp.notifications()` para pruebas |
+| 9 | Avisar de mensajes con la ventana en segundo plano | No había notificaciones | Bloquea | `janelkit.notify(título, mensaje, on_click=)` con la bandeja nativa de Qt (sin QtWidgets); `MountedApp.notifications()` para pruebas |
 | 10 | Contadores de no leídos y reacciones como «pastillas» | `<Text>` no admitía fondo ni borde: había que envolverlo en un `<Row>` | Molesta | `background`, `border` y `border-radius` en `<Text>` |
 | 11 | Botones fantasma con un emoji | Medían como mínimo 64 px | Detalle | Los botones `ghost` no tienen ancho mínimo |
 | 12 | `class={"bubble mine" if mine else "bubble"}` en un `<Column>` | El compilador avisaba de todas las reglas de texto del `<style>` («font-size no tiene efecto en Column») | Molesta (falso aviso) | Con `class={expr}` se ignoran sin avisar las clases que no aplican al elemento |
@@ -30,8 +30,8 @@ Gravedad: **Bloquea** (no se podía hacer), **Molesta** (había que dar un rodeo
 | 15 | Indicador «escribiendo…» que se borra a los 3 s | No hay temporizadores: una corrutina con `asyncio.sleep` y cancelación a mano | Molesta | ✅ Resuelto en el reto 1: `timeout(3000, fn)` y `.restart()` en cada aviso |
 | 16 | Copiar el texto de un mensaje | `<Text>` no se puede seleccionar | Molesta | `<Text selectable>` (un `TextEdit` de solo lectura con el mismo formato) |
 | 17 | Mostrar Markdown de otras personas | El Markdown de Qt acepta HTML; hay que escaparlo a mano, y el escape se ve literal dentro de `código` (`a &lt; b`) | Molesta (seguridad) | Que `format="markdown"` no interprete HTML (`MarkdownNoHTML`) y dejar `"html"` para quien lo quiera |
-| 18 | Icono propio en la notificación y en la bandeja | Se usa el icono de FluxUI; no hay forma de dar el de la aplicación | Molesta | `<Window icon="...">` o `run(..., icon=)`, usado también por `notify` |
-| 19 | Contador de no leídos en el icono de la bandeja, menú de la bandeja | No existe | Detalle | Ampliar `fluxui.notify` con un `tray` (icono, menú, insignia) |
+| 18 | Icono propio en la notificación y en la bandeja | Se usa el icono de JanelKit; no hay forma de dar el de la aplicación | Molesta | `<Window icon="...">` o `run(..., icon=)`, usado también por `notify` |
+| 19 | Contador de no leídos en el icono de la bandeja, menú de la bandeja | No existe | Detalle | Ampliar `janelkit.notify` con un `tray` (icono, menú, insignia) |
 | 20 | `room.messages` en la plantilla | Solo se desenvuelven los `state` de nivel superior: dentro de un objeto hay que escribir `.value` | Detalle | Decisión de diseño (como Vue). Documentarlo en el lenguaje |
 | 21 | El nombre de la sala árabe en una interfaz en español | Qt alinea cada texto según su propio idioma («# العربية» a la derecha) | Detalle | Opción de alineación natural frente a la del diseño (`text-align: start`) |
 | 22 | Simular «la ventana pierde el foco» en pruebas | `inspect` no puede activar o desactivar ventanas | Detalle | `MountedApp.activate()` / `deactivate()` |

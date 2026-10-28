@@ -2,22 +2,22 @@
 import re
 from pathlib import Path
 
-import fluxui
-import fluxui.compiler
-import fluxui.diagnostics
-import fluxui.inspect
+import janelkit
+import janelkit.compiler
+import janelkit.diagnostics
+import janelkit.inspect
 
 API_DOC = (Path(__file__).parent.parent / "docs" / "api.md").read_text(encoding="utf-8")
 
 PUBLIC = {
-    "fluxui": [
+    "janelkit": [
         "Computed", "DragEvent", "Effect", "Event", "FocusEvent", "KeyEvent", "PageStack", "Persisted", "PointerEvent", "ResizeEvent", "WheelEvent", "Prop", "PropError", "Ref", "Sections", "State", "Task", "Timer", "__version__", "background",
         "batch", "before_leave", "clipboard", "computed", "dialogs", "effect", "event", "i18n", "inject", "interval", "navigation", "notify", "on_destroy", "on_mount", "open_window", "pages", "persisted", "prop", "provide", "ref", "run", "sections",
         "spawn", "state", "t", "task", "theme", "timeout", "untracked",
     ],
-    "fluxui.compiler": ["CompiledComponent", "FORMAT_VERSION", "check_file", "check_source", "compile_file", "compile_source"],
-    "fluxui.diagnostics": ["Diagnostic", "FluxError", "SourceLocation"],
-    "fluxui.inspect": ["Element", "InspectError", "MountedApp", "mount"],
+    "janelkit.compiler": ["CompiledComponent", "FORMAT_VERSION", "check_file", "check_source", "compile_file", "compile_source"],
+    "janelkit.diagnostics": ["Diagnostic", "JanelError", "SourceLocation"],
+    "janelkit.inspect": ["Element", "InspectError", "MountedApp", "mount"],
 }  # fmt: skip
 
 
@@ -27,16 +27,16 @@ def documented() -> set[str]:
 
 
 def test_top_level_exports_are_exactly_the_public_api():
-    assert sorted(fluxui.__all__) == sorted(PUBLIC["fluxui"])
+    assert sorted(janelkit.__all__) == sorted(PUBLIC["janelkit"])
 
 
 def test_public_names_exist():
     for module_name, names in PUBLIC.items():
         module = {
-            "fluxui": fluxui,
-            "fluxui.compiler": fluxui.compiler,
-            "fluxui.diagnostics": fluxui.diagnostics,
-            "fluxui.inspect": fluxui.inspect,
+            "janelkit": janelkit,
+            "janelkit.compiler": janelkit.compiler,
+            "janelkit.diagnostics": janelkit.diagnostics,
+            "janelkit.inspect": janelkit.inspect,
         }[module_name]
         for name in names:
             assert hasattr(module, name), f"{module_name}.{name}"
@@ -48,6 +48,6 @@ def test_every_public_name_is_documented_and_nothing_else():
 
 
 def test_check_source_reports_without_raising():
-    assert fluxui.compiler.check_source("<Text>hola</Text>") == []
-    diags = fluxui.compiler.check_source("<script>\nx = 1\n</script>\n<Text>{y}</Text>")
+    assert janelkit.compiler.check_source("<Text>hola</Text>") == []
+    diags = janelkit.compiler.check_source("<script>\nx = 1\n</script>\n<Text>{y}</Text>")
     assert len(diags) == 1 and diags[0].severity == "error" and "'y' no está definido" in diags[0].message

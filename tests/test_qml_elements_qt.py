@@ -6,9 +6,9 @@ import pytest
 from conftest import find, texts
 from PySide6.QtCore import QMetaObject, Q_ARG
 
-from fluxui.compiler import compile_file
-from fluxui.compiler.qml_interface import read_interface
-from fluxui.diagnostics import FluxError
+from janelkit.compiler import compile_file
+from janelkit.compiler.qml_interface import read_interface
+from janelkit.diagnostics import JanelError
 
 GAUGE = """import QtQuick
 
@@ -32,7 +32,7 @@ Rectangle {
 """
 
 APP = """<script>
-from fluxui import state, ref
+from janelkit import state, ref
 from widgets.Gauge import Gauge
 level = state(10)
 picked = state([])
@@ -53,7 +53,7 @@ def project(tmp_path):
             path = tmp_path / rel
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
-        return tmp_path / "App.flux"
+        return tmp_path / "App.janel"
 
     return make
 
@@ -70,7 +70,7 @@ def test_reads_the_interface_of_the_root_object(tmp_path):
 
 
 def test_qml_element_props_bind_events_and_ref(mount, project, caplog):
-    m = mount(project({"App.flux": APP, "widgets/Gauge.qml": GAUGE}))
+    m = mount(project({"App.janel": APP, "widgets/Gauge.qml": GAUGE}))
     assert caplog.text == ""
     gauge = find(m, "g")
     ns = m.instance.namespace
@@ -85,36 +85,36 @@ def test_qml_element_props_bind_events_and_ref(mount, project, caplog):
 
 def test_unknown_prop_and_event_are_compile_errors(project):
     app = APP.replace('label="Nivel"', 'lable="Nivel"')
-    with pytest.raises(FluxError) as info:
-        compile_file(project({"App.flux": app, "widgets/Gauge.qml": GAUGE}))
+    with pytest.raises(JanelError) as info:
+        compile_file(project({"App.janel": app, "widgets/Gauge.qml": GAUGE}))
     assert "propiedad desconocida" in info.value.first.message or "lable" in info.value.first.message
     assert "label" in (info.value.first.hint or "")
     app = APP.replace("on:picked", "on:pickd")
-    with pytest.raises(FluxError) as info:
-        compile_file(project({"App.flux": app, "widgets/Gauge.qml": GAUGE}))
+    with pytest.raises(JanelError) as info:
+        compile_file(project({"App.janel": app, "widgets/Gauge.qml": GAUGE}))
     assert "on:pickd" in info.value.first.message and "on:picked" in info.value.first.hint
 
 
 def test_readonly_properties_cannot_be_set(project):
     app = APP.replace('label="Nivel"', "full={True}")
-    with pytest.raises(FluxError):
-        compile_file(project({"App.flux": app, "widgets/Gauge.qml": GAUGE}))
+    with pytest.raises(JanelError):
+        compile_file(project({"App.janel": app, "widgets/Gauge.qml": GAUGE}))
 
 
 def test_qml_files_are_part_of_the_app_files(project):
-    compiled = compile_file(project({"App.flux": APP, "widgets/Gauge.qml": GAUGE}))
+    compiled = compile_file(project({"App.janel": APP, "widgets/Gauge.qml": GAUGE}))
     assert any(f.endswith("Gauge.qml") for f in compiled.files)
-    assert compiled.qml.count("as FxUser0") == 1 and "FxUser0.Gauge {" in compiled.qml
+    assert compiled.qml.count("as JkUser0") == 1 and "JkUser0.Gauge {" in compiled.qml
 
 
-def test_qml_errors_point_to_the_flux_usage(mount, project, caplog):
+def test_qml_errors_point_to_the_janel_usage(mount, project, caplog):
     broken = GAUGE.replace("color: tint", "color: noExiste")
-    with caplog.at_level(logging.WARNING, logger="fluxui"):
-        mount(project({"App.flux": APP, "widgets/Gauge.qml": broken}))
+    with caplog.at_level(logging.WARNING, logger="janelkit"):
+        mount(project({"App.janel": APP, "widgets/Gauge.qml": broken}))
     assert "noExiste" in caplog.text
 
 
-def test_flex_on_a_qml_element_follows_the_flux_layout_rules(mount, project):
+def test_flex_on_a_qml_element_follows_the_janel_layout_rules(mount, project):
     app = """<script>
 from widgets.Gauge import Gauge
 </script>
@@ -125,9 +125,9 @@ from widgets.Gauge import Gauge
   </Column>
 </Window>
 """
-    m = mount(project({"App.flux": app, "widgets/Gauge.qml": GAUGE}))
+    m = mount(project({"App.janel": app, "widgets/Gauge.qml": GAUGE}))
     gauge = find(m, "g")
-    assert gauge.property("fxFlex") == 1
+    assert gauge.property("jkFlex") == 1
     assert gauge.height() > 200  # ocupa el alto libre de la columna (no sus 16 px naturales)
 
 
@@ -136,7 +136,7 @@ def test_a_list_passed_whole_to_qml_follows_in_place_changes(mount, project):
     (append, del) también debe llegar, no solo asignar una lista nueva."""
     chart = 'import QtQuick\nItem { property var values: []; readonly property int n: values.length }'
     app = """<script>
-from fluxui import state
+from janelkit import state
 from widgets.Chart import Chart
 serie = state([1.0])
 nested = state({"pts": [1, 2]})
@@ -146,7 +146,7 @@ nested = state({"pts": [1, 2]})
   <Chart id="b" values={nested["pts"]} />
 </Column>
 """
-    m = mount(project({"App.flux": app, "widgets/Chart.qml": chart}))
+    m = mount(project({"App.janel": app, "widgets/Chart.qml": chart}))
     ns = m.instance.namespace
     ns["serie"].value.append(2.0)
     assert find(m, "a").property("n") == 2

@@ -1,7 +1,7 @@
 import pytest
 
-from fluxui import batch, computed, state
-from fluxui.reactivity import Effect, ReactiveCycleError, Scope, untracked
+from janelkit import batch, computed, state
+from janelkit.reactivity import Effect, ReactiveCycleError, Scope, untracked
 
 
 def test_state_value_and_helpers():

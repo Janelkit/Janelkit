@@ -1,11 +1,11 @@
 import pytest
 
-from fluxui.compiler.ast_nodes import EachBlock, Element, Expression, IfBlock, Interpolation, Text, dump
-from fluxui.compiler.sfc_parser import parse_sfc
-from fluxui.diagnostics import FluxError
+from janelkit.compiler.ast_nodes import EachBlock, Element, Expression, IfBlock, Interpolation, Text, dump
+from janelkit.compiler.sfc_parser import parse_sfc
+from janelkit.diagnostics import JanelError
 
 APP = """<script lang="python">
-from fluxui import state
+from janelkit import state
 count = state(0)
 </script>
 
@@ -22,9 +22,9 @@ count = state(0)
 """
 
 
-def parse_error(source: str) -> FluxError:
-    with pytest.raises(FluxError) as info:
-        parse_sfc(source, "App.flux")
+def parse_error(source: str) -> JanelError:
+    with pytest.raises(JanelError) as info:
+        parse_sfc(source, "App.janel")
     return info.value
 
 
@@ -32,7 +32,7 @@ def parse_error(source: str) -> FluxError:
 
 
 def test_extracts_sections_with_locations():
-    sfc = parse_sfc(APP, "App.flux")
+    sfc = parse_sfc(APP, "App.janel")
     assert sfc.script is not None and "count = state(0)" in sfc.script.content
     assert sfc.script.loc.line == 1
     assert sfc.style is not None and ".page" in sfc.style.content
@@ -41,7 +41,7 @@ def test_extracts_sections_with_locations():
 
 
 def test_template_keeps_original_line_numbers():
-    sfc = parse_sfc(APP, "App.flux")
+    sfc = parse_sfc(APP, "App.janel")
     window = sfc.root_elements[0]
     assert isinstance(window, Element) and window.tag == "Window"
     assert (window.loc.line, window.loc.column) == (6, 1)
@@ -53,7 +53,7 @@ def test_template_keeps_original_line_numbers():
 
 
 def test_crlf_is_normalized():
-    sfc = parse_sfc(APP.replace("\n", "\r\n"), "App.flux")
+    sfc = parse_sfc(APP.replace("\n", "\r\n"), "App.janel")
     assert sfc.root_elements[0].loc.line == 6
 
 
@@ -74,7 +74,7 @@ def test_non_python_script_is_rejected():
 
 
 def test_script_inside_comment_is_ignored():
-    sfc = parse_sfc("<!-- <script> -->\n<Window />", "App.flux")
+    sfc = parse_sfc("<!-- <script> -->\n<Window />", "App.janel")
     assert sfc.script is None
 
 
@@ -82,7 +82,7 @@ def test_script_inside_comment_is_ignored():
 
 
 def test_attributes_literal_expression_boolean_and_shorthand():
-    sfc = parse_sfc('<Button text="Hola" width={1 + 2} flat {enabled} on:click={go} />', "App.flux")
+    sfc = parse_sfc('<Button text="Hola" width={1 + 2} flat {enabled} on:click={go} />', "App.janel")
     attrs = {a.name: a.value for a in sfc.root_elements[0].attributes}
     assert attrs["text"] == "Hola"
     assert isinstance(attrs["width"], Expression) and attrs["width"].code == "1 + 2"
@@ -92,14 +92,14 @@ def test_attributes_literal_expression_boolean_and_shorthand():
 
 
 def test_expressions_may_contain_braces_inside_strings_and_dicts():
-    sfc = parse_sfc('<Text>{ {"a": "}"}["a"] }</Text>', "App.flux")
+    sfc = parse_sfc('<Text>{ {"a": "}"}["a"] }</Text>', "App.janel")
     interp = sfc.root_elements[0].children[0]
     assert isinstance(interp, Interpolation)
     assert interp.expression.code.strip() == '{"a": "}"}["a"]'
 
 
 def test_mixed_text_and_interpolations():
-    sfc = parse_sfc("<Button>Clicks: {count}!</Button>", "App.flux")
+    sfc = parse_sfc("<Button>Clicks: {count}!</Button>", "App.janel")
     kinds = [type(c) for c in sfc.root_elements[0].children]
     assert kinds == [Text, Interpolation, Text]
 
@@ -107,7 +107,7 @@ def test_mixed_text_and_interpolations():
 def test_if_else_blocks():
     sfc = parse_sfc(
         "<Column>\n{#if a}\n<Text>A</Text>\n{:else if b}\n<Text>B</Text>\n{:else}\n<Text>C</Text>\n{/if}\n</Column>",
-        "App.flux",
+        "App.janel",
     )
     block = [c for c in sfc.root_elements[0].children if isinstance(c, IfBlock)][0]
     assert [b.condition.code if b.condition else None for b in block.branches] == ["a", "b", None]
@@ -115,19 +115,19 @@ def test_if_else_blocks():
 
 
 def test_each_block_with_index_and_key():
-    sfc = parse_sfc("<Column>{#each items as item, i (item.id)}<Text>{item}</Text>{/each}</Column>", "App.flux")
+    sfc = parse_sfc("<Column>{#each items as item, i (item.id)}<Text>{item}</Text>{/each}</Column>", "App.janel")
     block = sfc.root_elements[0].children[0]
     assert isinstance(block, EachBlock)
     assert (block.iterable.code, block.item, block.index, block.key.code) == ("items", "item", "i", "item.id")
 
 
 def test_comments_are_skipped():
-    sfc = parse_sfc("<Column><!-- <Nope> --><Text /></Column>", "App.flux")
+    sfc = parse_sfc("<Column><!-- <Nope> --><Text /></Column>", "App.janel")
     assert [c.tag for c in sfc.root_elements[0].children if isinstance(c, Element)] == ["Text"]
 
 
 def test_dump_lists_nodes_with_positions():
-    out = dump(parse_sfc(APP, "App.flux"))
+    out = dump(parse_sfc(APP, "App.janel"))
     assert "<Window title=\"Mi app\" width={640}> @6:1" in out
     assert "{count} @9:" in out
 
@@ -192,6 +192,6 @@ def test_duplicate_attribute():
 def test_diagnostic_format_shows_source_line_and_caret():
     err = parse_error("<Window>\n  <Column>\n</Window>")
     text = str(err)
-    assert text.startswith("App.flux:3:1: error:")
+    assert text.startswith("App.janel:3:1: error:")
     assert "   3 | </Window>" in text
     assert "^" in text

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fluxui import run
+from janelkit import run
 
 if __name__ == "__main__":
-    raise SystemExit(run(Path(__file__).parent / "src" / "App.flux"))
+    raise SystemExit(run(Path(__file__).parent / "src" / "App.janel"))

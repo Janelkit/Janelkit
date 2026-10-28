@@ -1,0 +1,28 @@
+<script lang="python">
+# Tarjeta de una métrica: valor, gráfica de los últimos 60 s y aviso por umbral.
+from janelkit import event, prop
+from widgets.LineChart import LineChart
+
+series = prop()
+color = prop("#3b5bdb")
+expand = event()  # abrir la gráfica en una ventana aparte
+</script>
+
+<Column class="card" class:alert={series.alert.value} label={series.label}>
+  <Row class="head">
+    <Text class="label" flex={1}>{series.label}</Text>
+    <Text class="value">{series.text()}</Text>
+    <Button variant="ghost" on:click={expand.emit(series)} label={"Abrir " + series.label}>↗</Button>
+  </Row>
+  <LineChart values={series.history.value} max={series.max} color={color} unit={series.unit} capacity={series.capacity} height={70} class="chart" />
+</Column>
+
+<style>
+.chart { width: 100%; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; gap: 6px;
+        transition: background 300ms, border-color 300ms; }
+.alert { background: #33e03131; border-color: var(--danger); }
+.head { gap: 6px; }
+.label { color: var(--text-muted); }
+.value { font-weight: 600; font-size: var(--font-size-lg); }
+</style>

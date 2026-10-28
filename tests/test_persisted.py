@@ -1,18 +1,18 @@
-"""persisted(clave, valor): estado que se recuerda entre sesiones (fluxui/storage.py)."""
+"""persisted(clave, valor): estado que se recuerda entre sesiones (janelkit/storage.py)."""
 import json
 import tempfile
 from pathlib import Path
 
 import pytest
 
-from fluxui import Persisted, computed, persisted, storage
-from fluxui.inspect import mount
+from janelkit import Persisted, computed, persisted, storage
+from janelkit.inspect import mount
 
 
 @pytest.fixture
 def data(tmp_path, monkeypatch):
     monkeypatch.setenv(storage.DATA_ENV, str(tmp_path))
-    storage.use_app(tmp_path / "App.flux")
+    storage.use_app(tmp_path / "App.janel")
     yield tmp_path
     storage.flush_all()
     storage._registry.clear()
@@ -31,7 +31,7 @@ def test_reads_the_initial_value_saves_changes_and_reads_them_back(data):
     assert seen.value == "OSCURO"  # sigue siendo un state reactivo
     tema.flush()
     assert saved(data, "prefs.tema") == "oscuro"
-    storage.use_app(data / "App.flux")  # otra sesión
+    storage.use_app(data / "App.janel")  # otra sesión
     assert persisted("prefs.tema", "claro").value == "oscuro"
 
 
@@ -67,14 +67,14 @@ def test_in_an_app_writes_are_grouped_and_mount_uses_a_temporary_folder(monkeypa
     monkeypatch.delenv(storage.DATA_ENV, raising=False)
     d = Path(tempfile.mkdtemp()) / "notas" / "src"
     d.mkdir(parents=True)
-    (d / "App.flux").write_text("""<script>
-from fluxui import persisted
+    (d / "App.janel").write_text("""<script>
+from janelkit import persisted
 n = persisted("n", 0)
 </script>
 <Column><Button text={f"n={n}"} on:click={n += 1} /></Column>""", encoding="utf-8")
-    with mount(d / "App.flux") as app:
+    with mount(d / "App.janel") as app:
         folder = storage.data_folder()
-        assert folder.name.startswith("fluxui-data-")  # no la carpeta real del usuario
+        assert folder.name.startswith("janelkit-data-")  # no la carpeta real del usuario
         for _ in range(3):
             app.find("Button").click()
         assert not (folder / "n.json").exists()  # agrupado: todavía no se ha escrito
@@ -86,7 +86,7 @@ n = persisted("n", 0)
 
 def test_app_name_comes_from_the_project_folder(monkeypatch):
     monkeypatch.delenv(storage.DATA_ENV, raising=False)
-    storage.use_app(Path("/x/gestor/src/App.flux"))
+    storage.use_app(Path("/x/gestor/src/App.janel"))
     assert storage.data_folder().name == "gestor"
-    storage.use_app(Path("/x/contador/App.flux"))
+    storage.use_app(Path("/x/contador/App.janel"))
     assert storage.data_folder().name == "contador"

@@ -1,14 +1,14 @@
-# Retos para poner FluxUI al límite
+# Retos para poner JanelKit al límite
 
-Seis aplicaciones pensadas para encontrar los límites del framework antes de publicarlo. Ninguna es un ejemplo "bonito": cada una apunta a un tipo de aplicación de escritorio real que FluxUI debería poder hacer, y está elegida para que choque con lo que **todavía no existe** o con lo que **no se ha medido**.
+Seis aplicaciones pensadas para encontrar los límites del framework antes de publicarlo. Ninguna es un ejemplo "bonito": cada una apunta a un tipo de aplicación de escritorio real que JanelKit debería poder hacer, y está elegida para que choque con lo que **todavía no existe** o con lo que **no se ha medido**.
 
-El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es FluxUI un framework completo para escritorio o le faltan piezas importantes?*
+El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es JanelKit un framework completo para escritorio o le faltan piezas importantes?*
 
 ## Cómo construirlos
 
-- **Solo con la API pública** ([api.md](api.md)). Si algo exige tocar `fluxui.runtime`, el QML generado o Qt directamente, eso ya es un hallazgo.
-- **Primero en `.flux` puro.** Si no alcanza, se permite la vía de escape (un `.qml` propio, ver [lenguaje.md](lenguaje.md#elementos-propios-en-qml)), pero se anota como carencia: lo que muchas aplicaciones necesitan no debería exigir QML.
-- **Con pruebas** usando `fluxui.inspect`, como hace cualquier usuario.
+- **Solo con la API pública** ([api.md](api.md)). Si algo exige tocar `janelkit.runtime`, el QML generado o Qt directamente, eso ya es un hallazgo.
+- **Primero en `.janel` puro.** Si no alcanza, se permite la vía de escape (un `.qml` propio, ver [lenguaje.md](lenguaje.md#elementos-propios-en-qml)), pero se anota como carencia: lo que muchas aplicaciones necesitan no debería exigir QML.
+- **Con pruebas** usando `janelkit.inspect`, como hace cualquier usuario.
 - **Medir**, no opinar: tiempos con `tools/bench_app.py` como referencia y uso de memoria con el administrador de tareas.
 - Cada reto vive en `examples/challenges/<nombre>/` y termina con su **registro de hallazgos** (plantilla al final).
 
@@ -17,11 +17,11 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 | # | Reto | Estado | Resultado |
 |---|---|---|---|
 | 4 | Chat | ✅ | [examples/challenges/chat](../examples/challenges/chat/) · [hallazgos](../examples/challenges/chat/HALLAZGOS.md). Se añadieron al núcleo el desplazamiento de `<List>`, `<Text format>`, eventos de ventana y `notify`; quedan temporizadores, texto seleccionable y Markdown seguro. |
-| 1 | Panel | ✅ | [examples/challenges/panel](../examples/challenges/panel/) · [hallazgos](../examples/challenges/panel/HALLAZGOS.md). Se añadieron al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`, y se corrigieron cuatro fallos (listas modificadas en el sitio que no llegaban a QML, scroll perdido al reordenar, `flex` en QML propio, `flux build` con ventanas); quedan gráficas (fluxui-kit), rejilla con salto de línea y tabla. |
+| 1 | Panel | ✅ | [examples/challenges/panel](../examples/challenges/panel/) · [hallazgos](../examples/challenges/panel/HALLAZGOS.md). Se añadieron al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`, y se corrigieron cuatro fallos (listas modificadas en el sitio que no llegaban a QML, scroll perdido al reordenar, `flex` en QML propio, `janel build` con ventanas); quedan gráficas (janelkit-kit), rejilla con salto de línea y tabla. |
 | 3 | Kanban | ✅ | [examples/challenges/kanban](../examples/challenges/kanban/) · [hallazgos](../examples/challenges/kanban/HALLAZGOS.md). Se añadió al núcleo arrastrar y soltar (`draggable`, `on:dragstart/dragover/drop/dragend`, `:dragging`, `:drag-over`, desplazamiento al acercarse al borde) y en `inspect` doble clic, clic derecho, teclas y arrastre; se corrigió que los eventos de puntero no llegaran a las filas de `<List>`. Arrastrar con 20 × 200 cuesta lo mismo que un fotograma vacío. Una fila que pasa a otra lista de la misma declaración `{#each}` se traslada con su estado y su foco (la tarjeta conserva su estado al cambiar de columna). Quedan `<Menu>` y la memoria por elemento (~0,65 MB por tarjeta, antes ~0,77; ver la fila de la tabla de abajo). |
 | 2 | Hoja de cálculo | ⏳ | |
 | 5 | Editor | ⏳ | |
-| 6 | Gestor de proyectos | ✅ | [examples/challenges/gestor](../examples/challenges/gestor/) · [hallazgos](../examples/challenges/gestor/HALLAZGOS.md). Antes de empezar se añadió al núcleo la navegación básica (`sections`, `navigation()`, `await push`/`back`, Alt+← y botón del ratón, `before_leave`, `{#hidden}`, transiciones de página). Durante el reto: las cajas ocultas ya no se recolocan (cambiar de pestaña con 200 tarjetas, de 239 a 5 ms), `pop`/`reset` se pueden esperar, y en `inspect` se corrigió aceptar un `confirm` y que dos apps con módulos del mismo nombre se mezclaran. Todas las medidas de «Hecho cuando» se cumplen y la memoria no crece. Quedan adelante y rutas (`fluxui-router`), otra ventana con su propia pila y parte del plan (pestaña Lista, ajustes de etiquetas y columnas). |
+| 6 | Gestor de proyectos | ✅ | [examples/challenges/gestor](../examples/challenges/gestor/) · [hallazgos](../examples/challenges/gestor/HALLAZGOS.md). Antes de empezar se añadió al núcleo la navegación básica (`sections`, `navigation()`, `await push`/`back`, Alt+← y botón del ratón, `before_leave`, `{#hidden}`, transiciones de página). Durante el reto: las cajas ocultas ya no se recolocan (cambiar de pestaña con 200 tarjetas, de 239 a 5 ms), `pop`/`reset` se pueden esperar, y en `inspect` se corrigió aceptar un `confirm` y que dos apps con módulos del mismo nombre se mezclaran. Todas las medidas de «Hecho cuando» se cumplen y la memoria no crece. Quedan adelante y rutas (`janelkit-router`), otra ventana con su propia pila y parte del plan (pestaña Lista, ajustes de etiquetas y columnas). |
 
 ## Resumen
 
@@ -32,7 +32,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 | 3 | Tablero Kanban | Arrastrar y soltar, reordenar con animación, menús contextuales | Drag and drop, eventos de puntero, menús |
 | 4 | Cliente de chat | Conexión permanente, lista que crece por los dos extremos, texto enriquecido | Control del desplazamiento, notificaciones del sistema, texto enriquecido |
 | 5 | Editor de código ligero | Documentos grandes, pestañas, árbol de archivos, cierre con cambios sin guardar | Árbol, editor con resaltado, interceptar el cierre de ventana, preferencias persistentes |
-| 6 | Gestor de proyectos | Varias pantallas con navegación, estado compartido entre vistas y ventanas, formularios de gestión | Enrutador (`fluxui-router`), conservar vistas ocultas, eventos en los campos |
+| 6 | Gestor de proyectos | Varias pantallas con navegación, estado compartido entre vistas y ventanas, formularios de gestión | Enrutador (`janelkit-router`), conservar vistas ocultas, eventos en los campos |
 
 ---
 
@@ -73,8 +73,8 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 | Reactividad a gran escala | Una celda con dependencias que cambia y recalcula cientos de fórmulas | `computed` por celda: sin medir con miles de nodos |
 | Teclado | Flechas, Tab, Intro, Esc, Mayús+flechas sobre celdas | **No existe** `on:keydown`; solo `<Shortcut>` global |
 | Edición en el sitio | Pasar de mostrar a editar una celda y volver, con el foco correcto | `ref.focus()` existe; falta gestionar el foco entre muchos elementos |
-| Portapapeles | Copiar y pegar rangos como texto tabulado | ✅ `fluxui.clipboard` (texto); falta probar el reto de rangos tabulados |
-| Deshacer / rehacer | Historial de cambios de celdas | No existe en el núcleo (previsto en `fluxui-store`, proyecto aparte) |
+| Portapapeles | Copiar y pegar rangos como texto tabulado | ✅ `janelkit.clipboard` (texto); falta probar el reto de rangos tabulados |
+| Deshacer / rehacer | Historial de cambios de celdas | No existe en el núcleo (previsto en `janelkit-store`, proyecto aparte) |
 | Selección con el ratón | Arrastrar para seleccionar un rango | Solo hay `on:click`: faltan eventos de puntero |
 
 **Hecho cuando**
@@ -83,7 +83,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 - Editar una celda de la que dependen 1 000 fórmulas actualiza la vista en menos de 100 ms.
 - Todo el flujo (navegar, editar, seleccionar, copiar, pegar, deshacer) funciona sin ratón.
 
-**Hipótesis de carencias:** un elemento de tabla virtualizado (`<Table>` sobre `TableView`), `on:keydown`/`on:keyup` con tecla y modificadores, `fluxui.clipboard`, eventos de puntero (`on:press`, `on:drag`), y quizá un `computed` más barato cuando hay miles.
+**Hipótesis de carencias:** un elemento de tabla virtualizado (`<Table>` sobre `TableView`), `on:keydown`/`on:keyup` con tecla y modificadores, `janelkit.clipboard`, eventos de puntero (`on:press`, `on:drag`), y quizá un `computed` más barato cuando hay miles.
 
 ---
 
@@ -135,13 +135,13 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 - Cargar el historial (bloques de 50) mantiene el mensaje visible en el mismo sitio de la pantalla.
 - Cortar el servidor y volver a levantarlo reconecta sin perder mensajes ni bloquear la interfaz.
 
-**Hipótesis de carencias:** control del scroll en `<List>` (`scroll_to_end`, `scroll_to(clave)`, anclaje al insertar arriba), `<Text rich>` o un elemento Markdown, `on:link`, `fluxui.notify`/bandeja, eventos de ventana (`on:activate`, `on:close`).
+**Hipótesis de carencias:** control del scroll en `<List>` (`scroll_to_end`, `scroll_to(clave)`, anclaje al insertar arriba), `<Text rich>` o un elemento Markdown, `on:link`, `janelkit.notify`/bandeja, eventos de ventana (`on:activate`, `on:close`).
 
 ---
 
 ## 5. Editor de código ligero
 
-**La aplicación.** Un editor para proyectos pequeños: árbol de carpetas a la izquierda (expandible, con iconos y menú contextual: nuevo, renombrar, borrar), pestañas de documentos abiertos con marca de "sin guardar", editor con números de línea y resaltado de sintaxis para Python y `.flux`, buscar y reemplazar en el archivo y en todo el proyecto (en segundo plano, con resultados que van apareciendo), paleta de comandos (Ctrl+Shift+P), preferencias (tema, tamaño de letra, idioma) que se guardan entre sesiones, y aviso al cerrar la ventana si hay cambios sin guardar. Se distribuye como ejecutable con la receta de [empaquetado.md](empaquetado.md).
+**La aplicación.** Un editor para proyectos pequeños: árbol de carpetas a la izquierda (expandible, con iconos y menú contextual: nuevo, renombrar, borrar), pestañas de documentos abiertos con marca de "sin guardar", editor con números de línea y resaltado de sintaxis para Python y `.janel`, buscar y reemplazar en el archivo y en todo el proyecto (en segundo plano, con resultados que van apareciendo), paleta de comandos (Ctrl+Shift+P), preferencias (tema, tamaño de letra, idioma) que se guardan entre sesiones, y aviso al cerrar la ventana si hay cambios sin guardar. Se distribuye como ejecutable con la receta de [empaquetado.md](empaquetado.md).
 
 **Qué pone a prueba**
 
@@ -163,11 +163,11 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 - Cerrar la ventana con cambios pregunta y permite cancelar; las preferencias sobreviven a reiniciar la aplicación.
 - El ejecutable funciona en un equipo sin Python.
 
-**Hipótesis de carencias:** `<CodeEditor>` o un editor de texto con resaltado y números de línea, `<Tree>`, un modo de `{#if}`/pestañas que oculte en lugar de destruir (`keep-alive`), `on:close` cancelable en `<Window>`, `fluxui.settings`, y generadores asíncronos para ir mostrando resultados.
+**Hipótesis de carencias:** `<CodeEditor>` o un editor de texto con resaltado y números de línea, `<Tree>`, un modo de `{#if}`/pestañas que oculte en lugar de destruir (`keep-alive`), `on:close` cancelable en `<Window>`, `janelkit.settings`, y generadores asíncronos para ir mostrando resultados.
 
 ## 6. Gestor de proyectos
 
-**Estado: hecho** ([examples/challenges/gestor](../examples/challenges/gestor/), [hallazgos](../examples/challenges/gestor/HALLAZGOS.md)). Nació al ampliar el Kanban (reto 3): de un tablero suelto a una aplicación con varias pantallas. Estaba en espera de `fluxui-router`; al revisar el alcance, la navegación fundamental (secciones, pila desde cualquier página, resultados, atrás, guardas, vistas que se conservan) pasó al núcleo, y el enrutado (rutas, historial con adelante, restaurar) sigue siendo `fluxui-router`. La tabla de abajo es la de partida; cómo quedó cada necesidad está en los hallazgos.
+**Estado: hecho** ([examples/challenges/gestor](../examples/challenges/gestor/), [hallazgos](../examples/challenges/gestor/HALLAZGOS.md)). Nació al ampliar el Kanban (reto 3): de un tablero suelto a una aplicación con varias pantallas. Estaba en espera de `janelkit-router`; al revisar el alcance, la navegación fundamental (secciones, pila desde cualquier página, resultados, atrás, guardas, vistas que se conservan) pasó al núcleo, y el enrutado (rutas, historial con adelante, restaurar) sigue siendo `janelkit-router`. La tabla de abajo es la de partida; cómo quedó cada necesidad está en los hallazgos.
 
 **La aplicación.** Un gestor de proyectos para un equipo pequeño, todo local, en un archivo JSON.
 
@@ -187,7 +187,7 @@ Las tarjetas guardan ids de personas y etiquetas, no nombres: renombrar una pers
 
 **Por qué necesita un enrutador.** Con lo que hay en el núcleo (`pages`, una pila; `{#if}`; `<Tabs>`) se podría montar a mano, pero el reto quedaría midiendo los rodeos y no la aplicación:
 
-| Necesidad | Con `pages` y `{#if}` | Lo que pediría a `fluxui-router` |
+| Necesidad | Con `pages` y `{#if}` | Lo que pediría a `janelkit-router` |
 |---|---|---|
 | Rutas con parámetros (`/proyectos/:id/tablero`, `/personas/:id`) | La página recibe props al apilarla; no hay una dirección que guardar o compartir | Rutas con nombre y parámetros, y la ruta actual como estado reactivo |
 | Atrás **y adelante** (Alt+←/→, botones del ratón) | Solo atrás (`pop`); adelante se pierde | Historial con las dos direcciones |
@@ -205,8 +205,8 @@ Las tarjetas guardan ids de personas y etiquetas, no nombres: renombrar una pers
 | Estado compartido entre vistas y ventanas | La misma tarjeta en el tablero, la lista, «Mi trabajo» y otra ventana | Colecciones reactivas + `provide`: debería funcionar; sin medir con varias ventanas |
 | `computed` que cruza todos los proyectos | «Mi trabajo» y los contadores de cada proyecto recorren miles de tarjetas | Sin medir |
 | Formularios de gestión | Validación, edición en línea, guardar al salir del campo | `<TextField>` sin `on:keydown` ni `on:blur` (reto 3, hallazgo 14) |
-| Tabla ordenable y editable | Ordenar sin perder la posición, editar con `<Select>` en la fila | Hecha con `<List>` y `<flex>`, como en el reto 1 (la tabla de datos es de `fluxui-kit`) |
-| Fechas | Elegir y validar una fecha | Sin selector (`fluxui-kit`): `<TextField>` con formato `AAAA-MM-DD` |
+| Tabla ordenable y editable | Ordenar sin perder la posición, editar con `<Select>` en la fila | Hecha con `<List>` y `<flex>`, como en el reto 1 (la tabla de datos es de `janelkit-kit`) |
+| Fechas | Elegir y validar una fecha | Sin selector (`janelkit-kit`): `<TextField>` con formato `AAAA-MM-DD` |
 | Borrados en cascada | Personas, etiquetas, columnas o proyectos referenciados | De la aplicación |
 | Memoria al navegar | Abrir y cerrar proyectos una y otra vez | Lo cerrado debe liberarse; la memoria por elemento ya es alta (reto 3) |
 
@@ -217,7 +217,7 @@ Las tarjetas guardan ids de personas y etiquetas, no nombres: renombrar una pers
 - Atrás, adelante y los enlaces de «Mi trabajo» llevan siempre a la vista correcta, también en una segunda ventana.
 - Toda acción se puede deshacer, y todo se puede hacer con el teclado.
 
-**Hipótesis de carencias:** `fluxui-router` (rutas con parámetros, historial, rutas anidadas, guardas), conservar vistas ocultas (`keep-alive`), eventos de teclado y foco en los campos, `<Menu>`, y el coste de `computed` con colecciones grandes.
+**Hipótesis de carencias:** `janelkit-router` (rutas con parámetros, historial, rutas anidadas, guardas), conservar vistas ocultas (`keep-alive`), eventos de teclado y foco en los campos, `<Menu>`, y el coste de `computed` con colecciones grandes.
 
 ---
 
@@ -234,15 +234,15 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 | Trasladar una fila entre dos `{#each}` sin recrearla (conserva su estado) | 3, 6 | ✅ Núcleo (reto 3): misma declaración, misma clave, mismo cambio ([lenguaje.md](lenguaje.md#trasladar-filas-entre-listas)) |
 | Memoria por elemento (~30–35 KB por `<Text>` o `<flex>`) | 3 | Núcleo · ✅ primera pasada: el texto heredado crea un enlace por propiedad usada (antes once siempre), `<Text>` es un `Text` y no un `Label`, y las cajas no interactivas no pagan hover, pulsado, foco ni bordes. Una tarjeta con estilos, −22 %; el tablero 20 × 200, de 282 a 249 MB; mismo tiempo de creación. Queda lo estructural: cada `{#if}`/`{#each}` es un `Repeater` (~8,5 KB vacío y ~8 KB más por fila) |
 | Conservar contenido oculto (`keep-alive`) | 5, 6 | ✅ Núcleo (reto 6): `{#hidden}`, secciones y la página de debajo; lo oculto no se recoloca ni recalcula lo que muestra hasta volver a verse (reto 6) |
-| Enrutado con parámetros, historial y rutas anidadas | 6 | `fluxui-router`. El núcleo da la navegación básica (reto 6): `pages`, `sections`, `navigation()`, resultados, atrás y `before_leave` |
-| Portapapeles, notificaciones, bandeja, ajustes | 2, 4, 5 | Núcleo, como módulos pequeños (`fluxui.clipboard`, …) · ✅ `notify` (reto 4) · ✅ `clipboard` (texto) |
+| Enrutado con parámetros, historial y rutas anidadas | 6 | `janelkit-router`. El núcleo da la navegación básica (reto 6): `pages`, `sections`, `navigation()`, resultados, atrás y `before_leave` |
+| Portapapeles, notificaciones, bandeja, ajustes | 2, 4, 5 | Núcleo, como módulos pequeños (`janelkit.clipboard`, …) · ✅ `notify` (reto 4) · ✅ `clipboard` (texto) |
 | Temporizadores ligados al componente | 1, 4 | ✅ Núcleo: `interval`, `timeout` (reto 1) |
 | Texto seleccionable | 4, 5 | Núcleo |
-| Tabla 2D y árbol virtualizados | 1, 2, 5 | Núcleo o `fluxui-kit` · el reto 1 hizo su tabla con `<List>` y anchos repetidos en cabecera y filas |
-| Canvas, gráficas, editor de código | 1, 5 | `fluxui-kit` (sobre la vía de escape QML) · el reto 1 hizo su gráfica en QML propio sin problemas |
+| Tabla 2D y árbol virtualizados | 1, 2, 5 | Núcleo o `janelkit-kit` · el reto 1 hizo su tabla con `<List>` y anchos repetidos en cabecera y filas |
+| Canvas, gráficas, editor de código | 1, 5 | `janelkit-kit` (sobre la vía de escape QML) · el reto 1 hizo su gráfica en QML propio sin problemas |
 | Rejilla con salto de línea (tarjetas que se recolocan según el ancho) | 1 | ✅ Núcleo: `flex-wrap` en `<flex>`, `Column` y `Row` ([flex.md](flex.md), fase 1) |
 | Texto enriquecido | 4 | ✅ Núcleo: `<Text format="markdown">` (reto 4) |
-| Deshacer/rehacer y stores | 2, 3 | `fluxui-store` · el reto 3 lo hizo en la aplicación con operaciones que devuelven su inversa (~100 líneas) |
+| Deshacer/rehacer y stores | 2, 3 | `janelkit-store` · el reto 3 lo hizo en la aplicación con operaciones que devuelven su inversa (~100 líneas) |
 
 ## Registro de hallazgos (plantilla)
 
@@ -271,4 +271,4 @@ Cada reto termina con un `HALLAZGOS.md` en su carpeta:
 1. **Chat (4)** y **Panel (1):** ponen a prueba la asincronía y la frecuencia de actualización, lo más nuevo y menos medido.
 2. **Kanban (3):** destapa las carencias de interacción (arrastrar, menús, gestos), que afectan al diseño del lenguaje.
 3. **Hoja de cálculo (2)** y **Editor (5):** los más exigentes; conviene abordarlos cuando las decisiones de los anteriores estén tomadas.
-4. **Gestor de proyectos (6):** ✅ hecho con la navegación básica del núcleo; servirá para validar `fluxui-router` cuando exista.
+4. **Gestor de proyectos (6):** ✅ hecho con la navegación básica del núcleo; servirá para validar `janelkit-router` cuando exista.

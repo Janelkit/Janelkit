@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from fluxui.compiler import compile_source
-from fluxui.diagnostics import FluxError
-from fluxui.inspect import mount
+from janelkit.compiler import compile_source
+from janelkit.diagnostics import JanelError
+from janelkit.inspect import mount
 
 FLEX = Path(__file__).parent.parent / "examples" / "flex"
 
@@ -18,8 +18,8 @@ def app_from():
 
     def run(source: str):
         d = Path(tempfile.mkdtemp())
-        (d / "App.flux").write_text(source, encoding="utf-8")
-        ctx = mount(d / "App.flux")
+        (d / "App.janel").write_text(source, encoding="utf-8")
+        ctx = mount(d / "App.janel")
         app = ctx.__enter__()
         apps.append(ctx)
         app.window.resize(300, 300)
@@ -36,7 +36,7 @@ def color(el, prop="color"):
 
 
 ROWS = """<script>
-from fluxui import state
+from janelkit import state
 items = state(["a", "b", "c"])
 </script>
 <Column>
@@ -71,11 +71,11 @@ def test_hover_pressed_and_descendant_states(app_from):
     a, b, c = rows(app)
     b.hover()
     assert color(b) == "#ff0000" and color(c) == "#ffffff"
-    assert b.prop("fxShadow") is True and b.prop("fxShadowBlur") == 8
+    assert b.prop("jkShadow") is True and b.prop("jkShadowBlur") == 8
     acciones = {e.label: e for e in app.elements() if (e.label or "").startswith("acc-")}
     assert acciones["acc-b"].prop("opacity") == 1 and acciones["acc-c"].prop("opacity") == 0
     b.press()
-    assert b.prop("scale") == 0.5 and b.prop("fxTy") == 3
+    assert b.prop("scale") == 0.5 and b.prop("jkTy") == 3
     b.release()
     assert b.prop("scale") == 1
     b.unhover()
@@ -84,16 +84,16 @@ def test_hover_pressed_and_descendant_states(app_from):
 
 def test_first_and_last_child_follow_the_list(app_from):
     app = app_from(ROWS)
-    assert [r.prop("fxBorderTop") for r in rows(app)] == [3, -1, -1]
-    assert [r.prop("fxBorderBottom") for r in rows(app)] == [-1, -1, 2]
+    assert [r.prop("jkBorderTop") for r in rows(app)] == [3, -1, -1]
+    assert [r.prop("jkBorderBottom") for r in rows(app)] == [-1, -1, 2]
     app.find(text="quitar").click()
     app.wait(0.05)
-    assert [(r.label, r.prop("fxBorderTop")) for r in rows(app)] == [("b", 3), ("c", -1)]
+    assert [(r.label, r.prop("jkBorderTop")) for r in rows(app)] == [("b", 3), ("c", -1)]
 
 
 def test_conditional_class_on_ancestor_reaches_descendants(app_from):
     app = app_from("""<script>
-from fluxui import state
+from janelkit import state
 sel = state(False)
 </script>
 <Column>
@@ -105,14 +105,14 @@ sel = state(False)
 .fila.sel Text { color: #ff0000; }
 </style>""")
     t = app.find("Text", text="hola")
-    assert color(t, "fxColor") != "#ff0000"
+    assert color(t, "jkColor") != "#ff0000"
     app.find(text="elegir").click()
-    assert color(t, "fxColor") == "#ff0000"
+    assert color(t, "jkColor") == "#ff0000"
 
 
 def test_dynamic_classes_compound_with_states(app_from):
     app = app_from("""<script>
-from fluxui import state
+from janelkit import state
 v = state("primary")
 </script>
 <Column>
@@ -138,11 +138,11 @@ def test_focus_visible_outline_replaces_the_default_ring(app_from):
 </Column>
 <style>.boton:focus-visible { outline: 2px solid #ff0000; outline-offset: 2px; }</style>""")
     b = app.find(label="boton")
-    assert b.prop("fxOutlineWidth") == 0
+    assert b.prop("jkOutlineWidth") == 0
     b.focus()
-    assert b.prop("fxOutlineWidth") == 2 and b.prop("fxOutlineOffset") == 2
-    assert b.prop("fxKeyFocus") is True and b.prop("fxFocusRing") is False  # sin el borde de siempre
-    assert b.item.property("fxOutlineItem") is not None
+    assert b.prop("jkOutlineWidth") == 2 and b.prop("jkOutlineOffset") == 2
+    assert b.prop("jkKeyFocus") is True and b.prop("jkFocusRing") is False  # sin el borde de siempre
+    assert b.item.property("jkOutlineItem") is not None
 
 
 def test_disabled_and_checked_states(app_from):
@@ -166,17 +166,17 @@ def test_cursor_and_transform_on_controls_compile():
 .t { cursor: text; transform: rotate(5deg) translateX(2px); transition: transform 100ms; }
 .f { cursor: pointer; transform: scale(1.1); }
 </style>""").qml
-    assert "property int fxCursor: Qt.IBeamCursor" in qml and "cursorShape: fxs0.fxCursor" in qml
-    assert "transform: Translate { x: fxs0.fxTx; y: fxs0.fxTy }" in qml
-    assert "rotation: 5" in qml and "property real fxTx: 2" in qml
-    assert "Behavior on fxTx" in qml
-    assert "fxCursor: Qt.PointingHandCursor" in qml and "scale: 1.1" in qml
+    assert "property int jkCursor: Qt.IBeamCursor" in qml and "cursorShape: jks0.jkCursor" in qml
+    assert "transform: Translate { x: jks0.jkTx; y: jks0.jkTy }" in qml
+    assert "rotation: 5" in qml and "property real jkTx: 2" in qml
+    assert "Behavior on jkTx" in qml
+    assert "jkCursor: Qt.PointingHandCursor" in qml and "scale: 1.1" in qml
 
 
 def test_selector_errors_and_warnings():
-    with pytest.raises(FluxError, match="pseudo-clase no soportada: ':visited'"):
+    with pytest.raises(JanelError, match="pseudo-clase no soportada: ':visited'"):
         compile_source("<Column />\n<style>.a:visited { color: red; }</style>")
-    with pytest.raises(FluxError, match="selector incompleto"):
+    with pytest.raises(JanelError, match="selector incompleto"):
         compile_source("<Column />\n<style>.a > { color: red; }</style>")
     c = compile_source("""<Column><flex class="f" /></Column>
 <style>.f { box-shadow: 0 1px 2px #000, 0 4px 8px #000; }</style>""")
@@ -193,13 +193,13 @@ def test_child_combinator_only_matches_direct_children():
 
 
 def test_catalog_card_lifts_and_shows_actions_on_hover():
-    with mount(FLEX / "src" / "App.flux") as app:
+    with mount(FLEX / "src" / "App.janel") as app:
         app.window.resize(900, 600)
         app.wait(0.1)
         card = app.find_all("Tarjeta")[1]
         card.hover()
         app.wait(0.3)  # transiciones de 150 ms
-        assert card.item.property("fxTy") == -2 and card.item.property("fxShadow") is True
+        assert card.item.property("jkTy") == -2 and card.item.property("jkShadow") is True
         abrir = [e for e in app.find_all(label="Abrir") if e.tag == "Boton"][1]
         assert abrir.item.parentItem().parentItem().property("opacity") == 1  # .acciones
         abrir.hover()

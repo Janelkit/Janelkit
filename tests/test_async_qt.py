@@ -6,21 +6,21 @@ import threading
 from conftest import click as press
 from conftest import find, texts
 
-from fluxui import background, spawn, state, task
+from janelkit import background, spawn, state, task
 
 
 def click(item):
     press(item)
 
 
-def settle(flux_app, seconds: float = 0.05):
+def settle(janel_app, seconds: float = 0.05):
     """Deja correr el bucle de asyncio (integrado con Qt) un momento."""
-    flux_app.run_until(asyncio.sleep(seconds))
+    janel_app.run_until(asyncio.sleep(seconds))
 
 
 ASYNC_APP = """<script>
 import asyncio
-from fluxui import state, task, background, on_mount
+from janelkit import state, task, background, on_mount
 import threading
 
 status = state("listo")
@@ -44,7 +44,7 @@ def heavy(n):
 
 async def compute():
     result, thread = await background(heavy, 21)
-    log.value.append((result, thread.startswith("fluxui-background")))
+    log.value.append((result, thread.startswith("janelkit-background")))
 
 @on_mount
 async def started():
@@ -67,67 +67,67 @@ async def started():
 """
 
 
-def test_async_handler_runs_without_blocking(mount, flux_app):
+def test_async_handler_runs_without_blocking(mount, janel_app):
     m = mount(ASYNC_APP)
     ns = m.instance.namespace
     click(find(m, "save"))
-    settle(flux_app)
+    settle(janel_app)
     assert ns["status"].value == "guardando"  # esperando: la interfaz sigue viva
     ns["gate"].set()
-    settle(flux_app)
+    settle(janel_app)
     assert ns["status"].value == "guardado" and find(m, "save").property("text") == "guardado"
 
 
-def test_task_exposes_loading_error_and_value(mount, flux_app):
+def test_task_exposes_loading_error_and_value(mount, janel_app):
     m = mount(ASYNC_APP)
     click(find(m, "load"))
     assert texts(m) == ["Cargando…"]
-    settle(flux_app)
+    settle(janel_app)
     assert texts(m) == ["hola, HOLA"]
     click(find(m, "bad"))
-    settle(flux_app)
+    settle(janel_app)
     assert texts(m) == ["Error: consulta no válida"]
 
 
-def test_background_runs_in_another_thread(mount, flux_app):
+def test_background_runs_in_another_thread(mount, janel_app):
     m = mount(ASYNC_APP)
     click(find(m, "compute"))
-    settle(flux_app, 0.2)
+    settle(janel_app, 0.2)
     assert (42, True) in m.instance.namespace["log"].value
 
 
-def test_async_on_mount(mount, flux_app):
+def test_async_on_mount(mount, janel_app):
     m = mount(ASYNC_APP)
-    settle(flux_app)
+    settle(janel_app)
     assert "montado" in m.instance.namespace["log"].value
 
 
-def test_unmount_cancels_pending_work(mount, flux_app):
+def test_unmount_cancels_pending_work(mount, janel_app):
     m = mount(ASYNC_APP)
     ns = m.instance.namespace
     click(find(m, "save"))
     click(find(m, "load"))
-    settle(flux_app, 0)
-    flux_app.unmount(m)
+    settle(janel_app, 0)
+    janel_app.unmount(m)
     ns["gate"].set()
-    settle(flux_app)
+    settle(janel_app)
     assert ns["status"].value == "guardando"  # la corrutina se canceló antes de terminar
     assert ns["load"].loading is False and ns["load"].value is None
 
 
-def test_errors_in_async_handlers_are_reported(mount, flux_app, caplog):
+def test_errors_in_async_handlers_are_reported(mount, janel_app, caplog):
     m = mount(
         "<script>\nasync def boom():\n    raise RuntimeError('fallo async')\n</script>\n"
         '<Button id="b" on:click={boom}>x</Button>'
     )
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
         click(find(m, "b"))
-        settle(flux_app)
+        settle(janel_app)
     assert "error en el manejador on:click: RuntimeError: fallo async" in caplog.text
-    assert "App.flux:5" in caplog.text
+    assert "App.janel:5" in caplog.text
 
 
-def test_task_run_cancels_the_previous_run(flux_app):
+def test_task_run_cancels_the_previous_run(janel_app):
     seen = []
 
     @task
@@ -138,21 +138,21 @@ def test_task_run_cancels_the_previous_run(flux_app):
 
     slow.run(1)
     slow.run(2)
-    settle(flux_app)
+    settle(janel_app)
     assert seen == [2] and slow.value == 2 and not slow.loading
 
 
-def test_spawn_outside_components_logs_errors(flux_app, caplog):
+def test_spawn_outside_components_logs_errors(janel_app, caplog):
     async def boom():
         raise KeyError("x")
 
-    with caplog.at_level(logging.ERROR, logger="fluxui"):
+    with caplog.at_level(logging.ERROR, logger="janelkit"):
         spawn(boom())
-        settle(flux_app)
+        settle(janel_app)
     assert "error en una tarea asíncrona: KeyError" in caplog.text
 
 
-def test_background_result_is_applied_in_the_ui_thread(flux_app):
+def test_background_result_is_applied_in_the_ui_thread(janel_app):
     s = state(None)
     main = threading.current_thread()
 
@@ -160,29 +160,29 @@ def test_background_result_is_applied_in_the_ui_thread(flux_app):
         value = await background(lambda: threading.current_thread() is main)
         s.value = (value, threading.current_thread() is main)
 
-    flux_app.run_until(work())
+    janel_app.run_until(work())
     assert s.value == (False, True)
 
 
-def test_exec_runs_the_asyncio_loop(flux_app, monkeypatch):
+def test_exec_runs_the_asyncio_loop(janel_app, monkeypatch):
     """exec() usa el bucle integrado: una corrutina programada antes de arrancar se ejecuta."""
     done = []
 
     async def job():
         await asyncio.sleep(0)
         done.append(True)
-        flux_app.qt_app.quit()
+        janel_app.qt_app.quit()
 
-    monkeypatch.delenv("FLUXUI_EXIT_AFTER_MS", raising=False)
-    monkeypatch.setattr(flux_app, "close", lambda: None)  # la app de la sesión sigue viva
+    monkeypatch.delenv("JANELKIT_EXIT_AFTER_MS", raising=False)
+    monkeypatch.setattr(janel_app, "close", lambda: None)  # la app de la sesión sigue viva
     spawn(job())
-    assert flux_app.exec() == 0
+    assert janel_app.exec() == 0
     assert done == [True]
 
 
-def test_background_threads_do_not_track_and_cannot_write(flux_app):
-    from fluxui.reactivity import Effect
-    from fluxui.reactivity.effects import WrongThreadError
+def test_background_threads_do_not_track_and_cannot_write(janel_app):
+    from janelkit.reactivity import Effect
+    from janelkit.reactivity.effects import WrongThreadError
 
     items = state([{"a": 1}])
     runs = []
@@ -199,6 +199,6 @@ def test_background_threads_do_not_track_and_cannot_write(flux_app):
     async def work():
         return await background(read_and_write)
 
-    total, error = flux_app.run_until(work())
+    total, error = janel_app.run_until(work())
     assert total == 1 and "hilo de la interfaz" in error
     assert runs == [1] and len(items.value) == 1

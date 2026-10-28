@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from fluxui.inspect import mount
+from janelkit.inspect import mount
 
 KANBAN = Path(__file__).parent.parent / "examples" / "challenges" / "kanban"
 
@@ -38,7 +38,7 @@ def archivo(tmp_path, monkeypatch):
 
 @pytest.fixture
 def app(archivo):
-    with mount(KANBAN / "src" / "App.flux") as app:
+    with mount(KANBAN / "src" / "App.janel") as app:
         yield app
 
 
@@ -216,7 +216,7 @@ def test_dragging_to_the_edge_reaches_columns_out_of_view(monkeypatch):
     from PySide6.QtTest import QTest
 
     monkeypatch.setenv("KANBAN_DEMO", "10x5")
-    with mount(KANBAN / "src" / "App.flux") as app:
+    with mount(KANBAN / "src" / "App.janel") as app:
         tab = app.get("tablero")
         cols = tab.columnas.peek()
         ident = cols[0]["tarjetas"][0]["id"]

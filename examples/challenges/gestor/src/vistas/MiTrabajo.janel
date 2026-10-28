@@ -1,0 +1,84 @@
+<script lang="python">
+# Sección Mi trabajo: las tarjetas de una persona en todos los proyectos, por proyecto o
+# por fecha. Abrir una lleva a su tablero con ella enfocada (enlace entre secciones).
+from janelkit import computed, inject, state
+from services.datos import cuenta
+
+datos = inject("datos")
+abrir_tarjeta = inject("abrir_tarjeta")
+quien = state(datos.personas.peek()[0]["id"] if datos.personas.peek() else "")
+orden = state("proyecto")
+ORDEN_OPC = [{"label": "Por proyecto", "value": "proyecto"}, {"label": "Por fecha", "value": "fecha"}]
+
+
+def personas_opc():
+    return [{"label": p["nombre"], "value": p["id"]} for p in datos.personas.value]
+
+
+filas = computed(lambda: sorted(
+    datos.tarjetas_de(quien.value),
+    key=(lambda f: (f[2]["fecha"] or "9999", f[0]["nombre"])) if orden.value == "fecha" else (lambda f: f[0]["nombre"]),
+))
+</script>
+
+<flex class="pagina">
+  <flex class="cabecera">
+    <flex class="titulos">
+      <Text class="titulo">Mi trabajo</Text>
+      <Text class="subtitulo">{f"{cuenta(len(filas), 'tarjeta')} de {datos.nombre(quien)}" if quien else "Elige una persona"}</Text>
+    </flex>
+    <Spacer />
+    <Select options={personas_opc()} bind:value={quien} label="Persona" />
+    <Select options={ORDEN_OPC} bind:value={orden} label="Orden" />
+  </flex>
+  <flex class="marco">
+    <flex class="tabla">
+      <flex class="encabezado">
+        <Text class="c-titulo">Tarjeta</Text>
+        <Text class="c-proyecto">Proyecto</Text>
+        <Text class="c-columna">Columna</Text>
+        <Text class="c-fecha">Fecha</Text>
+      </flex>
+      <List class="lista" label="Tarjetas de la persona">
+        {#each filas as f (f[2]["id"])}
+          <flex as="button" class="fila" label={f[2]["titulo"]} on:click={abrir_tarjeta(f[0]["id"], f[2]["id"])}>
+            <Text class="c-titulo t">{f[2]["titulo"]}</Text>
+            <flex class="c-proyecto">
+              <flex class="color" style={{"background": f[0]["color"]}} />
+              <Text class="proyecto">{f[0]["nombre"]}</Text>
+            </flex>
+            <flex class="c-columna"><Text class="columna">{f[1]["nombre"]}</Text></flex>
+            <Text class="c-fecha dato">{f[2]["fecha"] or "sin fecha"}</Text>
+          </flex>
+        {/each}
+      </List>
+    </flex>
+  </flex>
+</flex>
+
+<style>
+.pagina { direction: column; flex: 1; }
+.cabecera { gap: 12px; align-items: center; padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.titulos { direction: column; gap: 2px; }
+.titulo { font-size: 20px; font-weight: 700; }
+.subtitulo { color: var(--text-muted); font-size: 12px; }
+.marco { flex: 1; direction: column; padding: 20px 24px; }
+.tabla { flex: 1; direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.encabezado {
+  gap: 16px; padding: 10px 16px; background: var(--surface-alt); border-bottom: 1px solid var(--border);
+  color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.lista { flex: 1; }
+.fila:hover { background: var(--surface-alt); }
+.fila:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.fila { gap: 16px; align-items: center; padding: 10px 16px; cursor: pointer; border-bottom: 1px solid var(--border); }
+.c-titulo { flex: 3; }
+.c-proyecto { flex: 2; gap: 8px; align-items: center; }
+.c-columna { flex: 1; }
+.c-fecha { width: 90px; }
+.color { width: 8px; height: 8px; border-radius: 4px; }
+.t { font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.proyecto { white-space: nowrap; text-overflow: ellipsis; }
+.columna { font-size: 12px; padding: 2px 8px; border-radius: 8px; background: var(--surface-alt); }
+.dato { color: var(--text-muted); font-size: 12px; }
+</style>

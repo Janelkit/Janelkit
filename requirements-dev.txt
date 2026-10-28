@@ -1,4 +1,4 @@
-# Entorno de desarrollo de FluxUI: la biblioteca editable, las pruebas y las
+# Entorno de desarrollo de JanelKit: la biblioteca editable, las pruebas y las
 # herramientas, con las versiones con las que pasa la suite (Python 3.13).
 #
 #   python -m pip install -r requirements-dev.txt

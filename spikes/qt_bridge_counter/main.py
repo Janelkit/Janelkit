@@ -1,6 +1,6 @@
 """Spike del Incremento 0: puente Python <-> Qt Quick.
 
-Valida tres cosas sin archivos .flux:
+Valida tres cosas sin archivos .janel:
 1. Un QObject Python con propiedades notificables actualiza la vista.
 2. Un clic en QML modifica estado Python.
 3. Un TextField sincroniza su valor con Python sin bucles.
@@ -86,7 +86,7 @@ class Model:
 
 def load(engine: QQmlEngine, model: Model) -> QObject:
     ctx = QQmlContext(engine.rootContext(), engine)
-    ctx.setContextProperty("fx", model.bridge)
+    ctx.setContextProperty("jk", model.bridge)
     comp = QQmlComponent(engine, QUrl.fromLocalFile(str(Path(__file__).with_name("Counter.qml"))))
     obj = comp.create(ctx)
     if obj is None:

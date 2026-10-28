@@ -3,9 +3,9 @@ import copy
 import json
 import pickle
 
-from fluxui import computed, state
-from fluxui.reactivity import Effect
-from fluxui.reactivity.collections import ReactiveDict, ReactiveList, ReactiveSet, to_plain
+from janelkit import computed, state
+from janelkit.reactivity import Effect
+from janelkit.reactivity.collections import ReactiveDict, ReactiveList, ReactiveSet, to_plain
 
 
 def runs(fn):
@@ -121,7 +121,7 @@ def test_reassigning_keeps_existing_reactive_items():
 
 
 def test_mutation_in_a_batch_notifies_once():
-    from fluxui import batch
+    from janelkit import batch
 
     s = state([])
     seen = runs(lambda: len(s.value))

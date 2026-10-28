@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from fluxui.compiler import compile_source
-from fluxui.diagnostics import FluxError
-from fluxui.inspect import mount
+from janelkit.compiler import compile_source
+from janelkit.diagnostics import JanelError
+from janelkit.inspect import mount
 
 LISTA = """<script>
-from fluxui import navigation, state
+from janelkit import navigation, state
 from Detalle import Detalle
 
 nav = navigation()
@@ -29,7 +29,7 @@ async def elegir():
 
 DETALLE = """<script>
 import asyncio
-from fluxui import before_leave, navigation, prop, state
+from janelkit import before_leave, navigation, prop, state
 
 item = prop("")
 nav = navigation()
@@ -58,14 +58,14 @@ async def responder():
 """
 
 PERSONAS = """<script>
-from fluxui import on_mount, state
+from janelkit import on_mount, state
 creada = state(True)
 </script>
 <flex><Text>personas</Text></flex>
 """
 
 APP = """<script>
-from fluxui import sections
+from janelkit import sections
 from Lista import Lista
 from Personas import Personas
 
@@ -84,8 +84,8 @@ s = sections(lista=Lista, personas=Personas)
 def app():
     d = Path(tempfile.mkdtemp())
     for name, text in {"Lista": LISTA, "Detalle": DETALLE, "Personas": PERSONAS, "App": APP}.items():
-        (d / f"{name}.flux").write_text(text, encoding="utf-8")
-    with mount(d / "App.flux") as app:
+        (d / f"{name}.janel").write_text(text, encoding="utf-8")
+    with mount(d / "App.janel") as app:
         yield app
 
 
@@ -199,7 +199,7 @@ def test_switching_sections_does_not_ask(app):
 # -- {#hidden} -------------------------------------------------------------------------
 
 CAMPO = """<script>
-from fluxui import inject, on_destroy, on_mount, state
+from janelkit import inject, on_destroy, on_mount, state
 n = state(0)
 log = inject("log")
 on_mount(lambda: log.append("mount"))
@@ -209,7 +209,7 @@ on_destroy(lambda: log.append("destroy"))
 """
 
 OCULTO = """<script>
-from fluxui import provide, state
+from janelkit import provide, state
 from Campo import Campo
 oculto = state(True)
 log = state([])
@@ -228,9 +228,9 @@ provide("log", log.value)
 @pytest.fixture
 def oculto():
     d = Path(tempfile.mkdtemp())
-    (d / "Campo.flux").write_text(CAMPO, encoding="utf-8")
-    (d / "App.flux").write_text(OCULTO, encoding="utf-8")
-    with mount(d / "App.flux") as app:
+    (d / "Campo.janel").write_text(CAMPO, encoding="utf-8")
+    (d / "App.janel").write_text(OCULTO, encoding="utf-8")
+    with mount(d / "App.janel") as app:
         yield app
 
 
@@ -250,16 +250,16 @@ def test_hidden_content_is_created_when_first_shown_and_then_only_hidden(oculto)
 
 
 def test_unclosed_hidden_block_is_reported():
-    with pytest.raises(FluxError, match=r"antes de cerrar el bloque \{#hidden\}"):
+    with pytest.raises(JanelError, match=r"antes de cerrar el bloque \{#hidden\}"):
         compile_source("<script>\nx = True\n</script>\n<flex>{#hidden x}<Text>a</Text></flex>\n")
 
 
 ELSE = """<script>
-from fluxui import state
+from janelkit import state
 from Campo import Campo
 oculto = state(False)
 log = state([])
-from fluxui import provide
+from janelkit import provide
 provide("log", log.value)
 </script>
 <Window width={300} height={200}>
@@ -276,9 +276,9 @@ provide("log", log.value)
 
 def test_hidden_else_is_also_kept_and_transitions_finish_hidden():
     d = Path(tempfile.mkdtemp())
-    (d / "Campo.flux").write_text(CAMPO, encoding="utf-8")
-    (d / "App.flux").write_text(ELSE, encoding="utf-8")
-    with mount(d / "App.flux") as app:
+    (d / "Campo.janel").write_text(CAMPO, encoding="utf-8")
+    (d / "App.janel").write_text(ELSE, encoding="utf-8")
+    with mount(d / "App.janel") as app:
         o = app.namespace["oculto"]
         assert app.texts() == ["n=0"]  # {:else} aún no existe
         app.find("Campo", label="campo").click()
@@ -294,15 +294,15 @@ def test_hidden_else_is_also_kept_and_transitions_finish_hidden():
 
 
 def test_else_is_not_allowed_in_key():
-    with pytest.raises(FluxError, match=r"\{:else\} inesperada dentro de \{#key\}"):
+    with pytest.raises(JanelError, match=r"\{:else\} inesperada dentro de \{#key\}"):
         compile_source("<script>\nx = 1\n</script>\n<flex>{#key x}<Text>a</Text>{:else}<Text>b</Text>{/key}</flex>\n")
 
 
 def test_pages_transition_animates_the_entering_page(app):
     s = secciones(app)
     nav = s["lista"]
-    nav._container.setProperty("fxTransition", "slide")
-    nav._container.setProperty("fxTransitionMs", 100)
+    nav._container.setProperty("jkTransition", "slide")
+    nav._container.setProperty("jkTransitionMs", 100)
     nav.push(nav.page.namespace["Detalle"], item="y")
     pagina = nav._pages[-1][1]
     assert pagina.opacity() < 1 and pagina.x() > 0  # entra desde la derecha
@@ -316,9 +316,9 @@ def test_pages_transition_animates_the_entering_page(app):
 
 
 def test_transition_on_pages_compiles_to_its_properties():
-    src = "<script>\nfrom fluxui import pages\nnav = None\n</script>\n<Pages stack={nav} transition:slide={150} />\n"
+    src = "<script>\nfrom janelkit import pages\nnav = None\n</script>\n<Pages stack={nav} transition:slide={150} />\n"
     qml = compile_source(src).qml
-    assert 'fxTransition: "slide"' in qml and "fxTransitionMs: 150" in qml
+    assert 'jkTransition: "slide"' in qml and "jkTransitionMs: 150" in qml
 
 
 def test_leaving_can_be_awaited_to_chain_navigation(app):
@@ -346,7 +346,7 @@ async def _await(x):
 def test_a_page_fits_its_window_and_its_scrolling_grid_wraps(tmp_path):
     """La página de <Sections> se estrecha con la ventana (su mínimo es el de su contenido,
     no su ancho natural) y una rejilla con wrap y overflow: auto reparte en filas."""
-    (tmp_path / "Rejilla.flux").write_text("""<flex class="pagina">
+    (tmp_path / "Rejilla.janel").write_text("""<flex class="pagina">
   <flex class="barra"><Text>Título</Text><Spacer /><Button text="Nuevo" /></flex>
   <flex class="rejilla" label="rejilla">
     {#each list(range(12)) as i (i)}<flex class="ficha"><Text>{f"ficha {i}"}</Text></flex>{/each}
@@ -358,8 +358,8 @@ def test_a_page_fits_its_window_and_its_scrolling_grid_wraps(tmp_path):
 .ficha { width: 200px; height: 60px; }
 </style>
 """, encoding="utf-8")
-    (tmp_path / "App.flux").write_text("""<script>
-from fluxui import sections
+    (tmp_path / "App.janel").write_text("""<script>
+from janelkit import sections
 from Rejilla import Rejilla
 s = sections(a=Rejilla)
 </script>
@@ -371,7 +371,7 @@ s = sections(a=Rejilla)
 .lateral { width: 200px; }
 </style>
 """, encoding="utf-8")
-    with mount(tmp_path / "App.flux") as app:
+    with mount(tmp_path / "App.janel") as app:
         app.window.resize(800, 600)
         app.wait(0.1)
         boton = app.find("Button", text="Nuevo").item
@@ -392,13 +392,13 @@ s = sections(a=Rejilla)
     ("margin: 50px;", (250, 50, 500, 500)),
 ])  # fmt: skip
 def test_the_root_of_a_page_adjusts_its_place_with_css(tmp_path, css, esperado):
-    (tmp_path / "Pag.flux").write_text(f"""<flex class="pag"><Text>hola</Text></flex>
+    (tmp_path / "Pag.janel").write_text(f"""<flex class="pag"><Text>hola</Text></flex>
 <style>
 .pag {{ direction: column; {css} }}
 </style>
 """, encoding="utf-8")
-    (tmp_path / "App.flux").write_text("""<script>
-from fluxui import sections
+    (tmp_path / "App.janel").write_text("""<script>
+from janelkit import sections
 from Pag import Pag
 s = sections(a=Pag)
 </script>
@@ -410,7 +410,7 @@ s = sections(a=Pag)
 .lateral { width: 200px; }
 </style>
 """, encoding="utf-8")
-    with mount(tmp_path / "App.flux") as app:
+    with mount(tmp_path / "App.janel") as app:
         app.window.resize(800, 600)
         app.wait(0.1)
         pag = app.find("Text", text="hola").item.parentItem().parentItem()  # el lay y su caja

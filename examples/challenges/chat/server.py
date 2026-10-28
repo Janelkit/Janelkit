@@ -46,7 +46,7 @@ ROOMS = [
 ]
 BOTS = ["Ana", "Luis", "Marta", "Kenji", "Fátima"]
 LINES = [
-    "¿Alguien ha probado **FluxUI** con *asyncio*?",
+    "¿Alguien ha probado **JanelKit** con *asyncio*?",
     "Mirad esto: [documentación de Qt](https://doc.qt.io)",
     "El error estaba en `await background(fn)` 😅",
     "Hoy toca revisar el *pull request* de las listas",

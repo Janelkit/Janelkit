@@ -5,7 +5,7 @@ Deshacer aplica la inversa (que devuelve a su vez la suya, para rehacer). Las
 operaciones mueven las tarjetas en sitio dentro de las listas reactivas, así que
 `{#each}` mueve una fila en vez de volver a crear la columna entera.
 
-Deshacer no está en el núcleo de JanelKit (docs/alcance.md: es de `janelkit-store`); por
+Deshacer todavía no está en JanelKit (docs/alcance.md: los stores con deshacer serán del núcleo); por
 eso vive aquí, en la aplicación.
 """
 from __future__ import annotations

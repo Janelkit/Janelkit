@@ -130,7 +130,7 @@ Las expresiones de la plantilla se evalúan en **Python**; cuando cambia un `sta
 - [docs/cambios.md](docs/cambios.md) — cambios entre versiones y cómo migrar.
 - [docs/empaquetado.md](docs/empaquetado.md) — crear un ejecutable con PyInstaller.
 - [docs/estado.md](docs/estado.md) — avance frente al plan, decisiones provisionales, rendimiento y limitaciones.
-- [docs/alcance.md](docs/alcance.md) — qué es el framework, qué queda fuera y proyectos paralelos.
+- [docs/alcance.md](docs/alcance.md) — qué es del núcleo, qué es del ecosistema y con qué criterio.
 - [docs/lanzamiento.md](docs/lanzamiento.md) — pendientes priorizados antes de la primera versión pública.
 - [spikes/qt_bridge_counter/NOTES.md](spikes/qt_bridge_counter/NOTES.md) — validación técnica del puente Python ↔ Qt Quick.
 

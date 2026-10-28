@@ -1,3 +1,5 @@
+> **Archivado el 28 de octubre de 2026.** Es el plan con el que empezó el proyecto, cuando se llamaba FluxUI, y se conserva como registro histórico: ya no se actualiza y algunas decisiones cambiaron (nombre, organización en paquetes, qué es del núcleo). El estado real está en [estado.md](../estado.md), el alcance en [alcance.md](../alcance.md) y los pendientes en [lanzamiento.md](../lanzamiento.md).
+
 # JanelKit — Plan incremental de desarrollo
 
 > **Documento de diseño y ejecución | Versión 0.1 | 26 de octubre de 2026**  

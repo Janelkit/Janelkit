@@ -1,6 +1,6 @@
 # Pendientes antes del lanzamiento
 
-Prioriza lo que falta en **el framework** antes de su primera versión pública (0.1 en PyPI). Los proyectos paralelos (editor, pruebas, stores, empaquetado…) quedan fuera; ver [alcance.md](alcance.md).
+Prioriza lo que falta en **el framework** antes de su primera versión pública (0.1 en PyPI). Los paquetes del ecosistema (traducciones, servicios del sistema, editor, empaquetado…) llevan su propio ritmo; ver [alcance.md](alcance.md).
 
 Situación de partida: incrementos 0–7 completos; detalle en [estado.md](estado.md).
 
@@ -77,7 +77,7 @@ Tamaño estimado: **S** (días), **M** (1–2 semanas), **L** (más de 2 semanas
 
 ### 6. Contexto (compartir estado entre componentes) · S
 - **Problema:** hoy se comparte estado importando un módulo de `services/`, que es global al proceso; no hay forma de compartir algo solo con un subárbol, y el tema es global.
-- **Propuesta:** `provide(clave, valor)` / `inject(clave)` como primitivas. Los stores avanzados quedan para `janelkit-store`.
+- **Propuesta:** `provide(clave, valor)` / `inject(clave)` como primitivas. Los stores avanzados vendrán después, también en el núcleo.
 - **Hecho cuando:** dos subárboles pueden recibir valores distintos para la misma clave, y está documentado cuándo usar contexto y cuándo un módulo.
 
 ### 7. Superficie pública y versionado · S
@@ -111,7 +111,7 @@ Medir arranque, tiempo de compilación y respuesta de las aplicaciones de valida
 Navegación completa con teclado, orden del foco, foco visible y nombres accesibles en los controles básicos.
 
 ### 15. API de inspección pública · S
-Pasar de `packages/janelkit/src/janelkit/testing.py` a una API pública: montar sin ventana visible, buscar elementos, disparar eventos y leer el estado. Es la base de `janelkit-testing` y de las pruebas de los propios usuarios.
+Pasar de `packages/janelkit/src/janelkit/testing.py` a una API pública: montar sin ventana visible, buscar elementos, disparar eventos y leer el estado. Es la base del plugin de pytest del núcleo (`janelkit.testing`) y de las pruebas de los propios usuarios.
 
 ### 16. Documentación de lanzamiento · M
 Tutorial de inicio de principio a fin; referencia de la API pública; guía de migración entre versiones 0.x; receta documentada para empaquetar con PyInstaller (sin comando propio).
@@ -153,7 +153,7 @@ Verificar disponibilidad de `janelkit`/`janel` en PyPI (y conflictos con el coma
 
 ### 24. Navegación entre pantallas · S
 - **Problema:** pasar de una pantalla a otra exige escribir a mano `{#if}` con un estado de página.
-- **Propuesta:** un elemento de pila de páginas en el núcleo (`<Pages>` con `push`/`pop`/`replace`), con ciclo de vida por página. El enrutado avanzado sigue siendo un proyecto paralelo.
+- **Propuesta:** un elemento de pila de páginas en el núcleo (`<Pages>` con `push`/`pop`/`replace`), con ciclo de vida por página. El enrutado avanzado es del ecosistema (`janelkit-router`).
 - **Hecho cuando:** un ejemplo navega entre tres pantallas, vuelve atrás conservando el estado de la anterior y libera las que se descartan.
 
 ### 25. Secciones que conservan sus vistas · M

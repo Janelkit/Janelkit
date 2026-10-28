@@ -1,6 +1,6 @@
 # Estado del desarrollo
 
-Referencia: [`JanelKit_Plan_Desarrollo_v0.1.md`](../JanelKit_Plan_Desarrollo_v0.1.md). Actualizado: 26 de octubre de 2026.
+Referencia: el plan original, archivado en [`archivo/plan-desarrollo-v0.1.md`](archivo/plan-desarrollo-v0.1.md). Actualizado: 26 de octubre de 2026.
 
 **Entornos verificados:** Windows 11 con Python 3.13.9 + PySide6 6.12.0, y con Python 3.10.19 + PySide6 6.8.3 (las versiones mínimas declaradas): las pruebas pasan en ambos (523 entonces; ahora son 539 y se han comprobado con 3.13.9 + 6.12.0) (la vía rápida de `Column`/`Row` y las cajas ligeras, comprobadas con PySide6 6.12.0 y 6.8.3). Linux y macOS **no se han probado** todavía: la CI (`.github/workflows/ci.yml`) está preparada para hacerlo en cuanto el repositorio tenga un remoto en GitHub.
 

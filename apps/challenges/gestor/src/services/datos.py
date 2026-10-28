@@ -8,7 +8,7 @@ común y el archivo JSON.
 
 Las tarjetas guardan el id de su responsable: renombrar a una persona se ve al momento
 en todos los proyectos. La última columna de un proyecto es la «de hecho» (su progreso).
-Deshacer no está en el núcleo de JanelKit (docs/alcance.md: es de `janelkit-store`).
+Deshacer todavía no está en JanelKit (docs/alcance.md: los stores con deshacer serán del núcleo).
 """
 from __future__ import annotations
 

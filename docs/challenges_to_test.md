@@ -74,7 +74,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 | Teclado | Flechas, Tab, Intro, Esc, Mayús+flechas sobre celdas | **No existe** `on:keydown`; solo `<Shortcut>` global |
 | Edición en el sitio | Pasar de mostrar a editar una celda y volver, con el foco correcto | `ref.focus()` existe; falta gestionar el foco entre muchos elementos |
 | Portapapeles | Copiar y pegar rangos como texto tabulado | ✅ `janelkit_desktop.clipboard` (texto); falta probar el reto de rangos tabulados |
-| Deshacer / rehacer | Historial de cambios de celdas | No existe en el núcleo (previsto en `janelkit-store`, proyecto aparte) |
+| Deshacer / rehacer | Historial de cambios de celdas | Todavía no existe (previsto en el núcleo, con los stores) |
 | Selección con el ratón | Arrastrar para seleccionar un rango | Solo hay `on:click`: faltan eventos de puntero |
 
 **Hecho cuando**
@@ -242,7 +242,7 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 | Canvas, gráficas, editor de código | 1, 5 | `janelkit-kit` (sobre la vía de escape QML) · el reto 1 hizo su gráfica en QML propio sin problemas |
 | Rejilla con salto de línea (tarjetas que se recolocan según el ancho) | 1 | ✅ Núcleo: `flex-wrap` en `<flex>`, `Column` y `Row` ([flex.md](flex.md), fase 1) |
 | Texto enriquecido | 4 | ✅ Núcleo: `<Text format="markdown">` (reto 4) |
-| Deshacer/rehacer y stores | 2, 3 | `janelkit-store` · el reto 3 lo hizo en la aplicación con operaciones que devuelven su inversa (~100 líneas) |
+| Deshacer/rehacer y stores | 2, 3 | núcleo, pendiente · el reto 3 lo hizo en la aplicación con operaciones que devuelven su inversa (~100 líneas) |
 
 ## Registro de hallazgos (plantilla)
 

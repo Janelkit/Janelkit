@@ -312,3 +312,15 @@ log = state([])
     app.process()
     app.find("flex", label="d").right_click()  # todavía en su sitio antiguo
     assert app.get("log")[-1] == "menu d"
+
+
+def test_inspect_key_accepts_the_names_of_event_key(app_from):
+    app = app_from(LOG + """<Column><flex tabindex={0} label="caja" on:keydown={keys} /></Column>""")
+    caja = app.find(label="caja")
+    for name in ("PageDown", "PgUp", "ArrowRight", "Shift+ArrowUp", "Home"):
+        caja.key(name)
+    app.wait(0.02)
+    pressed = [k for _, k in app.get("log") if k != "Shift"]  # la combinación también pulsa Mayús
+    assert pressed == ["PageDown", "PageUp", "ArrowRight", "ArrowUp", "Home"]
+    with pytest.raises(AssertionError, match="no entiendo"):
+        caja.key("PaginaAbajo")  # antes no pulsaba nada y la prueba seguía

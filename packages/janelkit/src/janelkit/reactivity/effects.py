@@ -6,6 +6,10 @@ Modelo:
 - Un *observador* (`Effect`, `Computed`) se marca obsoleto cuando cambia una de
   sus fuentes. Los efectos se reejecutan al terminar el lote actual; los
   `Computed` solo se recalculan cuando alguien vuelve a leerlos.
+- Un efecto que solo ha sido avisado por `Computed` (no por un `State`) primero los
+  recalcula y solo se ejecuta si alguno cambió de valor (corte por igualdad): mil
+  celdas que dependen de «¿estoy en la selección?» no se reevalúan si la respuesta
+  sigue siendo la misma.
 - Un *ámbito* (`Scope`) agrupa lo creado por una instancia de componente para
   liberarlo de una vez al desmontarla.
 - Una *compuerta* (`Gate`) aplaza los efectos de lo que no se ve ({#hidden}, otra
@@ -50,6 +54,10 @@ def check_thread() -> None:
 
 
 class Source:
+    # True si un aviso de esta fuente significa que cambió seguro (State, colecciones);
+    # False si solo quizá (Computed: hay que recalcularlo para saberlo).
+    _certain = True
+
     def __init__(self) -> None:
         self._subscribers: dict[Observer, None] = {}
 
@@ -61,8 +69,9 @@ class Source:
 
     def _notify(self) -> None:
         check_thread()
+        certain = self._certain
         for observer in list(self._subscribers):
-            observer._mark_stale()
+            observer._mark_stale(certain)
 
     @property
     def subscriber_count(self) -> int:
@@ -95,7 +104,7 @@ class Observer:
         finally:
             _observer_stack.pop()
 
-    def _mark_stale(self) -> None:  # pragma: no cover - abstracto
+    def _mark_stale(self, certain: bool = True) -> None:  # pragma: no cover - abstracto
         raise NotImplementedError
 
     def dispose(self) -> None:
@@ -118,6 +127,8 @@ class Effect(Observer):
         self._cleanup: Callable[[], Any] | None = None
         self.gate: Gate | None = None  # efectos de plantilla: se aplazan mientras no se ven
         self._order = next(_created)
+        self._must_run = False  # lo avisó un State desde la última ejecución
+        self._seen: dict[Source, int] = {}  # versión de cada Computed leído en la última ejecución
         self.run()
 
     def run(self) -> None:
@@ -125,6 +136,7 @@ class Effect(Observer):
             return
         try:
             self._run_cleanup()
+            self._must_run = False
             result = self._collect(self._fn)
             if callable(result):
                 self._cleanup = result
@@ -132,6 +144,21 @@ class Effect(Observer):
             if self._on_error is None:
                 raise
             self._on_error(exc)
+        finally:
+            self._seen = {d: d._version for d in self._dependencies if not d._certain}  # type: ignore[attr-defined]
+
+    def _needs_run(self) -> bool:
+        """Si lo avisó un State, sí. Si solo lo avisaron Computed, solo si alguno cambió de valor."""
+        if self._must_run:
+            return True
+        for source, version in self._seen.items():
+            try:
+                source.peek()  # type: ignore[attr-defined]  # lo recalcula si hace falta
+            except Exception:  # noqa: BLE001 - que el error salga al ejecutar el efecto
+                return True
+            if source._version != version:  # type: ignore[attr-defined]
+                return True
+        return False
 
     def _run_cleanup(self) -> None:
         cleanup, self._cleanup = self._cleanup, None
@@ -150,8 +177,12 @@ class Effect(Observer):
                 raise
             self._on_error(exc)
 
-    def _mark_stale(self) -> None:
-        if self.disposed or self._held():
+    def _mark_stale(self, certain: bool = True) -> None:
+        if self.disposed:
+            return
+        if certain:
+            self._must_run = True
+        if self._held():
             return
         _pending[self] = None
         if _batch_depth == 0:
@@ -257,7 +288,8 @@ def _flush() -> None:
             del _pending[effect]
             if effect.gate is not None and effect._held():  # se ocultó mientras esperaba
                 continue
-            effect.run()
+            if effect._needs_run():
+                effect.run()
     finally:
         _flushing = False
 

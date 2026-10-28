@@ -162,6 +162,8 @@ class TemplateInstance:
         self._ungated = ungated
         self.names = names
         self.row_key: Any = None  # clave de la fila de {#each} que crea esta plantilla (si la hay)
+        self.view_gate: Gate | None = None  # fila de <List>: abierta solo mientras se ve
+        self._views = 0
         self.parent = parent
         self.scope = scope if scope is not None else Scope()
         self._globals = {GETTER: self._get, "__builtins__": builtins}
@@ -273,6 +275,13 @@ class TemplateInstance:
 
     def bridge_write(self, binding_id: str, value: Any) -> None:
         self._write(binding_id, value)
+
+    def bridge_shown(self, shown: bool) -> None:
+        """Fila de <List>: abre su compuerta mientras tiene alguna vista (ver _LazyEachRegion)."""
+        if self.view_gate is None:
+            return
+        self._views += 1 if shown else -1
+        self.view_gate.set_open(self._views > 0)
 
     def bridge_mounted(self, item: QObject) -> None:
         if self.parent is None and not self.disposed:
@@ -829,7 +838,13 @@ class _LazyEachRegion(_EachRegion):
         names: dict[str, Any] = {slot.item: row.item}
         if slot.index:
             names[slot.index] = row.index
-        inst = TemplateInstance(owner.component, slot.fragment.template, names, parent=owner, bridge_parent=self.model)
+        # Su compuerta se cierra cuando Qt destruye la vista de la fila (fuera de pantalla):
+        # la parte Python se conserva, pero lo que muestra deja de recalcularse hasta volver.
+        gate = Gate(owner.gate)
+        inst = TemplateInstance(
+            owner.component, slot.fragment.template, names, parent=owner, bridge_parent=self.model, gate=gate
+        )
+        inst.view_gate = gate
         inst.row_key = row.key
         inst.adopt, row.carried = row.carried, None
         owner.scope.add(inst.scope)

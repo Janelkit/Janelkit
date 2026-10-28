@@ -53,13 +53,23 @@ def _move_pointer(window: Any, pos: Any) -> None:
     QTest.mouseMove(window, pos)
 
 
+# Nombres de KeyEvent.key (como en la web) que Qt escribe de otra forma.
+_KEY_NAMES = {
+    "ArrowUp": "Up", "ArrowDown": "Down", "ArrowLeft": "Left", "ArrowRight": "Right",
+    "PageUp": "PgUp", "PageDown": "PgDown", " ": "Space",
+}  # fmt: skip
+
+
 def _send_keys(window: Any, keys: str) -> None:
-    """Pulsa y suelta una combinación como en <Shortcut>: "Ctrl+D", "Alt+Right", "Delete"."""
+    """Pulsa y suelta una combinación como en <Shortcut>: "Ctrl+D", "Alt+Right", "Delete".
+    También acepta los nombres de `event.key` ("ArrowRight", "PageDown")."""
+    from PySide6.QtCore import Qt
     from PySide6.QtGui import QKeySequence
     from PySide6.QtTest import QTest
 
-    seq = QKeySequence(keys)
-    if seq.count() != 1:
+    *mods, key = keys.split("+") if keys != "+" else ["+"]
+    seq = QKeySequence("+".join([*mods, _KEY_NAMES.get(key, key)]))
+    if seq.count() != 1 or seq[0].key() == Qt.Key.Key_unknown:
         raise InspectError(f"no entiendo la combinación de teclas {keys!r} (p. ej. 'Ctrl+D', 'Alt+Right', 'Delete')")
     combo = seq[0]
     QTest.keyClick(window, combo.key(), combo.keyboardModifiers())

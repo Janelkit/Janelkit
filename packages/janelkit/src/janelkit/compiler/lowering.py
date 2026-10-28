@@ -972,6 +972,10 @@ class _Lowerer:
             frag.root.props["width"] = Literal("ListView.view ? ListView.view.width : implicitWidth")
             if frag.root.qml_type in _BOXES:
                 frag.root.props["jkSizedW"] = Literal("true")
+            # La vista de la fila se crea al hacerse visible y se destruye al salir de pantalla:
+            # mientras no tiene vista, los efectos de lo que muestra esperan (ver Gate).
+            frag.root.handlers.setdefault("Component.onCompleted", []).append("jk.shown(true)")
+            frag.root.handlers.setdefault("Component.onDestruction", []).append("if (jk) jk.shown(false)")
         if node.else_children is not None and not lazy:
             empty = self.fragment(node.else_children, horizontal, (), node.loc)
             if not empty.empty:

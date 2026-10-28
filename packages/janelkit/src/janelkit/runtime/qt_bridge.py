@@ -23,6 +23,7 @@ class BridgeOwner(Protocol):
     def bridge_write(self, binding_id: str, value: Any) -> None: ...
     def bridge_ref(self, ref_id: str, item: QObject, attached: bool) -> None: ...
     def bridge_mounted(self, item: QObject) -> None: ...
+    def bridge_shown(self, shown: bool) -> None: ...
 
 
 # Las clases puente nunca se liberan: QML guarda en caché la información de
@@ -96,6 +97,10 @@ def _make_bridge_class(binding_ids: list[str], model_ids: list[str], name: str) 
     def mounted(self, item: QObject) -> None:
         self._owner.bridge_mounted(item)
 
+    # Filas de <List>: su vista se crea al hacerse visible y se destruye al salir de pantalla.
+    def shown(self, value: bool) -> None:
+        self._owner.bridge_shown(value)
+
     # Salida animada (out:/transition:): JkTransition anima la raíz al recibir leave().
     attrs["leave"] = Signal()
 
@@ -109,5 +114,6 @@ def _make_bridge_class(binding_ids: list[str], model_ids: list[str], name: str) 
         write=Slot(str, "QVariant")(write),
         setRef=Slot(str, QObject, bool)(setRef),
         mounted=Slot(QObject)(mounted),
+        shown=Slot(bool)(shown),
     )
     return type(name, (QObject,), attrs)

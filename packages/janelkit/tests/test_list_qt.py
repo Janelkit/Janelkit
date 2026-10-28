@@ -141,3 +141,44 @@ def test_bulk_removal_disposes_created_rows(mount):
     m.instance.namespace["items"].value = []
     assert all(inst.disposed for inst in created)
     assert reg.model.materialized() == 0
+
+
+SHARED = """<script>
+from janelkit import state
+items = state(list(range(1000)))
+selected = state(0)
+evaluated = []
+
+def mark(i):
+    evaluated.append(i)
+    return "*" if selected.value == i else ""
+</script>
+<Window width={300} height={200}>
+  <List>
+    {#each items as i (i)}
+      <Row><Text>{i}:{mark(i)}</Text></Row>
+    {/each}
+  </List>
+</Window>
+"""
+
+
+def test_rows_off_screen_wait_until_they_are_shown_again(mount, janel_app):
+    # Una fila que salió de pantalla conserva su parte Python, pero lo que muestra no se
+    # recalcula hasta volver: cambiar un estado que leen todas cuesta lo de las visibles.
+    m = mount(SHARED)
+    ns = m.instance.namespace
+    view = next(i for i in visual_items(m) if i.inherits("QQuickListView"))
+    QMetaObject.invokeMethod(view, "positionViewAtEnd")
+    janel_app.qt_app.processEvents()
+    assert "999:" in visible_texts(m)
+    alive = region(m).model.materialized()
+    ns["evaluated"].clear()
+    ns["selected"].value = 998
+    janel_app.qt_app.processEvents()
+    assert 0 < len(ns["evaluated"]) < 40 < alive  # solo las filas con vista
+    assert "998:*" in visible_texts(m)
+    ns["selected"].value = 1
+    QMetaObject.invokeMethod(view, "positionViewAtBeginning")
+    janel_app.qt_app.processEvents()
+    assert visible_texts(m)[:3] == ["0:", "1:*", "2:"]  # al volver, con el valor de ahora

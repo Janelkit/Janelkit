@@ -145,3 +145,58 @@ def test_effect_writing_other_state_settles():
     a.value = 5
     assert b.value == 10
     assert seen == [2, 10]
+
+
+def test_effect_skips_when_its_computed_keeps_the_same_value():
+    # Corte por igualdad: mil celdas que dependen de «¿está esta fila en la selección?».
+    cursor = state(0)
+    in_row_3 = computed(lambda: cursor.value == 3)
+    runs = []
+    Effect(lambda: runs.append(in_row_3.value))
+    cursor.value = 1
+    cursor.value = 2
+    assert runs == [False]
+    cursor.value = 3
+    cursor.value = 4
+    assert runs == [False, True, False]
+
+
+def test_effect_still_runs_when_a_state_it_reads_changed():
+    a, b = state(1), state("x")
+    parity = computed(lambda: a.value % 2)
+    runs = []
+    Effect(lambda: runs.append((parity.value, b.value)))
+    with batch():
+        a.value = 3  # misma paridad...
+        b.value = "y"  # ...pero b cambió: se ejecuta
+    assert runs == [(1, "x"), (1, "y")]
+
+
+def test_chained_computeds_cut_at_the_first_unchanged_value():
+    n = state(1)
+    sign = computed(lambda: n.value > 0)
+    label = computed(lambda: "positivo" if sign.value else "no positivo")
+    runs = []
+    Effect(lambda: runs.append(label.value))
+    n.value = 5
+    n.value = -1
+    assert runs == ["positivo", "no positivo"]
+
+
+def test_mutable_computed_values_always_count_as_changed():
+    # Un computed que devuelve un objeto mutable puede devolver el mismo cambiado por dentro.
+    items = state([1, 2])
+    same = computed(lambda: items.value)
+    runs = []
+    Effect(lambda: runs.append(len(same.peek())) or same.value)
+    items.value.append(3)
+    assert runs == [2, 3]
+
+
+def test_a_failing_computed_lets_the_effect_report_the_error():
+    a = state(1)
+    inv = computed(lambda: 1 / a.value)
+    errors = []
+    Effect(lambda: inv.value, on_error=errors.append)
+    a.value = 0
+    assert len(errors) == 1 and isinstance(errors[0], ZeroDivisionError)

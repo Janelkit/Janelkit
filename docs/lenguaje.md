@@ -489,6 +489,14 @@ Ejemplo: `apps/examples/preferencias` (nombre, tema, tamaño de letra, notas y u
 
 - Debe contener exactamente un `{#each}` (con clave, como siempre). El resto funciona igual: claves, índice, manejadores, componentes dentro de la fila y colecciones reactivas.
 - Cada fila se crea —su parte Python y su vista— la primera vez que se hace visible. Su parte Python se conserva hasta que la fila sale de la lista; la vista se destruye al salir de pantalla y se vuelve a crear al volver. Por eso, lo que el usuario esté escribiendo en una fila debe ir a un `state` (`bind:`), no quedarse solo en el control.
+- Mientras una fila no tiene vista, lo que muestra no se recalcula (como en `{#hidden}`): se pone al día una vez, al volver a verse. Sus `effect`, temporizadores y tareas siguen funcionando.
+- Si todas las filas leen un mismo estado (la fila elegida, la selección de una hoja de cálculo), calcula en cada fila con un `computed` la parte que le toca: un binding que solo lee `computed` no se reevalúa si su valor no cambió, así que al cambiar la selección solo se actualizan las filas afectadas.
+
+  ```python
+  @computed
+  def elegida():          # en el componente de la fila
+      return seleccion.value == fila.value["id"]
+  ```
 - Las filas ocupan el ancho de la lista. Admite `gap`, `padding`, fondo, borde y radio desde `<style>`; por defecto ocupa el espacio libre (`flex: 1`).
 - Añadir filas (al final, al principio o en medio, en cualquier cantidad) se aplica por bloques y la vista conserva su posición. Borrar o mover pocas filas se aplica una a una (con `animate`, animado). A partir de 64 borrados o movimientos a la vez (ordenar, invertir, sustituir la lista) se aplican de golpe: las filas visibles se vuelven a crear y la vista conserva su posición (la fila que estaba arriba, por su número, sigue arriba), como al reordenar una tabla.
 - `{:else}` no está disponible dentro de `<List>`: muestra el estado vacío con un `{#if}` fuera.

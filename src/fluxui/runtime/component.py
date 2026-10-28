@@ -50,7 +50,7 @@ from ..compiler.ir import (
 from ..compiler.script_analysis import EVENT_FACTORY, PROP_FACTORY
 from ..diagnostics import Diagnostic, SourceLocation
 from ..lifecycle import Ref, _setup
-from ..pages import PageStack
+from ..pages import PageStack, Sections
 from ..tasks import spawn
 from ..reactivity import Computed, Effect, Event, Prop, PropError, Scope, State, batch, untracked
 from ..reactivity.props import REQUIRED
@@ -276,7 +276,7 @@ class TemplateInstance:
             target = self.resolve(use.name)
         except NameError:
             target = None
-        if isinstance(target, PageStack):  # <Pages stack={nav}>
+        if isinstance(target, (PageStack, Sections)):  # <Pages stack={nav}>, <Sections of={...}>
             if attached:
                 target._attach(item, self)
                 self._attached.append((target, item))
@@ -883,12 +883,18 @@ class _KeyRegion(_Region):
         self.row: _Row | None = None
 
         def on_error(exc: BaseException) -> None:
-            owner.report(f"error al evaluar {{#key}}: {type(exc).__name__}: {exc}", slot.expression.loc, exc)
+            word = "hidden" if slot.hidden else "key"
+            owner.report(f"error al evaluar {{#{word}}}: {type(exc).__name__}: {exc}", slot.expression.loc, exc)
 
         Effect(self.update, on_error=on_error)
 
     def update(self) -> None:
         value = self.owner.eval(self.slot.expression)
+        if self.slot.hidden:  # se crea la primera vez que se muestra; su `visible` hace el resto
+            if self.row is None and not value:
+                with untracked():
+                    self.row = self.mount(self.slot.fragment, self.model, 0, {})
+            return
         if self.value is not self._UNSET and _same(value, self.value):
             return
         self.value = value
@@ -1109,6 +1115,8 @@ class ComponentInstance:
         self.view_item: QObject | None = None  # raíz de su vista QML (cambia si la fila se traslada)
         self._refocus: list[int] | None = None
         self._on_mount: list[Any] = []
+        self.leave_guards: list[Any] = []  # before_leave
+        self.page_stack: Any = None  # la pila de pages() si es una página
         self._incoming = props or {}
         self._event_handlers = events or {}
         self.props: dict[str, Prop] = {}
@@ -1155,6 +1163,9 @@ class ComponentInstance:
 
     def add_destroy(self, fn: Any) -> None:
         self.scope.add(_Callback(self, fn, "on_destroy"))
+
+    def add_leave(self, fn: Any) -> None:
+        self.leave_guards.append(fn)
 
     def provide(self, key: Any, value: Any) -> None:
         self.provided[key] = value

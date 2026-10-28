@@ -26,6 +26,7 @@ Si algo puede construirse **solo con la API pública** y no todas las aplicacion
 | **Runtime de componentes** | Instancias, regiones dinámicas, reconciliación por clave, **ciclo de vida** (`on_mount`, `on_destroy`), **referencias a elementos** | ✅ |
 | **Asincronía** | Manejadores `async def` y trabajo en segundo plano con retorno seguro al hilo de la interfaz | ✅ (`qasync`, `@task`, `background`) |
 | **Backend Qt** | Módulo QML interno `Flux`, controles básicos, disposición flex, ventanas | ✅ (varias ventanas, navegación, idiomas y derecha a izquierda) |
+| **Navegación básica** | Moverse entre vistas que son componentes: abrir ventanas, pila de vistas, secciones que conservan sus vistas, salir o cerrar con cambios sin guardar | ✅ Ventanas, pila, `sections()`, `{#hidden}`, `navigation()`, `before_leave` ([lanzamiento.md](lanzamiento.md), 25–27) |
 | **Controles básicos** | Los necesarios para formularios y navegación sencilla: texto, botón, campos, casilla, select, switch, slider, radio, imagen, progreso, pestañas, diálogos nativos, lista virtualizada | ✅ |
 | **Estilos y temas** | Subconjunto de CSS, tokens `var(--x)`, temas intercambiables | ✅ |
 | **Interoperabilidad con Qt** | Usar un componente QML propio o un objeto Qt existente desde un `.flux` cuando FluxUI no alcanza | ✅ (importar `.qml`) |
@@ -42,7 +43,7 @@ Si algo puede construirse **solo con la API pública** y no todas las aplicacion
 - Bibliotecas de componentes ricos: tablas de datos, gráficas, selectores de fecha, editores de texto enriquecido.
 - Empaquetado de aplicaciones en ejecutables (`.exe`, `.app`, instaladores).
 - Herramientas de inspección visual en tiempo de ejecución (devtools).
-- Enrutado complejo con historial, parámetros o carga diferida.
+- Enrutado: navegar a direcciones (`/proyectos/42/tablero`) con parámetros, historial con «adelante», enlaces que reconstruyen varias vistas, rutas anidadas declaradas como tabla, restaurar la ruta al reabrir, carga diferida. Ver [Navegación básica y enrutado](#navegación-básica-y-enrutado).
 - Backends distintos de Qt Quick (web, widgets nativos, móvil).
 
 ## Proyectos paralelos
@@ -57,8 +58,27 @@ Cada proyecto se apoya en una **API del núcleo** concreta. Esa API es la que el
 | **Biblioteca de componentes** (`fluxui-kit`) | Tablas con ordenación y filtrado, gráficas, selectores de fecha, árboles, paneles acoplables | Slots, `ref`, interoperabilidad con Qt, tokens de tema | Se escribe en `.flux` (y QML propio cuando haga falta), como lo haría un usuario |
 | **Empaquetado** (`flux package`) | Generar ejecutables e instaladores con PyInstaller, Nuitka o Briefcase | Ubicación estable de recursos del paquete (módulo QML, plantillas); `flux build` | Puede ser un plugin de la CLI. El núcleo debe garantizar que las apps sean empaquetables y documentar una receta |
 | **Devtools** | Ventana que muestra el árbol de componentes, el estado de cada instancia y qué bindings se recalculan | API de inspección; ganchos de depuración en la reactividad | Útil cuando haya aplicaciones medianas |
-| **Enrutado** (`fluxui-router`) | Navegación entre pantallas con historial y parámetros | Slots, contexto, ciclo de vida | Para casos sencillos bastan `{#if}` y una pila de páginas en el núcleo. El reto 6 ([gestor de proyectos](challenges_to_test.md#6-gestor-de-proyectos)) lo necesita y lista qué pediría |
+| **Enrutado** (`fluxui-router`) | Navegar a direcciones con parámetros, historial con «adelante» y rutas anidadas | Navegación básica (pila, secciones, salidas con confirmación), contexto, ciclo de vida | Ver [Navegación básica y enrutado](#navegación-básica-y-enrutado). El reto 6 ([gestor de proyectos](challenges_to_test.md#6-gestor-de-proyectos)) lo necesita y lista qué pediría |
 | **Plantillas y ejemplos** | Galería de aplicaciones de referencia y plantillas para `flux new` | API pública completa | Sirven además para validar el framework con uso real |
+
+## Navegación básica y enrutado
+
+Casi toda aplicación que no sea básica necesita varias vistas y ventanas. Eso es del núcleo. El enrutador es otra cosa: traduce **direcciones** a vistas.
+
+- **Navegación básica (núcleo):** se navega a un componente, con sus props: `nav.push(Detalle, item=t)`. Incluye ventanas, la pila de vistas, volver conservando el estado, secciones paralelas que conservan sus vistas y la confirmación al salir o cerrar con cambios sin guardar.
+- **Enrutado (`fluxui-router`):** se navega a un texto, `/proyectos/42/tablero?tarjeta=t5`, que el enrutador traduce a vistas y parámetros. Sirve para guardar, compartir o reconstruir «dónde estoy»: historial con adelante, enlaces profundos, rutas anidadas como tabla, restaurar al reabrir, carga diferida.
+
+| Capacidad | Dónde |
+|---|---|
+| Abrir ventanas con props, eventos y modo modal | Núcleo ✅ |
+| Pila de vistas: ir, volver, sustituir; volver conserva el estado; lo descartado se libera | Núcleo ✅ |
+| Secciones paralelas, cada una con su pila, que se conservan al ocultarse | Núcleo ✅ `sections()`, `{#hidden}` |
+| Confirmar antes de salir de una vista o cerrar una ventana | Núcleo ✅ `before_leave` |
+| Obtener la pila sin pasarla, atrás con teclado y ratón, devolver un resultado | Núcleo ✅ `navigation()`, `back(valor)` |
+| Rutas con nombre y parámetros, historial con adelante, enlaces profundos | Enrutador |
+| Rutas anidadas declaradas como tabla, restaurar la ruta, carga diferida | Enrutador |
+
+El enrutador debe poder construirse con la API pública sobre la navegación básica.
 
 ## Puntos de extensión que el núcleo debe ofrecer
 

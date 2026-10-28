@@ -22,9 +22,9 @@ from .reactivity import (
 from . import dialogs
 from .events import DragEvent, FocusEvent, KeyEvent, PointerEvent, ResizeEvent, WheelEvent
 from .i18n import i18n, t
-from .lifecycle import Ref, inject, on_destroy, on_mount, provide, ref
+from .lifecycle import Ref, before_leave, inject, on_destroy, on_mount, provide, ref
 from .notifications import notify
-from .pages import PageStack, pages
+from .pages import PageStack, Sections, navigation, pages, sections
 from .styling.theme import theme
 from .tasks import Task, background, spawn, task
 from .timers import Timer, interval, timeout
@@ -46,6 +46,7 @@ __all__ = [
     "PointerEvent",
     "PropError",
     "Ref",
+    "Sections",
     "ResizeEvent",
     "State",
     "Task",
@@ -54,6 +55,7 @@ __all__ = [
     "__version__",
     "background",
     "batch",
+    "before_leave",
     "computed",
     "dialogs",
     "effect",
@@ -61,6 +63,7 @@ __all__ = [
     "event",
     "inject",
     "interval",
+    "navigation",
     "notify",
     "on_destroy",
     "on_mount",
@@ -70,6 +73,7 @@ __all__ = [
     "provide",
     "ref",
     "run",
+    "sections",
     "spawn",
     "state",
     "t",

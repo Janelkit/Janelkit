@@ -256,6 +256,22 @@ En el elemento raíz de un bloque `{#if}`, `{#each}` o `{#key}`:
 
 Vuelve a crear el contenido cuando cambia el valor de la expresión. Útil para reiniciar el estado local de un componente (por ejemplo, el borrador de un formulario al cambiar de nota).
 
+### `{#hidden}`
+
+```html
+{#hidden pestaña != "buscar"}
+  <Buscador />
+{/hidden}
+```
+
+Oculta el contenido mientras la condición es verdadera, **sin destruirlo**: al volver a mostrarlo conserva su estado (lo escrito, el desplazamiento, la página de una lista). Es lo contrario de `{#if}`, que destruye lo que deja de mostrarse.
+
+- El contenido se crea la primera vez que la condición es falsa. Si empieza oculto, no cuesta nada hasta que se muestra.
+- Después, ocultar y mostrar solo cambia su visibilidad: `on_mount` no se repite y `on_destroy` no llega hasta que se desmonta lo que contiene el bloque.
+- Mientras está oculto no ocupa sitio, pero sigue vivo: sus efectos y temporizadores continúan.
+- Úsalo para lo que se alterna a menudo y es caro de crear o tiene estado que importa. Para lo demás, `{#if}` libera memoria.
+- No admite `{:else}` ni transiciones de entrada y salida.
+
 ### Varios elementos en un bloque
 
 Si una rama o una fila tiene varios elementos, se agrupan en un contenedor implícito con la orientación del contenedor padre, que hereda su dirección, separación y alineación. Normalmente no se nota; si necesitas controlar la disposición, envuélvelos tú en un `<Column>` o `<Row>`.
@@ -508,6 +524,79 @@ def abrir(item):
 - `push` muestra una página nueva encima; la de debajo **sigue viva** y, al volver con `pop()`, conserva su estado. `replace` sustituye la actual; `reset` vacía la pila y empieza de nuevo. Las páginas descartadas se liberan (sus `on_destroy` se ejecutan).
 - Las palabras clave son props y eventos (`on_...`) de la página, como en `open_window`. Las páginas heredan el contexto (`inject`) del componente que declara la pila.
 - `nav.current` (nombre de la página visible), `nav.depth` y `nav.can_go_back` son reactivos; `nav.page` da la instancia visible.
+- **Atrás con el teclado y el ratón:** Alt+← y el botón «atrás» del ratón vuelven a la página anterior, en la pila visible más interna. Alt+← actúa cuando el foco está dentro de la pila (si está, por ejemplo, en un botón de la barra lateral, no hace nada); el ratón, al pulsar sobre ella. Si un elemento de la página ya usa Alt+← (por ejemplo, para mover una tarjeta), gana el elemento.
+
+### Navegar desde una página
+
+Dentro de una página (o de cualquier componente que contenga), `navigation()` da su pila, sin pasarla como prop:
+
+```python
+from fluxui import navigation
+from pages.Detalle import Detalle
+
+nav = navigation()
+
+def abrir(item):
+    nav.push(Detalle, item=item)
+```
+
+### Devolver un resultado
+
+`push` se puede esperar: `await` devuelve el valor con el que la página vuelve con `nav.back(valor)` (o `None` si se descarta de otra forma, con `pop`, `replace` o `reset`).
+
+```python
+async def elegir_responsable():                  # en la página que pregunta
+    persona = await nav.push(ElegirPersona)
+    if persona is not None:
+        tarjeta["responsable"] = persona["id"]
+```
+
+```html
+<!-- en ElegirPersona.flux -->
+<Button on:click={nav.back(p)}>{p["nombre"]}</Button>
+```
+
+### Secciones
+
+Una aplicación con barra lateral o pestañas tiene varias secciones, y cada una necesita su pila. `sections()` las crea; `<Sections of={...} />` muestra la actual:
+
+```python
+from fluxui import sections
+from pages.Proyectos import Proyectos
+from pages.Personas import Personas
+
+secciones = sections(proyectos=Proyectos, personas=Personas)
+```
+
+```html
+<flex>
+  <flex direction="column" class="barra">
+    <Button on:click={secciones.show("proyectos")} class:activa={secciones.current == "proyectos"}>Proyectos</Button>
+    <Button on:click={secciones.show("personas")} class:activa={secciones.current == "personas"}>Personas</Button>
+  </flex>
+  <Sections of={secciones} />
+</flex>
+```
+
+- Cada sección es una pila (`secciones["personas"]`, o `secciones.stack` para la visible) y empieza en el componente indicado. Dentro, `navigation()` da la pila de su sección.
+- Una sección se crea la primera vez que se muestra. Al cambiar a otra **se conserva entera**, con todas sus páginas y su estado; volver a ella cuesta lo mismo que mostrarla.
+- `secciones.current` (el nombre de la visible) es reactivo; `secciones.names` lista los nombres.
+
+### Preguntar antes de salir
+
+`before_leave(fn)` en el script de un componente registra una pregunta: si `fn()` devuelve `False`, no se sale. Puede ser `async`, para preguntar con un diálogo:
+
+```python
+from fluxui import before_leave, dialogs
+
+@before_leave
+async def salir():
+    return not cambios.value or await dialogs.confirm("Hay cambios sin guardar. ¿Salir igualmente?")
+```
+
+- Se consulta al descartar la página que contiene el componente (`pop`, `back`, `replace`, `reset`, Alt+←) y al cerrar con la X la ventana que lo muestra. Cerrar la ventana principal consulta también las ventanas que abrió.
+- Cambiar de sección no pregunta: la sección se conserva y no se pierde nada.
+- Cerrar desde el código (`ventana.close()`) no pregunta.
 
 ## Varias ventanas
 

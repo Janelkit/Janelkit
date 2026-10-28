@@ -34,6 +34,7 @@ _MISSING: Any = object()
 class _Setup(Protocol):
     def add_mount(self, fn: Callable[[], Any]) -> None: ...
     def add_destroy(self, fn: Callable[[], Any]) -> None: ...
+    def add_leave(self, fn: Callable[[], Any]) -> None: ...
     def provide(self, key: Any, value: Any) -> None: ...
     def inject(self, key: Any) -> Any: ...
 
@@ -72,6 +73,15 @@ def on_mount(fn: F) -> F:
 def on_destroy(fn: F) -> F:
     """Ejecuta `fn` al desmontar el componente. Se puede usar como decorador."""
     _current("on_destroy").add_destroy(fn)
+    return fn
+
+
+def before_leave(fn: F) -> F:
+    """Pregunta antes de salir: `fn()` se llama al descartar la página que contiene este
+    componente (`pop`, `back`, `replace`, `reset`) y al cerrar su ventana con la X.
+    Si devuelve False, no se sale. Puede ser `async` (p. ej. `await dialogs.confirm(...)`).
+    Se puede usar como decorador."""
+    _current("before_leave").add_leave(fn)
     return fn
 
 

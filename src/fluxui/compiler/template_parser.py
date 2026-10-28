@@ -333,25 +333,27 @@ class _TemplateParser:
             return self.parse_if(start, cond)
         if keyword == "each":
             return self.parse_each(start, rest, rest_loc)
-        if keyword == "key":
-            expr = self._expr(rest, rest_loc, "{#key expresión}")
-            return self.parse_key(start, expr)
+        if keyword in ("key", "hidden"):
+            expr = self._expr(rest, rest_loc, "{#hidden condición}" if keyword == "hidden" else "{#key expresión}")
+            return self.parse_key(start, expr, keyword)
         raise self.error(
-            f"bloque desconocido '{{#{keyword}}}'", start, "los bloques disponibles son {#if}, {#each} y {#key}"
+            f"bloque desconocido '{{#{keyword}}}'", start, "los bloques disponibles son {#if}, {#each}, {#key} y {#hidden}"
         )
 
-    def parse_key(self, start: int, expr: Expression) -> KeyBlock:
-        block = KeyBlock(expr, [], self.loc(start))
+    def parse_key(self, start: int, expr: Expression, word: str = "key") -> KeyBlock:
+        block = KeyBlock(expr, [], self.loc(start), hidden=word == "hidden")
         try:
-            self.parse_children(closing=None, block=("key", start))
+            self.parse_children(closing=None, block=(word, start))
         except _Stop as stop:
             block.children = stop.nodes
         else:
-            raise self.error("el bloque {#key} no está cerrado", start, "añade {/key}")
+            raise self.error(f"el bloque {{#{word}}} no está cerrado", start, f"añade {{/{word}}}")
         dstart = self.pos
         directive = self.read_braced(validate=False).code.strip()
-        if directive != "/key":
-            raise self.error(f"directiva {{{directive}}} inesperada dentro de {{#key}}", dstart, "cierra el bloque con {/key}")
+        if directive != f"/{word}":
+            raise self.error(
+                f"directiva {{{directive}}} inesperada dentro de {{#{word}}}", dstart, f"cierra el bloque con {{/{word}}}"
+            )
         return block
 
     def _expr(self, code: str, loc: SourceLocation, form: str) -> Expression:

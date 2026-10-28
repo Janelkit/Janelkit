@@ -32,6 +32,9 @@ Situación de partida: incrementos 0–7 completos; detalle en [estado.md](estad
 | 24 | Navegación entre pantallas | P2 | ✅ | `pages()` y `<Pages>`; `tests/test_pages_qt.py` |
 | 21 | Internacionalización | P2 | ✅ | `t`, `i18n`; formatos con QLocale; RTL; `examples/idiomas`; `tests/test_i18n_qt.py` |
 | 22 | `flux dev` conservando el estado (HMR) | P2 | ✅ | `tests/test_dev.py::test_reload_keeps_state_unless_the_script_changed` |
+| 25 | Secciones que conservan sus vistas | P0 | ✅ | `sections()`/`<Sections>` y `{#hidden}`; `tests/test_navigation.py`. Cambiar de sección con 500 filas: ~13 ms (crearla, ~80 ms) |
+| 26 | Salir de una vista o cerrar una ventana con cambios sin guardar | P1 | ✅ | `before_leave` (también `async`); `tests/test_navigation.py` |
+| 27 | Experiencia de navegación | P1 | ✅ | `navigation()`, `await push` / `back(valor)`, Alt+← y botón «atrás» del ratón; `tests/test_navigation.py`. Pendiente opcional: transición entre páginas, `open_window(..., single=True)` |
 
 ## Cómo se prioriza
 
@@ -153,6 +156,22 @@ Verificar disponibilidad de `fluxui`/`flux` en PyPI (y conflictos con el comando
 - **Propuesta:** un elemento de pila de páginas en el núcleo (`<Pages>` con `push`/`pop`/`replace`), con ciclo de vida por página. El enrutado avanzado sigue siendo un proyecto paralelo.
 - **Hecho cuando:** un ejemplo navega entre tres pantallas, vuelve atrás conservando el estado de la anterior y libera las que se descartan.
 
+### 25. Secciones que conservan sus vistas · M
+- **Problema:** una aplicación con barra lateral o pestañas (Proyectos, Personas, Mi trabajo) necesita una pila por sección. Hoy se monta a mano: una `pages()` por sección y `{#if}` para elegir cuál se ve. `{#if}` destruye la sección que se oculta, así que al volver se pierden la búsqueda, el desplazamiento y lo que se estaba escribiendo.
+- **Propuesta:** una forma de que el contenido oculto se conserve en vez de destruirse. Puede ser general (para cualquier `{#if}` o `<Tabs>`) o propia de la navegación (secciones, cada una con su pila). La elección afecta al lenguaje, por eso es P0.
+- **Decisión:** las dos. `sections()` y `<Sections>` para la navegación, y la directiva `{#hidden cond}` para cualquier contenido.
+- **Hecho cuando:** un ejemplo con tres secciones, cada una con su pila, cambia de sección y vuelve encontrando cada una como la dejó. Ocultar una sección no cuesta más que no mostrarla, y descartarla la libera.
+
+### 26. Salir de una vista o cerrar una ventana con cambios sin guardar · S
+- **Problema:** no hay forma de que una página impida `pop`, `replace` o `reset`, ni de que una ventana impida cerrarse. Hay que comprobarlo en cada botón, y cerrar la ventana con la X no se puede interceptar.
+- **Propuesta:** la página o la ventana registra en su script una función que decide si se puede salir. Puede ser `async` para preguntar con `dialogs.confirm`. Si responde que no, la navegación o el cierre se cancelan.
+- **Hecho cuando:** con un formulario modificado, volver atrás, cambiar de sección, cerrar la ventana con la X y cerrar la aplicación preguntan antes. Sin cambios, no preguntan.
+
+### 27. Experiencia de navegación · S
+- **Problema:** para que una página navegue tiene que recibir la pila a mano (prop o `provide`). `nav.current` es un texto con el nombre del componente. Atrás no responde a Alt+← ni al botón lateral del ratón. Una página que elige algo y vuelve devuelve el resultado con un evento.
+- **Propuesta:** que una página obtenga su pila sin pasarla. Que `<Pages>` responda a Alt+← y al botón «atrás» del ratón. Que una página pueda devolver un resultado a quien la abrió. Opcional: transición al cambiar de página.
+- **Hecho cuando:** la aplicación de ejemplo del 25 navega sin pasar la pila entre páginas, vuelve con Alt+← y con el ratón, y una página de selección devuelve su resultado con `await`.
+
 ## Orden sugerido
 
 1. **Primero lo que define la API:** 1, 2, 7. Son pequeños o medianos y condicionan todo lo demás.
@@ -160,7 +179,7 @@ Verificar disponibilidad de `fluxui`/`flux` en PyPI (y conflictos con el comando
 3. **Asincronía e interoperabilidad:** 5 y 8.
 4. **Validación con aplicaciones reales** (12) en paralelo a los controles (9) y la lista virtualizada (10): las aplicaciones dirán qué controles hacen falta de verdad.
 5. **Completar el lenguaje:** 18, 23 y 20 (tipos en props, clases dinámicas, transiciones).
-6. **Aplicaciones de varias pantallas:** 19, 24 y 21 (ventanas, navegación, idiomas). Conviene incorporarlas a las aplicaciones de validación.
+6. **Aplicaciones de varias pantallas:** 19, 24 y 21 (ventanas, navegación, idiomas). Conviene incorporarlas a las aplicaciones de validación. Después, 25, 26 y 27 (navegación básica completa).
 7. **Experiencia de desarrollo:** 22 (HMR), cuando el ciclo de vida esté estable.
 8. **Preparar la publicación:** 11, 13, 14, 15, 16 y 17. La documentación (16) y las mediciones (13) se cierran al final para cubrir todo lo anterior.
 

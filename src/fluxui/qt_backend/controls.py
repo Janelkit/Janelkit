@@ -259,6 +259,7 @@ CONTROLS: dict[str, ControlSpec] = {
         events={"activate": EventSpec("onActivated")},
     ),
     "Pages": ControlSpec("FxPages"),  # stack={nav}: lo trata el compilador (como ref)
+    "Sections": ControlSpec("FxPages"),  # of={secciones}: una <Pages> por sección, dentro
     "Spacer": ControlSpec("FxSpacer"),
 }
 

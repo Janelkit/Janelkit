@@ -50,6 +50,40 @@ class MountedComponent:
     compiled: CompiledComponent
 
 
+class _CloseGuard(QObject):
+    """Cerrar una ventana con la X consulta los `before_leave` de lo que muestra
+    (también los de las ventanas que abrió). Si uno dice que no, la ventana sigue abierta."""
+
+    def __init__(self, window: QObject, instance: ComponentInstance):
+        super().__init__(window)
+        self._instance = instance
+        self._approved = False
+        window.installEventFilter(self)
+
+    def eventFilter(self, window: QObject, event: QEvent) -> bool:  # noqa: N802 - API de Qt
+        if event.type() == QEvent.Type.Show:
+            self._approved = False
+        if event.type() != QEvent.Type.Close or self._approved or self._instance.disposed:
+            return False
+        from ..pages import ask_to_leave, leave_guards
+
+        guards = leave_guards(self._instance)
+        if not guards:
+            return False
+        answered_now = True
+
+        def proceed() -> None:
+            self._approved = True
+            if not answered_now:  # respondió más tarde (async): cerrar ahora
+                window.close()
+
+        if ask_to_leave(guards, proceed):
+            return False
+        answered_now = False
+        event.ignore()
+        return True
+
+
 class Application:
     """Una única `QGuiApplication` y un motor QML por proceso."""
 
@@ -175,6 +209,8 @@ class Application:
             raise self._qml_error(compiled, component.errors())
         mounted = MountedComponent(instance, root, context, component, compiled)
         self.mounted.append(mounted)
+        if root.isWindowType():
+            _CloseGuard(root, instance)
         if parent is None and root.isWindowType():
             # Al cerrar la ventana principal se cierran las secundarias que abrió (open_window).
             root.visibleChanged.connect(

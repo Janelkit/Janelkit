@@ -198,6 +198,7 @@ class KeySlot:
     expression: Expression
     fragment: Fragment
     loc: SourceLocation
+    hidden: bool = False  # {#hidden expr}: se crea al mostrarse y después solo se oculta
 
 
 @dataclass

@@ -6,6 +6,21 @@ import "fx.js" as Fx
 
 StackLayout {
     id: pages
+    // Atrás con Alt+← o el botón «atrás» del ratón: lo que no atendió un elemento de
+    // dentro llega aquí (la pila más interna primero). Python decide si se puede volver.
+    property bool fxCanGoBack: false
+    signal fxBack()
+    Keys.onPressed: (event) => {
+        if (fxCanGoBack && ((event.key === Qt.Key_Left && (event.modifiers & Qt.AltModifier)) || event.key === Qt.Key_Back)) {
+            event.accepted = true
+            fxBack()
+        }
+    }
+    TapHandler {
+        acceptedButtons: Qt.BackButton
+        enabled: pages.fxCanGoBack
+        onTapped: pages.fxBack()
+    }
     property int fxFlex: 1
     property string fxSelfAlign: ""
     property bool fxSelfStretch: false

@@ -89,11 +89,15 @@ class EachBlock:
 
 @dataclass
 class KeyBlock:
-    """`{#key expr}...{/key}`: recrea el contenido cuando cambia `expr`."""
+    """`{#key expr}...{/key}`: recrea el contenido cuando cambia `expr`.
+
+    Con `hidden`, es `{#hidden expr}...{/hidden}`: el contenido se crea la primera vez
+    que `expr` es falso y después solo se oculta (conserva su estado)."""
 
     expression: Expression
     children: list["Node"]
     loc: SourceLocation
+    hidden: bool = False
 
 
 Node = Union[Element, Text, Interpolation, IfBlock, EachBlock, KeyBlock]
@@ -170,7 +174,8 @@ def _dump_node(node: Node, depth: int, out: list[str]) -> None:
             for child in branch.children:
                 _dump_node(child, depth + 1, out)
     elif isinstance(node, KeyBlock):
-        out.append(f"{pad}{{#key {node.expression.code.strip()}}} @{_lc(node.loc)}")
+        word = "hidden" if node.hidden else "key"
+        out.append(f"{pad}{{#{word} {node.expression.code.strip()}}} @{_lc(node.loc)}")
         for child in node.children:
             _dump_node(child, depth + 1, out)
     elif isinstance(node, EachBlock):

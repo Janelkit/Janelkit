@@ -55,6 +55,7 @@ Se llaman mientras se ejecuta el `<script>` de un componente; fuera de él lanza
 |---|---|
 | `on_mount` | `on_mount(fn)` (o como decorador) ejecuta `fn` cuando la vista del componente existe. Si `fn` devuelve una función, se llama al desmontar. |
 | `on_destroy` | `on_destroy(fn)` ejecuta `fn` al desmontar el componente. |
+| `before_leave` | `before_leave(fn)` (o como decorador): `fn()` se consulta antes de descartar la página que lo contiene o de cerrar su ventana con la X; si devuelve `False`, no se sale. Puede ser `async`. |
 | `provide` | `provide(clave, valor)` pone un valor a disposición de los descendientes. |
 | `inject` | `inject(clave, defecto)` lee el valor del antecesor más cercano que lo provee. Sin defecto y sin proveedor: `LookupError`. |
 | `ref` | `ref()` crea una referencia para `ref={nombre}` en la plantilla. |
@@ -100,7 +101,10 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 | Nombre | Descripción |
 |---|---|
 | `pages` | `nav = pages(Inicio, **props)` en el script crea una pila de páginas; `<Pages stack={nav} />` muestra la de arriba. |
-| `PageStack` | Tipo de `pages`: `.push(C, **props_y_on_eventos)`, `.pop()`, `.replace(...)`, `.reset(...)`; reactivos `.current`, `.depth`, `.can_go_back`; `.page` (instancia visible). |
+| `PageStack` | Tipo de `pages`: `.push(C, **props_y_on_eventos)` (se puede esperar: `await` devuelve el valor de `.back(valor)`), `.pop()`, `.back(valor=None)`, `.replace(...)`, `.reset(...)`; reactivos `.current`, `.depth`, `.can_go_back`; `.page` (instancia visible). |
+| `navigation` | `nav = navigation()` en el script de una página (o de un componente dentro de ella) da su pila. |
+| `sections` | `secciones = sections(a=A, b=B)` crea secciones paralelas, cada una con su pila; `<Sections of={secciones} />` muestra la actual. |
+| `Sections` | Tipo de `sections`: `.show(nombre)`, `[nombre]` (su pila), `.stack` (la de la visible), `.names`; reactivo `.current`. |
 
 ### Diálogos
 

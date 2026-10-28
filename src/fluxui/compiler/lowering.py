@@ -467,7 +467,7 @@ class _Lowerer:
                     ir.props["objectName"] = Literal(qml_string(attr.value))
                 else:
                     self.error('el atributo id debe ser un texto literal, p. ej. id="guardar"', attr.loc)
-            elif attr.name == "ref" or (el.tag == "Pages" and attr.name == "stack"):
+            elif attr.name == "ref" or (el.tag == "Pages" and attr.name == "stack") or (el.tag == "Sections" and attr.name == "of"):
                 self.ref(attr, ir)
             elif attr.directive == "on":
                 self.event(attr, spec, ir)
@@ -980,12 +980,31 @@ class _Lowerer:
 
     def key_block(self, node: KeyBlock, horizontal: bool) -> list[IRNode]:
         self.check_expr(node.expression)
-        frag = self.fragment(node.children, horizontal, (), node.loc)
+        frag = self.fragment(node.children, horizontal, (), node.loc, component_root=not node.hidden)
         if frag.empty:
             return []
-        slot = KeySlot(self.next_id("m"), node.expression, frag, node.loc)
+        if node.hidden:
+            self.hide_when(frag, node.expression, horizontal)
+        slot = KeySlot(self.next_id("m"), node.expression, frag, node.loc, hidden=node.hidden)
         self.tpl.slots.append(slot)
         return [IRRepeater(slot.model_id, node.loc, frag.root, _path(frag))]
+
+    def hide_when(self, frag: Fragment, condition: Expression, horizontal: bool) -> None:
+        """{#hidden}: la raíz del fragmento se oculta mientras `condition` sea verdadera."""
+        root = frag.root
+        if "visible" in root.props or any(prop == "visible" for prop, _, _ in root.conditional):
+            box = IRElement("FxRow" if horizontal else "FxColumn", root.loc)
+            box.children = [root]
+            box.props.update({k: Literal(v) for k, v in _TRANSPARENT_BOX.items()})
+            own = "row" if horizontal else "column"
+            box.props["direction"] = Literal(f'parent && parent.fxBox ? parent.fxBox.direction : "{own}"')
+            frag.root = root = box
+        saved, self.tpl = self.tpl, frag.template
+        try:
+            bid = self.add_expr_binding(Expression(f"not ({condition.code.strip()})", condition.loc), condition.loc)
+        finally:
+            self.tpl = saved
+        root.props["visible"] = Bound(bid)
 
     # -- slots ---------------------------------------------------------------
     def slot_outlet(self, el: Element, horizontal: bool) -> list[IRNode]:

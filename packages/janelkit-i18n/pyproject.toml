@@ -8,7 +8,7 @@ version = "0.0.1.dev0"
 description = "Traducciones, plurales y formatos según el idioma para JanelKit"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["janelkit==0.0.1.dev0"]
+dependencies = ["janelkit>=0.0.1.dev0,<0.1"]  # rango del núcleo probado (docs/api.md, política de versiones)
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Programming Language :: Python :: 3",

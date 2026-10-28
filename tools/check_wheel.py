@@ -5,6 +5,8 @@
 3. Instala el wheel en un entorno virtual nuevo, fuera del repositorio.
 4. Ejecuta `janel --help`, `janel new demo` y `python main.py` (Qt offscreen)
    y confirma que `janelkit` se importa desde el entorno, no desde el checkout.
+5. Construye e instala junto a él los wheels de las extensiones (janelkit-i18n,
+   janelkit-desktop) y comprueba que se importan y que pip acepta su rango del núcleo.
 
 Uso:  python tools/check_wheel.py [--keep]
 """
@@ -21,6 +23,7 @@ import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+EXTENSIONS = {"janelkit-i18n": "janelkit_i18n", "janelkit-desktop": "janelkit_desktop"}
 REQUIRED = [
     "janelkit/__init__.py",
     "janelkit/compiler/qml_generator.py",
@@ -121,7 +124,21 @@ def main() -> int:
             raise SystemExit("janel build no generó build/qml/App.qml")
         print("   todos los componentes compilan; QML en build/qml")
 
-        print("\nOK: el recorrido pip install -> janel new -> python main.py funciona fuera del repositorio.")
+        step("Extensiones: " + ", ".join(EXTENSIONS))
+        for name in EXTENSIONS:
+            run([sys.executable, "-m", "build", "--wheel", "--outdir", str(dist), str(REPO / "packages" / name)])
+        wheels = [next(dist.glob(f"{module}-*.whl")) for module in EXTENSIONS.values()]
+        run([str(py), "-m", "pip", "install", "--quiet", *map(str, wheels)])
+        run([str(py), "-m", "pip", "check"], cwd=outside, env=env)
+        code = "import janelkit_desktop as d, janelkit_i18n as i; print(d.__file__); print(i.__file__)"
+        origins = [Path(o) for o in run([str(py), "-c", code], cwd=outside, env=env).stdout.splitlines()]
+        if any(o.resolve().is_relative_to(REPO) for o in origins):
+            raise SystemExit("las extensiones se importan desde el repositorio, no desde los wheels")
+        if not (origins[0].parent / "icon.png").is_file():
+            raise SystemExit("el wheel de janelkit-desktop no incluye icon.png")
+        print("   instaladas sobre el núcleo del wheel; pip check sin conflictos")
+
+        print("\nOK: el recorrido pip install -> janel new -> python main.py funciona fuera del repositorio, también con las extensiones.")
         return 0
     finally:
         if args.keep:

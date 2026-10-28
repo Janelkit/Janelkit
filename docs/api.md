@@ -177,4 +177,8 @@ Mientras JanelKit esté en la serie **0.x**:
 - **Formato `.janel`**: `FORMAT_VERSION` sube solo cuando un archivo que compilaba deja de compilar o cambia de significado. Añadir sintaxis nueva no lo cambia. Las herramientas (editores, linters) pueden usarlo para saber qué esperar.
 - Desde la **1.0**, se aplica versionado semántico estricto.
 
+### Paquetes del ecosistema
+
+`janelkit-i18n` y `janelkit-desktop` tienen **versión propia** y siguen la misma política para su propia API. Cada uno declara en su `pyproject.toml` las versiones del núcleo con las que funciona (por ejemplo `janelkit>=0.1,<0.2`) y solo usa la API pública del núcleo, así que una versión de parche del núcleo no los rompe. Cuando el núcleo publica una versión menor, se prueban contra ella y se amplía el rango (con una versión de parche de la extensión) o se adaptan (con una versión menor). En el repositorio, la CI prueba cada extensión contra el núcleo de la misma rama, y `tests/test_packages.py` comprueba que el rango declarado incluye esa versión.
+
 Las pruebas de `packages/janelkit/tests/test_public_api.py` fallan si cambia la lista de nombres públicos sin actualizar esta página.

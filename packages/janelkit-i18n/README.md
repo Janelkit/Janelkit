@@ -34,3 +34,10 @@ El idioma de la interfaz es del núcleo (`janelkit.locale`): de él dependen la 
 - Si falta una clave en el idioma activo, se usa la de `i18n.default` y, si tampoco está, la propia clave, con un aviso en el logger `janelkit`.
 
 Ejemplo: `apps/examples/idiomas` (español, inglés y árabe).
+
+## Cambios
+
+### 0.0.1.dev0 (sin publicar)
+
+- Primera versión como paquete propio. Antes era el módulo `janelkit.i18n` del núcleo: cambia `from janelkit import t, i18n` por `from janelkit_i18n import t, i18n`.
+- Compatible con `janelkit` 0.0.1.dev0 (prealfa); se ampliará al publicarse la 0.1 (`janelkit>=0.0.1.dev0,<0.1`).

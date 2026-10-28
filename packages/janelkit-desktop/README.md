@@ -36,3 +36,10 @@ Al importarse, añade estos métodos a `MountedApp` de `janelkit.inspect` (con `
 | `app.notifications()` | Notificaciones enviadas (`{"title", "message"}`), de la más antigua a la más reciente. |
 
 Ejemplos: `apps/examples/files` (elegir carpeta), `apps/challenges/gestor` (confirmaciones) y `apps/challenges/chat` (notificaciones).
+
+## Cambios
+
+### 0.0.1.dev0 (sin publicar)
+
+- Primera versión como paquete propio. Antes eran los módulos `janelkit.dialogs`, `janelkit.clipboard` y `janelkit.notifications` del núcleo: cambia `from janelkit import dialogs, clipboard, notify` por `from janelkit_desktop import dialogs, clipboard, notify`.
+- Compatible con `janelkit` 0.0.1.dev0 (prealfa); se ampliará al publicarse la 0.1 (`janelkit>=0.0.1.dev0,<0.1`).

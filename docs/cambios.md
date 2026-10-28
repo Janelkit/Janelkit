@@ -2,6 +2,8 @@
 
 Cada versión lista lo nuevo y, aparte, lo que **rompe** código existente con cómo migrarlo. La política está en [api.md](api.md#política-de-versiones).
 
+Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`janelkit-i18n`, `janelkit-desktop`) llevan sus cambios en la sección «Cambios» de su README.
+
 ## 0.1.0 (sin publicar)
 
 Primera versión pública prevista. Respecto a la prealfa interna (incrementos 0–7):
@@ -21,7 +23,7 @@ Primera versión pública prevista. Respecto a la prealfa interna (incrementos 0
 - **Desplazamiento en `<List>`** (reto del chat): `follow`, `on:top`, `on:bottom`, `on:scroll`; `ref.scroll_to_end()`, `scroll_to_start()`, `scroll_to(i)`. Añadir filas ya no reinicia la lista, aunque sean muchas.
 - **Texto enriquecido:** `<Text format="markdown">` (o `"html"`) y `on:link`.
 - **Ventanas:** `on:activate` y `on:deactivate` en `<Window>`.
-- **Notificaciones:** `janelkit.notify(título, mensaje)`, con icono en la bandeja del sistema.
+- **Notificaciones:** `janelkit_desktop.notify(título, mensaje)`, con icono en la bandeja del sistema.
 - **Inspección:** `find(label=...)` y `Element.label`; `MountedApp.notifications()`; `MountedApp.windows()` para inspeccionar las ventanas abiertas con `open_window`.
 - **Temporizadores** (reto del panel): `interval(ms, fn)` y `timeout(ms, fn)` (también como decoradores), ligados al componente; `Timer` con `.active`, `.start()`, `.restart()`, `.stop()`.
 - **Formato en el texto:** `{cpu:.1f}`, `{n:,}`, `{x!r}`, como en un f-string.
@@ -63,6 +65,7 @@ Primera versión pública prevista. Respecto a la prealfa interna (incrementos 0
 
 | Antes | Ahora | Cómo migrar |
 |---|---|---|
+| Un solo paquete, `janelkit`, con traducciones, diálogos, portapapeles y notificaciones. | Son paquetes aparte: `janelkit-i18n` (`t`, `i18n`) y `janelkit-desktop` (`dialogs`, `clipboard`, `notify`). `janelkit` ya no los exporta. El idioma de la interfaz (dirección y `QLocale`) sigue en el núcleo como `janelkit.locale`. | Instala el paquete (`pip install janelkit-i18n janelkit-desktop`) y cambia los imports: `from janelkit import t, i18n` → `from janelkit_i18n import t, i18n`; `from janelkit import dialogs, clipboard, notify` → `from janelkit_desktop import dialogs, clipboard, notify`; `janelkit.i18n.I18nError` → `janelkit_i18n.I18nError`. En las pruebas, `app.dialogs()`, `app.answer_dialog()` y `app.notifications()` existen una vez importado `janelkit_desktop` (lo importa la propia aplicación). Para saber si la interfaz va de derecha a izquierda sin traducciones, usa `locale.rtl`. |
 | `<Text>` se creaba como un `Label` de Qt Quick Controls. | Es un `Text` de Qt Quick, con la fuente del tema. Se ve igual (mismas medidas, fuente y color). | Nada, salvo QML propio o pruebas que lo buscaran por la clase `QQuickLabel` o usaran `background`/`palette`: usa `inspect` (`find("Text")`). |
 | `on:click={crear(x)}` llamaba a la función que devolvía `crear(x)`. | Una llamada en un manejador se **ejecuta** al ocurrir el evento. | Si `crear(x)` devuelve una función, escribe `on:click={lambda: crear(x)()}`, o llama directamente a lo que querías ejecutar. |
 | `state([...])` guardaba la lista tal cual. | Guarda una **copia reactiva** (también de los diccionarios y listas anidados). | Modifica el objeto que devuelve `estado.value`, no el original que pasaste. Los `list`/`dict`/`set` siguen siendo instancias de esos tipos (`isinstance` funciona). |

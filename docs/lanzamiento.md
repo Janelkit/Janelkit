@@ -22,7 +22,7 @@ Situación de partida: incrementos 0–7 completos; detalle en [estado.md](estad
 | 13 | Rendimiento de una aplicación mediana | P1 | ✅ | `tools/bench_app.py`; arranque < 300 ms, interacciones < 70 ms |
 | 15 | API de inspección pública | P1 | ✅ | `janelkit.inspect`; `packages/janelkit/tests/test_inspect.py` |
 | 14 | Accesibilidad básica | P1 | ✅ | `packages/janelkit/tests/test_accessibility_qt.py`: orden de Tab, Espacio/Intro en cajas pulsables, foco visible, nombres accesibles (`label`, `alt`) |
-| 11 | Linux, macOS y CI | P1 | 🟡 | CI con matriz preparada (`.github/workflows/ci.yml`); versiones mínimas (Python 3.10 + PySide6 6.8) verificadas en Windows. **Falta:** ejecutarla en GitHub (necesita un remoto) para probar Linux y macOS. |
+| 11 | Linux, macOS y CI | P1 | 🟡 | CI con matriz preparada (`.github/workflows/ci.yml`, un trabajo por paquete); versiones mínimas (Python 3.10 + PySide6 6.8) verificadas en Windows. **Falta:** ejecutarla en GitHub (necesita un remoto) para probar Linux y macOS. |
 | 16 | Documentación de lanzamiento | P1 | ✅ | [tutorial.md](tutorial.md) (con `apps/examples/compra` probado), [api.md](api.md), [cambios.md](cambios.md), [empaquetado.md](empaquetado.md) (receta verificada con PyInstaller) |
 | 17 | Nombre, licencia y publicación | P1 | 🟡 | Nombre decidido: **JanelKit** (`janelkit`, comando `janel`, archivos `.janel`; [estado.md](estado.md#decisiones-provisionales-tomadas-al-implementar), decisión 23). Renombrado aplicado. **Falta:** elegir licencia y publicar en TestPyPI. |
 | 18 | Tipos en props | P2 | ✅ | `edad: int = prop(0)`; literales al compilar, valores dinámicos al ejecutar (`packages/janelkit/tests/test_components_qt.py`) |

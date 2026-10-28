@@ -3,7 +3,7 @@
 Uso:  python tools/bench_app.py
 
 - Arranque: importar JanelKit y PySide6, compilar, crear Qt y montar la vista.
-- Respuesta: el explorador `examples/files` sobre una carpeta de 5000 archivos.
+- Respuesta: el explorador `apps/examples/files` sobre una carpeta de 5000 archivos.
 """
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def startup() -> None:
     print("| Ejemplo | Importar | Compilar | Qt + montar | Total |")
     print("|---|---|---|---|---|")
     for name in EXAMPLES:
-        app = REPO / "examples" / name / "src" / "App.janel"
+        app = REPO / "apps" / "examples" / name / "src" / "App.janel"
         # Un proceso nuevo por medición: el arranque incluye la importación en frío.
         out = subprocess.run([sys.executable, "-c", STARTUP, str(app)], capture_output=True, text=True, check=True)
         imp, comp, mount, total = out.stdout.strip().splitlines()[-1].split("|")
@@ -65,7 +65,7 @@ def responsiveness(files: int = 5000) -> None:
         fn()
         print(f"| {label} | {1000 * (time.perf_counter() - t0):.0f} ms |")
 
-    with mount(REPO / "examples" / "files" / "src" / "App.janel") as app:
+    with mount(REPO / "apps" / "examples" / "files" / "src" / "App.janel") as app:
         timed("Listar la carpeta (hilo aparte + lista)", lambda: app.wait(until=lambda: app.get("listing").value is not None))
         field = app.find(placeholder="Filtrar por nombre (Ctrl+F)")
         timed("Filtrar (quedan 10)", lambda: field.type("_0004"))

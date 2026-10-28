@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "janelkit-i18n"
+version = "0.0.1.dev0"
+description = "Traducciones, plurales y formatos según el idioma para JanelKit"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["janelkit==0.0.1.dev0"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: User Interfaces",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib"

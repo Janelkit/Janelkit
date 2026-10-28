@@ -86,7 +86,7 @@ def enviar():
 - Los errores de un manejador asíncrono se registran con archivo y línea, como los síncronos. Los de una `@task` quedan en `.error` para mostrarlos.
 - El trabajo de `background` en curso no se puede interrumpir (es un hilo), pero su resultado se descarta si la tarea se canceló.
 
-Ejemplo completo: `examples/books` (busca en la API de Open Library).
+Ejemplo completo: `apps/examples/books` (busca en la API de Open Library).
 
 ### Temporizadores
 
@@ -171,7 +171,7 @@ Por defecto, un `<Text>` no se puede seleccionar, como una etiqueta de escritori
 
 ```html
 <script>
-from janelkit import clipboard
+from janelkit_desktop import clipboard
 </script>
 
 <Text selectable>Pedido {pedido["id"]}</Text>
@@ -179,7 +179,7 @@ from janelkit import clipboard
 <Text>En el portapapeles: {clipboard.paste() or "nada"}</Text>
 ```
 
-`janelkit.clipboard` copia (`copy`), lee (`paste`) y vacía (`clear`) el portapapeles del sistema. `paste()` es reactivo: lo que dependa de él se actualiza cuando el portapapeles cambia, también si se copia en otra aplicación.
+El portapapeles es del paquete [`janelkit-desktop`](../packages/janelkit-desktop/README.md). `janelkit_desktop.clipboard` copia (`copy`), lee (`paste`) y vacía (`clear`) el portapapeles del sistema. `paste()` es reactivo: lo que dependa de él se actualiza cuando el portapapeles cambia, también si se copia en otra aplicación.
 
 Límites de `selectable`: con `text-overflow: ellipsis` corta el texto en el borde, sin puntos suspensivos, y no tiene menú contextual. Además, crear un texto seleccionable cuesta unas 2,8 veces lo que uno normal (unos 0,35 ms frente a 0,12 ms), así que en listas de miles de filas conviene usarlo solo donde haga falta. Un texto sin `selectable` no paga nada.
 
@@ -471,7 +471,7 @@ def abrir(ruta):
 - Es para preferencias y datos pequeños: cada cambio reescribe el archivo de esa clave. Los datos grandes de la aplicación (documentos, bases de datos) siguen en sus propios archivos.
 - Lo habitual es reunirlos en un módulo (`services/prefs.py`). `bind:value={prefs.tema}` enlaza con el del módulo; para leerlo en la plantilla sin `.value`, impórtalo por su nombre (`from services.prefs import tema`): la plantilla desenvuelve nombres, no atributos (`{prefs.tema}` es el `state`, `{prefs.tema.value}` su valor).
 
-Ejemplo: `examples/preferencias` (nombre, tema, tamaño de letra, notas y un contador de aperturas; `python examples/preferencias/main.py`, ciérrala y vuelve a abrirla).
+Ejemplo: `apps/examples/preferencias` (nombre, tema, tamaño de letra, notas y un contador de aperturas; `python apps/examples/preferencias/main.py`, ciérrala y vuelve a abrirla).
 
 ## Listas grandes: `<List>`
 
@@ -526,9 +526,11 @@ Con 10 000 filas, crear la lista tarda unos 40 ms (ver `python tools/bench.py`).
 
 ## Idiomas
 
+Las traducciones son del paquete [`janelkit-i18n`](../packages/janelkit-i18n/README.md) (`pip install janelkit-i18n`).
+
 ```python
 from pathlib import Path
-from janelkit import i18n, t
+from janelkit_i18n import i18n, t
 
 i18n.load(Path(__file__).parent / "locales")   # locales/es.json, en.json, ar.json…
 i18n.set("es")
@@ -551,7 +553,7 @@ i18n.set("es")
 - En idiomas de **derecha a izquierda** (`ar`, `he`, `fa`, `ur`…) toda la interfaz se refleja: filas, alineación del texto e indicadores de los controles. `i18n.rtl` dice si el idioma activo lo es.
 - El idioma de la interfaz es del núcleo: `janelkit.locale`. `i18n.set()` lo cambia, y sin traducciones basta `locale.set("ar")` para reflejar la interfaz y que Qt use ese idioma.
 
-Ejemplo: `examples/idiomas` (español, inglés y árabe).
+Ejemplo: `apps/examples/idiomas` (español, inglés y árabe).
 
 ## Navegación entre pantallas
 
@@ -650,7 +652,8 @@ secciones = sections(proyectos=Proyectos, personas=Personas)
 `before_leave(fn)` en el script de un componente registra una pregunta: si `fn()` devuelve `False`, no se sale. Puede ser `async`, para preguntar con un diálogo:
 
 ```python
-from janelkit import before_leave, dialogs
+from janelkit import before_leave
+from janelkit_desktop import dialogs
 
 @before_leave
 async def salir():
@@ -687,8 +690,10 @@ def abrir_ajustes():
 
 ## Diálogos del sistema
 
+Son del paquete [`janelkit-desktop`](../packages/janelkit-desktop/README.md) (`pip install janelkit-desktop`), como el portapapeles y las notificaciones.
+
 ```python
-from janelkit import dialogs
+from janelkit_desktop import dialogs
 
 async def abrir():                                # on:click={abrir}
     ruta = await dialogs.open_file("Abrir nota", filters=["Notas (*.md *.txt)", "Todos (*)"])
@@ -748,7 +753,7 @@ from widgets.Meter import Meter
 
 **Tipos escritos en Python.** Un `QQuickItem` (o `QQuickPaintedItem`) registrado con `@QmlElement` se usa desde un `.qml` como cualquier tipo QML (`import dials` → `PyDial { ... }`). El módulo que lo registra debe importarse **antes** de `run()`, en `main.py`, porque Qt resuelve los imports al cargar la vista.
 
-Ejemplo: `examples/counter` (`src/widgets/Meter.qml`).
+Ejemplo: `apps/examples/counter` (`src/widgets/Meter.qml`).
 
 ## Elementos disponibles
 

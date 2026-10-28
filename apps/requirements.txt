@@ -1,0 +1,6 @@
+# Lo que necesitan los ejemplos y retos además de JanelKit (sus pruebas también).
+-e ../packages/janelkit
+-e ../packages/janelkit-i18n
+-e ../packages/janelkit-desktop
+psutil>=5.9              # memoria y CPU en challenges/*/bench.py y challenges/panel
+websockets>=13           # challenges/chat (cliente y servidor de prueba)

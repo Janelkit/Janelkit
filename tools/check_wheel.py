@@ -66,7 +66,7 @@ def main() -> int:
     try:
         step("Construyendo wheel y sdist")
         dist = work / "dist"
-        run([sys.executable, "-m", "build", "--outdir", str(dist), str(REPO)])
+        run([sys.executable, "-m", "build", "--outdir", str(dist), str(REPO / "packages" / "janelkit")])
         wheel = next(dist.glob("*.whl"))
         sdist = next(dist.glob("*.tar.gz"))
 

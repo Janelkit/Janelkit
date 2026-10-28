@@ -4,7 +4,9 @@
 #   python -m pip install -r requirements-dev.txt
 
 -r requirements.txt
--e .
+-e packages/janelkit
+-e packages/janelkit-i18n
+-e packages/janelkit-desktop
 
 # Pruebas y comprobaciones
 pytest==9.1.1
@@ -12,8 +14,8 @@ pyflakes==4.0.3
 build==1.6.1             # tools/check_wheel.py: construir wheel y sdist
 
 # Ejemplos y mediciones
-psutil==7.2.2            # memoria y CPU en examples/challenges/*/bench.py y tools
-websockets==17.3         # examples/challenges/chat (servidor de prueba)
+psutil==7.2.2            # memoria y CPU en apps/challenges/*/bench.py y tools
+websockets==17.3         # apps/challenges/chat (servidor de prueba)
 
 # Empaquetado (docs/empaquetado.md); opcional, solo para generar ejecutables
 # pyinstaller==6.22.3

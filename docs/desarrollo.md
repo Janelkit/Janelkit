@@ -44,14 +44,14 @@ logging.getLogger("janelkit").setLevel(logging.DEBUG)
 
 ## Resaltado en el editor
 
-`editors/vscode/` contiene una extensión mínima de VS Code con resaltado de sintaxis para `.janel` (Python en `<script>` y en las expresiones, CSS en `<style>`). Ver su [README](../editors/vscode/README.md) para instalarla. Todavía no hay autocompletado ni diagnósticos en el editor.
+`packages/janelkit-vscode/` contiene una extensión mínima de VS Code con resaltado de sintaxis para `.janel` (Python en `<script>` y en las expresiones, CSS en `<style>`). Ver su [README](../packages/janelkit-vscode/README.md) para instalarla. Todavía no hay autocompletado ni diagnósticos en el editor.
 
 ## Pruebas automáticas de una aplicación
 
 `janelkit.inspect` monta la aplicación sin ventana y la maneja como lo haría un usuario. Funciona con pytest o con cualquier otro sistema de pruebas:
 
 ```python
-# tests/test_app.py
+# packages/janelkit/tests/test_app.py
 from janelkit.inspect import mount
 
 def test_añadir_tarea():

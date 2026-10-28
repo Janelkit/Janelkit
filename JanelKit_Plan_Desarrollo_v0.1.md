@@ -322,7 +322,7 @@ La estructura es orientativa. Los módulos se incorporarán cuando exista una ne
 - [ ] Aplicar cambios solo a bindings afectados, sin recrear la ventana.
 - [ ] Verificar liberación de listeners al destruir componentes.
 
-**Entregable:** `examples/counter/App.janel`, sin QML escrito por el usuario.
+**Entregable:** `apps/examples/counter/App.janel`, sin QML escrito por el usuario.
 
 **Criterio de salida:** cada clic modifica el número visible, los valores derivados se actualizan y dos instancias del contador mantienen estados independientes.
 
@@ -339,7 +339,7 @@ La estructura es orientativa. Los módulos se incorporarán cuando exista una ne
 - [ ] Implementar `@computed` con invalidación de dependencias.
 - [ ] Probar inserción, edición, eliminación y reordenamiento de filas.
 
-**Entregable:** `examples/todo/App.janel`, con lista editable, filtro y estado vacío.
+**Entregable:** `apps/examples/todo/App.janel`, con lista editable, filtro y estado vacío.
 
 **Criterio de salida:** escribir actualiza el estado, agregar/eliminar elementos actualiza la lista, los condicionales reaccionan y las claves mantienen correctamente la identidad de cada fila.
 
@@ -546,7 +546,7 @@ Estas preguntas **no bloquean el Incremento 0**, pero deben cerrarse antes de de
 
 Para comenzar, crear un repositorio con esta secuencia de entregas pequeñas:
 
-- [ ] **PR-001:** esqueleto instalable de la biblioteca (`pyproject.toml`, estructura `src/janelkit/` o equivalente, tests y declaración de `project.scripts` para `janel`).
+- [ ] **PR-001:** esqueleto instalable de la biblioteca (`pyproject.toml`, estructura `packages/janelkit/src/janelkit/` o equivalente, tests y declaración de `project.scripts` para `janel`).
 - [ ] **PR-002:** aplicación Qt Quick mínima con ventana y botón, iniciada desde `main.py`.
 - [ ] **PR-003:** `QObject` con valor observable, señal de cambio y manejador de clic.
 - [ ] **PR-004:** campo editable que sincroniza valor entre Qt y Python, sin bucles.

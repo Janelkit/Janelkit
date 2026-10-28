@@ -108,31 +108,13 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 | `sections` | `secciones = sections(a=A, b=B)` crea secciones paralelas, cada una con su pila; `<Sections of={secciones} />` muestra la actual. |
 | `Sections` | Tipo de `sections`: `.show(nombre)`, `[nombre]` (su pila), `.stack` (la de la visible), `.names`; reactivo `.current`. |
 
-### Diálogos
+### Idioma de la interfaz
 
 | Nombre | Descripción |
 |---|---|
-| `dialogs` | Módulo de diálogos del sistema, todos asíncronos (`await`): `open_file`, `open_files`, `save_file`, `choose_folder` (devuelven `Path`, lista o `None` si se cancela), `message` y `confirm` (devuelve `bool`). `pending()` lista los abiertos y `kind(d)` dice el tipo de uno (`"MessageDialog"`, `"FileDialog"`, `"FolderDialog"`), para pruebas. |
+| `locale` | Idioma de la interfaz: `.language`, `.set(idioma)`, `.reset()`, `.rtl` (¿se escribe de derecha a izquierda? Entonces toda la interfaz se refleja). Reactivo; también fija el `QLocale` por defecto de Qt. `janelkit_i18n.i18n.set()` lo cambia. |
 
-### Portapapeles
-
-| Nombre | Descripción |
-|---|---|
-| `clipboard` | Módulo del portapapeles del sistema (texto): `copy(texto)`, `paste()` (el texto que hay, `""` si no hay; reactivo: se actualiza cuando cambia, también desde otra aplicación) y `clear()`. Necesita la aplicación en marcha. |
-
-### Notificaciones
-
-| Nombre | Descripción |
-|---|---|
-| `notify` | `notify(título, mensaje="", on_click=None)` muestra una notificación del sistema (con el icono de la aplicación en la bandeja). Pulsarla trae la ventana al frente y llama a `on_click`. Donde no hay bandeja no se ve, pero queda registrada (`MountedApp.notifications()`). |
-
-### Idiomas
-
-| Nombre | Descripción |
-|---|---|
-| `locale` | Idioma de la interfaz, del núcleo: `.language`, `.set(idioma)`, `.reset()`, `.rtl` (¿se escribe de derecha a izquierda? Entonces toda la interfaz se refleja). Reactivo; también fija el `QLocale` por defecto de Qt. `i18n.set()` lo cambia. |
-| `t` | `t(clave, **parámetros)` traduce al idioma activo. Reactivo. |
-| `i18n` | Idioma y catálogos: `.load(carpeta)`, `.add(idioma, dict)`, `.set(idioma)`, `.language`, `.languages`, `.rtl`, `.default`; formatos `.number()`, `.currency()`, `.date()`. |
+Las traducciones (`t`, `i18n`) están en [`janelkit-i18n`](../packages/janelkit-i18n/README.md), y los diálogos, el portapapeles y las notificaciones (`dialogs`, `clipboard`, `notify`), en [`janelkit-desktop`](../packages/janelkit-desktop/README.md).
 
 ### Estilos
 
@@ -164,18 +146,18 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 | Nombre | Descripción |
 |---|---|
 | `mount` | `with mount("src/App.janel", headless=True) as app:` monta la aplicación sin ventana visible y la desmonta al salir. |
-| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.key("Ctrl+Z")` (pulsa una combinación sobre lo que tenga el foco: atajos), `app.windows()` (las ventanas abiertas con `open_window`, cada una inspeccionable igual). Las extensiones añaden más con [`janelkit.ext.inspector`](#janelkitext-extensiones): `app.dialogs()`, `app.answer_dialog(resultado)` (de `dialogs`) y `app.notifications()` (de `notify`). |
+| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.key("Ctrl+Z")` (pulsa una combinación sobre lo que tenga el foco: atajos), `app.windows()` (las ventanas abiertas con `open_window`, cada una inspeccionable igual). Las extensiones añaden más con [`janelkit.ext.inspector`](#janelkitext-extensiones): `janelkit-desktop` añade `app.dialogs()`, `app.answer_dialog(resultado)` y `app.notifications()`. |
 | `Element` | `.tag`, `.id`, `.text`, `.label`, `.value`, `.visible`, `.enabled`, `.prop(nombre)`; acciones `.click()`, `.type(texto)`, `.submit()`, `.check(bool)`, `.slide(valor)`, `.choose(opción)`, `.focus()`, `.hover()`/`.unhover()` (puntero encima: estilos `:hover`), `.press()`/`.release()` (botón del ratón: `:pressed`; soltar encima es un clic real). `.double_click()`, `.right_click()` (`on:dblclick`, `on:contextmenu`), `.key("Ctrl+D")` (le da el foco y pulsa la combinación). `.drag_to(destino, x=, y=, cancel=False)` arrastra un `<flex draggable>` y lo suelta sobre `destino` (o pulsa Escape con `cancel=True`). `.item` es el objeto Qt (no cubierto por la política de versiones). |
 | `InspectError` | Elemento no encontrado, ambiguo, desactivado o que no admite la acción. Es un `AssertionError`. |
 
 ## `janelkit.ext` (extensiones)
 
-Para paquetes que amplían JanelKit sin tocar el núcleo (`janelkit-i18n`, `janelkit-desktop`…). Una extensión usa solo la API pública: los nombres de `janelkit` y los de estos módulos. `tests/test_extensions.py` comprueba que las que aún viven en este paquete lo cumplen.
+Para paquetes que amplían JanelKit sin tocar el núcleo (`janelkit-i18n`, `janelkit-desktop`…). Una extensión usa solo la API pública: los nombres de `janelkit` y los de estos módulos. `tests/test_boundaries.py`, en la raíz del repositorio, comprueba que las de este repositorio lo cumplen y que el núcleo no las importa.
 
 | Nombre | Descripción |
 |---|---|
 | `app` | `app()` devuelve la aplicación en marcha, o `None`. Son públicos `.engine` (el `QQmlEngine`), `.qt_app` (la `QGuiApplication`) y `.main_window()` (la ventana de la vista montada más reciente, o `None`). |
-| `inspector` | Decorador: `@inspector("nombre")` sobre `fn(app, *args)` añade el método `MountedApp.nombre` de `janelkit.inspect`. Así `janelkit.dialogs` aporta `dialogs()` y `answer_dialog()`, y `janelkit.notifications` aporta `notifications()`. |
+| `inspector` | Decorador: `@inspector("nombre")` sobre `fn(app, *args)` añade el método `MountedApp.nombre` de `janelkit.inspect`. Así `janelkit_desktop.dialogs` aporta `dialogs()` y `answer_dialog()`, y `janelkit_desktop.notifications` aporta `notifications()`. |
 
 **Subcomandos de `janel`:** un paquete los declara como entry points del grupo `janelkit.commands`. El nombre del entry point es el del comando y apunta a `configurar(parser)`, que recibe el `ArgumentParser` del subcomando, le añade sus argumentos y fija `parser.set_defaults(func=ejecutar)`. `ejecutar(args)` devuelve el código de salida, y la primera línea de la documentación de `configurar` es la ayuda.
 
@@ -195,4 +177,4 @@ Mientras JanelKit esté en la serie **0.x**:
 - **Formato `.janel`**: `FORMAT_VERSION` sube solo cuando un archivo que compilaba deja de compilar o cambia de significado. Añadir sintaxis nueva no lo cambia. Las herramientas (editores, linters) pueden usarlo para saber qué esperar.
 - Desde la **1.0**, se aplica versionado semántico estricto.
 
-Las pruebas de `tests/test_public_api.py` fallan si cambia la lista de nombres públicos sin actualizar esta página.
+Las pruebas de `packages/janelkit/tests/test_public_api.py` fallan si cambia la lista de nombres públicos sin actualizar esta página.

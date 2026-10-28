@@ -2,7 +2,7 @@
 
 En este tutorial se construye, de principio a fin, una aplicación de escritorio con JanelKit: una lista de la compra que se guarda sola en disco. Por el camino aparecen el estado reactivo, las listas, los componentes, los estilos, el trabajo en segundo plano y las pruebas.
 
-Necesitas Python 3.10 o posterior. Tiempo estimado: 30 minutos. El código completo está en `examples/compra`.
+Necesitas Python 3.10 o posterior. Tiempo estimado: 30 minutos. El código completo está en `apps/examples/compra`.
 
 ![La aplicación terminada](img/tutorial.png)
 
@@ -269,7 +269,7 @@ effect(autosave)
 
 ## 8. Probar la aplicación
 
-`janelkit.inspect` monta la aplicación sin ventana y la maneja como lo haría un usuario. Crea `tests/test_app.py`:
+`janelkit.inspect` monta la aplicación sin ventana y la maneja como lo haría un usuario. Crea `packages/janelkit/tests/test_app.py`:
 
 ```python
 import json
@@ -327,4 +327,4 @@ Estas pruebas encontraron, al escribir este tutorial, el error de guardar antes 
 - [lenguaje.md](lenguaje.md): todo el formato `.janel`, los elementos disponibles, `<List>` para listas grandes, diálogos, accesibilidad y elementos propios en QML.
 - [estilos.md](estilos.md): propiedades de estilo, `flex` y temas.
 - [desarrollo.md](desarrollo.md): `janel dev`, errores y pruebas.
-- Los ejemplos de `examples/`, en especial `files` (explorador de archivos) y `books` (cliente de una API).
+- Los ejemplos de `apps/examples/`, en especial `files` (explorador de archivos) y `books` (cliente de una API).

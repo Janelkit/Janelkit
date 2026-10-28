@@ -10,18 +10,18 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 - **Primero en `.janel` puro.** Si no alcanza, se permite la vía de escape (un `.qml` propio, ver [lenguaje.md](lenguaje.md#elementos-propios-en-qml)), pero se anota como carencia: lo que muchas aplicaciones necesitan no debería exigir QML.
 - **Con pruebas** usando `janelkit.inspect`, como hace cualquier usuario.
 - **Medir**, no opinar: tiempos con `tools/bench_app.py` como referencia y uso de memoria con el administrador de tareas.
-- Cada reto vive en `examples/challenges/<nombre>/` y termina con su **registro de hallazgos** (plantilla al final).
+- Cada reto vive en `apps/challenges/<nombre>/` y termina con su **registro de hallazgos** (plantilla al final).
 
 ## Avance
 
 | # | Reto | Estado | Resultado |
 |---|---|---|---|
-| 4 | Chat | ✅ | [examples/challenges/chat](../examples/challenges/chat/) · [hallazgos](../examples/challenges/chat/HALLAZGOS.md). Se añadieron al núcleo el desplazamiento de `<List>`, `<Text format>`, eventos de ventana y `notify`; quedan temporizadores, texto seleccionable y Markdown seguro. |
-| 1 | Panel | ✅ | [examples/challenges/panel](../examples/challenges/panel/) · [hallazgos](../examples/challenges/panel/HALLAZGOS.md). Se añadieron al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`, y se corrigieron cuatro fallos (listas modificadas en el sitio que no llegaban a QML, scroll perdido al reordenar, `flex` en QML propio, `janel build` con ventanas); quedan gráficas (janelkit-kit), rejilla con salto de línea y tabla. |
-| 3 | Kanban | ✅ | [examples/challenges/kanban](../examples/challenges/kanban/) · [hallazgos](../examples/challenges/kanban/HALLAZGOS.md). Se añadió al núcleo arrastrar y soltar (`draggable`, `on:dragstart/dragover/drop/dragend`, `:dragging`, `:drag-over`, desplazamiento al acercarse al borde) y en `inspect` doble clic, clic derecho, teclas y arrastre; se corrigió que los eventos de puntero no llegaran a las filas de `<List>`. Arrastrar con 20 × 200 cuesta lo mismo que un fotograma vacío. Una fila que pasa a otra lista de la misma declaración `{#each}` se traslada con su estado y su foco (la tarjeta conserva su estado al cambiar de columna). Quedan `<Menu>` y la memoria por elemento (~0,65 MB por tarjeta, antes ~0,77; ver la fila de la tabla de abajo). |
+| 4 | Chat | ✅ | [apps/challenges/chat](../apps/challenges/chat/) · [hallazgos](../apps/challenges/chat/HALLAZGOS.md). Se añadieron al núcleo el desplazamiento de `<List>`, `<Text format>`, eventos de ventana y `notify`; quedan temporizadores, texto seleccionable y Markdown seguro. |
+| 1 | Panel | ✅ | [apps/challenges/panel](../apps/challenges/panel/) · [hallazgos](../apps/challenges/panel/HALLAZGOS.md). Se añadieron al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`, y se corrigieron cuatro fallos (listas modificadas en el sitio que no llegaban a QML, scroll perdido al reordenar, `flex` en QML propio, `janel build` con ventanas); quedan gráficas (janelkit-kit), rejilla con salto de línea y tabla. |
+| 3 | Kanban | ✅ | [apps/challenges/kanban](../apps/challenges/kanban/) · [hallazgos](../apps/challenges/kanban/HALLAZGOS.md). Se añadió al núcleo arrastrar y soltar (`draggable`, `on:dragstart/dragover/drop/dragend`, `:dragging`, `:drag-over`, desplazamiento al acercarse al borde) y en `inspect` doble clic, clic derecho, teclas y arrastre; se corrigió que los eventos de puntero no llegaran a las filas de `<List>`. Arrastrar con 20 × 200 cuesta lo mismo que un fotograma vacío. Una fila que pasa a otra lista de la misma declaración `{#each}` se traslada con su estado y su foco (la tarjeta conserva su estado al cambiar de columna). Quedan `<Menu>` y la memoria por elemento (~0,65 MB por tarjeta, antes ~0,77; ver la fila de la tabla de abajo). |
 | 2 | Hoja de cálculo | ⏳ | |
 | 5 | Editor | ⏳ | |
-| 6 | Gestor de proyectos | ✅ | [examples/challenges/gestor](../examples/challenges/gestor/) · [hallazgos](../examples/challenges/gestor/HALLAZGOS.md). Antes de empezar se añadió al núcleo la navegación básica (`sections`, `navigation()`, `await push`/`back`, Alt+← y botón del ratón, `before_leave`, `{#hidden}`, transiciones de página). Durante el reto: las cajas ocultas ya no se recolocan (cambiar de pestaña con 200 tarjetas, de 239 a 5 ms), `pop`/`reset` se pueden esperar, y en `inspect` se corrigió aceptar un `confirm` y que dos apps con módulos del mismo nombre se mezclaran. Todas las medidas de «Hecho cuando» se cumplen y la memoria no crece. Quedan adelante y rutas (`janelkit-router`), otra ventana con su propia pila y parte del plan (pestaña Lista, ajustes de etiquetas y columnas). |
+| 6 | Gestor de proyectos | ✅ | [apps/challenges/gestor](../apps/challenges/gestor/) · [hallazgos](../apps/challenges/gestor/HALLAZGOS.md). Antes de empezar se añadió al núcleo la navegación básica (`sections`, `navigation()`, `await push`/`back`, Alt+← y botón del ratón, `before_leave`, `{#hidden}`, transiciones de página). Durante el reto: las cajas ocultas ya no se recolocan (cambiar de pestaña con 200 tarjetas, de 239 a 5 ms), `pop`/`reset` se pueden esperar, y en `inspect` se corrigió aceptar un `confirm` y que dos apps con módulos del mismo nombre se mezclaran. Todas las medidas de «Hecho cuando» se cumplen y la memoria no crece. Quedan adelante y rutas (`janelkit-router`), otra ventana con su propia pila y parte del plan (pestaña Lista, ajustes de etiquetas y columnas). |
 
 ## Resumen
 
@@ -73,7 +73,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 | Reactividad a gran escala | Una celda con dependencias que cambia y recalcula cientos de fórmulas | `computed` por celda: sin medir con miles de nodos |
 | Teclado | Flechas, Tab, Intro, Esc, Mayús+flechas sobre celdas | **No existe** `on:keydown`; solo `<Shortcut>` global |
 | Edición en el sitio | Pasar de mostrar a editar una celda y volver, con el foco correcto | `ref.focus()` existe; falta gestionar el foco entre muchos elementos |
-| Portapapeles | Copiar y pegar rangos como texto tabulado | ✅ `janelkit.clipboard` (texto); falta probar el reto de rangos tabulados |
+| Portapapeles | Copiar y pegar rangos como texto tabulado | ✅ `janelkit_desktop.clipboard` (texto); falta probar el reto de rangos tabulados |
 | Deshacer / rehacer | Historial de cambios de celdas | No existe en el núcleo (previsto en `janelkit-store`, proyecto aparte) |
 | Selección con el ratón | Arrastrar para seleccionar un rango | Solo hay `on:click`: faltan eventos de puntero |
 
@@ -83,7 +83,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 - Editar una celda de la que dependen 1 000 fórmulas actualiza la vista en menos de 100 ms.
 - Todo el flujo (navegar, editar, seleccionar, copiar, pegar, deshacer) funciona sin ratón.
 
-**Hipótesis de carencias:** un elemento de tabla virtualizado (`<Table>` sobre `TableView`), `on:keydown`/`on:keyup` con tecla y modificadores, `janelkit.clipboard`, eventos de puntero (`on:press`, `on:drag`), y quizá un `computed` más barato cuando hay miles.
+**Hipótesis de carencias:** un elemento de tabla virtualizado (`<Table>` sobre `TableView`), `on:keydown`/`on:keyup` con tecla y modificadores, `janelkit_desktop.clipboard`, eventos de puntero (`on:press`, `on:drag`), y quizá un `computed` más barato cuando hay miles.
 
 ---
 
@@ -167,7 +167,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 
 ## 6. Gestor de proyectos
 
-**Estado: hecho** ([examples/challenges/gestor](../examples/challenges/gestor/), [hallazgos](../examples/challenges/gestor/HALLAZGOS.md)). Nació al ampliar el Kanban (reto 3): de un tablero suelto a una aplicación con varias pantallas. Estaba en espera de `janelkit-router`; al revisar el alcance, la navegación fundamental (secciones, pila desde cualquier página, resultados, atrás, guardas, vistas que se conservan) pasó al núcleo, y el enrutado (rutas, historial con adelante, restaurar) sigue siendo `janelkit-router`. La tabla de abajo es la de partida; cómo quedó cada necesidad está en los hallazgos.
+**Estado: hecho** ([apps/challenges/gestor](../apps/challenges/gestor/), [hallazgos](../apps/challenges/gestor/HALLAZGOS.md)). Nació al ampliar el Kanban (reto 3): de un tablero suelto a una aplicación con varias pantallas. Estaba en espera de `janelkit-router`; al revisar el alcance, la navegación fundamental (secciones, pila desde cualquier página, resultados, atrás, guardas, vistas que se conservan) pasó al núcleo, y el enrutado (rutas, historial con adelante, restaurar) sigue siendo `janelkit-router`. La tabla de abajo es la de partida; cómo quedó cada necesidad está en los hallazgos.
 
 **La aplicación.** Un gestor de proyectos para un equipo pequeño, todo local, en un archivo JSON.
 
@@ -235,7 +235,7 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 | Memoria por elemento (~30–35 KB por `<Text>` o `<flex>`) | 3 | Núcleo · ✅ primera pasada: el texto heredado crea un enlace por propiedad usada (antes once siempre), `<Text>` es un `Text` y no un `Label`, y las cajas no interactivas no pagan hover, pulsado, foco ni bordes. Una tarjeta con estilos, −22 %; el tablero 20 × 200, de 282 a 249 MB; mismo tiempo de creación. Queda lo estructural: cada `{#if}`/`{#each}` es un `Repeater` (~8,5 KB vacío y ~8 KB más por fila) |
 | Conservar contenido oculto (`keep-alive`) | 5, 6 | ✅ Núcleo (reto 6): `{#hidden}`, secciones y la página de debajo; lo oculto no se recoloca ni recalcula lo que muestra hasta volver a verse (reto 6) |
 | Enrutado con parámetros, historial y rutas anidadas | 6 | `janelkit-router`. El núcleo da la navegación básica (reto 6): `pages`, `sections`, `navigation()`, resultados, atrás y `before_leave` |
-| Portapapeles, notificaciones, bandeja, ajustes | 2, 4, 5 | Núcleo, como módulos pequeños (`janelkit.clipboard`, …) · ✅ `notify` (reto 4) · ✅ `clipboard` (texto) |
+| Portapapeles, notificaciones, bandeja, ajustes | 2, 4, 5 | Núcleo, como módulos pequeños (`janelkit_desktop.clipboard`, …) · ✅ `notify` (reto 4) · ✅ `clipboard` (texto) |
 | Temporizadores ligados al componente | 1, 4 | ✅ Núcleo: `interval`, `timeout` (reto 1) |
 | Texto seleccionable | 4, 5 | Núcleo |
 | Tabla 2D y árbol virtualizados | 1, 2, 5 | Núcleo o `janelkit-kit` · el reto 1 hizo su tabla con `<List>` y anchos repetidos en cabecera y filas |

@@ -8,15 +8,15 @@ Referencia: [`JanelKit_Plan_Desarrollo_v0.1.md`](../JanelKit_Plan_Desarrollo_v0.
 
 | PR | Entrega | Estado | Evidencia |
 |---|---|---|---|
-| PR-001 | Biblioteca instalable, `src/janelkit/`, tests, `project.scripts` → `janel` | ✅ | `pyproject.toml`, `pip install -e ".[dev]"` |
+| PR-001 | Biblioteca instalable, `packages/janelkit/src/janelkit/`, tests, `project.scripts` → `janel` | ✅ | `packages/janelkit/pyproject.toml`, `pip install -r requirements-dev.txt` |
 | PR-002 | App Qt Quick mínima iniciada desde `main.py` | ✅ | `spikes/qt_bridge_counter/main.py` |
 | PR-003 | `QObject` con valor observable, señal y clic | ✅ | spike + `spikes/qt_bridge_counter/check.py` |
-| PR-004 | Campo editable sincronizado sin bucles | ✅ | spike + `tests/test_runtime_qt.py::test_two_way_binding_without_loops` |
+| PR-004 | Campo editable sincronizado sin bucles | ✅ | spike + `packages/janelkit/tests/test_runtime_qt.py::test_two_way_binding_without_loops` |
 | PR-005 | Hallazgos del puente; decisión | ✅ **continuar** | `spikes/qt_bridge_counter/NOTES.md` |
-| PR-006 | Extractor de secciones con localización de errores | ✅ | `compiler/sfc_parser.py`, `tests/test_parser.py` |
+| PR-006 | Extractor de secciones con localización de errores | ✅ | `compiler/sfc_parser.py`, `packages/janelkit/tests/test_parser.py` |
 | PR-007 | Parser de elementos anidados y atributos | ✅ | `compiler/template_parser.py` |
 | PR-008 | Ventana QML desde `App.janel` y API `run()` | ✅ | `compiler/qml_generator.py`, `qt_backend/application.py` |
-| PR-009 | `janel new` mínimo + arranque desde carpeta nueva | ✅ | `cli/scaffolding.py`, `tests/test_cli.py` |
+| PR-009 | `janel new` mínimo + arranque desde carpeta nueva | ✅ | `cli/scaffolding.py`, `packages/janelkit/tests/test_cli.py` |
 | PR-010 | Wheel instalado en entorno limpio con plantillas | ✅ | `python tools/check_wheel.py` |
 
 ## Incrementos
@@ -24,12 +24,12 @@ Referencia: [`JanelKit_Plan_Desarrollo_v0.1.md`](../JanelKit_Plan_Desarrollo_v0.
 | Incremento | Estado | Entregable / evidencia |
 |---|---|---|
 | 0 — Validación técnica | ✅ | `spikes/qt_bridge_counter/` |
-| 1 — Formato SFC y compilador mínimo | ✅ | `janel parse`, `tests/test_parser.py` |
+| 1 — Formato SFC y compilador mínimo | ✅ | `janel parse`, `packages/janelkit/tests/test_parser.py` |
 | 2 — Primera interfaz compilada | ✅ | `janel compile`; errores de Qt remitidos al `.janel` |
-| 3 — Estado, interpolación y eventos | ✅ | `examples/counter` |
-| 4 — Entrada de datos y control de flujo | ✅ | `examples/todo`: lista editable, filtro, búsqueda y estado vacío |
-| 5 — Composición de componentes | ✅ | `examples/todo-components`: `App.janel`, `TodoList.janel`, `TodoItem.janel` |
-| 6 — Estilos y temas (**cierre del MVP**) | ✅ | `examples/notes`: barra lateral, formulario y tarjetas; tema claro/oscuro |
+| 3 — Estado, interpolación y eventos | ✅ | `apps/examples/counter` |
+| 4 — Entrada de datos y control de flujo | ✅ | `apps/examples/todo`: lista editable, filtro, búsqueda y estado vacío |
+| 5 — Composición de componentes | ✅ | `apps/examples/todo-components`: `App.janel`, `TodoList.janel`, `TodoItem.janel` |
+| 6 — Estilos y temas (**cierre del MVP**) | ✅ | `apps/examples/notes`: barra lateral, formulario y tarjetas; tema claro/oscuro |
 | 7 — Experiencia de desarrollo | ✅ | `janel dev`, `janel build`, plantilla mejorada, resaltado para VS Code |
 | 8 — Estabilidad y distribución pública | ⏳ | Pendiente: CI con matriz, Linux/macOS, TestPyPI, licencia, nombre |
 | 9 — Validación comunitaria | ⏳ | Requiere usuarios externos |
@@ -38,8 +38,8 @@ Referencia: [`JanelKit_Plan_Desarrollo_v0.1.md`](../JanelKit_Plan_Desarrollo_v0.
 
 - **Inc. 4** — escribir actualiza el estado (`bind:value`); añadir/eliminar actualiza la lista sin recrear la ventana; los condicionales montan y desmontan; las claves conservan la identidad de las filas al reordenar (`test_keys_preserve_row_identity_when_reordering`).
 - **Inc. 5** — un componente reutilizado no mezcla estados (`test_component_instances_are_independent`); el hijo comunica resultados al padre con eventos; el desmontaje no deja suscripciones activas (`test_unmounted_child_stops_receiving_notifications`).
-- **Inc. 6** — tipografía, espaciado, colores, bordes, radios y alineación desde `<style>`; tokens y dos temas; advertencias para lo no soportado (`tests/test_compiler.py`, `test_theme_switch_updates_tokens_in_qml`).
-- **Inc. 7** — un cambio en un `.janel` se refleja sin reiniciar el comando; un error remite al `.janel` y conserva la última versión correcta; `python main.py` sigue funcionando sin `janel dev` (`tests/test_dev.py`).
+- **Inc. 6** — tipografía, espaciado, colores, bordes, radios y alineación desde `<style>`; tokens y dos temas; advertencias para lo no soportado (`packages/janelkit/tests/test_compiler.py`, `test_theme_switch_updates_tokens_in_qml`).
+- **Inc. 7** — un cambio en un `.janel` se refleja sin reiniciar el comando; un error remite al `.janel` y conserva la última versión correcta; `python main.py` sigue funcionando sin `janel dev` (`packages/janelkit/tests/test_dev.py`).
 
 ### Pruebas de aceptación del MVP (sección 7)
 
@@ -50,7 +50,7 @@ Referencia: [`JanelKit_Plan_Desarrollo_v0.1.md`](../JanelKit_Plan_Desarrollo_v0.
 | Al borrar una tarea, no se intercambia el estado local de otras filas | ✅ | `test_removing_a_row_keeps_local_state_of_the_others` |
 | Al desmontar una tarjeta, deja de recibir notificaciones reactivas | ✅ | `test_unmounted_child_stops_receiving_notifications`, `test_removed_rows_release_their_subscriptions` |
 | Al cambiar un tema, los colores y tipografías definidos por tokens cambian | ✅ | `test_theme_switch_updates_tokens_in_qml` |
-| Al introducir una directiva mal formada, se indica el archivo y la línea | ✅ | `tests/test_parser.py` |
+| Al introducir una directiva mal formada, se indica el archivo y la línea | ✅ | `packages/janelkit/tests/test_parser.py` |
 | La aplicación inicia sin QML escrito a mano en el proyecto | ✅ | `test_example_runs_with_python_main` |
 
 ## Decisiones provisionales tomadas al implementar
@@ -92,7 +92,7 @@ Cierran de forma **provisional** puntos del «Registro de decisiones pendientes�
     | Módulo QML interno | `Flux` | `Janel` | no |
     | Prefijo de tipos QML internos | `Fx` (`FxBox`…) | `Jk` (`JkBox`…) | no |
     | Logger | `fluxui` | `janelkit` | — |
-    | Extensión de editor | `editors/vscode`, lenguaje `flux` | `janelkit-vscode`, lenguaje `janel` | sí |
+    | Extensión de editor | `packages/janelkit-vscode`, lenguaje `flux` | `janelkit-vscode`, lenguaje `janel` | sí |
 
     Como no se ha publicado nada, no se mantienen alias del nombre anterior (ni `import fluxui` ni archivos `.flux`).
 
@@ -139,7 +139,7 @@ En `<Scroll>` las filas se crean todas; para miles de elementos, usa `<List>`.
 
 Casi todo el arranque es importar PySide6. Compilar cuesta menos de 10 ms, así que **no hace falta una caché de compilación** por ahora.
 
-Explorador (`examples/files`) sobre una carpeta de 5000 archivos:
+Explorador (`apps/examples/files`) sobre una carpeta de 5000 archivos:
 
 | Operación | Tiempo |
 |---|---|
@@ -151,7 +151,7 @@ Explorador (`examples/files`) sobre una carpeta de 5000 archivos:
 
 ## Validación con aplicaciones reales
 
-`examples/files` (explorador de archivos) y `examples/books` (cliente de una API) se construyeron sin tocar el framework a mano y están cubiertos por `tests/test_inspect.py` y `tests/test_examples.py`. Lo que salió al construirlas, ya corregido:
+`apps/examples/files` (explorador de archivos) y `apps/examples/books` (cliente de una API) se construyeron sin tocar el framework a mano y están cubiertos por `packages/janelkit/tests/test_inspect.py` y `apps/examples/tests/test_examples.py`. Lo que salió al construirlas, ya corregido:
 
 1. **Un componente con `flex` en su etiqueta no ocupaba su caja:** la caja exterior crecía, pero la raíz del componente no. Ahora la caja exterior hace que su raíz la llene.
 2. **`flex` no repartía en proporción:** Qt reparte según el tamaño natural del contenido (un texto largo se quedaba con todo). `JkRow`/`JkColumn` calculan ahora el reparto como CSS (`flex: N 1 0`) cuando su tamaño viene de fuera.
@@ -160,23 +160,23 @@ Explorador (`examples/files`) sobre una carpeta de 5000 archivos:
 
 ### Retos ([challenges_to_test.md](challenges_to_test.md))
 
-- **Chat (reto 4):** hecho, en `examples/challenges/chat`, con pruebas en `tests/test_challenge_chat.py` y [registro de hallazgos](../examples/challenges/chat/HALLAZGOS.md). Añadió al núcleo el desplazamiento de `<List>` (`follow`, `on:top`/`on:bottom`/`on:scroll`, `ref.scroll_to_*`), las inserciones por bloques sin reiniciar la lista, `<Text format="markdown">` con `on:link`, fondo y borde en `<Text>`, `on:activate`/`on:deactivate` en `<Window>`, `janelkit.notify`, y parámetros de señal declarados en el QML generado. Medido: 20 mensajes/s durante 5 min con menos del 10 % de CPU; la memoria se estabiliza.
+- **Chat (reto 4):** hecho, en `apps/challenges/chat`, con pruebas en `apps/challenges/tests/test_challenge_chat.py` y [registro de hallazgos](../apps/challenges/chat/HALLAZGOS.md). Añadió al núcleo el desplazamiento de `<List>` (`follow`, `on:top`/`on:bottom`/`on:scroll`, `ref.scroll_to_*`), las inserciones por bloques sin reiniciar la lista, `<Text format="markdown">` con `on:link`, fondo y borde en `<Text>`, `on:activate`/`on:deactivate` en `<Window>`, `janelkit.notify`, y parámetros de señal declarados en el QML generado. Medido: 20 mensajes/s durante 5 min con menos del 10 % de CPU; la memoria se estabiliza.
 
-- **Panel (reto 1):** hecho, en `examples/challenges/panel`, con pruebas en `tests/test_challenge_panel.py` y [registro de hallazgos](../examples/challenges/panel/HALLAZGOS.md). Añadió al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`. Corrigió que las listas modificadas en el sitio no llegaran a QML cuando se pasan enteras a un control, que una `<List>` volviera arriba al reordenar muchas filas, `flex` en elementos QML propios, `janel build` con ventanas de `open_window` y un aviso al salir. Medido: 50 métricas 10 veces por segundo durante 10 min con un 12 % del hilo de la interfaz, memoria estable y menos de 30 ms hasta la pantalla.
+- **Panel (reto 1):** hecho, en `apps/challenges/panel`, con pruebas en `apps/challenges/tests/test_challenge_panel.py` y [registro de hallazgos](../apps/challenges/panel/HALLAZGOS.md). Añadió al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`. Corrigió que las listas modificadas en el sitio no llegaran a QML cuando se pasan enteras a un control, que una `<List>` volviera arriba al reordenar muchas filas, `flex` en elementos QML propios, `janel build` con ventanas de `open_window` y un aviso al salir. Medido: 50 métricas 10 veces por segundo durante 10 min con un 12 % del hilo de la interfaz, memoria estable y menos de 30 ms hasta la pantalla.
 
 ### Elementos base
 
-- **`<flex>` (fase 1 de 6, [flex.md](flex.md)):** caja y motor de disposición propio (flexbox de CSS en JS interno, calculado en la fase de *polish* de Qt Quick antes de cada fotograma). `Column` y `Row` son atajos suyos. Validado con la rejilla y la barra de herramientas de `examples/flex` (`tests/test_flex_qt.py`, `tests/test_example_flex.py`). Medido (`examples/flex/bench.py`, ventana real): crear 1000 cajas, 220 ms con `Column` (antes 238 ms) y 251 ms con `<flex>` en fila (+5 %). Redimensionar una rejilla de 200 tarjetas cuesta 14 ms de mediana por fotograma (p99 18 ms): el objetivo de 4 ms **no se cumple todavía**. Son unas 600 cajas, porque cada tarjeta lleva la caja exterior de un componente con `class`, que desaparece en la fase 5; sin ella, el motor baja de 4,9 a 3,5 ms por pasada (medido sin pantalla).
-- **Estados y selectores (fase 2):** pseudo-clases, selectores compuestos y de descendiente, `transform`, `cursor`, `box-shadow`, `outline`, todo resuelto al compilar en condiciones de la vista (`compiler/cascade.py`); un solo `Binding` por propiedad para que el resultado no dependa del orden en que Qt los procese (en PySide 6.8 sí dependía). Validado con el botón y la tarjeta de `examples/flex` (`tests/test_flex_states.py`). Medido: crear 1000 filas no cambia (463 ms frente a 461 ms sin la transformación). 
-- **Eventos y accesibilidad (fase 3):** eventos de puntero, rueda, teclado, foco y tamaño con propagación, `prevent()` y `stop()` (`qt_backend/events.py`, un filtro por ventana), `as`, `tabindex`, `disabled`, `title`, `pointer-events`, `visibility`. Validado con el botón, el chip, el interruptor y el menú de `examples/flex` (`tests/test_flex_events.py`). Medido: crear 1000 filas sin eventos, 478 ms (+3 % frente a la fase 2); con `on:click`, 488 ms. 
-- **Herencia y variables (fase 4):** texto heredado, variables propias y `style=` (`JkContext.qml`, `JkTextInherit.qml`: un enlace por propiedad heredada que se usa), validados con la tabla y las pestañas segmentadas de `examples/flex` (`tests/test_flex_inherit.py`). 
-- **Componentes como elementos (fase 5):** los atributos de la etiqueta van a la raíz del componente (`JkRemote.qml`), sin caja exterior (`tests/test_flex_components.py`). Rendimiento de la rejilla: 44 ms por paso con el catálogo actual (48 ms antes); el objetivo de 4 ms no se cumple (ver [flex.md](flex.md), fase 5).
-- **Posición (fase 6):** `position` (relative, absolute, fixed), `inset`, `z-index`, validados con la insignia, el menú en el puntero y el diálogo superpuesto de `examples/flex` (`tests/test_flex_position.py`). Con esto están las seis fases de [flex.md](flex.md). Pendiente: el rendimiento de la rejilla grande (ver fase 5).
-- **Vía rápida de `Column`/`Row`:** el compilador elige caja a caja entre un layout de Qt (`JkColumn`, `JkRow`, `JkQtBox`) y el motor de `<flex>` (`JkFlexColumn`, `JkFlexRow`, `JkFlex`), según lo que usen la caja y sus hijos (`compiler/layout_choice.py`; `tests/test_layout_choice.py`). Las dos vías colocan igual en todos los ejemplos. Medido con 300 tarjetas: cambiar el ancho, 9 ms por paso frente a 32 ms con el motor (4 ms con `ColumnLayout` sin más); crear, 285 ms frente a 300 ms (60 ms). Crear sigue siendo caro por el peso de cada caja y de cada texto (ver [flex.md](flex.md#vía-rápida-layouts-de-qt)). En los ejemplos, algo más de la mitad de las cajas van por la vía rápida (96 de 173; en el panel, 60 de 72); las de `<flex>` en fila, como las de `examples/flex` (1 de 43), siguen con el motor.
-- **Cajas y textos ligeros:** cada caja y cada `<Text>` crean solo las piezas que usan (`JkHover`, `JkTap`, `JkRole`, `JkTranslate`, `JkTextBox`, `JkTextLinks`; `tests/test_flex_lazy.py`). Una caja vacía pasa de ~50 a ~32 µs y un texto de ~43 a ~30 µs; las 300 tarjetas desde `.janel`, de ~425 a ~325 ms al crear y de ~9 a ~6,5 ms por paso al cambiar el ancho.
-- **Trasladar filas entre `{#each}` (reto Kanban):** al quitar una fila con clave, sus componentes quedan aparcados hasta el final del cambio reactivo (`when_settled` en `reactivity/effects.py`); si otra instancia de la misma declaración crea una fila con esa clave, los adopta: reutiliza las fuentes de sus props, cambia padre, manejadores y puente, y devuelve el foco a la vista nueva. Si la lista destino se actualiza antes que la de origen, la reclama directamente. Soltar en otra columna con 20 × 200 sigue en ~12 ms (`tests/test_each_transfer.py`).
-- **Arrastrar y soltar (reto Kanban):** sobre el mismo filtro de eventos (`qt_backend/events.py`): al pasar la distancia de arrastre empieza el arrastre y Qt Quick deja de seguir ese puntero; la zona bajo el puntero se busca en el orden de dibujo de Qt (antes, `childAt`, que ignora `z` y dejaba sin eventos la primera fila de una `<List>`). Con 20 columnas × 200 tarjetas, un movimiento cuesta lo mismo que un fotograma vacío (p99 7 ms frente a 6 ms), ~0,5 ms de Python ([hallazgos](../examples/challenges/kanban/HALLAZGOS.md)).
-- **Tiempos recuperados:** invertir 1000 filas en un `<Scroll>` volvió a ~93 ms (~380 ms desde el motor de `<flex>`): cada fila avisaba a su contenedor al cambiar su índice, y mover una fila cambiaba el de todas las de detrás; ahora avisa el modelo, una vez por movimiento. La rejilla de 200 tarjetas de `examples/flex` volvió a 17 ms por fotograma (con la vía rápida había subido a 40, con picos de casi 3 s): dentro de una caja con el motor, también el motor, y lo que quede con layout de Qt se coloca al momento (ver [flex.md](flex.md#vía-rápida-layouts-de-qt)). 300 tarjetas dentro de un `<Scroll>`: 8,7 ms por paso al cambiar el ancho (28 ms en el último commit).
+- **`<flex>` (fase 1 de 6, [flex.md](flex.md)):** caja y motor de disposición propio (flexbox de CSS en JS interno, calculado en la fase de *polish* de Qt Quick antes de cada fotograma). `Column` y `Row` son atajos suyos. Validado con la rejilla y la barra de herramientas de `apps/examples/flex` (`packages/janelkit/tests/test_flex_qt.py`, `apps/examples/tests/test_example_flex.py`). Medido (`apps/examples/flex/bench.py`, ventana real): crear 1000 cajas, 220 ms con `Column` (antes 238 ms) y 251 ms con `<flex>` en fila (+5 %). Redimensionar una rejilla de 200 tarjetas cuesta 14 ms de mediana por fotograma (p99 18 ms): el objetivo de 4 ms **no se cumple todavía**. Son unas 600 cajas, porque cada tarjeta lleva la caja exterior de un componente con `class`, que desaparece en la fase 5; sin ella, el motor baja de 4,9 a 3,5 ms por pasada (medido sin pantalla).
+- **Estados y selectores (fase 2):** pseudo-clases, selectores compuestos y de descendiente, `transform`, `cursor`, `box-shadow`, `outline`, todo resuelto al compilar en condiciones de la vista (`compiler/cascade.py`); un solo `Binding` por propiedad para que el resultado no dependa del orden en que Qt los procese (en PySide 6.8 sí dependía). Validado con el botón y la tarjeta de `apps/examples/flex` (`packages/janelkit/tests/test_flex_states.py`). Medido: crear 1000 filas no cambia (463 ms frente a 461 ms sin la transformación). 
+- **Eventos y accesibilidad (fase 3):** eventos de puntero, rueda, teclado, foco y tamaño con propagación, `prevent()` y `stop()` (`qt_backend/events.py`, un filtro por ventana), `as`, `tabindex`, `disabled`, `title`, `pointer-events`, `visibility`. Validado con el botón, el chip, el interruptor y el menú de `apps/examples/flex` (`packages/janelkit/tests/test_flex_events.py`). Medido: crear 1000 filas sin eventos, 478 ms (+3 % frente a la fase 2); con `on:click`, 488 ms. 
+- **Herencia y variables (fase 4):** texto heredado, variables propias y `style=` (`JkContext.qml`, `JkTextInherit.qml`: un enlace por propiedad heredada que se usa), validados con la tabla y las pestañas segmentadas de `apps/examples/flex` (`packages/janelkit/tests/test_flex_inherit.py`). 
+- **Componentes como elementos (fase 5):** los atributos de la etiqueta van a la raíz del componente (`JkRemote.qml`), sin caja exterior (`packages/janelkit/tests/test_flex_components.py`). Rendimiento de la rejilla: 44 ms por paso con el catálogo actual (48 ms antes); el objetivo de 4 ms no se cumple (ver [flex.md](flex.md), fase 5).
+- **Posición (fase 6):** `position` (relative, absolute, fixed), `inset`, `z-index`, validados con la insignia, el menú en el puntero y el diálogo superpuesto de `apps/examples/flex` (`packages/janelkit/tests/test_flex_position.py`). Con esto están las seis fases de [flex.md](flex.md). Pendiente: el rendimiento de la rejilla grande (ver fase 5).
+- **Vía rápida de `Column`/`Row`:** el compilador elige caja a caja entre un layout de Qt (`JkColumn`, `JkRow`, `JkQtBox`) y el motor de `<flex>` (`JkFlexColumn`, `JkFlexRow`, `JkFlex`), según lo que usen la caja y sus hijos (`compiler/layout_choice.py`; `packages/janelkit/tests/test_layout_choice.py`). Las dos vías colocan igual en todos los ejemplos. Medido con 300 tarjetas: cambiar el ancho, 9 ms por paso frente a 32 ms con el motor (4 ms con `ColumnLayout` sin más); crear, 285 ms frente a 300 ms (60 ms). Crear sigue siendo caro por el peso de cada caja y de cada texto (ver [flex.md](flex.md#vía-rápida-layouts-de-qt)). En los ejemplos, algo más de la mitad de las cajas van por la vía rápida (96 de 173; en el panel, 60 de 72); las de `<flex>` en fila, como las de `apps/examples/flex` (1 de 43), siguen con el motor.
+- **Cajas y textos ligeros:** cada caja y cada `<Text>` crean solo las piezas que usan (`JkHover`, `JkTap`, `JkRole`, `JkTranslate`, `JkTextBox`, `JkTextLinks`; `packages/janelkit/tests/test_flex_lazy.py`). Una caja vacía pasa de ~50 a ~32 µs y un texto de ~43 a ~30 µs; las 300 tarjetas desde `.janel`, de ~425 a ~325 ms al crear y de ~9 a ~6,5 ms por paso al cambiar el ancho.
+- **Trasladar filas entre `{#each}` (reto Kanban):** al quitar una fila con clave, sus componentes quedan aparcados hasta el final del cambio reactivo (`when_settled` en `reactivity/effects.py`); si otra instancia de la misma declaración crea una fila con esa clave, los adopta: reutiliza las fuentes de sus props, cambia padre, manejadores y puente, y devuelve el foco a la vista nueva. Si la lista destino se actualiza antes que la de origen, la reclama directamente. Soltar en otra columna con 20 × 200 sigue en ~12 ms (`packages/janelkit/tests/test_each_transfer.py`).
+- **Arrastrar y soltar (reto Kanban):** sobre el mismo filtro de eventos (`qt_backend/events.py`): al pasar la distancia de arrastre empieza el arrastre y Qt Quick deja de seguir ese puntero; la zona bajo el puntero se busca en el orden de dibujo de Qt (antes, `childAt`, que ignora `z` y dejaba sin eventos la primera fila de una `<List>`). Con 20 columnas × 200 tarjetas, un movimiento cuesta lo mismo que un fotograma vacío (p99 7 ms frente a 6 ms), ~0,5 ms de Python ([hallazgos](../apps/challenges/kanban/HALLAZGOS.md)).
+- **Tiempos recuperados:** invertir 1000 filas en un `<Scroll>` volvió a ~93 ms (~380 ms desde el motor de `<flex>`): cada fila avisaba a su contenedor al cambiar su índice, y mover una fila cambiaba el de todas las de detrás; ahora avisa el modelo, una vez por movimiento. La rejilla de 200 tarjetas de `apps/examples/flex` volvió a 17 ms por fotograma (con la vía rápida había subido a 40, con picos de casi 3 s): dentro de una caja con el motor, también el motor, y lo que quede con layout de Qt se coloca al momento (ver [flex.md](flex.md#vía-rápida-layouts-de-qt)). 300 tarjetas dentro de un `<Scroll>`: 8,7 ms por paso al cambiar el ancho (28 ms en el último commit).
 
 ## Limitaciones conocidas
 

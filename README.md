@@ -7,7 +7,7 @@ Componentes de archivo único (`.janel`) para aplicaciones de escritorio: **Pyth
 ```html
 <script lang="python">
 from janelkit import state, computed
-from components.TodoItem import TodoItem   # otro .janel (ver examples/todo-components)
+from components.TodoItem import TodoItem   # otro .janel (ver apps/examples/todo-components)
 
 todos = state([{"id": 1, "title": "Probar JanelKit", "done": False}])
 draft = state("")
@@ -54,21 +54,37 @@ def remove(todo_id):
 - **Asincronía:** manejadores `async def`, `@task` con estados de carga y error, `background()` para trabajo bloqueante; todo se cancela al desmontar.
 - **Estilos:** subconjunto CSS (colores, tipografía, espaciado, bordes, radios, alineación, `flex`), clases condicionales `class:x={cond}`, tokens `var(--primary)` y temas claro/oscuro intercambiables en caliente.
 - **Diagnósticos:** errores con archivo, línea, columna y sugerencias («¿quisiste decir…?»), también para errores de Qt y de ejecución.
-- **Herramientas:** `janel new`, `janel dev` (recarga al guardar), `janel build`, `janel compile`, `janel parse`; resaltado para VS Code.
+- **Herramientas:** `janel new`, `janel dev` (recarga al guardar), `janel build`, `janel compile`, `janel parse`.
+
+## Organización del repositorio
+
+Un solo repositorio con el núcleo y los paquetes del ecosistema, que se publican por separado:
+
+| Carpeta | Paquete | Qué es |
+|---|---|---|
+| [`packages/janelkit`](packages/janelkit/README.md) | `janelkit` | El núcleo: lenguaje `.janel`, compilador, reactividad, runtime, disposición, controles, ventanas, navegación, temas, tareas, `persisted`, `janelkit.inspect` y el comando `janel`. |
+| [`packages/janelkit-i18n`](packages/janelkit-i18n/README.md) | `janelkit-i18n` | Traducciones (`t`, `i18n`): catálogos, plurales y formatos según el idioma. |
+| [`packages/janelkit-desktop`](packages/janelkit-desktop/README.md) | `janelkit-desktop` | Diálogos nativos, portapapeles y notificaciones (`dialogs`, `clipboard`, `notify`). |
+| [`packages/janelkit-vscode`](packages/janelkit-vscode/README.md) | — | Resaltado de `.janel` para VS Code. |
+| `apps/examples` | — | Ejemplos pequeños, uno por tema. |
+| `apps/challenges` | — | Aplicaciones grandes que ponen a prueba el framework (chat, gestor, kanban, panel). |
+
+Las extensiones solo usan la API pública del núcleo (`tests/test_boundaries.py` lo comprueba), y el núcleo no las importa. Qué va en cada sitio: [docs/alcance.md](docs/alcance.md).
 
 ## Probarlo (desde el repositorio)
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate          # Windows  (Linux/macOS: source .venv/bin/activate)
-python -m pip install -r requirements-dev.txt   # versiones probadas; o: pip install -e ".[dev]"
+python -m pip install -r requirements-dev.txt   # los tres paquetes editables y las herramientas, con versiones probadas
+python -m pytest                                # toda la suite; o un paquete: python -m pytest packages/janelkit
 
 janel new mi-app
 cd mi-app
 python main.py                  # o: janel dev
 ```
 
-Ejemplos incluidos (cada uno se ejecuta con `python examples/<nombre>/main.py`):
+Ejemplos incluidos (cada uno se ejecuta con `python apps/examples/<nombre>/main.py`):
 
 | Ejemplo | Muestra |
 |---|---|
@@ -78,8 +94,8 @@ Ejemplos incluidos (cada uno se ejecuta con `python examples/<nombre>/main.py`):
 | `notes` | barra lateral, formulario, tarjetas, `class:`, `{#key}` y cambio de tema |
 | `books` | búsqueda en una API real sin bloquear la ventana: `@task`, `background`, cargando y errores |
 | `compra` | la aplicación del [tutorial](docs/tutorial.md): componentes, slot, guardado en segundo plano y pruebas |
-| `idiomas` | cambio de idioma en caliente, plurales, formatos según el idioma y árabe (derecha a izquierda) |
-| `files` | explorador de archivos: `<List>` virtualizada, slots, `provide`/`inject`, `ref`, atajos, diálogos y vista previa en segundo plano |
+| `idiomas` | cambio de idioma en caliente, plurales, formatos según el idioma y árabe (derecha a izquierda), con `janelkit-i18n` |
+| `files` | explorador de archivos: `<List>` virtualizada, slots, `provide`/`inject`, `ref`, atajos, diálogos (`janelkit-desktop`) y vista previa en segundo plano |
 
 ## Comandos
 
@@ -106,7 +122,7 @@ Las expresiones de la plantilla se evalúan en **Python**; cuando cambia un `sta
 
 ## Documentación
 
-- [docs/tutorial.md](docs/tutorial.md) — **empieza aquí**: una aplicación completa paso a paso (código en `examples/compra`).
+- [docs/tutorial.md](docs/tutorial.md) — **empieza aquí**: una aplicación completa paso a paso (código en `apps/examples/compra`).
 - [docs/lenguaje.md](docs/lenguaje.md) — formato `.janel`, expresiones, bloques, componentes y elementos.
 - [docs/estilos.md](docs/estilos.md) — CSS soportado, disposición (flex), tokens y temas.
 - [docs/desarrollo.md](docs/desarrollo.md) — `janel dev`, `janel build`, errores y editor.

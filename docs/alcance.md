@@ -4,13 +4,15 @@ Este documento delimita qué es **el framework JanelKit** (este repositorio) y q
 
 Prioridades antes del lanzamiento: [lanzamiento.md](lanzamiento.md).
 
-> **Frontera decidida el 28 de octubre de 2026 (pendiente de aplicar en el código; este documento se reescribirá al hacerlo):**
+> **Frontera decidida el 28 de octubre de 2026 y aplicada en el código (este documento se reescribirá):**
 >
 > - **En el núcleo:** la gestión de estado, es decir, `persisted` y los stores con acciones o deshacer/rehacer que vengan, porque se apoyan en la semántica de `batch` y de los efectos. También un plugin de pytest delgado (`janelkit.testing`) sobre `janelkit.inspect`.
-> - **Fuera del núcleo:** `janelkit-i18n` (`t`, catálogos, formatos; la dirección derecha a izquierda se queda en el núcleo como estado de disposición), `janelkit-desktop` (`dialogs`, `clipboard`, `notify`), `janelkit-vscode` (hoy `editors/vscode/`) y los retos de `examples/challenges/`.
+> - **Fuera del núcleo:** `janelkit-i18n` (`t`, catálogos, formatos; la dirección derecha a izquierda se queda en el núcleo como estado de disposición), `janelkit-desktop` (`dialogs`, `clipboard`, `notify`), `janelkit-vscode` y los retos de `apps/challenges/`.
 > - **Organización:** un solo repositorio con varios paquetes (`packages/janelkit`, `packages/janelkit-i18n`, `packages/janelkit-desktop`, `packages/janelkit-vscode`; `apps/examples`, `apps/challenges`). Antes de mover nada, el núcleo deja de importar a esos módulos mediante ganchos de aplicación, extensiones de `inspect` y plugins de la CLI.
 >
-> **Hecho (paso 2):** el núcleo ya no importa esos módulos. El idioma de la interfaz pasó al núcleo (`janelkit.locale`: dirección y `QLocale`). `janelkit.ext` da `app()` e `inspector()` a las extensiones, y `janel` carga subcomandos del grupo de entry points `janelkit.commands` (punto de extensión 5). `tests/test_extensions.py` vigila la frontera. **Siguiente (paso 3):** mover los módulos a `packages/` y los retos a `apps/`.
+> **Hecho (paso 2):** el núcleo ya no importa esos módulos. El idioma de la interfaz pasó al núcleo (`janelkit.locale`: dirección y `QLocale`). `janelkit.ext` da `app()` e `inspector()` a las extensiones, y `janel` carga subcomandos del grupo de entry points `janelkit.commands` (punto de extensión 5). `packages/janelkit/tests/test_extensions.py` prueba esos puntos de extensión.
+>
+> **Hecho (paso 3):** el repositorio ya tiene esa organización. Cada paquete de `packages/` tiene su `pyproject.toml` y sus pruebas, y se prueba solo (`python -m pytest packages/janelkit-i18n`). Los ejemplos y retos están en `apps/`, con sus dependencias en `apps/requirements.txt`. `tests/test_boundaries.py` comprueba que el núcleo no importa el ecosistema y que las extensiones solo usan la API pública. Las fixtures de pytest compartidas están en `janelkit.testing`, todavía sin ser API pública. **Siguiente (paso 4):** CI por paquete y versiones independientes.
 >
 > Lo que sigue en este documento todavía describe la situación anterior.
 
@@ -62,13 +64,13 @@ Cada proyecto se apoya en una **API del núcleo** concreta. Esa API es la que el
 
 | Proyecto | Qué haría | Depende de (API del núcleo) | Notas |
 |---|---|---|---|
-| **Soporte de editor** (`janelkit-vscode`, `janelkit-lsp`) | Resaltado, diagnósticos en vivo, autocompletado de elementos, props y nombres del script, ir a definición | API del compilador para herramientas | El resaltado de `editors/vscode/` es su semilla; debería salir de este repositorio cuando tenga entidad propia |
+| **Soporte de editor** (`janelkit-vscode`, `janelkit-lsp`) | Resaltado, diagnósticos en vivo, autocompletado de elementos, props y nombres del script, ir a definición | API del compilador para herramientas | El resaltado de `packages/janelkit-vscode/` es su semilla; debería salir de este repositorio cuando tenga entidad propia |
 | **Pruebas** (`janelkit-testing`) | Plugin de pytest, fixtures, consultas tipo Testing Library (por texto, por rol), capturas visuales comparables | API de inspección | El núcleo ofrece montar, buscar y disparar eventos; la ergonomía de pruebas va aparte |
 | **Gestión de estado** (`janelkit-store`) | Stores con acciones, deshacer/rehacer, estado derivado entre ventanas | `state`, `computed`, efectos, colecciones reactivas, contexto, `persisted` | El núcleo da las primitivas; los patrones de arquitectura van aparte |
 | **Biblioteca de componentes** (`janelkit-kit`) | Tablas con ordenación y filtrado, gráficas, selectores de fecha, árboles, paneles acoplables | Slots, `ref`, interoperabilidad con Qt, tokens de tema | Se escribe en `.janel` (y QML propio cuando haga falta), como lo haría un usuario |
 | **Empaquetado** (`janel package`) | Generar ejecutables e instaladores con PyInstaller, Nuitka o Briefcase | Ubicación estable de recursos del paquete (módulo QML, plantillas); `janel build` | Puede ser un plugin de la CLI. El núcleo debe garantizar que las apps sean empaquetables y documentar una receta |
 | **Devtools** | Ventana que muestra el árbol de componentes, el estado de cada instancia y qué bindings se recalculan | API de inspección; ganchos de depuración en la reactividad | Útil cuando haya aplicaciones medianas |
-| **Enrutado** (`janelkit-router`) | Navegar a direcciones con parámetros, historial con «adelante» y rutas anidadas | Navegación básica (pila, secciones, salidas con confirmación), contexto, ciclo de vida | Ver [Navegación básica y enrutado](#navegación-básica-y-enrutado). El reto 6 ([gestor de proyectos](challenges_to_test.md#6-gestor-de-proyectos)) se hizo con la navegación básica; sus [hallazgos](../examples/challenges/gestor/HALLAZGOS.md) dicen qué quedaría para el enrutador |
+| **Enrutado** (`janelkit-router`) | Navegar a direcciones con parámetros, historial con «adelante» y rutas anidadas | Navegación básica (pila, secciones, salidas con confirmación), contexto, ciclo de vida | Ver [Navegación básica y enrutado](#navegación-básica-y-enrutado). El reto 6 ([gestor de proyectos](challenges_to_test.md#6-gestor-de-proyectos)) se hizo con la navegación básica; sus [hallazgos](../apps/challenges/gestor/HALLAZGOS.md) dicen qué quedaría para el enrutador |
 | **Plantillas y ejemplos** | Galería de aplicaciones de referencia y plantillas para `janel new` | API pública completa | Sirven además para validar el framework con uso real |
 
 ## Navegación básica y enrutado
@@ -105,6 +107,6 @@ Para que los proyectos paralelos sean posibles sin tocar el núcleo:
 
 Mientras el núcleo no se estabilice, todo puede vivir aquí. Al publicar:
 
-- `src/janelkit/` es el framework.
-- `editors/vscode/` se mueve a su propio repositorio (o se marca como experimental).
-- Las utilidades de pruebas de `tests/conftest.py` que sean de uso general pasan a la API de inspección; la ergonomía de pruebas queda para `janelkit-testing`.
+- `packages/janelkit/src/janelkit/` es el framework.
+- `packages/janelkit-vscode/` se mueve a su propio repositorio (o se marca como experimental).
+- Las utilidades de pruebas de `packages/janelkit/src/janelkit/testing.py` que sean de uso general pasan a la API de inspección; la ergonomía de pruebas queda para `janelkit-testing`.

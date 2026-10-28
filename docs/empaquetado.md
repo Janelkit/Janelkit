@@ -2,7 +2,7 @@
 
 JanelKit no tiene un comando propio de empaquetado todavía (está previsto como proyecto aparte, ver [alcance.md](alcance.md)). Mientras tanto, esta receta con [PyInstaller](https://pyinstaller.org) genera una carpeta con un ejecutable que funciona sin Python instalado.
 
-> Verificada en Windows 11 con Python 3.10, PySide6 6.8 y PyInstaller 6.22, empaquetando `examples/files` (componentes, servicios, `<List>`, diálogos y tareas en segundo plano). En Linux y macOS el procedimiento es el mismo, pero aún no se ha probado.
+> Verificada en Windows 11 con Python 3.10, PySide6 6.8 y PyInstaller 6.22, empaquetando `apps/examples/files` (componentes, servicios, `<List>`, diálogos y tareas en segundo plano). En Linux y macOS el procedimiento es el mismo, pero aún no se ha probado.
 
 ## Receta
 
@@ -55,7 +55,7 @@ Si falta un `.janel`, un módulo o un tipo QML, el ejecutable termina con códig
 
 ## Tamaño
 
-La carpeta incluye Qt completo: con `examples/files` ocupa 341 MB sin comprimir y 146 MB en un .zip. Se puede reducir excluyendo módulos de Qt que la aplicación no usa (`--exclude-module PySide6.QtWebEngineCore`, `QtMultimedia`, `Qt3D*`…). Comprueba siempre el resultado tras excluir.
+La carpeta incluye Qt completo: con `apps/examples/files` ocupa 341 MB sin comprimir y 146 MB en un .zip. Se puede reducir excluyendo módulos de Qt que la aplicación no usa (`--exclude-module PySide6.QtWebEngineCore`, `QtMultimedia`, `Qt3D*`…). Comprueba siempre el resultado tras excluir.
 
 ## Limitaciones conocidas
 

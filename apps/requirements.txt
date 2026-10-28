@@ -1,6 +1,6 @@
 # Lo que necesitan los ejemplos y retos además de JanelKit (sus pruebas también).
--e ../packages/janelkit
--e ../packages/janelkit-i18n
--e ../packages/janelkit-desktop
+# JanelKit se instala aparte; desde la raíz del repositorio:
+#   pip install -e packages/janelkit -e packages/janelkit-i18n -e packages/janelkit-desktop -r apps/requirements.txt
+# (requirements-dev.txt ya lo incluye todo, con versiones fijas).
 psutil>=5.9              # memoria y CPU en challenges/*/bench.py y challenges/panel
 websockets>=13           # challenges/chat (cliente y servidor de prueba)

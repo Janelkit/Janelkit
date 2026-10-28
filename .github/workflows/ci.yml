@@ -126,10 +126,9 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y $QT_LINUX_LIBS
       - name: Instalar
-        working-directory: apps
         run: |
           python -m pip install --upgrade pip
-          pip install pytest -r requirements.txt
+          pip install pytest -e packages/janelkit -e packages/janelkit-i18n -e packages/janelkit-desktop -r apps/requirements.txt
       - name: Pruebas de ejemplos y retos
         run: python -m pytest -q apps/examples/tests apps/challenges/tests
       - name: Ejemplos con python main.py

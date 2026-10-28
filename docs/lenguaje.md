@@ -268,9 +268,19 @@ Oculta el contenido mientras la condición es verdadera, **sin destruirlo**: al 
 
 - El contenido se crea la primera vez que la condición es falsa. Si empieza oculto, no cuesta nada hasta que se muestra.
 - Después, ocultar y mostrar solo cambia su visibilidad: `on_mount` no se repite y `on_destroy` no llega hasta que se desmonta lo que contiene el bloque.
-- Mientras está oculto no ocupa sitio, pero sigue vivo: sus efectos y temporizadores continúan.
+- Mientras está oculto no ocupa sitio y **lo que muestra espera**: sus textos, estilos, props, `{#if}` y `{#each}` no se recalculan aunque cambien los datos, ni se recoloca. Al volver a verse se ponen al día una sola vez, con los valores de ese momento.
+- Lo que escribes en el script **sigue funcionando**: `effect`, `interval`, `timeout`, tareas y `on_destroy`. Un `effect` que guarda o sincroniza datos no se detiene por ocultar su componente.
 - Úsalo para lo que se alterna a menudo y es caro de crear o tiene estado que importa. Para lo demás, `{#if}` libera memoria.
-- No admite `{:else}` ni transiciones de entrada y salida.
+- `{:else}` es lo contrario: se muestra mientras la condición es verdadera, y también se crea la primera vez que se muestra y después solo se oculta.
+- Las transiciones (`transition:fade`, `in:`, `out:`) en la raíz del bloque se reproducen al mostrar y al ocultar; el contenido desaparece al terminar la salida.
+
+```html
+{#hidden cargando}
+  <Resultados filas={filas} />
+{:else}
+  <flex transition:fade><Spinner /></flex>
+{/hidden}
+```
 
 ### Varios elementos en un bloque
 
@@ -521,9 +531,18 @@ def abrir(item):
 ```
 
 - `<Pages stack={nav} />` muestra la página de arriba de la pila y ocupa el espacio libre (`flex: 1`).
-- `push` muestra una página nueva encima; la de debajo **sigue viva** y, al volver con `pop()`, conserva su estado. `replace` sustituye la actual; `reset` vacía la pila y empieza de nuevo. Las páginas descartadas se liberan (sus `on_destroy` se ejecutan).
+- `push` muestra una página nueva encima; la de debajo **sigue viva** y, al volver con `pop()`, conserva su estado. Mientras está debajo, lo que muestra espera, como en [`{#hidden}`](#hidden): se pone al día al volver a verse. `replace` sustituye la actual; `reset` vacía la pila y empieza de nuevo. Las páginas descartadas se liberan (sus `on_destroy` se ejecutan).
+- Cada página ocupa todo su `<Pages>` (y cada sección, su `<Sections>`) y se estrecha con la ventana hasta el mínimo de su contenido; lo que deba desplazarse, con `overflow: auto`. La raíz de la página puede cambiarlo con CSS, como un bloque en una columna:
+
+  ```css
+  .pagina { max-width: 720px; margin: 0 auto; }   /* una columna centrada */
+  .pagina { width: 400px; height: 300px; }         /* tamaño fijo, arriba a la izquierda */
+  .pagina { align-self: center; }                  /* su ancho natural, centrada */
+  .pagina { margin: 24px; }                        /* llena, con margen alrededor */
+  ```
 - Las palabras clave son props y eventos (`on_...`) de la página, como en `open_window`. Las páginas heredan el contexto (`inject`) del componente que declara la pila.
 - `nav.current` (nombre de la página visible), `nav.depth` y `nav.can_go_back` son reactivos; `nav.page` da la instancia visible.
+- **Transiciones:** `<Pages stack={nav} transition:slide />` anima la página que entra: al avanzar llega desde la derecha y al volver desde la izquierda. También `fade` y `scale`, y la duración: `transition:fade={150}`. En `<Sections>`, la transición se aplica al cambiar de sección y a las páginas de cada una.
 - **Atrás con el teclado y el ratón:** Alt+← y el botón «atrás» del ratón vuelven a la página anterior, en la pila visible más interna. Alt+← actúa cuando el foco está dentro de la pila (si está, por ejemplo, en un botón de la barra lateral, no hace nada); el ratón, al pulsar sobre ella. Si un elemento de la página ya usa Alt+← (por ejemplo, para mover una tarjeta), gana el elemento.
 
 ### Navegar desde una página
@@ -579,7 +598,7 @@ secciones = sections(proyectos=Proyectos, personas=Personas)
 ```
 
 - Cada sección es una pila (`secciones["personas"]`, o `secciones.stack` para la visible) y empieza en el componente indicado. Dentro, `navigation()` da la pila de su sección.
-- Una sección se crea la primera vez que se muestra. Al cambiar a otra **se conserva entera**, con todas sus páginas y su estado; volver a ella cuesta lo mismo que mostrarla.
+- Una sección se crea la primera vez que se muestra. Al cambiar a otra **se conserva entera**, con todas sus páginas y su estado; volver a ella cuesta lo mismo que mostrarla. Mientras no se ve, lo que muestra espera (como en [`{#hidden}`](#hidden)): un cambio de datos en otra sección no la recalcula.
 - `secciones.current` (el nombre de la visible) es reactivo; `secciones.names` lista los nombres.
 
 ### Preguntar antes de salir
@@ -596,6 +615,13 @@ async def salir():
 
 - Se consulta al descartar la página que contiene el componente (`pop`, `back`, `replace`, `reset`, Alt+←) y al cerrar con la X la ventana que lo muestra. Cerrar la ventana principal consulta también las ventanas que abrió.
 - Cambiar de sección no pregunta: la sección se conserva y no se pierde nada.
+- Para encadenar navegaciones, espera la salida: `pop`, `back`, `replace` y `reset` devuelven `True` si se salió y `False` si un `before_leave` lo impidió (la respuesta puede llegar después de un diálogo):
+
+```python
+async def ir_a_tarjeta(pid, tid):
+    if await nav.reset(Proyectos):      # un detalle con cambios puede pedir quedarse
+        nav.push(Proyecto, ident=pid, enfocar=tid)
+```
 - Cerrar desde el código (`ventana.close()`) no pregunta.
 
 ## Varias ventanas

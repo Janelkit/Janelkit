@@ -203,7 +203,8 @@ Rectangle {
 
     onFxDecorChanged: Fx.flexDecorations(box)
     // fxListen fijado desde la etiqueta de un componente (FxRemote): cuando ya están fxOn y fxBridge.
-    function fxRegister() { if (fxListen) fxevents.listen(box) }
+    // Qt.callLater puede llegar con la caja ya destruida (página cerrada): sin contexto, ni fxevents.
+    function fxRegister() { if (fxListen && typeof fxevents !== "undefined") fxevents.listen(box) }
     onFxListenChanged: Qt.callLater(fxRegister)
     Component.onCompleted: {
         if (fxDecor) Fx.flexDecorations(box)

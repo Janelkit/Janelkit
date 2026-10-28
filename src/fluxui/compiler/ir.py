@@ -199,6 +199,7 @@ class KeySlot:
     fragment: Fragment
     loc: SourceLocation
     hidden: bool = False  # {#hidden expr}: se crea al mostrarse y después solo se oculta
+    shown_id: str = ""  # {#hidden}: el binding que muestra u oculta la rama (no se aplaza al ocultarla)
 
 
 @dataclass

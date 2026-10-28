@@ -54,6 +54,8 @@ def _create(qml_type: str, props: dict[str, Any]) -> Any:
     # QML lo borran antes de que el usuario responda (se borra en _run al terminar).
     dialog.setParent(app.engine)
     component.setParent(dialog)
+    # El tipo, para `kind` (desde Python el diálogo puede llegar como un QObject genérico).
+    dialog.setProperty("fxDialogType", qml_type)
     return dialog
 
 
@@ -166,3 +168,8 @@ async def confirm(text: str, title: str = "", details: str | None = None) -> boo
 def pending() -> list[Any]:
     """Diálogos abiertos ahora mismo (objetos Qt). Útil en pruebas para aceptarlos o cancelarlos."""
     return list(_open)
+
+
+def kind(dialog: Any) -> str:
+    """El tipo QML de un diálogo abierto: "MessageDialog", "FileDialog" o "FolderDialog"."""
+    return str(dialog.property("fxDialogType") or "")

@@ -217,3 +217,38 @@ items = state([1, 2, 3])
     for _ in range(3):
         QCoreApplication.processEvents()
     assert xs() == [60, 30, 0]
+
+
+def test_hidden_subtree_keeps_its_layout_and_catches_up_when_shown(mount):
+    # Oculto no se recoloca (cuesta y daría tamaños 0: una lista de dentro crearía todas sus
+    # filas); lo que cambió mientras tanto se coloca al volver a verse.
+    m = mount("""<script>
+from fluxui import state
+oculto = state(False)
+items = state(["uno", "dos"])
+ancho = state(60)
+</script>
+<flex direction="column">
+  {#hidden oculto}
+    <flex id="col" direction="column" style={{"width": f"{ancho}px"}}>
+      {#each items as i (i)}<flex class="fila"><Text>{i}</Text></flex>{/each}
+    </flex>
+  {/hidden}
+</flex>
+<style>.fila { height: 20px; }</style>""")
+    settle(m)
+    ns = m.instance.namespace
+    col = find(m, "col")
+    assert (col.width(), col.height()) == (60, 40)
+    ns["oculto"].value = True
+    settle(m)
+    assert not col.isVisible() and (col.width(), col.height(), col.implicitHeight()) == (60, 40, 40)  # como estaba
+    ns["items"].value.append("tres")
+    ns["ancho"].value = 90
+    settle(m)
+    ns["oculto"].value = False
+    settle(m)
+    filas = [i for i in visual_items(m) if i.parentItem() is not None and i.property("fxState") is not None
+             and i is not col and i.mapToItem(col, 0, 0).y() >= 0 and i.height() == 20]
+    assert (col.width(), col.height()) == (90, 60) and len(filas) == 3
+    assert sorted(round(f.mapToItem(col, 0, 0).y()) for f in filas) == [0, 20, 40]

@@ -101,7 +101,7 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 | Nombre | Descripción |
 |---|---|
 | `pages` | `nav = pages(Inicio, **props)` en el script crea una pila de páginas; `<Pages stack={nav} />` muestra la de arriba. |
-| `PageStack` | Tipo de `pages`: `.push(C, **props_y_on_eventos)` (se puede esperar: `await` devuelve el valor de `.back(valor)`), `.pop()`, `.back(valor=None)`, `.replace(...)`, `.reset(...)`; reactivos `.current`, `.depth`, `.can_go_back`; `.page` (instancia visible). |
+| `PageStack` | Tipo de `pages`: `.push(C, **props_y_on_eventos)` (se puede esperar: `await` devuelve el valor de `.back(valor)`), `.pop()`, `.back(valor=None)`, `.replace(...)`, `.reset(...)` (los cuatro se pueden esperar: `True` si se salió, `False` si un `before_leave` lo impidió); reactivos `.current`, `.depth`, `.can_go_back`; `.page` (instancia visible). |
 | `navigation` | `nav = navigation()` en el script de una página (o de un componente dentro de ella) da su pila. |
 | `sections` | `secciones = sections(a=A, b=B)` crea secciones paralelas, cada una con su pila; `<Sections of={secciones} />` muestra la actual. |
 | `Sections` | Tipo de `sections`: `.show(nombre)`, `[nombre]` (su pila), `.stack` (la de la visible), `.names`; reactivo `.current`. |
@@ -110,7 +110,7 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 
 | Nombre | Descripción |
 |---|---|
-| `dialogs` | Módulo de diálogos del sistema, todos asíncronos (`await`): `open_file`, `open_files`, `save_file`, `choose_folder` (devuelven `Path`, lista o `None` si se cancela), `message` y `confirm` (devuelve `bool`). `pending()` lista los abiertos (para pruebas). |
+| `dialogs` | Módulo de diálogos del sistema, todos asíncronos (`await`): `open_file`, `open_files`, `save_file`, `choose_folder` (devuelven `Path`, lista o `None` si se cancela), `message` y `confirm` (devuelve `bool`). `pending()` lista los abiertos y `kind(d)` dice el tipo de uno (`"MessageDialog"`, `"FileDialog"`, `"FolderDialog"`), para pruebas. |
 
 ### Notificaciones
 

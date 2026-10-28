@@ -1,7 +1,8 @@
 // Transición de entrada/salida de FluxUI (transition:fade, in:scale, out:slide…).
 // La genera el compilador como hijo invisible de la raíz de un bloque {#if}/{#each}/{#key}.
 // Entrada: al crearse. Salida: cuando el puente (fx) emite leave(); Python retira la fila
-// cuando termina la animación.
+// cuando termina la animación. En {#hidden} (toggle): entra y sale cuando cambia `shown`,
+// y es quien cambia `visible` de la raíz (al terminar la salida).
 import QtQuick
 
 Item {
@@ -16,7 +17,23 @@ Item {
     property string leaveKind: ""
     property int enterMs: 200
     property int leaveMs: 200
+    property bool toggle: false
+    property bool shown: true
     readonly property real fxOffset: 12  // desplazamiento de slide, en píxeles
+
+    onShownChanged: {
+        if (!toggle || !target) return
+        if (shown) {
+            leave.stop()
+            target.visible = true
+            if (enterKind) { prepare(enterKind); enter.start() }
+            else { target.opacity = 1; target.scale = 1; shift.y = 0 }
+        } else {
+            enter.stop()
+            if (leaveKind) leave.start()
+            else target.visible = false
+        }
+    }
 
     Translate { id: shift }
 
@@ -62,5 +79,6 @@ Item {
             to: t.leaveKind === "slide" ? -t.fxOffset : 0
         }
         onStarted: if (t.leaveKind === "slide" && t.target) t.target.transform = [shift]
+        onFinished: if (t.toggle && !t.shown && t.target) t.target.visible = false
     }
 }

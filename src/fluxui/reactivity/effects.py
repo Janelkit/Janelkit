@@ -8,9 +8,12 @@ Modelo:
   `Computed` solo se recalculan cuando alguien vuelve a leerlos.
 - Un *ámbito* (`Scope`) agrupa lo creado por una instancia de componente para
   liberarlo de una vez al desmontarla.
+- Una *compuerta* (`Gate`) aplaza los efectos de lo que no se ve ({#hidden}, otra
+  sección, la página de debajo): se ejecutan una vez al volver a verse.
 """
 from __future__ import annotations
 
+import itertools
 import threading
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator
@@ -22,6 +25,7 @@ _flushing = False
 _pending: dict["Effect", None] = {}  # conjunto ordenado
 _settled: list[Callable[[], Any]] = []  # se ejecutan cuando ya no queda ningún efecto pendiente
 _MAX_FLUSH_ITERATIONS = 10_000
+_created = itertools.count()  # orden de creación de los efectos (ver Gate.open)
 # El sistema reactivo vive en un solo hilo (el de la interfaz). Desde otros hilos
 # (p. ej. código de `background()`) leer no registra dependencias y escribir es un error.
 _OWNER = threading.get_ident()
@@ -112,6 +116,8 @@ class Effect(Observer):
         self._fn = fn
         self._on_error = on_error
         self._cleanup: Callable[[], Any] | None = None
+        self.gate: Gate | None = None  # efectos de plantilla: se aplazan mientras no se ven
+        self._order = next(_created)
         self.run()
 
     def run(self) -> None:
@@ -145,11 +151,55 @@ class Effect(Observer):
             self._on_error(exc)
 
     def _mark_stale(self) -> None:
-        if self.disposed:
+        if self.disposed or self._held():
             return
         _pending[self] = None
         if _batch_depth == 0:
             _flush()
+
+    def _held(self) -> bool:
+        """Si una compuerta cerrada (la suya o una de fuera) lo aplaza, queda esperando en ella."""
+        gate = self.gate
+        while gate is not None:
+            if gate.closed:
+                gate._held[self] = None
+                return True
+            gate = gate.parent
+        return False
+
+
+class Gate:
+    """Compuerta de visibilidad. Mientras ella o una de fuera (`parent`) está cerrada, los
+    efectos que la llevan no se ejecutan al cambiar sus fuentes: esperan aquí y se
+    ejecutan una sola vez al abrirse, con los valores de ese momento.
+
+    La llevan solo los efectos de la plantilla (lo que se muestra). Los `effect`,
+    temporizadores y tareas del script siguen funcionando aunque no se vea."""
+
+    __slots__ = ("parent", "closed", "_held")
+
+    def __init__(self, parent: "Gate | None" = None):
+        self.parent = parent
+        self.closed = False
+        self._held: dict[Effect, None] = {}
+
+    def close(self) -> None:
+        self.closed = True
+
+    def open(self) -> None:
+        if not self.closed:
+            return
+        self.closed = False
+        held, self._held = self._held, {}
+        if held:
+            # En el orden en que se crearon: una región ({#hidden}, {#each}) antes que lo que
+            # contiene, que así ya sabe si se ve. Cada uno vuelve a mirar sus compuertas.
+            with batch():
+                for effect in sorted(held, key=lambda e: e._order):
+                    effect._mark_stale()
+
+    def set_open(self, value: bool) -> None:
+        self.open() if value else self.close()
 
 
 class Scope:
@@ -205,6 +255,8 @@ def _flush() -> None:
                 continue
             effect = next(iter(_pending))
             del _pending[effect]
+            if effect.gate is not None and effect._held():  # se ocultó mientras esperaba
+                continue
             effect.run()
     finally:
         _flushing = False

@@ -252,3 +252,167 @@ def test_hidden_content_is_created_when_first_shown_and_then_only_hidden(oculto)
 def test_unclosed_hidden_block_is_reported():
     with pytest.raises(FluxError, match=r"antes de cerrar el bloque \{#hidden\}"):
         compile_source("<script>\nx = True\n</script>\n<flex>{#hidden x}<Text>a</Text></flex>\n")
+
+
+ELSE = """<script>
+from fluxui import state
+from Campo import Campo
+oculto = state(False)
+log = state([])
+from fluxui import provide
+provide("log", log.value)
+</script>
+<Window width={300} height={200}>
+  <flex direction="column">
+    {#hidden oculto}
+      <Campo />
+    {:else}
+      <flex transition:fade={50}><Text>{"vacío"}</Text></flex>
+    {/hidden}
+  </flex>
+</Window>
+"""
+
+
+def test_hidden_else_is_also_kept_and_transitions_finish_hidden():
+    d = Path(tempfile.mkdtemp())
+    (d / "Campo.flux").write_text(CAMPO, encoding="utf-8")
+    (d / "App.flux").write_text(ELSE, encoding="utf-8")
+    with mount(d / "App.flux") as app:
+        o = app.namespace["oculto"]
+        assert app.texts() == ["n=0"]  # {:else} aún no existe
+        app.find("Campo", label="campo").click()
+        o.value = True
+        app.wait(0.15)  # la entrada de {:else} dura 50 ms
+        assert app.texts() == ["vacío"]
+        o.value = False
+        app.wait(0.15)  # la salida de {:else} termina oculta
+        assert app.texts() == ["n=1"] and app.get("log") == ["mount"]
+        o.value = True
+        app.wait(0.15)
+        assert app.texts() == ["vacío"]
+
+
+def test_else_is_not_allowed_in_key():
+    with pytest.raises(FluxError, match=r"\{:else\} inesperada dentro de \{#key\}"):
+        compile_source("<script>\nx = 1\n</script>\n<flex>{#key x}<Text>a</Text>{:else}<Text>b</Text>{/key}</flex>\n")
+
+
+def test_pages_transition_animates_the_entering_page(app):
+    s = secciones(app)
+    nav = s["lista"]
+    nav._container.setProperty("fxTransition", "slide")
+    nav._container.setProperty("fxTransitionMs", 100)
+    nav.push(nav.page.namespace["Detalle"], item="y")
+    pagina = nav._pages[-1][1]
+    assert pagina.opacity() < 1 and pagina.x() > 0  # entra desde la derecha
+    app.wait(0.25)
+    assert pagina.opacity() == 1 and pagina.x() == 0
+    nav.pop()
+    abajo = nav._pages[-1][1]
+    assert abajo.x() < 0  # al volver, entra desde la izquierda
+    app.wait(0.25)
+    assert abajo.x() == 0 and abajo.opacity() == 1
+
+
+def test_transition_on_pages_compiles_to_its_properties():
+    src = "<script>\nfrom fluxui import pages\nnav = None\n</script>\n<Pages stack={nav} transition:slide={150} />\n"
+    qml = compile_source(src).qml
+    assert 'fxTransition: "slide"' in qml and "fxTransitionMs: 150" in qml
+
+
+def test_leaving_can_be_awaited_to_chain_navigation(app):
+    import asyncio
+
+    nav, ns = detalle(app)
+    ns["lenta"].value, ns["permitir"].value = True, False
+    resultados = []
+
+    async def ir():
+        resultados.append(await nav.pop())
+
+    app.application.run_until(ir())
+    assert resultados == [False] and nav.current == "Detalle"
+    ns["permitir"].value = True
+    app.application.run_until(ir())
+    assert resultados == [False, True] and nav.depth == 1
+    assert app.application.run_until(asyncio.ensure_future(_await(nav.pop()))) is False  # en la primera, no hace nada
+
+
+async def _await(x):
+    return await x
+
+
+def test_a_page_fits_its_window_and_its_scrolling_grid_wraps(tmp_path):
+    """La página de <Sections> se estrecha con la ventana (su mínimo es el de su contenido,
+    no su ancho natural) y una rejilla con wrap y overflow: auto reparte en filas."""
+    (tmp_path / "Rejilla.flux").write_text("""<flex class="pagina">
+  <flex class="barra"><Text>Título</Text><Spacer /><Button text="Nuevo" /></flex>
+  <flex class="rejilla" label="rejilla">
+    {#each list(range(12)) as i (i)}<flex class="ficha"><Text>{f"ficha {i}"}</Text></flex>{/each}
+  </flex>
+</flex>
+<style>
+.pagina { direction: column; flex: 1; }
+.rejilla { flex: 1; flex-wrap: wrap; gap: 10px; overflow: auto; align-content: start; }
+.ficha { width: 200px; height: 60px; }
+</style>
+""", encoding="utf-8")
+    (tmp_path / "App.flux").write_text("""<script>
+from fluxui import sections
+from Rejilla import Rejilla
+s = sections(a=Rejilla)
+</script>
+<Window width={800} height={600}>
+  <flex class="app"><flex class="lateral" /><Sections of={s} /></flex>
+</Window>
+<style>
+.app { flex: 1; }
+.lateral { width: 200px; }
+</style>
+""", encoding="utf-8")
+    with mount(tmp_path / "App.flux") as app:
+        app.window.resize(800, 600)
+        app.wait(0.1)
+        boton = app.find("Button", text="Nuevo").item
+        derecha = boton.mapToScene(boton.boundingRect().topRight()).x()
+        assert derecha <= 800  # antes: la página medía lo que la rejilla en una sola fila
+        rejilla = app.find("flex", label="rejilla").item
+        assert rejilla.width() == pytest.approx(600)  # 800 - la lateral
+        fila = [app.find("Text", text=f"ficha {i}").item for i in (0, 1, 2)]
+        y = [t.mapToScene(t.boundingRect().topLeft()).y() for t in fila]
+        assert y[0] == y[1] and y[2] > y[0]  # caben 2 por fila (200 + 10 + 200 + 10 + 200 > 600)
+
+
+@pytest.mark.parametrize("css, esperado", [
+    ("", (200, 0, 600, 600)),  # llena su <Sections>
+    ("width: 400px; height: 300px;", (200, 0, 400, 300)),
+    ("max-width: 400px; margin: 0 auto;", (300, 0, 400, 600)),  # centrada
+    ("align-self: end; width: 100px;", (700, 0, 100, 600)),
+    ("margin: 50px;", (250, 50, 500, 500)),
+])  # fmt: skip
+def test_the_root_of_a_page_adjusts_its_place_with_css(tmp_path, css, esperado):
+    (tmp_path / "Pag.flux").write_text(f"""<flex class="pag"><Text>hola</Text></flex>
+<style>
+.pag {{ direction: column; {css} }}
+</style>
+""", encoding="utf-8")
+    (tmp_path / "App.flux").write_text("""<script>
+from fluxui import sections
+from Pag import Pag
+s = sections(a=Pag)
+</script>
+<Window width={800} height={600}>
+  <flex class="app"><flex class="lateral" /><Sections of={s} /></flex>
+</Window>
+<style>
+.app { flex: 1; }
+.lateral { width: 200px; }
+</style>
+""", encoding="utf-8")
+    with mount(tmp_path / "App.flux") as app:
+        app.window.resize(800, 600)
+        app.wait(0.1)
+        pag = app.find("Text", text="hola").item.parentItem().parentItem()  # el lay y su caja
+        pos = pag.mapToScene(pag.boundingRect().topLeft())
+        assert (pos.x(), pos.y(), pag.width(), pag.height()) == esperado

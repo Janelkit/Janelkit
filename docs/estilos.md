@@ -46,7 +46,7 @@ Los estilos son **locales al componente**: afectan a los elementos escritos en s
 | `border-color`, `border-width` | ídem | |
 | `border-top`, `-right`, `-bottom`, `-left` (y `-width`, `-color`) | flex, Column, Row | bordes por lado (separadores). Con radio, los lados son rectos en las esquinas |
 | `border-radius` | ídem | 1 valor; de 2 a 4 (radio por esquina, como en CSS) solo en flex, Column y Row |
-| `overflow` | flex, Column, Row | `visible`, `hidden` (recorta, sin redondear las esquinas), `auto`/`scroll` (zona de desplazamiento) |
+| `overflow` | flex, Column, Row | `visible`, `hidden` (recorta, sin redondear las esquinas), `auto`/`scroll` (zona de desplazamiento). Con `flex-wrap: wrap`, como en CSS, las líneas se cortan al tamaño de la caja y se desplaza en el otro eje (una rejilla de fichas que baja) |
 | `padding` | contenedores y controles con texto | 1 a 4 valores, como en CSS |
 | `padding-top`, `-right`, `-bottom`, `-left` | ídem | |
 | `gap` | flex, Column, Row, Scroll | separación entre hijos |

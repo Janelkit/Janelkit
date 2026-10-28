@@ -1,0 +1,112 @@
+<script lang="python">
+# Ficha de una persona: editar sus datos (un borrador), ver sus tarjetas en todos los
+# proyectos (abrir una lleva a su tablero) y darla de baja, con aviso de cuántas tiene.
+from fluxui import before_leave, dialogs, inject, navigation, prop, state
+from services.datos import ROLES, cuenta
+
+ident = prop("")
+datos = inject("datos")
+abrir_tarjeta = inject("abrir_tarjeta")
+nav = navigation()
+p = datos.persona(ident.value)
+nombre = state(p["nombre"])
+correo = state(p["correo"])
+rol = state(p["rol"])
+ROLES_OPC = [{"label": "Sin rol", "value": ""}] + [{"label": r, "value": r} for r in ROLES]
+
+
+def cambios():
+    return {k: v for k, v in {"nombre": nombre.value.strip() or p["nombre"], "correo": correo.value.strip(),
+                              "rol": rol.value}.items() if p[k] != v}
+
+
+@before_leave
+async def salir():
+    if not cambios() or datos.persona(ident.value) is None:
+        return True
+    return await dialogs.confirm(f"Los datos de {p['nombre']} tienen cambios sin guardar. ¿Salir sin guardarlos?")
+
+
+async def borrar():
+    n = datos.cuantas_de(ident.value)
+    aviso = f" Es responsable de {cuenta(n, 'tarjeta')}, que se quedarán sin responsable." if n else ""
+    if await dialogs.confirm(f"¿Dar de baja a {p['nombre']}?{aviso} Se puede deshacer con Ctrl+Z."):
+        datos.borrar_persona(ident.value)
+        nav.pop()
+</script>
+
+<flex class="pagina">
+  <flex class="cabecera">
+    <Button text="← Personas" variant="ghost" enabled={nav.can_go_back} label="Volver a Personas (Alt+←)" on:click={nav.pop()} />
+    <flex class="avatar grande" style={{"background": p["color"]}}><Text>{datos.iniciales(ident)}</Text></flex>
+    <flex class="titulos">
+      <Text class="titulo">{p["nombre"]}</Text>
+      <Text class="subtitulo">{" · ".join(x for x in (p["rol"], p["correo"]) if x) or "Sin rol ni correo"}</Text>
+    </flex>
+    <Spacer />
+    <Button text="Dar de baja" on:click={borrar()} />
+  </flex>
+  <flex class="cuerpo">
+    <flex class="panel ficha">
+      <Text class="panel-titulo">Datos</Text>
+      <Text class="rotulo">Nombre</Text>
+      <TextField bind:value={nombre} label="Nombre" />
+      <Text class="rotulo">Correo</Text>
+      <TextField bind:value={correo} placeholder="nombre@ejemplo.org" label="Correo" />
+      <Text class="rotulo">Rol</Text>
+      <Select options={ROLES_OPC} bind:value={rol} label="Rol" />
+      <flex class="botones">
+        {#if cambios()}<Text class="aviso">Cambios sin guardar</Text>{/if}
+        <Spacer />
+        <Button text="Guardar" variant="primary" enabled={bool(cambios())} on:click={datos.editar_persona(ident, **cambios())} />
+      </flex>
+    </flex>
+    <flex class="panel tarjetas">
+      <flex class="panel-cabecera">
+        <Text class="panel-titulo">Tarjetas</Text>
+        <Text class="contador">{datos.cuantas_de(ident)}</Text>
+      </flex>
+      <flex class="lista">
+        {#each datos.tarjetas_de(ident) as fila (fila[2]["id"])}
+          <flex as="button" class="tarjeta" label={fila[2]["titulo"]} on:click={abrir_tarjeta(fila[0]["id"], fila[2]["id"])}>
+            <flex class="color" style={{"background": fila[0]["color"]}} />
+            <Text class="t">{fila[2]["titulo"]}</Text>
+            <Spacer />
+            <Text class="dato">{f"{fila[0]['nombre']} · {fila[1]['nombre']}"}</Text>
+            <Text class="fecha">{fila[2]["fecha"] or "sin fecha"}</Text>
+          </flex>
+        {:else}
+          <Text class="dato">No es responsable de ninguna tarjeta.</Text>
+        {/each}
+      </flex>
+    </flex>
+  </flex>
+</flex>
+
+<style>
+.pagina { direction: column; flex: 1; }
+.cabecera { gap: 12px; align-items: center; padding: 12px 24px 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.titulos { direction: column; gap: 2px; }
+.titulo { font-size: 20px; font-weight: 700; }
+.subtitulo { color: var(--text-muted); font-size: 12px; }
+.avatar { width: 28px; height: 28px; border-radius: 14px; align-items: center; justify-content: center; color: #ffffff; font-size: 11px; font-weight: 600; }
+.grande { width: 40px; height: 40px; border-radius: 20px; font-size: 14px; }
+.cuerpo { flex: 1; gap: 20px; padding: 20px 24px; align-items: start; }
+.panel { direction: column; gap: 8px; padding: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.ficha { width: 360px; }
+.tarjetas { flex: 1; align-self: stretch; }
+.panel-cabecera { gap: 8px; align-items: center; margin-bottom: 4px; }
+.panel-titulo { font-size: 15px; font-weight: 700; }
+.contador { color: var(--text-muted); font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 8px; background: var(--surface-alt); }
+.rotulo { color: var(--text-muted); font-size: 12px; margin-top: 6px; }
+.botones { gap: 8px; margin-top: 12px; align-items: center; }
+.aviso { color: var(--warning); font-size: 12px; font-weight: 600; }
+.lista { direction: column; flex: 1; gap: 6px; overflow: auto; }
+.tarjeta { gap: 10px; align-items: center; padding: 8px 12px; cursor: pointer; border-radius: 8px; border: 1px solid var(--border); }
+.tarjeta:hover { border-color: var(--primary); background: var(--surface-alt); }
+.tarjeta:focus-visible { outline: 2px solid var(--primary); }
+.color { width: 8px; height: 8px; border-radius: 4px; }
+.t { font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.dato { color: var(--text-muted); font-size: 12px; }
+.fecha { color: var(--text-muted); font-size: 12px; width: 80px; text-align: right; }
+</style>

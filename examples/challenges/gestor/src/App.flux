@@ -1,0 +1,102 @@
+<script lang="python">
+# Reto 6: gestor de proyectos. Ver ../README.md y ../HALLAZGOS.md.
+# GESTOR_FILE: archivo JSON de los datos (por defecto, datos.json junto a la app; si no
+# existe, se crean datos de ejemplo y se importa el tablero.json del reto 3).
+# GESTOR_DEMO=10x4x50x300: proyectos × columnas × tarjetas por columna × personas, sin
+# archivo (pruebas y mediciones).
+import json
+import os
+from pathlib import Path
+
+from fluxui import provide, sections
+from vistas.MiTrabajo import MiTrabajo
+from vistas.Personas import Personas
+from vistas.Proyecto import Proyecto
+from vistas.Proyectos import Proyectos
+from services.datos import Datos, ejemplo, importar_kanban
+
+if os.environ.get("GESTOR_DEMO"):
+    p, c, t, g = (int(n) for n in os.environ["GESTOR_DEMO"].split("x"))
+    datos = Datos(None, ejemplo(p, c, t, g))
+else:
+    archivo = Path(os.environ.get("GESTOR_FILE", Path(__file__).parent.parent / "datos.json"))
+    inicial = None
+    kanban = Path(__file__).parent.parent.parent / "kanban" / "tablero.json"
+    if not archivo.exists() and kanban.exists():
+        inicial = ejemplo()
+        inicial["proyectos"].insert(0, importar_kanban(json.loads(kanban.read_text(encoding="utf-8")),
+                                                        inicial["personas"], pid="p0", nombre="Tablero del reto 3"))
+    datos = Datos(archivo, inicial)
+
+secciones = sections(proyectos=Proyectos, personas=Personas, trabajo=MiTrabajo)
+historial = datos.historial
+deshacer = historial.puede_deshacer
+rehacer = historial.puede_rehacer
+SECCIONES = [("proyectos", "Proyectos"), ("personas", "Personas"), ("trabajo", "Mi trabajo")]
+
+
+async def abrir_tarjeta(pid, tid):
+    """Enlace profundo: el tablero de un proyecto con una tarjeta enfocada, desde cualquier sección."""
+    secciones.show("proyectos")
+    nav = secciones["proyectos"]
+    actual = nav.page
+    if nav.current == "Proyecto" and actual.namespace["ident"].value == pid:
+        actual.namespace["enfocar_tarjeta"](tid)
+    elif await nav.reset(Proyectos):  # False si un detalle con cambios pidió quedarse
+        nav.push(Proyecto, ident=pid, enfocar=tid)
+
+
+provide("datos", datos)
+provide("secciones", secciones)
+provide("abrir_tarjeta", abrir_tarjeta)
+</script>
+
+<Window title="Gestor de proyectos" width={1280} height={800} minWidth={760} minHeight={480}>
+  <Shortcut keys="Ctrl+Z" on:activate={historial.deshacer()} />
+  <Shortcut keys="Ctrl+Y" on:activate={historial.rehacer()} />
+  <Shortcut keys="Ctrl+Shift+Z" on:activate={historial.rehacer()} />
+  <Shortcut keys="Ctrl+1" on:activate={secciones.show("proyectos")} />
+  <Shortcut keys="Ctrl+2" on:activate={secciones.show("personas")} />
+  <Shortcut keys="Ctrl+3" on:activate={secciones.show("trabajo")} />
+  <flex class="app">
+    <flex as="region" class="cabecera" label="Secciones">
+      <flex class="marca">
+        <flex class="logo"><Text>G</Text></flex>
+        <Text class="nombre">Gestor</Text>
+      </flex>
+      <flex class="secciones">
+        {#each SECCIONES as s, i (s[0])}
+          <flex as="button" class="seccion" class:activa={secciones.current == s[0]} label={s[1]}
+                title={f"{s[1]} (Ctrl+{i + 1})"} on:click={secciones.show(s[0])}>
+            <Text>{s[1]}</Text>
+          </flex>
+        {/each}
+      </flex>
+      <Spacer />
+      {#if deshacer}<Text class="ultimo">{f"Último cambio: {deshacer}"}</Text>{/if}
+      <Button text="Deshacer" variant="ghost" enabled={bool(deshacer)} label={f"Deshacer: {deshacer} (Ctrl+Z)"} on:click={historial.deshacer()} />
+      <Button text="Rehacer" variant="ghost" enabled={bool(rehacer)} label={f"Rehacer: {rehacer} (Ctrl+Y)"} on:click={historial.rehacer()} />
+    </flex>
+    <Sections of={secciones} transition:fade={120} />
+  </flex>
+</Window>
+
+<style>
+.app { flex: 1; direction: column; background: var(--bg); }
+.cabecera {
+  height: 52px; gap: 6px; align-items: center; padding: 0 16px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.marca { gap: 8px; align-items: center; margin-right: 24px; }
+.logo { width: 28px; height: 28px; border-radius: 7px; background: var(--primary); align-items: center; justify-content: center; color: var(--on-primary); font-weight: 800; }
+.nombre { font-size: 16px; font-weight: 800; }
+.secciones { gap: 4px; align-self: stretch; }
+.seccion {
+  align-items: center; padding: 0 14px; cursor: pointer; color: var(--text-muted); font-weight: 600;
+  border-bottom: 2px solid transparent; transition: color 120ms, border-color 120ms;
+}
+.seccion:hover { color: var(--text); }
+.seccion:focus-visible { outline: 2px solid var(--primary); outline-offset: -4px; }
+.activa { color: var(--text); border-bottom: 2px solid var(--primary); }
+.ultimo { color: var(--text-muted); font-size: 12px; max-width: 280px; white-space: nowrap; text-overflow: ellipsis; margin-right: 4px; }
+</style>

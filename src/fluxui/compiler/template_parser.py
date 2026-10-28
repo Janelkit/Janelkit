@@ -342,14 +342,23 @@ class _TemplateParser:
 
     def parse_key(self, start: int, expr: Expression, word: str = "key") -> KeyBlock:
         block = KeyBlock(expr, [], self.loc(start), hidden=word == "hidden")
-        try:
-            self.parse_children(closing=None, block=(word, start))
-        except _Stop as stop:
-            block.children = stop.nodes
-        else:
-            raise self.error(f"el bloque {{#{word}}} no está cerrado", start, f"añade {{/{word}}}")
-        dstart = self.pos
-        directive = self.read_braced(validate=False).code.strip()
+        while True:
+            try:
+                self.parse_children(closing=None, block=(word, start))
+            except _Stop as stop:
+                nodes = stop.nodes
+            else:
+                raise self.error(f"el bloque {{#{word}}} no está cerrado", start, f"añade {{/{word}}}")
+            if block.else_children is None and not block.children:
+                block.children = nodes
+            else:
+                block.else_children = nodes
+            dstart = self.pos
+            directive = self.read_braced(validate=False).code.strip()
+            if directive == ":else" and block.hidden and block.else_children is None:
+                block.else_children = []
+                continue
+            break
         if directive != f"/{word}":
             raise self.error(
                 f"directiva {{{directive}}} inesperada dentro de {{#{word}}}", dstart, f"cierra el bloque con {{/{word}}}"

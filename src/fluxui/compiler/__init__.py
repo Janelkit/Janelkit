@@ -189,7 +189,7 @@ def _slot_names(nodes: list[Node]) -> set[str]:
         elif isinstance(node, EachBlock):
             children = [*node.children, *(node.else_children or [])]
         elif isinstance(node, KeyBlock):
-            children = node.children
+            children = [*node.children, *(node.else_children or [])]
         names |= _slot_names(children)
     return names
 

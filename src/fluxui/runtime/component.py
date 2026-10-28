@@ -55,7 +55,7 @@ from ..tasks import spawn
 from ..reactivity import Computed, Effect, Event, Prop, PropError, Scope, State, batch, untracked
 from ..reactivity.props import REQUIRED
 from ..reactivity.collections import to_plain
-from ..reactivity.effects import when_settled
+from ..reactivity.effects import Gate, when_settled
 from ..reactivity.state import _same
 from .list_model import LazySlotModel, SlotModel
 from .qt_bridge import make_bridge_class
@@ -151,9 +151,15 @@ class TemplateInstance:
         bridge_parent: QObject | None = None,
         scope: Scope | None = None,
         with_bridge: bool = True,
+        gate: "Gate | None | object" = ...,
+        ungated: frozenset[str] = frozenset(),
     ):
         self.component = component
         self.template = template
+        # Compuerta de visibilidad de lo que muestra esta plantilla (ver Gate): la del sitio
+        # donde se monta. `ungated`: bindings que no se aplazan (el que muestra un {#hidden}).
+        self.gate: Gate | None = (parent.gate if parent is not None else None) if gate is ... else gate  # type: ignore[assignment]
+        self._ungated = ungated
         self.names = names
         self.row_key: Any = None  # clave de la fila de {#each} que crea esta plantilla (si la hay)
         self.parent = parent
@@ -235,7 +241,9 @@ class TemplateInstance:
             if bridge.value(binding.id) is None and isinstance(binding, TextBinding):
                 bridge.set_value(binding.id, "")
 
-        Effect(update, on_error=on_error)
+        effect = Effect(update, on_error=on_error)
+        if binding.id not in self._ungated:
+            effect.gate = self.gate
 
     def _evaluate(self, binding: Binding) -> Any:
         if isinstance(binding, ExprBinding):
@@ -420,7 +428,7 @@ class TemplateInstance:
                 def on_error(exc: BaseException, name: str = name, arg: Expression = arg) -> None:
                     self.report(f"error al evaluar la prop '{name}' de <{use.tag}>: {type(exc).__name__}: {exc}", arg.loc, exc)
 
-                Effect(push, on_error=on_error)
+                Effect(push, on_error=on_error).gate = self.gate
                 incoming[name] = source
             events = {
                 name: (lambda *args, _h=handler, **kwargs: self.call_handler(_h, list(args), kwargs))
@@ -440,7 +448,7 @@ class TemplateInstance:
             else:
                 child = ComponentInstance(
                     compiled, self.component.host, incoming, events, bridge_parent, parent=self.component, slots=slots,
-                    prop_locs=locs, hmr_key=hmr_key,
+                    prop_locs=locs, hmr_key=hmr_key, gate=self.gate,
                 )  # fmt: skip
         self.scope.add(child.scope)
         if self.row_key is not None:
@@ -486,8 +494,11 @@ class _Region:
         key: Any = None,
         origin: TemplateInstance | None = None,
         adopt: "dict[int, ComponentInstance] | None" = None,
+        gate: "Gate | None | object" = ...,
+        ungated: frozenset[str] = frozenset(),
     ) -> _Row | None:
-        """Crea el fragmento en `model`. `origin` es la plantilla donde se escribió (otra, si es contenido de un slot)."""
+        """Crea el fragmento en `model`. `origin` es la plantilla donde se escribió (otra, si es contenido de un slot);
+        `gate`, su compuerta de visibilidad (por defecto, la del sitio donde se muestra)."""
         owner = self.owner
         origin = origin or owner
         inst = TemplateInstance(
@@ -497,6 +508,8 @@ class _Region:
             parent=origin,
             bridge_parent=model,
             with_bridge=fragment.root is not None,
+            gate=owner.gate if gate is ... else gate,
+            ungated=ungated,
         )
         inst.row_key = key
         inst.adopt = adopt
@@ -564,7 +577,7 @@ class _EachRegion(_Region):
         def on_error(exc: BaseException) -> None:
             owner.report(f"error en {{#each}}: {type(exc).__name__}: {exc}", slot.iterable.loc, exc)
 
-        Effect(self.update, on_error=on_error)
+        Effect(self.update, on_error=on_error).gate = owner.gate
 
     def update(self) -> None:
         value = self.owner.eval(self.slot.iterable)
@@ -853,7 +866,7 @@ class _IfRegion(_Region):
         def on_error(exc: BaseException) -> None:
             owner.report(f"error al evaluar la condición de {{#if}}: {type(exc).__name__}: {exc}", slot.loc, exc)
 
-        Effect(self.update, on_error=on_error)
+        Effect(self.update, on_error=on_error).gate = owner.gate
 
     def update(self) -> None:
         index = None
@@ -881,19 +894,23 @@ class _KeyRegion(_Region):
         self.model = self.new_model(slot.model_id, slot.fragment)
         self.value: Any = self._UNSET
         self.row: _Row | None = None
+        # {#hidden}: mientras está oculto, lo que muestra no se recalcula (se pone al día al verse).
+        self.gate = Gate(owner.gate) if slot.hidden else None
 
         def on_error(exc: BaseException) -> None:
             word = "hidden" if slot.hidden else "key"
             owner.report(f"error al evaluar {{#{word}}}: {type(exc).__name__}: {exc}", slot.expression.loc, exc)
 
-        Effect(self.update, on_error=on_error)
+        Effect(self.update, on_error=on_error).gate = owner.gate
 
     def update(self) -> None:
         value = self.owner.eval(self.slot.expression)
         if self.slot.hidden:  # se crea la primera vez que se muestra; su `visible` hace el resto
-            if self.row is None and not value:
-                with untracked():
-                    self.row = self.mount(self.slot.fragment, self.model, 0, {})
+            with untracked():
+                self.gate.set_open(not value)
+                if self.row is None and not value:
+                    shown = frozenset((self.slot.shown_id,)) if self.slot.shown_id else frozenset()
+                    self.row = self.mount(self.slot.fragment, self.model, 0, {}, gate=self.gate, ungated=shown)
             return
         if self.value is not self._UNSET and _same(value, self.value):
             return
@@ -1095,6 +1112,7 @@ class ComponentInstance:
         slots: dict[str, tuple[Fragment, TemplateInstance]] | None = None,
         prop_locs: dict[str, SourceLocation] | None = None,
         hmr_key: Any = None,
+        gate: Gate | None = None,
     ):
         self.compiled = compiled
         self._prop_locs = prop_locs or {}
@@ -1139,7 +1157,7 @@ class ComponentInstance:
                     exec(code, self.namespace)
                 if hot_reload is not None:
                     hot_reload.restore(self)
-            self.root = TemplateInstance(self, compiled.ir.template, self.namespace, None, bridge_parent, scope=self.scope)
+            self.root = TemplateInstance(self, compiled.ir.template, self.namespace, None, bridge_parent, scope=self.scope, gate=gate)
             self.root.start()
 
     @property

@@ -502,6 +502,8 @@ class MountedApp:
         """Responde al diálogo abierto: una ruta (archivos), True/False (aceptar/cancelar)."""
         from PySide6.QtCore import Q_ARG, QUrl
 
+        from . import dialogs
+
         pending = self.dialogs()
         if not pending:
             raise InspectError("no hay ningún diálogo abierto")
@@ -509,10 +511,10 @@ class MountedApp:
         if result is False or result is None:
             _invoke(dialog, "reject")
         elif isinstance(result, (str, Path)):
-            prop = "selectedFolder" if dialog.metaObject().className().startswith("QQuickFolderDialog") else "selectedFile"
+            prop = "selectedFolder" if dialogs.kind(dialog) == "FolderDialog" else "selectedFile"
             dialog.setProperty(prop, QUrl.fromLocalFile(str(Path(result).resolve())))
             _invoke(dialog, "done", Q_ARG(int, 1))
-        elif dialog.property("buttons") is not None and dialog.metaObject().className().startswith("QQuickMessageDialog"):
+        elif dialogs.kind(dialog) == "MessageDialog":
             _invoke(dialog, "done", Q_ARG(int, 0x400))  # Aceptar
         else:
             _invoke(dialog, "done", Q_ARG(int, 1))
@@ -541,7 +543,9 @@ def mount(entry: str | os.PathLike[str], headless: bool = True) -> Iterator[Moun
     """Compila y monta `entry` (p. ej. "src/App.flux"); lo desmonta al salir del bloque.
 
     Con `headless=True` (por defecto) y si aún no existe la aplicación Qt, usa
-    la plataforma `offscreen`: no se muestra ninguna ventana.
+    la plataforma `offscreen`: no se muestra ninguna ventana. Al salir se olvidan los
+    módulos de la carpeta de la app: otra app con un `services/` o `components/` del
+    mismo nombre se puede montar después en el mismo proceso.
     """
     from PySide6.QtGui import QGuiApplication
 
@@ -551,15 +555,31 @@ def mount(entry: str | os.PathLike[str], headless: bool = True) -> Iterator[Moun
     from .qt_backend.application import Application
 
     path = Path(entry).resolve()
-    if str(path.parent) not in sys.path:
+    added = str(path.parent) not in sys.path
+    if added:
         sys.path.insert(0, str(path.parent))
+    before = set(sys.modules)
     application = Application.current or Application([])
-    mounted = application.mount(compile_file(path))
-    app = MountedApp(application, mounted)
-    app.process()
     try:
-        yield app
+        mounted = application.mount(compile_file(path))
+        app = MountedApp(application, mounted)
+        app.process()
+        try:
+            yield app
+        finally:
+            if mounted in application.mounted:
+                application.unmount(mounted)
+            application.process_events()
     finally:
-        if mounted in application.mounted:
-            application.unmount(mounted)
-        application.process_events()
+        if added and str(path.parent) in sys.path:
+            sys.path.remove(str(path.parent))
+        _forget_modules(path.parent, set(sys.modules) - before)
+
+
+def _forget_modules(folder: Path, names: set[str]) -> None:
+    """Quita de `sys.modules` los módulos (y paquetes) importados desde `folder`."""
+    for name in names:
+        module = sys.modules.get(name)
+        places = [getattr(module, "__file__", None) or "", *(getattr(module, "__path__", None) or [])]
+        if any(p and Path(p).resolve().is_relative_to(folder) for p in places):
+            del sys.modules[name]

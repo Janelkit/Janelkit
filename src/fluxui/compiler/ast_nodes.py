@@ -92,12 +92,14 @@ class KeyBlock:
     """`{#key expr}...{/key}`: recrea el contenido cuando cambia `expr`.
 
     Con `hidden`, es `{#hidden expr}...{/hidden}`: el contenido se crea la primera vez
-    que `expr` es falso y después solo se oculta (conserva su estado)."""
+    que `expr` es falso y después solo se oculta (conserva su estado). Su `{:else}` es
+    lo contrario: se muestra mientras `expr` es verdadero, y también se conserva."""
 
     expression: Expression
     children: list["Node"]
     loc: SourceLocation
     hidden: bool = False
+    else_children: list["Node"] | None = None
 
 
 Node = Union[Element, Text, Interpolation, IfBlock, EachBlock, KeyBlock]
@@ -178,6 +180,10 @@ def _dump_node(node: Node, depth: int, out: list[str]) -> None:
         out.append(f"{pad}{{#{word} {node.expression.code.strip()}}} @{_lc(node.loc)}")
         for child in node.children:
             _dump_node(child, depth + 1, out)
+        if node.else_children is not None:
+            out.append(f"{pad}{{:else}}")
+            for child in node.else_children:
+                _dump_node(child, depth + 1, out)
     elif isinstance(node, EachBlock):
         key = f" ({node.key.code.strip()})" if node.key else ""
         idx = f", {node.index}" if node.index else ""

@@ -523,6 +523,10 @@ class _Lowerer:
                 self.error(f"{attr.name} espera la duración en milisegundos, p. ej. {attr.name}={{300}}", attr.loc)
                 return
             ms = value
+        if ir.qml_type == "FxPages":  # <Pages transition:slide>: anima la página que entra
+            ir.props["fxTransition"] = Literal(qml_string(kind))
+            ir.props["fxTransitionMs"] = Literal(str(ms))
+            return
         directions = ("in", "out") if attr.directive == "transition" else (attr.directive,)
         for direction in directions:
             ir.transitions[direction] = (kind, ms)
@@ -980,17 +984,35 @@ class _Lowerer:
 
     def key_block(self, node: KeyBlock, horizontal: bool) -> list[IRNode]:
         self.check_expr(node.expression)
-        frag = self.fragment(node.children, horizontal, (), node.loc, component_root=not node.hidden)
+        if node.hidden:
+            out = self.hidden_branch(node.children, node.expression, node.loc, horizontal)
+            if node.else_children is not None:
+                opposite = Expression(f"not ({node.expression.code.strip()})", node.expression.loc)
+                out += self.hidden_branch(node.else_children, opposite, node.loc, horizontal)
+            return out
+        frag = self.fragment(node.children, horizontal, (), node.loc)
         if frag.empty:
             return []
-        if node.hidden:
-            self.hide_when(frag, node.expression, horizontal)
-        slot = KeySlot(self.next_id("m"), node.expression, frag, node.loc, hidden=node.hidden)
+        slot = KeySlot(self.next_id("m"), node.expression, frag, node.loc)
         self.tpl.slots.append(slot)
         return [IRRepeater(slot.model_id, node.loc, frag.root, _path(frag))]
 
-    def hide_when(self, frag: Fragment, condition: Expression, horizontal: bool) -> None:
-        """{#hidden}: la raíz del fragmento se oculta mientras `condition` sea verdadera."""
+    def hidden_branch(self, nodes: list[Node], condition: Expression, loc: SourceLocation, horizontal: bool) -> list[IRNode]:
+        """Una rama de {#hidden}: se crea la primera vez que `condition` es falsa y después solo se oculta."""
+        frag = self.fragment(nodes, horizontal, (), loc, component_root=False)
+        if frag.empty:
+            return []
+        shown = self.hide_when(frag, condition, horizontal)
+        slot = KeySlot(self.next_id("m"), condition, frag, loc, hidden=True, shown_id=shown)
+        self.tpl.slots.append(slot)
+        return [IRRepeater(slot.model_id, loc, frag.root, _path(frag))]
+
+    def hide_when(self, frag: Fragment, condition: Expression, horizontal: bool) -> str:
+        """{#hidden}: la raíz del fragmento se oculta mientras `condition` sea verdadera.
+        Devuelve el id del binding que la muestra.
+
+        Con transiciones, un FxTransition en modo `toggle` anima al mostrar y al ocultar, y
+        es quien cambia `visible` (al terminar la salida)."""
         root = frag.root
         if "visible" in root.props or any(prop == "visible" for prop, _, _ in root.conditional):
             box = IRElement("FxRow" if horizontal else "FxColumn", root.loc)
@@ -998,13 +1020,23 @@ class _Lowerer:
             box.props.update({k: Literal(v) for k, v in _TRANSPARENT_BOX.items()})
             own = "row" if horizontal else "column"
             box.props["direction"] = Literal(f'parent && parent.fxBox ? parent.fxBox.direction : "{own}"')
+            box.transitions, root.transitions = root.transitions, {}
+            self.pending_transitions.pop(id(root), None)
             frag.root = root = box
         saved, self.tpl = self.tpl, frag.template
         try:
             bid = self.add_expr_binding(Expression(f"not ({condition.code.strip()})", condition.loc), condition.loc)
         finally:
             self.tpl = saved
-        root.props["visible"] = Bound(bid)
+        if root.transitions:
+            self.attach_transitions(frag)
+            anim = root.children[-1]
+            anim.props["toggle"] = Literal("true")
+            anim.props["shown"] = Bound(bid)
+            frag.leave_ms = 0  # ocultarse no retira la fila
+        else:
+            root.props["visible"] = Bound(bid)
+        return bid
 
     # -- slots ---------------------------------------------------------------
     def slot_outlet(self, el: Element, horizontal: bool) -> list[IRNode]:
@@ -1316,7 +1348,7 @@ def _inline_vars(nodes: list[Node]) -> set[str]:
         elif isinstance(node, EachBlock):
             children = node.children + (node.else_children or [])
         elif isinstance(node, KeyBlock):
-            children = node.children
+            children = node.children + (node.else_children or [])
         out |= _inline_vars(children)
     return out
 

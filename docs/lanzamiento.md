@@ -34,7 +34,7 @@ Situación de partida: incrementos 0–7 completos; detalle en [estado.md](estad
 | 22 | `flux dev` conservando el estado (HMR) | P2 | ✅ | `tests/test_dev.py::test_reload_keeps_state_unless_the_script_changed` |
 | 25 | Secciones que conservan sus vistas | P0 | ✅ | `sections()`/`<Sections>` y `{#hidden}`; `tests/test_navigation.py`. Cambiar de sección con 500 filas: ~13 ms (crearla, ~80 ms) |
 | 26 | Salir de una vista o cerrar una ventana con cambios sin guardar | P1 | ✅ | `before_leave` (también `async`); `tests/test_navigation.py` |
-| 27 | Experiencia de navegación | P1 | ✅ | `navigation()`, `await push` / `back(valor)`, Alt+← y botón «atrás» del ratón; `tests/test_navigation.py`. Pendiente opcional: transición entre páginas, `open_window(..., single=True)` |
+| 27 | Experiencia de navegación | P1 | ✅ | `navigation()`, `await push` / `back(valor)`, Alt+← y botón «atrás» del ratón; `tests/test_navigation.py`. `<Pages transition:slide>`. Pendiente opcional: `open_window(..., single=True)` |
 
 ## Cómo se prioriza
 

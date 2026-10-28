@@ -1,0 +1,188 @@
+<script lang="python">
+# Un proyecto: pestañas Tablero, Miembros y Ajustes. Las pestañas usan {#hidden}: al
+# cambiar de una a otra se conservan (filtros, desplazamiento, detalle abierto).
+# El tablero es el del reto 3, con las etiquetas y los miembros del proyecto.
+from fluxui import inject, navigation, prop, provide, state
+from components.AjustesProyecto import AjustesProyecto
+from components.Columna import Columna
+from components.Detalle import Detalle
+from components.Miembros import Miembros
+from components.MenuContextual import MenuContextual
+from services.datos import cuenta
+from services.interfaz import Interfaz
+
+ident = prop("")
+enfocar = prop("")  # id de una tarjeta que enfocar al abrir (enlaces de «Mi trabajo»)
+datos = inject("datos")
+nav = navigation()
+tablero = datos.tablero(ident.value)
+proyecto = tablero.proyecto
+
+texto = state("")
+etiqueta = state("")
+persona = state("")
+pestaña = state("tablero")
+ui = Interfaz(texto, etiqueta, persona)
+ui.enfocar.value = enfocar.value or None  # la tarjeta la toma al montarse
+provide("tablero", tablero)
+provide("ui", ui)
+
+columnas = tablero.columnas
+detalle = ui.detalle
+menu = ui.menu
+PESTAÑAS = [("tablero", "Tablero"), ("miembros", "Miembros"), ("ajustes", "Ajustes")]
+
+
+def etiquetas_opc():
+    return [{"label": "Todas las etiquetas", "value": ""}] + [{"label": e, "value": e} for e in proyecto["etiquetas"]]
+
+
+def personas_opc():
+    return [{"label": "Todas las personas", "value": ""}] + [
+        {"label": datos.nombre(m["persona"]), "value": m["persona"]} for m in proyecto["miembros"]]
+
+
+def enfocar_tarjeta(tid):
+    """Llamada por el enlace de «Mi trabajo» cuando este proyecto ya está abierto."""
+    pestaña.value = "tablero"
+    ui.detalle.value = None
+    ref_tarjeta = ui.tarjetas.get(tid)
+    if ref_tarjeta is not None:
+        ref_tarjeta.focus()
+
+
+def opciones_menu(tid):
+    col, _ = tablero.donde(tid)
+    destinos = [{"label": f"Mover a «{c['nombre']}»", "valor": ("mover", c["id"]), "tecla": "Alt+← / Alt+→"}
+                for c in columnas.value if c is not col]
+    return destinos + [
+        {"label": "Abrir", "valor": ("abrir", None), "tecla": "Intro"},
+        {"label": "Duplicar", "valor": ("duplicar", None), "tecla": "Ctrl+D"},
+        {"label": "Borrar", "valor": ("borrar", None), "tecla": "Supr"},
+    ]
+
+
+def elegir(valor):
+    tid = menu.value["id"]
+    accion, col = valor
+    ui.cerrar_menu()
+    if accion == "mover":
+        tablero.mover(tid, col, 0)
+    elif accion == "abrir":
+        ui.abrir(tid)
+    elif accion == "duplicar":
+        ui.enfocar.value = tablero.duplicar(tid)
+    else:
+        tablero.borrar(tid)
+
+
+def nueva_columna():
+    ui.renombrar.value = tablero.nueva_columna()  # la columna nueva empieza con su nombre en edición
+
+
+def total_tarjetas():
+    return sum(len(c["tarjetas"]) for c in columnas.value)
+
+
+def limpiar_filtros():
+    texto.set("")
+    etiqueta.set("")
+    persona.set("")
+</script>
+
+<flex class="proyecto">
+  <flex class="cabecera">
+    <flex class="arriba">
+      <Button text="← Proyectos" variant="ghost" enabled={nav.can_go_back} label="Volver a Proyectos (Alt+←)" on:click={nav.pop()} />
+      <flex class="color" style={{"background": proyecto["color"]}} />
+      <flex class="titulos">
+        <flex class="fila-titulo">
+          <Text class="nombre">{proyecto["nombre"]}</Text>
+          {#if proyecto["archivado"]}<Text class="archivado">Archivado</Text>{/if}
+        </flex>
+        {#if proyecto["descripcion"]}<Text class="descripcion">{proyecto["descripcion"]}</Text>{/if}
+      </flex>
+    </flex>
+    <flex as="tablist" class="pestañas" label="Vistas del proyecto">
+      {#each PESTAÑAS as p (p[0])}
+        <flex as="tab" class="pestaña" class:activa={pestaña == p[0]} label={p[1]} selected={pestaña == p[0]}
+              on:click={pestaña = p[0]}>
+          <Text>{p[1]}</Text>
+        </flex>
+      {/each}
+    </flex>
+  </flex>
+  {#hidden pestaña != "tablero"}
+    <flex class="vista">
+      <flex class="barra">
+        <TextField class="buscar" bind:value={texto} placeholder="Buscar tarjetas…" label="Buscar" />
+        <Select options={etiquetas_opc()} bind:value={etiqueta} label="Filtrar por etiqueta" />
+        <Select options={personas_opc()} bind:value={persona} label="Filtrar por persona" />
+        {#if texto or etiqueta or persona}
+          <Button text="Quitar filtros" variant="ghost" on:click={limpiar_filtros()} />
+        {/if}
+        <Spacer />
+        <Text class="resumen">{f"{cuenta(total_tarjetas(), 'tarjeta')} en {cuenta(len(columnas), 'columna')}"}</Text>
+        <Button text="+ Columna" variant="primary" on:click={nueva_columna()} />
+      </flex>
+      <flex class="cuerpo">
+        <flex class="tablero" label="Columnas del tablero">
+          {#each columnas as c (c["id"])}
+            <Columna columna={c} />
+          {/each}
+          <flex as="button" class="otra-columna" label="Añadir columna" on:click={nueva_columna()}>
+            <Text>+ Añadir columna</Text>
+          </flex>
+        </flex>
+        {#if detalle}
+          {#key detalle}
+            <Detalle ident={detalle} on:cerrar={detalle = None} />
+          {/key}
+        {/if}
+      </flex>
+    </flex>
+  {/hidden}
+  {#hidden pestaña != "miembros"}
+    <Miembros pid={ident} />
+  {/hidden}
+  {#hidden pestaña != "ajustes"}
+    <AjustesProyecto pid={ident} on:borrado={nav.pop()} />
+  {/hidden}
+  {#if menu}
+    <MenuContextual opciones={opciones_menu(menu["id"])} x={menu["x"] if menu["x"] is not None else 240}
+                    y={menu["y"] if menu["y"] is not None else 120}
+                    on:elegir={elegir} on:cerrar={ui.cerrar_menu()} />
+  {/if}
+</flex>
+
+<style>
+.proyecto { direction: column; flex: 1; }
+.cabecera { direction: column; gap: 6px; padding: 12px 24px 0 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.arriba { gap: 12px; align-items: center; }
+.color { width: 14px; height: 14px; border-radius: 7px; }
+.titulos { direction: column; gap: 1px; flex: 1; }
+.fila-titulo { gap: 8px; align-items: center; }
+.nombre { font-size: 20px; font-weight: 700; }
+.descripcion { color: var(--text-muted); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.archivado { color: var(--text-muted); font-size: 11px; padding: 1px 8px; border-radius: 8px; background: var(--surface-alt); }
+.pestañas { gap: 4px; padding-left: 8px; }
+.pestaña {
+  padding: 8px 12px; cursor: pointer; color: var(--text-muted); font-weight: 600;
+  border-bottom: 2px solid transparent; transition: color 120ms, border-color 120ms;
+}
+.pestaña:hover { color: var(--text); }
+.pestaña:focus-visible { outline: 2px solid var(--primary); outline-offset: -4px; }
+.activa { color: var(--text); border-bottom: 2px solid var(--primary); }
+.vista { direction: column; flex: 1; }
+.barra { gap: 8px; align-items: center; padding: 10px 24px; }
+.buscar { flex: 0 1 260px; min-width: 140px; }
+.resumen { color: var(--text-muted); font-size: 12px; margin-right: 4px; white-space: nowrap; }
+.cuerpo { flex: 1; }
+.tablero { flex: 1; gap: 12px; padding: 4px 24px 16px 24px; overflow: auto; align-items: stretch; }
+.otra-columna {
+  width: 280px; flex-shrink: 0; align-self: start; padding: 14px; cursor: pointer;
+  color: var(--text-muted); font-weight: 600; border: 2px solid var(--border); border-radius: 10px;
+}
+.otra-columna:hover { color: var(--primary); border-color: var(--primary); }
+.otra-columna:focus-visible { outline: 2px solid var(--primary); }
+</style>

@@ -1,0 +1,115 @@
+<script lang="python">
+# Inicio de la sección Proyectos: rejilla con color, nº de tarjetas, progreso y miembros.
+# Abrir uno apila su página (navigation()); la búsqueda se conserva al volver.
+from fluxui import computed, inject, navigation, state
+from services.datos import cuenta
+from vistas.Proyecto import Proyecto
+
+datos = inject("datos")
+nav = navigation()
+buscar = state("")
+archivados = state(False)
+
+visibles = computed(lambda: [
+    p for p in datos.proyectos.value
+    if p["archivado"] == archivados.value and buscar.value.strip().lower() in p["nombre"].lower()
+])
+
+
+def resumen_general():
+    activos = [p for p in datos.proyectos.value if not p["archivado"]]
+    total = sum(datos.resumen(p)["total"] for p in activos)
+    return f"{cuenta(len(activos), 'proyecto activo', 'proyectos activos')} · {cuenta(total, 'tarjeta')}"
+
+
+def abrir(pid):
+    nav.push(Proyecto, ident=pid)
+
+
+def nuevo():
+    abrir(datos.nuevo_proyecto())
+</script>
+
+<flex class="pagina">
+  <flex class="cabecera">
+    <flex class="titulos">
+      <Text class="titulo">{"Proyectos archivados" if archivados else "Proyectos"}</Text>
+      <Text class="subtitulo">{resumen_general()}</Text>
+    </flex>
+    <Spacer />
+    <TextField class="buscar" bind:value={buscar} placeholder="Buscar proyectos…" label="Buscar proyectos" />
+    <Checkbox text="Ver archivados" bind:checked={archivados} />
+    <Button text="+ Proyecto" variant="primary" on:click={nuevo()} />
+  </flex>
+  <flex class="rejilla" label="Lista de proyectos">
+    {#each visibles as p (p["id"])}
+      <flex as="button" class="ficha" label={p["nombre"]} on:click={abrir(p["id"])}>
+        <flex class="franja" style={{"background": p["color"]}} />
+        <flex class="contenido">
+          <flex class="fila-nombre">
+            <Text class="nombre">{p["nombre"]}</Text>
+            {#if p["archivado"]}<Text class="insignia">Archivado</Text>{/if}
+          </flex>
+          <Text class="descripcion">{p["descripcion"] or "Sin descripción"}</Text>
+          <flex class="progreso">
+            <ProgressBar value={datos.resumen(p)["progreso"]} max={1} flex={1} />
+            <Text class="porcentaje">{f"{round(datos.resumen(p)['progreso'] * 100)} %"}</Text>
+          </flex>
+          <flex class="pie">
+            <Text class="dato">{f"{cuenta(datos.resumen(p)['total'], 'tarjeta')} · {cuenta(len(p['miembros']), 'miembro')}"}</Text>
+            <Spacer />
+            <flex class="caras">
+              {#each p["miembros"][:5] as m (m["persona"])}
+                <flex class="avatar" style={{"background": (datos.persona(m["persona"]) or {}).get("color", "#868e96")}}
+                      title={datos.nombre(m["persona"])}>
+                  <Text>{datos.iniciales(m["persona"])}</Text>
+                </flex>
+              {/each}
+              {#if len(p["miembros"]) > 5}<Text class="mas">{f"+{len(p['miembros']) - 5}"}</Text>{/if}
+            </flex>
+          </flex>
+        </flex>
+      </flex>
+    {:else}
+      <flex class="vacio">
+        <Text class="vacio-titulo">{"No hay proyectos archivados" if archivados else "No hay proyectos que coincidan"}</Text>
+        <Text class="dato">{"Los proyectos archivados aparecen aquí." if archivados else "Prueba con otra búsqueda o crea uno nuevo."}</Text>
+      </flex>
+    {/each}
+  </flex>
+</flex>
+
+<style>
+.pagina { direction: column; flex: 1; }
+.cabecera { gap: 12px; align-items: center; padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.titulos { direction: column; gap: 2px; }
+.titulo { font-size: 20px; font-weight: 700; }
+.subtitulo { color: var(--text-muted); font-size: 12px; }
+.buscar { width: 280px; }
+.rejilla { flex: 1; flex-wrap: wrap; gap: 16px; padding: 24px; overflow: auto; align-content: start; }
+.ficha {
+  direction: column; flex: 1 1 280px; max-width: 420px; cursor: pointer; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.ficha:hover { border-color: var(--primary); box-shadow: 0 4px 14px rgba(0, 0, 0, .08); }
+.ficha:focus-visible { outline: 2px solid var(--primary); }
+.franja { height: 6px; }
+.contenido { direction: column; gap: 10px; padding: 14px 16px; }
+.fila-nombre { gap: 8px; align-items: center; }
+.nombre { font-size: 16px; font-weight: 700; flex: 1; white-space: nowrap; text-overflow: ellipsis; }
+.insignia { color: var(--text-muted); font-size: 11px; padding: 1px 8px; border-radius: 8px; background: var(--surface-alt); }
+.descripcion { color: var(--text-muted); font-size: 13px; white-space: nowrap; text-overflow: ellipsis; }
+.progreso { gap: 10px; align-items: center; }
+.porcentaje { font-size: 12px; font-weight: 600; width: 36px; text-align: right; }
+.pie { align-items: center; gap: 8px; }
+.dato { color: var(--text-muted); font-size: 12px; }
+.caras { gap: 0px; align-items: center; }
+.avatar {
+  width: 26px; height: 26px; border-radius: 13px; margin-left: -6px; align-items: center; justify-content: center;
+  color: #ffffff; font-size: 10px; font-weight: 600; border: 2px solid var(--surface);
+}
+.mas { color: var(--text-muted); font-size: 11px; margin-left: 4px; }
+.vacio { direction: column; gap: 4px; flex: 1; align-items: center; padding: 48px; }
+.vacio-titulo { font-size: 15px; font-weight: 600; }
+</style>

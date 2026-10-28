@@ -21,7 +21,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 | 3 | Kanban | ✅ | [examples/challenges/kanban](../examples/challenges/kanban/) · [hallazgos](../examples/challenges/kanban/HALLAZGOS.md). Se añadió al núcleo arrastrar y soltar (`draggable`, `on:dragstart/dragover/drop/dragend`, `:dragging`, `:drag-over`, desplazamiento al acercarse al borde) y en `inspect` doble clic, clic derecho, teclas y arrastre; se corrigió que los eventos de puntero no llegaran a las filas de `<List>`. Arrastrar con 20 × 200 cuesta lo mismo que un fotograma vacío. Una fila que pasa a otra lista de la misma declaración `{#each}` se traslada con su estado y su foco (la tarjeta conserva su estado al cambiar de columna). Quedan `<Menu>` y la memoria por elemento (~0,7 MB por tarjeta). |
 | 2 | Hoja de cálculo | ⏳ | |
 | 5 | Editor | ⏳ | |
-| 6 | Gestor de proyectos | ⏸ | Nació del reto 3. Espera a `fluxui-router` (ver [6](#6-gestor-de-proyectos)). |
+| 6 | Gestor de proyectos | ✅ | [examples/challenges/gestor](../examples/challenges/gestor/) · [hallazgos](../examples/challenges/gestor/HALLAZGOS.md). Antes de empezar se añadió al núcleo la navegación básica (`sections`, `navigation()`, `await push`/`back`, Alt+← y botón del ratón, `before_leave`, `{#hidden}`, transiciones de página). Durante el reto: las cajas ocultas ya no se recolocan (cambiar de pestaña con 200 tarjetas, de 239 a 5 ms), `pop`/`reset` se pueden esperar, y en `inspect` se corrigió aceptar un `confirm` y que dos apps con módulos del mismo nombre se mezclaran. Todas las medidas de «Hecho cuando» se cumplen y la memoria no crece. Quedan adelante y rutas (`fluxui-router`), otra ventana con su propia pila y parte del plan (pestaña Lista, ajustes de etiquetas y columnas). |
 
 ## Resumen
 
@@ -167,7 +167,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Flux
 
 ## 6. Gestor de proyectos
 
-**Estado: siguiente proyecto, en espera de un enrutador.** Nació al ampliar el Kanban (reto 3): de un tablero suelto a una aplicación con varias pantallas. La aplicación es una pieza de la API pública; lo que la frena es la navegación, que [alcance.md](alcance.md) deja fuera del núcleo («enrutado con historial, parámetros o carga diferida» es `fluxui-router`). Se construirá cuando exista ese proyecto, o como su primer caso de uso.
+**Estado: hecho** ([examples/challenges/gestor](../examples/challenges/gestor/), [hallazgos](../examples/challenges/gestor/HALLAZGOS.md)). Nació al ampliar el Kanban (reto 3): de un tablero suelto a una aplicación con varias pantallas. Estaba en espera de `fluxui-router`; al revisar el alcance, la navegación fundamental (secciones, pila desde cualquier página, resultados, atrás, guardas, vistas que se conservan) pasó al núcleo, y el enrutado (rutas, historial con adelante, restaurar) sigue siendo `fluxui-router`. La tabla de abajo es la de partida; cómo quedó cada necesidad está en los hallazgos.
 
 **La aplicación.** Un gestor de proyectos para un equipo pequeño, todo local, en un archivo JSON.
 
@@ -229,12 +229,12 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 |---|---|---|
 | Eventos de teclado y de puntero (`on:keydown`, doble clic, clic derecho, arrastrar) | 2, 3, 5, 6 | ✅ Núcleo en `<flex>` (fase 3 y reto 3: arrastrar y soltar); faltan en los campos (`<TextField>` sin `on:keydown` ni `on:blur`, reto 3) |
 | Control del desplazamiento (leer y fijar el scroll, anclaje) | 1, 2, 4, 5 | Núcleo · ✅ en `<List>` (retos 4 y 1: también al reordenar); falta en `<Scroll>` |
-| Eventos de ventana (cerrar cancelable, activa) | 4, 5 | Núcleo · ✅ activa (reto 4); falta cerrar cancelable |
+| Eventos de ventana (cerrar cancelable, activa) | 4, 5 | Núcleo · ✅ activa (reto 4); ✅ cerrar con la X consulta `before_leave` (reto 6) |
 | Menús (contextual y barra) | 3, 5 | Núcleo (controles básicos) · el reto 3 hizo el contextual con `<flex>` (sin submenús ni recolocación junto al borde) |
 | Trasladar una fila entre dos `{#each}` sin recrearla (conserva su estado) | 3, 6 | ✅ Núcleo (reto 3): misma declaración, misma clave, mismo cambio ([lenguaje.md](lenguaje.md#trasladar-filas-entre-listas)) |
 | Memoria por elemento (~30–35 KB por `<Text>` o `<flex>`) | 3 | Núcleo |
-| Conservar contenido oculto (`keep-alive`) | 5, 6 | Núcleo: afecta al lenguaje |
-| Enrutado con parámetros, historial y rutas anidadas | 6 | `fluxui-router` (el núcleo da `pages` para casos sencillos) |
+| Conservar contenido oculto (`keep-alive`) | 5, 6 | ✅ Núcleo (reto 6): `{#hidden}`, secciones y la página de debajo; lo oculto no se recoloca ni recalcula lo que muestra hasta volver a verse (reto 6) |
+| Enrutado con parámetros, historial y rutas anidadas | 6 | `fluxui-router`. El núcleo da la navegación básica (reto 6): `pages`, `sections`, `navigation()`, resultados, atrás y `before_leave` |
 | Portapapeles, notificaciones, bandeja, ajustes | 2, 4, 5 | Núcleo, como módulos pequeños (`fluxui.clipboard`, …) · ✅ `notify` (reto 4) |
 | Temporizadores ligados al componente | 1, 4 | ✅ Núcleo: `interval`, `timeout` (reto 1) |
 | Texto seleccionable | 4, 5 | Núcleo |
@@ -271,4 +271,4 @@ Cada reto termina con un `HALLAZGOS.md` en su carpeta:
 1. **Chat (4)** y **Panel (1):** ponen a prueba la asincronía y la frecuencia de actualización, lo más nuevo y menos medido.
 2. **Kanban (3):** destapa las carencias de interacción (arrastrar, menús, gestos), que afectan al diseño del lenguaje.
 3. **Hoja de cálculo (2)** y **Editor (5):** los más exigentes; conviene abordarlos cuando las decisiones de los anteriores estén tomadas.
-4. **Gestor de proyectos (6):** cuando exista `fluxui-router`; sirve para validarlo con una aplicación real.
+4. **Gestor de proyectos (6):** ✅ hecho con la navegación básica del núcleo; servirá para validar `fluxui-router` cuando exista.

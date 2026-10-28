@@ -24,6 +24,7 @@ import inspect
 from typing import Any, Callable
 
 from .reactivity import State
+from .reactivity.effects import Gate
 
 _creating: list["PageStack"] = []  # pilas que están creando una página (para navigation())
 
@@ -63,8 +64,9 @@ def leave_guards(instance: Any) -> list[Callable[[], Any]]:
     return out
 
 
-def ask_to_leave(guards: list[Callable[[], Any]], proceed: Callable[[], Any]) -> bool:
-    """Consulta los `before_leave` en orden y llama a `proceed` si ninguno devuelve False.
+def ask_to_leave(guards: list[Callable[[], Any]], proceed: Callable[[], Any], refuse: Callable[[], Any] | None = None) -> bool:
+    """Consulta los `before_leave` en orden y llama a `proceed` si ninguno devuelve False
+    (si alguno lo hace, a `refuse`).
 
     Si uno es asíncrono, la respuesta llega más tarde: devuelve False (todavía no se
     sale) y `proceed` se llama cuando todos han respondido que sí."""
@@ -75,11 +77,15 @@ def ask_to_leave(guards: list[Callable[[], Any]], proceed: Callable[[], Any]) ->
 
             async def later(answer: Any = answer, rest: list = guards[i + 1:]) -> None:
                 if await answer is not False:
-                    ask_to_leave(rest, proceed)
+                    ask_to_leave(rest, proceed, refuse)
+                elif refuse is not None:
+                    refuse()
 
             spawn(later())
             return False
         if answer is False:
+            if refuse is not None:
+                refuse()
             return False
     proceed()
     return True
@@ -93,10 +99,15 @@ class PageStack:
         self._entries: list[tuple[Any, dict[str, Any]]] = []
         self._results: list[_Result] = []  # uno por entrada: lo que espera quien la abrió
         self._pages: list[tuple[Any, Any, Any]] = []  # (instancia, item QML, contexto) por entrada
+        # Compuertas de visibilidad (reactivity.Gate): la de la pila (cerrada si su sección no se
+        # ve) y una por página (cerradas las de debajo). Lo que no se ve se pone al día al verse.
+        self._gate = Gate()
+        self._gates: list[Gate] = []
         self._container: Any = None
         self._template: Any = None
         self._depth = State(0)
         self._current = State("")
+        self._shown: tuple[Any, int] | None = None  # (página visible, profundidad): para animar la que entra
         self._push_entry(first, kwargs)
 
     # -- estado reactivo --------------------------------------------------------
@@ -126,27 +137,34 @@ class PageStack:
         se descarta de otra forma)."""
         return self._push_entry(component, kwargs)
 
-    def pop(self) -> None:
+    # pop, back, replace y reset se pueden esperar: `if await nav.reset(Inicio): ...` da True
+    # si se salió y False si un before_leave lo impidió (la respuesta puede llegar más tarde).
+    def pop(self) -> _Result:
         """Vuelve a la página anterior y libera la actual. No hace nada en la primera."""
-        self.back()
+        return self.back()
 
-    def back(self, value: Any = None) -> None:
+    def back(self, value: Any = None) -> _Result:
         """Como `pop`, y quien abrió esta página con `await nav.push(...)` recibe `value`."""
-        if len(self._entries) > 1:
-            self._leave(1, lambda: self._discard(1, value))
+        if len(self._entries) <= 1:
+            done = _Result()
+            done.resolve(False)
+            return done
+        return self._leave(1, lambda: self._discard(1, value))
 
-    def replace(self, component: Any, **kwargs: Any) -> None:
+    def replace(self, component: Any, **kwargs: Any) -> _Result:
         """Sustituye la página actual por `component`."""
-        self._leave(1, lambda: (self._discard(1), self._push_entry(component, kwargs)))
+        return self._leave(1, lambda: (self._discard(1), self._push_entry(component, kwargs)))
 
-    def reset(self, component: Any, **kwargs: Any) -> None:
+    def reset(self, component: Any, **kwargs: Any) -> _Result:
         """Vacía la pila y empieza de nuevo con `component`."""
-        self._leave(len(self._entries), lambda: (self._discard(len(self._entries)), self._push_entry(component, kwargs)))
+        return self._leave(len(self._entries), lambda: (self._discard(len(self._entries)), self._push_entry(component, kwargs)))
 
-    def _leave(self, count: int, proceed: Callable[[], Any]) -> None:
+    def _leave(self, count: int, proceed: Callable[[], Any]) -> _Result:
         """Descarta las `count` páginas de arriba si sus `before_leave` lo permiten."""
+        done = _Result()
         guards = [g for instance, _, _ in self._pages[-count:] for g in leave_guards(instance)] if count else []
-        ask_to_leave(guards, proceed)
+        ask_to_leave(guards, lambda: (proceed(), done.resolve(True)), lambda: done.resolve(False))
+        return done
 
     def _discard(self, count: int, value: Any = None) -> None:
         for _ in range(count):
@@ -177,13 +195,23 @@ class PageStack:
             from shiboken6 import Shiboken
 
             if Shiboken.isValid(self._container):
+                for i, gate in enumerate(self._gates):
+                    gate.set_open(i == len(self._gates) - 1)
                 self._container.setProperty("currentIndex", len(self._pages) - 1)
                 self._container.setProperty("fxCanGoBack", len(self._entries) > 1)
+                top = self._pages[-1][0] if self._pages else None
+                if self._shown is not None and top is not self._shown[0]:  # transition: en <Pages>
+                    depth = len(self._pages)
+                    self._container.setProperty("fxDirection", (depth > self._shown[1]) - (depth < self._shown[1]))
+                    self._container.setProperty("fxShown", self._container.property("fxShown") + 1)
+                self._shown = (top, len(self._pages))
 
     def _attach(self, container: Any, template: Any) -> None:
         """La plantilla montó `<Pages stack={...}>`: crear las páginas de la pila."""
         self._detach_all()
         self._container, self._template = container, template
+        self._gate.parent = getattr(template, "gate", None)  # p. ej. <Pages> dentro de un {#hidden}
+        self._shown = None  # la primera página no se anima
         container.fxBack.connect(self.pop)  # Alt+←, el botón «atrás» del ratón (FxPages.qml)
         for component, kwargs in self._entries:
             self._create(component, kwargs)
@@ -217,9 +245,10 @@ class PageStack:
         if compiled is None:
             compiled = owner.compiled.cache[key] = compile_file(component.path, owner.compiled.roots or None, as_window=False)
         props, events = split_component_kwargs(component.name, compiled, kwargs)
+        gate = Gate(self._gate)
         _creating.append(self)
         try:
-            instance = ComponentInstance(compiled, host, props, events, parent=owner)
+            instance = ComponentInstance(compiled, host, props, events, parent=owner, gate=gate)
         finally:
             _creating.pop()
         instance.page_stack = self
@@ -233,6 +262,7 @@ class PageStack:
             raise RuntimeError(f"no se pudo crear la página {component.name}")
         item.setParentItem(self._container)
         self._pages.append((instance, item, context))
+        self._gates.append(gate)
 
     def _destroy_top(self) -> None:
         if not self._pages:
@@ -241,6 +271,7 @@ class PageStack:
         from shiboken6 import Shiboken
 
         instance, item, context = self._pages.pop()
+        self._gates.pop()
         instance.dispose()
         self._owner.scope.discard(instance.scope)
         if Shiboken.isValid(item):
@@ -350,10 +381,18 @@ class Sections:
         if not Shiboken.isValid(self._container):
             return
         name = self._current.peek()
+        for other, stack in self._stacks.items():  # lo que muestran las otras secciones espera
+            stack._gate.set_open(other == name)
+        first = not self._items
         if name not in self._items:
             self._items[name] = item = self._new_pages()
             self._stacks[name]._attach(item, self._template)
-        self._container.setProperty("currentIndex", list(self._items).index(name))
+        index = list(self._items).index(name)
+        if index != self._container.property("currentIndex"):
+            self._container.setProperty("currentIndex", index)
+            if not first:  # <Sections transition:fade>: anima la sección que entra
+                self._container.setProperty("fxDirection", 0)
+                self._container.setProperty("fxShown", self._container.property("fxShown") + 1)
 
     def _new_pages(self) -> Any:
         from PySide6.QtQml import QQmlComponent, QQmlEngine
@@ -367,6 +406,8 @@ class Sections:
             raise RuntimeError(f"no se pudo crear la sección: {component.errorString()}")
         item.setParentItem(self._container)
         item.setParent(self._container)
+        for prop in ("fxTransition", "fxTransitionMs"):  # las páginas de cada sección, igual
+            item.setProperty(prop, self._container.property(prop))
         return item
 
     def _attach(self, container: Any, template: Any) -> None:

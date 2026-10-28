@@ -16,6 +16,9 @@ function inLayout(p) {
 // contenedor fije una alineación (como un bloque en CSS). `self` (align-self) gana:
 // con start, center o end no se estira en el eje transversal.
 function fillWidth(p, flex, selfStretch, block, self) {
+    // La raíz de una página llena su <Pages> salvo que fije su tamaño (width, height: el
+    // compilador pone entonces Layout.fill* a false); align-self la decide arrangePages.
+    if (p && p.fxPages === true) return true
     if (!inLayout(p)) return false
     if (p.fxBox.fxFill) return true
     if (p.fxHorizontal) return flex > 0
@@ -25,6 +28,7 @@ function fillWidth(p, flex, selfStretch, block, self) {
 }
 
 function fillHeight(p, flex, selfStretch, self) {
+    if (p && p.fxPages === true) return true
     if (!inLayout(p)) return false
     if (p.fxBox.fxFill) return true
     if (!p.fxHorizontal) return flex > 0

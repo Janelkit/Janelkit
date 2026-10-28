@@ -10,7 +10,9 @@ FxBox {
     id: box
     default property alias content: lay.data
     fxLay: lay
-    readonly property var fxState: ({ queued: false, busy: false })  // flex.js: en cola / colocándose
+    // flex.js: en cola / colocándose / sin colocar mientras estaba oculta
+    readonly property var fxState: ({ queued: false, busy: false, stale: false })
+    onVisibleChanged: if (visible && fxState.stale) Flex.schedule(box)
 
     // Lo que cambia la disposición de los propios hijos.
     // El tamaño y el mínimo de contenido cambian a menudo: con manejadores, que no

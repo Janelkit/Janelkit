@@ -182,3 +182,38 @@ def test_tutorial_app(tmp_path, monkeypatch):
     with mount(EXAMPLES / "compra" / "src" / "App.flux") as app:  # vuelve a cargar lo guardado
         app.wait(until=lambda: app.get("loaded"))
         assert app.find("Checkbox", text="Pan").value is True
+
+
+def test_answer_dialog_accepts_or_cancels_a_confirm(tmp_path):
+    app_file = tmp_path / "App.flux"
+    app_file.write_text(
+        """<script lang="python">
+from fluxui import dialogs, state
+answers = state([])
+
+async def ask():
+    answers.value = answers.value + [await dialogs.confirm("¿Seguro?")]
+</script>
+<Window><Button text="Preguntar" on:click={ask()} /></Window>
+""",
+        encoding="utf-8",
+    )
+    with mount(app_file) as app:
+        for result in (True, False):
+            app.find(text="Preguntar").click()
+            app.wait(0.02)
+            app.answer_dialog(result)
+        assert list(app.get("answers")) == [True, False]
+
+
+def test_apps_with_modules_of_the_same_name_do_not_mix(tmp_path):
+    for name in ("una", "otra"):
+        (tmp_path / name / "services").mkdir(parents=True)
+        (tmp_path / name / "services" / "datos.py").write_text(f"NOMBRE = {name!r}\n", encoding="utf-8")
+        (tmp_path / name / "App.flux").write_text(
+            '<script lang="python">\nfrom services.datos import NOMBRE\n</script>\n<Window><Text>{NOMBRE}</Text></Window>\n',
+            encoding="utf-8",
+        )
+    for name in ("una", "otra", "una"):
+        with mount(tmp_path / name / "App.flux") as app:
+            assert app.texts() == [name]

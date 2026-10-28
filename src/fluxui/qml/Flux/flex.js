@@ -165,6 +165,7 @@ function hintsOf(c, box) {
         selfStretch: c.fxSelfStretch === true,
         scrollable: c.fxScrollable === true,
         isFlex: c.fxIsFlex === true,
+        pages: c.fxPages === true,  // <Pages>/<Sections>: su mínimo es el de la página visible
         wraps: c.fxWraps === true,
         // Usa :first-child o :last-child (el compilador declara fxFirst y fxLast).
         marks: typeof c.fxFirst === "boolean",
@@ -227,6 +228,7 @@ function autoMin(it, horiz, legacy) {
     if (legacy || h.scrollable) return 0
     if (!horiz) return prefH(it)               // en columna no se encoge por debajo del contenido
     if (h.isFlex) return it.c.fxQt === true ? qtMinW(it.c) : it.c.fxMinW
+    if (h.pages) return pagesMinW(it.c)
     if (h.wraps) return 0                      // texto que se corta: puede estrecharse
     return prefW(it)
 }
@@ -255,6 +257,13 @@ function qtMinW(box) {
     return m + pad(box.leftPadding, box.padding) + pad(box.rightPadding, box.padding) + box.fxBorderLeftW + box.fxBorderRightW
 }
 
+// Mínimo de contenido en ancho de <Pages>/<Sections>: el de su página visible (con
+// <Sections>, la de la pila visible; FxPages.fxMinW), con la página ya colocada.
+function pagesMinW(pages) {
+    measure(pages)
+    return pages.fxMinW
+}
+
 // padding y gap por lado sin fijar (NaN): los generales (como Fx.pad).
 function pad(own, all) {
     return isNaN(own) ? all : own
@@ -265,6 +274,20 @@ function layout(box) {
     const st = box.fxState
     if (!st) return
     st.queued = false
+    // Oculta (ella o algo por encima: {#hidden}, otra pestaña, una página de debajo): se
+    // queda como estaba y se coloca al volver a verse (FxFlex.onVisibleChanged). Si no,
+    // ocultar un subárbol lo recolocaría entero sin contar a sus hijos (todos invisibles):
+    // tamaños 0, y una lista de dentro crearía todas sus filas.
+    if (!box.visible) {
+        st.stale = true
+        return
+    }
+    st.stale = false
+    if (box.fxPages === true) {
+        st.busy = true
+        try { arrangePages(box) } finally { st.busy = false }
+        return
+    }
     const lay = box.fxLay
     // Un contenedor que se está destruyendo (fila retirada) ya no tiene sus funciones.
     if (!lay || typeof box.fxMirrored !== "function") return
@@ -283,6 +306,47 @@ function layout(box) {
 }
 
 const result = { w: 0, h: 0, minW: 0, grows: false }
+
+// <Pages>/<Sections> (FxPages): solo se ve una página, y su raíz se coloca como un bloque
+// en una columna: ocupa todo el contenedor salvo que fije su tamaño (width, height,
+// max-width…) o align-self; los márgenes `auto` reparten lo que sobra (margin: 0 auto
+// la centra).
+function arrangePages(pages) {
+    const kids = pages.children, cur = pages.currentIndex
+    const page = cur >= 0 && cur < kids.length ? kids[cur] : null  // FxPages ya oculta las demás
+    if (!page) {
+        pages.fxMinW = 0
+        pages.implicitWidth = 0
+        pages.implicitHeight = 0
+        return
+    }
+    const h = hintsOf(page, pages)
+    const W = pages.width, H = pages.height
+    const availW = Math.max(0, W - h.ml - h.mr), availH = Math.max(0, H - h.mt - h.mb)
+    const self = h.selfAlign, aligned = self === "start" || self === "center" || self === "end"
+    let w = h.fillW && !aligned ? availW : h.pw >= 0 ? h.pw : h.wp > 0 ? W * h.wp / 100 : page.implicitWidth
+    w = clamp(w, h.minW, h.maxW)
+    place(page, w, null)  // el alto natural depende del ancho
+    let hh = h.fillH ? availH : h.ph >= 0 ? h.ph : h.hp > 0 ? H * h.hp / 100 : page.implicitHeight
+    hh = clamp(hh, h.minH, h.maxH)
+    place(page, null, hh)
+    const freeW = Math.max(0, availW - w), freeH = Math.max(0, availH - hh)
+    const a = h.auto
+    let x = h.ml
+    if ((a & AUTO_LEFT) && (a & AUTO_RIGHT)) x += freeW / 2
+    else if (a & AUTO_LEFT) x += freeW
+    else if (!(a & AUTO_RIGHT) && self === "center") x += freeW / 2
+    else if (!(a & AUTO_RIGHT) && self === "end") x += freeW
+    let y = h.mt
+    if ((a & AUTO_TOP) && (a & AUTO_BOTTOM)) y += freeH / 2
+    else if (a & AUTO_TOP) y += freeH
+    page.x = x
+    page.y = y
+    const content = h.pw >= 0 ? h.pw : typeof page.fxMinW === "number" ? page.fxMinW : 0
+    pages.fxMinW = Math.max(content, h.minW) + h.ml + h.mr
+    pages.implicitWidth = (h.pw >= 0 ? h.pw : page.implicitWidth) + h.ml + h.mr
+    pages.implicitHeight = (h.ph >= 0 ? h.ph : page.implicitHeight) + h.mt + h.mb
+}
 
 function arrange(box, lay, out) {
     const dir = box.direction
@@ -308,7 +372,9 @@ function arrange(box, lay, out) {
     const sizedH = box.fxSizedH === true || Math.abs(boxH - box.implicitHeight) >= 0.5
     const innerW = Math.max(0, boxW - padL - padR)
     const innerH = Math.max(0, boxH - padT - padB)
-    const mainDefinite = (horiz ? sizedW : sizedH) && !scroll
+    // Desplazable: el contenido sigue a su tamaño natural en el eje principal; con wrap,
+    // las líneas se cortan a la caja y se desplaza en el transversal (como en CSS).
+    const mainDefinite = (horiz ? sizedW : sizedH) && (!scroll || wrap)
     const crossDefinite = horiz ? sizedH : sizedW
     let mainAvail = horiz ? innerW : innerH
     const crossAvail = horiz ? innerH : innerW
@@ -576,7 +642,10 @@ function arrange(box, lay, out) {
     const contentMain = naturalMain
     const w = (horiz ? contentMain : natCross) + padL + padR
     const h = (horiz ? natCross : contentMain) + padT + padB
-    if (scroll) {
+    if (scroll && wrap) {
+        lay.width = horiz ? boxW : Math.max(boxW, w)
+        lay.height = horiz ? Math.max(boxH, h) : boxH
+    } else if (scroll) {
         lay.width = horiz ? Math.max(innerW, mainAvail) + padL + padR : boxW
         lay.height = horiz ? boxH : Math.max(innerH, mainAvail) + padT + padB
     }
@@ -643,7 +712,7 @@ function placeOutside(c, box, lay, padL, padT) {
 // Un hijo flex pendiente se coloca antes de leer su tamaño natural.
 function measure(c) {
     const st = c.fxState
-    if (st && st.queued && !st.busy) layout(c)
+    if (st && (st.queued || st.stale) && !st.busy) layout(c)
     else if (c.fxQt === true) settleQt(c)
 }
 
@@ -653,7 +722,7 @@ function place(c, w, h) {
     if (w !== null) c.width = w
     if (h !== null) c.height = h
     const st = c.fxState
-    if (st && st.queued && !st.busy) layout(c)
+    if (st && (st.queued || st.stale) && !st.busy) layout(c)
     else if (c.fxQt === true) settleQt(c)
 }
 

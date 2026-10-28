@@ -1,0 +1,39 @@
+<script lang="python">
+# Edición en el sitio: un campo encima de la celda que se edita (uno por fila editada,
+# no uno por celda). Intro/Tab confirman y pasan a la siguiente; Escape cancela; perder
+# el foco (un clic en otra celda) confirma sin moverse.
+from janelkit import inject, on_mount, prop, ref
+
+x = prop(0)
+vista = inject("vista")
+borrador = vista.borrador
+campo = ref()
+on_mount(lambda: campo.focus())
+
+
+def tecla(event):
+    k = event.key
+    if k == "Enter":
+        vista.confirmar(-1 if event.shift else 1, 0)
+    elif k == "Tab":
+        vista.confirmar(0, -1 if event.shift else 1)
+    elif k in ("ArrowUp", "ArrowDown"):
+        vista.confirmar(-1 if k == "ArrowUp" else 1, 0)
+    elif k == "Escape":
+        vista.cancelar()
+    else:
+        event.stop()  # se escribe en el campo; la rejilla no se entera
+        return
+    event.prevent()
+    event.stop()
+</script>
+
+<flex class="editor" style={{"left": f"{x}px"}}>
+  <TextField class="campo" ref={campo} bind:value={borrador} on:keydown={tecla}
+             on:blur={vista.confirmar(mover=False)} label="Editar celda" />
+</flex>
+
+<style>
+.editor { position: absolute; top: 0; bottom: 0; width: 97px; z-index: 2; }
+.campo { flex: 1; padding: 0 4px; font-size: 13px; border-radius: 0; border: 2px solid var(--primary); }
+</style>

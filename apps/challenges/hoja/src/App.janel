@@ -1,0 +1,212 @@
+<script lang="python">
+# Reto 2: hoja de cálculo. Ver ../README.md y ../HALLAZGOS.md.
+# HOJA_FILE: CSV que se abre al empezar. HOJA_DEMO=10000x26: datos generados (pruebas y
+# mediciones). Sin ninguno de los dos, una hoja vacía de 10 000 × 26.
+import os
+from pathlib import Path
+
+from janelkit import computed, effect, provide, ref, state
+from janelkit_desktop import clipboard, dialogs
+from components.Fila import Fila
+from services.formulas import nombre_col
+from services.hoja import Hoja, ejemplo
+from services.vista import ALTO_FILA, Vista
+
+if os.environ.get("HOJA_DEMO"):
+    filas_demo, cols_demo = (int(n) for n in os.environ["HOJA_DEMO"].split("x"))
+    hoja = Hoja(ejemplo(filas_demo, cols_demo))
+else:
+    hoja = Hoja()
+archivo = state(None)  # Path del CSV abierto
+if os.environ.get("HOJA_FILE"):
+    archivo.value = Path(os.environ["HOJA_FILE"])
+    hoja.abrir(archivo.value)
+
+vista = Vista(hoja)
+rejilla = ref()
+lista = ref()
+alto = state(480)  # alto de la rejilla en px (para AvPág/RePág)
+provide("hoja", hoja)
+provide("vista", vista)
+provide("enfocar", lambda: rejilla.focus())
+
+cols = vista.visibles
+congelar_fila = vista.congelar_fila
+congelar_col = vista.congelar_col
+deshacer = hoja.puede_deshacer
+rehacer = hoja.puede_rehacer
+modificada = hoja.modificada
+
+
+@computed
+def filas():
+    return list(range(1 if congelar_fila.value else 0, hoja.filas))
+
+
+@computed
+def escrito_activa():
+    return hoja.escrito(*vista.cursor.value)
+
+
+@computed
+def resumen():
+    """Suma, promedio y recuento de la selección (hasta 5 000 celdas)."""
+    r0, c0, r1, c1 = vista.rango.value
+    if (r1 - r0 + 1) * (c1 - c0 + 1) > 5000:
+        return ""
+    numeros = [v for r in range(r0, r1 + 1) for c in range(c0, c1 + 1) if isinstance(v := hoja.valor(r, c), float)]
+    if len(numeros) < 2:
+        return ""
+    total = sum(numeros)
+    return f"Suma: {total:.10g} · Promedio: {total / len(numeros):.10g} · Recuento: {len(numeros)}"
+
+
+@computed
+def titulo():
+    nombre = archivo.value.name if archivo.value else "Sin título"
+    return f"{'• ' if modificada.value else ''}{nombre} — Hoja"
+
+
+@effect
+def seguir_cursor():
+    # Desplaza la lista lo justo para que se vea la fila activa.
+    r, _ = vista.cursor.value
+    fija = congelar_fila.peek()
+    if lista.value is not None and not (fija and r == 0):
+        lista.scroll_to(r - (1 if fija else 0))
+
+
+@effect
+def volver_a_la_rejilla():
+    if vista.editando.value is None and rejilla.value is not None:
+        rejilla.focus()
+
+
+def tecla(event):
+    if vista.editando.peek() is not None:
+        return  # el editor se ocupa
+    k = event.key.lower()
+    if event.ctrl and k == "c":
+        clipboard.copy(hoja.copiar(*vista.rango.peek()))
+    elif event.ctrl and k == "x":
+        clipboard.copy(hoja.copiar(*vista.rango.peek()))
+        hoja.borrar(*vista.rango.peek())
+    elif event.ctrl and k == "v":
+        pegar()
+    elif event.ctrl and k == "z" and not event.shift:
+        hoja.deshacer()
+    elif event.ctrl and (k == "y" or (k == "z" and event.shift)):
+        hoja.rehacer()
+    elif not vista.tecla(event, pagina=max(1, int(alto.value // ALTO_FILA) - 2)):
+        return
+    event.prevent()
+
+
+def pegar():
+    r, c = vista.cursor.peek()
+    pegado = hoja.pegar(r, c, clipboard.paste())
+    if pegado:
+        r0, c0, r1, c1 = pegado
+        vista.ancla.value = (r1, c1)
+        vista.cursor.value = (r0, c0)
+
+
+def rueda(event):
+    # La lista desplaza las filas; las columnas, Mayús+rueda o la rueda horizontal.
+    if event.shift or abs(event.dx) > abs(event.dy):
+        paso = event.dy if event.shift else event.dx
+        vista.desplazar_cols(1 if paso > 0 else -1)
+        event.prevent()
+
+
+def medir(event):
+    vista.medir(event.width)
+    alto.value = event.height
+
+
+def escribir_barra(texto):
+    r, c = vista.cursor.peek()
+    hoja.escribir({(r, c): texto}, f"Editar {nombre_col(c)}{r + 1}")
+    rejilla.focus()
+
+
+async def abrir():
+    elegido = await dialogs.open_file("Abrir CSV", ["CSV (*.csv *.txt)", "Todos (*)"])
+    if elegido:
+        hoja.abrir(elegido)
+        archivo.value = elegido
+        vista.ir(0, 0)
+
+
+async def guardar():
+    destino = archivo.value or await dialogs.save_file("Guardar CSV")
+    if destino:
+        hoja.guardar(destino)
+        archivo.value = destino
+
+
+def ordenar(descendente):
+    hoja.ordenar(vista.cursor.peek()[1], descendente, desde=1 if congelar_fila.peek() else 0)
+</script>
+
+<Window title={titulo} width={1100} height={720} minWidth={560} minHeight={360}>
+  <flex class="app">
+    <flex class="barra">
+      <Button text="Abrir…" on:click={abrir} />
+      <Button text="Guardar" on:click={guardar} />
+      <Button text="Deshacer" enabled={bool(deshacer)} label={f"Deshacer {deshacer} (Ctrl+Z)"} on:click={hoja.deshacer()} />
+      <Button text="Rehacer" enabled={bool(rehacer)} label={f"Rehacer {rehacer} (Ctrl+Y)"} on:click={hoja.rehacer()} />
+      <Button text="Ordenar A→Z" on:click={ordenar(False)} />
+      <Button text="Ordenar Z→A" on:click={ordenar(True)} />
+      <Checkbox text="Congelar fila 1" bind:checked={congelar_fila} />
+      <Checkbox text="Congelar columna A" bind:checked={congelar_col} />
+    </flex>
+    <flex class="formula">
+      <Text class="activa">{vista.nombre_activa()}</Text>
+      <TextField class="contenido" value={escrito_activa} on:submit={escribir_barra} label="Contenido de la celda" />
+    </flex>
+    <flex class="rejilla" tabindex={0} ref={rejilla} label="Hoja" on:keydown={tecla} on:wheel={rueda} on:resize={medir}>
+      <flex class="cabecera">
+        <flex class="esquina" />
+        {#each cols as c (c)}
+          <flex class="col" class:activa={vista.rango.value[1] <= c <= vista.rango.value[3]}
+                on:pointerdown={vista.seleccionar_columna(c, event.shift)}>
+            <Text>{nombre_col(c)}</Text>
+          </flex>
+        {/each}
+      </flex>
+      {#if congelar_fila}
+        <flex class="congelada"><Fila f={0} /></flex>
+      {/if}
+      <List class="filas" ref={lista}>
+        {#each filas as f (f)}
+          <Fila f={f} />
+        {/each}
+      </List>
+    </flex>
+    <flex class="estado">
+      <Text>{resumen}</Text>
+      <Spacer />
+      <Text class="ayuda">Mayús+rueda: columnas · F2: editar · Ctrl+Z / Ctrl+Y</Text>
+    </flex>
+  </flex>
+</Window>
+
+<style>
+.app { direction: column; flex: 1; background: var(--bg); }
+.barra { gap: 6px; align-items: center; padding: 6px 8px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.formula { gap: 8px; align-items: center; padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.activa { width: 120px; font-weight: 600; }
+.contenido { flex: 1; }
+.rejilla { direction: column; flex: 1; overflow: hidden; }
+.rejilla:focus-visible { outline: none; }
+.cabecera { height: 24px; gap: 1px; background: var(--border); padding-bottom: 1px; }
+.esquina { width: 55px; background: var(--surface); }
+.col { width: 95px; align-items: center; justify-content: center; background: var(--surface);
+       font-size: 12px; color: var(--text-muted); }
+.col.activa { background: var(--border); color: var(--text); }
+.congelada { border-bottom: 2px solid var(--text-muted); }
+.filas { flex: 1; }
+.estado { gap: 8px; padding: 4px 8px; border-top: 1px solid var(--border); font-size: 12px; }
+.ayuda { color: var(--text-muted); }
+</style>

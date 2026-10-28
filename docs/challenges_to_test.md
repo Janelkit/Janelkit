@@ -19,7 +19,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 | 4 | Chat | ✅ | [apps/challenges/chat](../apps/challenges/chat/) · [hallazgos](../apps/challenges/chat/HALLAZGOS.md). Se añadieron al núcleo el desplazamiento de `<List>`, `<Text format>`, eventos de ventana y `notify`; después llegaron los temporizadores (reto 1) y el texto seleccionable (`<Text selectable>`). Queda el Markdown seguro (que `format="markdown"` no interprete HTML). |
 | 1 | Panel | ✅ | [apps/challenges/panel](../apps/challenges/panel/) · [hallazgos](../apps/challenges/panel/HALLAZGOS.md). Se añadieron al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`, y se corrigieron cuatro fallos (listas modificadas en el sitio que no llegaban a QML, scroll perdido al reordenar, `flex` en QML propio, `janel build` con ventanas); después llegó la rejilla con salto de línea (`flex-wrap`); quedan gráficas (janelkit-kit) y tabla. |
 | 3 | Kanban | ✅ | [apps/challenges/kanban](../apps/challenges/kanban/) · [hallazgos](../apps/challenges/kanban/HALLAZGOS.md). Se añadió al núcleo arrastrar y soltar (`draggable`, `on:dragstart/dragover/drop/dragend`, `:dragging`, `:drag-over`, desplazamiento al acercarse al borde) y en `inspect` doble clic, clic derecho, teclas y arrastre; se corrigió que los eventos de puntero no llegaran a las filas de `<List>`. Arrastrar con 20 × 200 cuesta lo mismo que un fotograma vacío. Una fila que pasa a otra lista de la misma declaración `{#each}` se traslada con su estado y su foco (la tarjeta conserva su estado al cambiar de columna). Quedan `<Menu>` y la memoria por elemento (~0,65 MB por tarjeta, antes ~0,77; ver la fila de la tabla de abajo). |
-| 2 | Hoja de cálculo | ⏳ | |
+| 2 | Hoja de cálculo | ✅ | [apps/challenges/hoja](../apps/challenges/hoja/) · [hallazgos](../apps/challenges/hoja/HALLAZGOS.md). Se añadió a la reactividad el corte por igualdad de `computed` y a `<List>` que las filas fuera de pantalla no recalculen lo que muestran; `inspect.key` acepta los nombres de `event.key`. Abrir 10 000 × 26 tarda 0,37 s y editar una celda de la que dependen 1 000 fórmulas, 1–5 ms. Quedan la tabla con virtualización en 2D (las columnas se virtualizan a mano), el coste de crear filas en Qt (AvPág, 192 ms), la memoria de las filas recorridas y el deshacer del núcleo. |
 | 5 | Editor | ⏳ | |
 | 6 | Gestor de proyectos | ✅ | [apps/challenges/gestor](../apps/challenges/gestor/) · [hallazgos](../apps/challenges/gestor/HALLAZGOS.md). Antes de empezar se añadió al núcleo la navegación básica (`sections`, `navigation()`, `await push`/`back`, Alt+← y botón del ratón, `before_leave`, `{#hidden}`, transiciones de página). Durante el reto: las cajas ocultas ya no se recolocan (cambiar de pestaña con 200 tarjetas, de 239 a 5 ms), `pop`/`reset` se pueden esperar, y en `inspect` se corrigió aceptar un `confirm` y que dos apps con módulos del mismo nombre se mezclaran. Todas las medidas de «Hecho cuando» se cumplen y la memoria no crece. Quedan adelante y rutas (`janelkit-router`), otra ventana con su propia pila y parte del plan (pestaña Lista, ajustes de etiquetas y columnas). |
 
@@ -238,11 +238,13 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 | Portapapeles, notificaciones, bandeja, ajustes | 2, 4, 5 | Núcleo, como módulos pequeños (`janelkit_desktop.clipboard`, …) · ✅ `notify` (reto 4) · ✅ `clipboard` (texto) |
 | Temporizadores ligados al componente | 1, 4 | ✅ Núcleo: `interval`, `timeout` (reto 1) |
 | Texto seleccionable | 4, 5 | ✅ Núcleo: `<Text selectable>` o `user-select: text` |
-| Tabla 2D y árbol virtualizados | 1, 2, 5 | Núcleo o `janelkit-kit` · el reto 1 hizo su tabla con `<List>` y anchos repetidos en cabecera y filas |
+| Tabla 2D y árbol virtualizados | 1, 2, 5 | Núcleo o `janelkit-kit` · el reto 1 hizo su tabla con `<List>` y anchos repetidos en cabecera y filas; el reto 2, con `<List>` y las columnas virtualizadas a mano (de columna en columna) |
+| Reactividad con miles de nodos (estado leído por todas las filas, fórmulas) | 2 | ✅ Núcleo (reto 2): corte por igualdad en `computed` y filas de `<List>` sin vista en espera |
+| Coste de crear la vista de una fila | 2, 3 | Núcleo · ~0,4 ms por `<Text>`: una página de 40 filas × 11 celdas, 192 ms; probar `reuseItems` y aligerar `JkText` |
 | Canvas, gráficas, editor de código | 1, 5 | `janelkit-kit` (sobre la vía de escape QML) · el reto 1 hizo su gráfica en QML propio sin problemas |
 | Rejilla con salto de línea (tarjetas que se recolocan según el ancho) | 1 | ✅ Núcleo: `flex-wrap` en `<flex>`, `Column` y `Row` ([flex.md](flex.md), fase 1) |
 | Texto enriquecido | 4 | ✅ Núcleo: `<Text format="markdown">` (reto 4) · falta que no interprete HTML, para mostrar texto de otras personas sin escaparlo a mano; decidirlo antes de publicar |
-| Deshacer/rehacer y stores | 2, 3 | núcleo, pendiente · el reto 3 lo hizo en la aplicación con operaciones que devuelven su inversa (~100 líneas) |
+| Deshacer/rehacer y stores | 2, 3 | núcleo, pendiente · el reto 3 lo hizo en la aplicación con operaciones que devuelven su inversa (~100 líneas) y el reto 2 con instantáneas por celda (~40 líneas): el del núcleo debe admitir los dos ([hallazgo 7](../apps/challenges/hoja/HALLAZGOS.md)) |
 
 ## Registro de hallazgos (plantilla)
 
@@ -270,5 +272,5 @@ Cada reto termina con un `HALLAZGOS.md` en su carpeta:
 
 1. **Chat (4)** y **Panel (1):** ponen a prueba la asincronía y la frecuencia de actualización, lo más nuevo y menos medido.
 2. **Kanban (3):** destapa las carencias de interacción (arrastrar, menús, gestos), que afectan al diseño del lenguaje.
-3. **Hoja de cálculo (2)** y **Editor (5):** los más exigentes; conviene abordarlos cuando las decisiones de los anteriores estén tomadas.
+3. **Hoja de cálculo (2)** ✅ y **Editor (5):** los más exigentes; conviene abordarlos cuando las decisiones de los anteriores estén tomadas.
 4. **Gestor de proyectos (6):** ✅ hecho con la navegación básica del núcleo; servirá para validar `janelkit-router` cuando exista.

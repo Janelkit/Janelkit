@@ -23,15 +23,16 @@ import asyncio
 from pathlib import Path
 from typing import Any, Sequence
 
+from janelkit.ext import app as running_app, inspector
+
 _open: list[Any] = []  # diálogos abiertos (para pruebas: ver `pending`)
 
 
 def _app() -> Any:
-    from .qt_backend.application import Application
-
-    if Application.current is None:
+    app = running_app()
+    if app is None:
         raise RuntimeError("los diálogos necesitan una aplicación en marcha (janelkit.run)")
-    return Application.current
+    return app
 
 
 def _create(qml_type: str, props: dict[str, Any]) -> Any:
@@ -173,3 +174,37 @@ def pending() -> list[Any]:
 def kind(dialog: Any) -> str:
     """El tipo QML de un diálogo abierto: "MessageDialog", "FileDialog" o "FolderDialog"."""
     return str(dialog.property("jkDialogType") or "")
+
+
+# -- en pruebas: `app.dialogs()` y `app.answer_dialog(...)` de janelkit.inspect ----------
+@inspector("dialogs")
+def _inspect_pending(app: Any) -> list[Any]:
+    """Diálogos abiertos, del más antiguo al más reciente."""
+    return pending()
+
+
+@inspector("answer_dialog")
+def _inspect_answer(app: Any, result: Any = True) -> None:
+    """Responde al diálogo abierto: una ruta (archivos), True/False (aceptar/cancelar)."""
+    from PySide6.QtCore import Q_ARG, QMetaObject, QUrl
+
+    from janelkit.inspect import InspectError
+
+    def invoke(method: str, *args: Any) -> None:
+        if not QMetaObject.invokeMethod(dialog, method, *args):
+            raise InspectError(f"no se pudo invocar {method} en {dialog.metaObject().className()}")
+
+    if not _open:
+        raise InspectError("no hay ningún diálogo abierto")
+    dialog = _open[-1]
+    if result is False or result is None:
+        invoke("reject")
+    elif isinstance(result, (str, Path)):
+        prop = "selectedFolder" if kind(dialog) == "FolderDialog" else "selectedFile"
+        dialog.setProperty(prop, QUrl.fromLocalFile(str(Path(result).resolve())))
+        invoke("done", Q_ARG(int, 1))
+    elif kind(dialog) == "MessageDialog":
+        invoke("done", Q_ARG(int, _OK))  # Aceptar
+    else:
+        invoke("done", Q_ARG(int, 1))
+    app.wait(0.01)

@@ -1299,7 +1299,7 @@ def _fill_parent(item: IRElement) -> None:
     """Raíz del contenido de la ventana: la ocupa entera, así que su tamaño viene de fuera."""
     item.props["anchors.fill"] = Literal("parent")
     # Idiomas de derecha a izquierda (árabe, hebreo…): todo el contenido se refleja.
-    item.props["LayoutMirroring.enabled"] = Literal("jki18n.rtl === true")
+    item.props["LayoutMirroring.enabled"] = Literal("jklocale.rtl === true")
     item.props["LayoutMirroring.childrenInherit"] = Literal("true")
     if item.qml_type in _BOXES:
         item.props["jkSizedW"] = Literal("true")

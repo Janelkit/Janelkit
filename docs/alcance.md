@@ -10,6 +10,8 @@ Prioridades antes del lanzamiento: [lanzamiento.md](lanzamiento.md).
 > - **Fuera del núcleo:** `janelkit-i18n` (`t`, catálogos, formatos; la dirección derecha a izquierda se queda en el núcleo como estado de disposición), `janelkit-desktop` (`dialogs`, `clipboard`, `notify`), `janelkit-vscode` (hoy `editors/vscode/`) y los retos de `examples/challenges/`.
 > - **Organización:** un solo repositorio con varios paquetes (`packages/janelkit`, `packages/janelkit-i18n`, `packages/janelkit-desktop`, `packages/janelkit-vscode`; `apps/examples`, `apps/challenges`). Antes de mover nada, el núcleo deja de importar a esos módulos mediante ganchos de aplicación, extensiones de `inspect` y plugins de la CLI.
 >
+> **Hecho (paso 2):** el núcleo ya no importa esos módulos. El idioma de la interfaz pasó al núcleo (`janelkit.locale`: dirección y `QLocale`). `janelkit.ext` da `app()` e `inspector()` a las extensiones, y `janel` carga subcomandos del grupo de entry points `janelkit.commands` (punto de extensión 5). `tests/test_extensions.py` vigila la frontera. **Siguiente (paso 3):** mover los módulos a `packages/` y los retos a `apps/`.
+>
 > Lo que sigue en este documento todavía describe la situación anterior.
 
 ## Criterio para decidir qué pertenece al núcleo

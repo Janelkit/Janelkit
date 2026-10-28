@@ -549,6 +549,7 @@ i18n.set("es")
 - Si falta una clave en el idioma activo, se usa la de `i18n.default` (por defecto `"es"`) y, si tampoco está, la propia clave, con un aviso en el logger `janelkit`.
 - `i18n.number(x, decimales)`, `i18n.currency(x, "€")` e `i18n.date(fecha, "short" | "long")` dan formato según el idioma activo (separadores, nombres de meses, cifras árabes…).
 - En idiomas de **derecha a izquierda** (`ar`, `he`, `fa`, `ur`…) toda la interfaz se refleja: filas, alineación del texto e indicadores de los controles. `i18n.rtl` dice si el idioma activo lo es.
+- El idioma de la interfaz es del núcleo: `janelkit.locale`. `i18n.set()` lo cambia, y sin traducciones basta `locale.set("ar")` para reflejar la interfaz y que Qt use ese idioma.
 
 Ejemplo: `examples/idiomas` (español, inglés y árabe).
 

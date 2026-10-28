@@ -18,6 +18,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 
+from janelkit.ext import app as running_app, inspector
+
 _sent: list[dict[str, str]] = []  # notificaciones enviadas en este proceso (ver `sent`)
 _tray: Any = None
 _on_click: Callable[[], Any] | None = None
@@ -47,9 +49,7 @@ def _tray_icon() -> Any:
     global _tray
     from shiboken6 import Shiboken
 
-    from .qt_backend.application import Application
-
-    app = Application.current
+    app = running_app()
     if app is None:
         return None
     if _tray is not None and Shiboken.isValid(_tray) and _tray.parent() is app.engine:
@@ -85,9 +85,7 @@ def _tray_icon() -> Any:
 
 
 def _clicked() -> None:
-    from .qt_backend.application import Application
-
-    app = Application.current
+    app = running_app()
     window = app.main_window() if app is not None else None
     if window is not None:
         window.show()
@@ -95,3 +93,9 @@ def _clicked() -> None:
         window.requestActivate()
     if _on_click is not None:
         _on_click()
+
+
+@inspector("notifications")
+def _inspect_sent(app: Any) -> list[dict[str, str]]:
+    """Notificaciones enviadas con `notify` (`{"title", "message"}`), de la más antigua a la más reciente."""
+    return sent()

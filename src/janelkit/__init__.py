@@ -19,17 +19,22 @@ from .reactivity import (
     state,
     untracked,
 )
-from . import clipboard, dialogs
+from .locale import locale
 from .events import DragEvent, FocusEvent, KeyEvent, PointerEvent, ResizeEvent, WheelEvent
-from .i18n import i18n, t
 from .lifecycle import Ref, before_leave, inject, on_destroy, on_mount, provide, ref
-from .notifications import notify
 from .pages import PageStack, Sections, navigation, pages, sections
 from .storage import Persisted, persisted
 from .styling.theme import theme
 from .tasks import Task, background, spawn, task
 from .timers import Timer, interval, timeout
 from .windows import open_window
+
+# Extensiones que aún viven en este paquete y saldrán a janelkit-i18n y janelkit-desktop
+# (docs/alcance.md). Se importan al final porque usan la API pública de arriba
+# (`from janelkit import State, locale`), como lo hará cualquier paquete externo.
+from . import clipboard, dialogs  # noqa: E402
+from .i18n import i18n, t  # noqa: E402
+from .notifications import notify  # noqa: E402
 
 __version__ = "0.0.1.dev0"
 
@@ -66,6 +71,7 @@ __all__ = [
     "event",
     "inject",
     "interval",
+    "locale",
     "navigation",
     "notify",
     "on_destroy",

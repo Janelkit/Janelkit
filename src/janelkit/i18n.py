@@ -21,10 +21,9 @@ from datetime import date as Date, datetime
 from pathlib import Path
 from typing import Any
 
-from .reactivity import State
+from janelkit import State, locale
 
 log = logging.getLogger("janelkit")
-RTL_LANGUAGES = {"ar", "he", "fa", "ur", "yi", "ps", "sd", "ug", "dv"}
 
 
 class I18nError(ValueError):
@@ -36,7 +35,6 @@ class I18n:
 
     def __init__(self) -> None:
         self._catalogs: dict[str, dict[str, Any]] = {}
-        self._language = State("es")
         self.default = "es"  # idioma de reserva para claves que faltan
         self._revision = State(0)
         self._warned: set[tuple[str, str]] = set()
@@ -44,7 +42,8 @@ class I18n:
     # -- idioma -------------------------------------------------------------------
     @property
     def language(self) -> str:
-        return self._language.value
+        """El idioma de la interfaz (`janelkit.locale`): traducir y dar formato siguen a ese."""
+        return locale.language
 
     @property
     def languages(self) -> list[str]:
@@ -54,12 +53,12 @@ class I18n:
     @property
     def rtl(self) -> bool:
         """True si el idioma activo se escribe de derecha a izquierda (la interfaz se refleja)."""
-        return self.language.split("-")[0].split("_")[0] in RTL_LANGUAGES
+        return locale.rtl
 
     def set(self, language: str) -> None:
         if self._catalogs and language not in self._catalogs:
             raise I18nError(f"idioma sin catálogo: {language!r}; disponibles: {', '.join(sorted(self._catalogs))}")
-        self._language.value = language
+        locale.set(language)
 
     # -- catálogos ----------------------------------------------------------------
     def add(self, language: str, entries: dict[str, Any]) -> None:
@@ -85,7 +84,7 @@ class I18n:
     def reset(self) -> None:
         self._catalogs.clear()
         self.default = "es"
-        self._language.value = "es"
+        locale.reset()
         self._warned.clear()
         self._revision.update(lambda r: r + 1)
 
@@ -148,7 +147,7 @@ class I18n:
         return day
 
     def __repr__(self) -> str:
-        return f"<i18n {self._language.peek()!r} de {sorted(self._catalogs)}>"
+        return f"<i18n {locale!r} de {sorted(self._catalogs)}>"
 
 
 i18n = I18n()

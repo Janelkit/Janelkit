@@ -5,9 +5,9 @@ Esta página define **qué es público** en JanelKit. Lo público solo cambia si
 Lo público es:
 
 1. Los nombres que se importan desde `janelkit` (listados abajo).
-2. Los nombres listados de `janelkit.compiler`, `janelkit.diagnostics` y `janelkit.inspect`, pensados para herramientas y pruebas.
+2. Los nombres listados de `janelkit.compiler`, `janelkit.diagnostics` y `janelkit.inspect`, pensados para herramientas y pruebas, y los de `janelkit.ext`, para paquetes que extienden JanelKit.
 3. El formato `.janel`: secciones, sintaxis de plantilla, elementos con sus props y eventos, la importación de componentes `.janel` y de elementos `.qml`, y el CSS soportado ([lenguaje.md](lenguaje.md), [estilos.md](estilos.md)).
-4. Los comandos `janel` y sus opciones ([desarrollo.md](desarrollo.md)).
+4. Los comandos `janel` y sus opciones ([desarrollo.md](desarrollo.md)), y el grupo de entry points `janelkit.commands` para añadir subcomandos ([abajo](#janelkitext-extensiones)).
 5. Las variables de entorno `JANELKIT_DEV`, `JANELKIT_EXIT_AFTER_MS`, `JANELKIT_DATA_DIR` y `QT_QUICK_CONTROLS_STYLE`.
 6. En los archivos `.qml` propios: el objeto `jktheme`, con los tokens del tema activo (`jktheme.primary`, `jktheme.radius`…).
 
@@ -130,6 +130,7 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 
 | Nombre | Descripción |
 |---|---|
+| `locale` | Idioma de la interfaz, del núcleo: `.language`, `.set(idioma)`, `.reset()`, `.rtl` (¿se escribe de derecha a izquierda? Entonces toda la interfaz se refleja). Reactivo; también fija el `QLocale` por defecto de Qt. `i18n.set()` lo cambia. |
 | `t` | `t(clave, **parámetros)` traduce al idioma activo. Reactivo. |
 | `i18n` | Idioma y catálogos: `.load(carpeta)`, `.add(idioma, dict)`, `.set(idioma)`, `.language`, `.languages`, `.rtl`, `.default`; formatos `.number()`, `.currency()`, `.date()`. |
 
@@ -163,9 +164,27 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 | Nombre | Descripción |
 |---|---|
 | `mount` | `with mount("src/App.janel", headless=True) as app:` monta la aplicación sin ventana visible y la desmonta al salir. |
-| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.key("Ctrl+Z")` (pulsa una combinación sobre lo que tenga el foco: atajos), `app.dialogs()`, `app.answer_dialog(resultado)`, `app.notifications()`, `app.windows()` (las ventanas abiertas con `open_window`, cada una inspeccionable igual). |
+| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.key("Ctrl+Z")` (pulsa una combinación sobre lo que tenga el foco: atajos), `app.windows()` (las ventanas abiertas con `open_window`, cada una inspeccionable igual). Las extensiones añaden más con [`janelkit.ext.inspector`](#janelkitext-extensiones): `app.dialogs()`, `app.answer_dialog(resultado)` (de `dialogs`) y `app.notifications()` (de `notify`). |
 | `Element` | `.tag`, `.id`, `.text`, `.label`, `.value`, `.visible`, `.enabled`, `.prop(nombre)`; acciones `.click()`, `.type(texto)`, `.submit()`, `.check(bool)`, `.slide(valor)`, `.choose(opción)`, `.focus()`, `.hover()`/`.unhover()` (puntero encima: estilos `:hover`), `.press()`/`.release()` (botón del ratón: `:pressed`; soltar encima es un clic real). `.double_click()`, `.right_click()` (`on:dblclick`, `on:contextmenu`), `.key("Ctrl+D")` (le da el foco y pulsa la combinación). `.drag_to(destino, x=, y=, cancel=False)` arrastra un `<flex draggable>` y lo suelta sobre `destino` (o pulsa Escape con `cancel=True`). `.item` es el objeto Qt (no cubierto por la política de versiones). |
 | `InspectError` | Elemento no encontrado, ambiguo, desactivado o que no admite la acción. Es un `AssertionError`. |
+
+## `janelkit.ext` (extensiones)
+
+Para paquetes que amplían JanelKit sin tocar el núcleo (`janelkit-i18n`, `janelkit-desktop`…). Una extensión usa solo la API pública: los nombres de `janelkit` y los de estos módulos. `tests/test_extensions.py` comprueba que las que aún viven en este paquete lo cumplen.
+
+| Nombre | Descripción |
+|---|---|
+| `app` | `app()` devuelve la aplicación en marcha, o `None`. Son públicos `.engine` (el `QQmlEngine`), `.qt_app` (la `QGuiApplication`) y `.main_window()` (la ventana de la vista montada más reciente, o `None`). |
+| `inspector` | Decorador: `@inspector("nombre")` sobre `fn(app, *args)` añade el método `MountedApp.nombre` de `janelkit.inspect`. Así `janelkit.dialogs` aporta `dialogs()` y `answer_dialog()`, y `janelkit.notifications` aporta `notifications()`. |
+
+**Subcomandos de `janel`:** un paquete los declara como entry points del grupo `janelkit.commands`. El nombre del entry point es el del comando y apunta a `configurar(parser)`, que recibe el `ArgumentParser` del subcomando, le añade sus argumentos y fija `parser.set_defaults(func=ejecutar)`. `ejecutar(args)` devuelve el código de salida, y la primera línea de la documentación de `configurar` es la ayuda.
+
+```toml
+[project.entry-points."janelkit.commands"]
+package = "janelkit_package.cli:configure"
+```
+
+Un plugin que falla al cargarse, o que intenta redefinir un comando de JanelKit, se ignora con un aviso.
 
 ## Política de versiones
 

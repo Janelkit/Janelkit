@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from importlib import metadata
 from pathlib import Path
 
 from .. import __version__
@@ -131,7 +132,37 @@ def build_parser() -> argparse.ArgumentParser:
     p_build.add_argument("path", nargs="?", default=".", help="carpeta del proyecto (por defecto, la actual)")
     p_build.add_argument("-o", "--output", help="carpeta de salida (por defecto, build/qml)")
     p_build.set_defaults(func=_cmd_build)
+
+    _add_plugin_commands(sub)
     return parser
+
+
+COMMANDS_GROUP = "janelkit.commands"
+
+
+def _plugin_commands() -> list[metadata.EntryPoint]:
+    return list(metadata.entry_points(group=COMMANDS_GROUP))
+
+
+def _add_plugin_commands(sub: argparse._SubParsersAction) -> None:
+    """Subcomandos de otros paquetes: entry points `nombre = "paquete.modulo:configurar"`.
+
+    `configurar(parser)` recibe el `ArgumentParser` del subcomando, le añade sus
+    argumentos y fija `parser.set_defaults(func=ejecutar)`; `ejecutar(args)` devuelve
+    el código de salida. La primera línea de la documentación de `configurar` es la ayuda.
+    """
+    for entry in _plugin_commands():
+        if entry.name in sub.choices:
+            print(f"aviso: {entry.value} no puede redefinir el comando {entry.name!r}", file=sys.stderr)
+            continue
+        try:
+            configure = entry.load()
+            summary = (configure.__doc__ or "").strip().splitlines()
+            configure(sub.add_parser(entry.name, help=summary[0] if summary else None))
+        except Exception as exc:  # noqa: BLE001 - un plugin roto no debe impedir usar `janel`
+            sub.choices.pop(entry.name, None)
+            sub._choices_actions = [a for a in sub._choices_actions if a.dest != entry.name]
+            print(f"aviso: no se pudo cargar el comando {entry.name!r} ({entry.value}): {exc}", file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -5,6 +5,7 @@ from pathlib import Path
 import janelkit
 import janelkit.compiler
 import janelkit.diagnostics
+import janelkit.ext
 import janelkit.inspect
 
 API_DOC = (Path(__file__).parent.parent / "docs" / "api.md").read_text(encoding="utf-8")
@@ -12,12 +13,13 @@ API_DOC = (Path(__file__).parent.parent / "docs" / "api.md").read_text(encoding=
 PUBLIC = {
     "janelkit": [
         "Computed", "DragEvent", "Effect", "Event", "FocusEvent", "KeyEvent", "PageStack", "Persisted", "PointerEvent", "ResizeEvent", "WheelEvent", "Prop", "PropError", "Ref", "Sections", "State", "Task", "Timer", "__version__", "background",
-        "batch", "before_leave", "clipboard", "computed", "dialogs", "effect", "event", "i18n", "inject", "interval", "navigation", "notify", "on_destroy", "on_mount", "open_window", "pages", "persisted", "prop", "provide", "ref", "run", "sections",
+        "batch", "before_leave", "clipboard", "computed", "dialogs", "effect", "event", "i18n", "inject", "interval", "locale", "navigation", "notify", "on_destroy", "on_mount", "open_window", "pages", "persisted", "prop", "provide", "ref", "run", "sections",
         "spawn", "state", "t", "task", "theme", "timeout", "untracked",
     ],
     "janelkit.compiler": ["CompiledComponent", "FORMAT_VERSION", "check_file", "check_source", "compile_file", "compile_source"],
     "janelkit.diagnostics": ["Diagnostic", "JanelError", "SourceLocation"],
     "janelkit.inspect": ["Element", "InspectError", "MountedApp", "mount"],
+    "janelkit.ext": ["app", "inspector"],
 }  # fmt: skip
 
 
@@ -37,6 +39,7 @@ def test_public_names_exist():
             "janelkit.compiler": janelkit.compiler,
             "janelkit.diagnostics": janelkit.diagnostics,
             "janelkit.inspect": janelkit.inspect,
+            "janelkit.ext": janelkit.ext,
         }[module_name]
         for name in names:
             assert hasattr(module, name), f"{module_name}.{name}"

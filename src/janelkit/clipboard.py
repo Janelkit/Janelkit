@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .reactivity import State
+from janelkit import State
 
 _text: State[str] = State("")
 _board: Any = None  # QClipboard vigilado (se avisa a _text cuando cambia)

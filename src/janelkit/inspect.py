@@ -21,6 +21,7 @@ Esta API es pública; un plugin de pytest con más comodidades es un proyecto ap
 from __future__ import annotations
 
 import asyncio
+import functools
 import os
 import shutil
 import sys
@@ -363,6 +364,16 @@ def press(item: Any) -> None:
     _invoke(item, "clicked")
 
 
+_extensions: dict[str, Callable[..., Any]] = {}
+
+
+def add_inspector(name: str, fn: Callable[..., Any]) -> None:
+    """Registra `fn(app, ...)` como `MountedApp.<name>` (lo usa `janelkit.ext.inspector`)."""
+    if name.startswith("_") or name in vars(MountedApp):
+        raise ValueError(f"MountedApp ya tiene {name!r} o no es un nombre válido")
+    _extensions[name] = fn
+
+
 def _invoke(item: Any, method: str, *args: Any) -> None:
     from PySide6.QtCore import QMetaObject
 
@@ -488,39 +499,13 @@ class MountedApp:
         self.application.run_until(run(), timeout=timeout + 1 if until else max(seconds + 1, timeout))
         self.process()
 
-    # -- notificaciones y diálogos -----------------------------------------------
-    def notifications(self) -> list[dict[str, str]]:
-        """Notificaciones enviadas con `notify` (`{"title", "message"}`), de la más antigua a la más reciente."""
-        from . import notifications
-
-        return notifications.sent()
-
-    def dialogs(self) -> list[Any]:
-        from . import dialogs
-
-        return dialogs.pending()
-
-    def answer_dialog(self, result: Any = True) -> None:
-        """Responde al diálogo abierto: una ruta (archivos), True/False (aceptar/cancelar)."""
-        from PySide6.QtCore import Q_ARG, QUrl
-
-        from . import dialogs
-
-        pending = self.dialogs()
-        if not pending:
-            raise InspectError("no hay ningún diálogo abierto")
-        dialog = pending[-1]
-        if result is False or result is None:
-            _invoke(dialog, "reject")
-        elif isinstance(result, (str, Path)):
-            prop = "selectedFolder" if dialogs.kind(dialog) == "FolderDialog" else "selectedFile"
-            dialog.setProperty(prop, QUrl.fromLocalFile(str(Path(result).resolve())))
-            _invoke(dialog, "done", Q_ARG(int, 1))
-        elif dialogs.kind(dialog) == "MessageDialog":
-            _invoke(dialog, "done", Q_ARG(int, 0x400))  # Aceptar
-        else:
-            _invoke(dialog, "done", Q_ARG(int, 1))
-        self.wait(0.01)
+    def __getattr__(self, name: str) -> Any:
+        # Métodos que añaden otros paquetes con `janelkit.ext.inspector` (p. ej. `dialogs()`).
+        method = _extensions.get(name)
+        if method is None:
+            hint = "" if name.startswith("_") else "; si lo añade una extensión (como dialogs() o notifications()), impórtala"
+            raise AttributeError(f"MountedApp no tiene {name!r}{hint}")
+        return functools.partial(method, self)
 
     # -- internos -------------------------------------------------------------
     @staticmethod

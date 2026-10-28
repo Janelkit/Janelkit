@@ -25,6 +25,7 @@ from .. import storage
 from ..compiler import CompiledComponent, compile_file
 from ..compiler.qml_generator import BRIDGE_NAME
 from ..diagnostics import Diagnostic, JanelError
+from ..locale import locale
 from ..reactivity import Effect, Scope
 from ..runtime.component import ComponentInstance, flush_mounts
 from ..styling.compiler import THEME_OBJECT
@@ -133,11 +134,11 @@ class Application:
             warnings.simplefilter("ignore", DeprecationWarning)
             self.theme_map = QQmlPropertyMap(self.engine)
         self.engine.rootContext().setContextProperty(THEME_OBJECT, self.theme_map)
-        # Idioma: dirección de escritura para las ventanas (jki18n.rtl) y QLocale por defecto.
+        # Idioma: dirección de escritura para las ventanas (jklocale.rtl) y QLocale por defecto.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DeprecationWarning)
-            self.i18n_map = QQmlPropertyMap(self.engine)
-        self.engine.rootContext().setContextProperty("jki18n", self.i18n_map)
+            self.locale_map = QQmlPropertyMap(self.engine)
+        self.engine.rootContext().setContextProperty("jklocale", self.locale_map)
         # Eventos de <flex> con propagación (events.py); uno para todas las ventanas.
         self.engine.rootContext().setContextProperty("jkevents", event_router)
 
@@ -153,11 +154,9 @@ class Application:
     def _sync_language(self) -> None:
         from PySide6.QtCore import QLocale
 
-        from ..i18n import i18n
-
-        language = i18n.language
-        self.i18n_map.insert("rtl", i18n.rtl)
-        self.i18n_map.insert("language", language)
+        language = locale.language
+        self.locale_map.insert("rtl", locale.rtl)
+        self.locale_map.insert("language", language)
         QLocale.setDefault(QLocale(language.replace("-", "_")))
 
     def check_tokens(self, compiled: CompiledComponent) -> list[Diagnostic]:

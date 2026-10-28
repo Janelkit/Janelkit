@@ -2,7 +2,7 @@
 
 Referencia: [`JanelKit_Plan_Desarrollo_v0.1.md`](../JanelKit_Plan_Desarrollo_v0.1.md). Actualizado: 26 de octubre de 2026.
 
-**Entornos verificados:** Windows 11 con Python 3.13.9 + PySide6 6.12.0, y con Python 3.10.19 + PySide6 6.8.3 (las versiones mínimas declaradas): las 523 pruebas pasan en ambos (la vía rápida de `Column`/`Row` y las cajas ligeras, comprobadas con PySide6 6.12.0 y 6.8.3). Linux y macOS **no se han probado** todavía: la CI (`.github/workflows/ci.yml`) está preparada para hacerlo en cuanto el repositorio tenga un remoto en GitHub.
+**Entornos verificados:** Windows 11 con Python 3.13.9 + PySide6 6.12.0, y con Python 3.10.19 + PySide6 6.8.3 (las versiones mínimas declaradas): las pruebas pasan en ambos (523 entonces; ahora son 530 y se han comprobado con 3.13.9 + 6.12.0) (la vía rápida de `Column`/`Row` y las cajas ligeras, comprobadas con PySide6 6.12.0 y 6.8.3). Linux y macOS **no se han probado** todavía: la CI (`.github/workflows/ci.yml`) está preparada para hacerlo en cuanto el repositorio tenga un remoto en GitHub.
 
 ## Backlog inicial (sección 11)
 
@@ -87,7 +87,7 @@ Cierran de forma **provisional** puntos del «Registro de decisiones pendientes�
     | Comando | `flux` | `janel` | sí |
     | Extensión de componentes | `.flux` | `.janel` | sí |
     | Variables de entorno | `FLUXUI_*` | `JANELKIT_*` | sí |
-    | Objetos en `.qml` propios | `fxtheme`, `fxi18n` | `jktheme`, `jki18n` | sí |
+    | Objetos en `.qml` propios | `fxtheme`, `fxi18n` | `jktheme`, `jklocale` (el idioma pasó al núcleo como `janelkit.locale`) | sí |
     | Excepción de diagnósticos | `FluxError` | `JanelError` | sí |
     | Módulo QML interno | `Flux` | `Janel` | no |
     | Prefijo de tipos QML internos | `Fx` (`FxBox`…) | `Jk` (`JkBox`…) | no |

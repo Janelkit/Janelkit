@@ -155,7 +155,7 @@ def test_a_non_contiguous_array_is_copied_right(app_from):
 def test_size_fps_and_clear(app_from):
     app = app_from(APP)
     frames = app.namespace["frames"]
-    frames._hub._idle.setInterval(100)
+    frames._hub._idle.setInterval(300)  # más que una pausa del ejecutor de la CI
     parar = threading.Event()
 
     def emitir():
@@ -166,13 +166,11 @@ def test_size_fps_and_clear(app_from):
     t = threading.Thread(target=emitir)
     t.start()
     try:
-        app.wait(1.2)
-        assert frames.fps > 10
+        app.wait(until=lambda: frames.fps > 10, timeout=5)
     finally:
         parar.set()
         t.join()
-    app.wait(0.3)
-    assert frames.fps == 0
+    app.wait(until=lambda: frames.fps == 0, timeout=2)
     frames.clear()
     app.wait(0.02)
     assert frames.size is None and frames.latest() is None

@@ -119,7 +119,7 @@ def test_add(tmp_path):
 ## Requisitos
 
 - Python 3.10 o posterior.
-- PySide6 6.8 o posterior (se instala solo).
+- PySide6 6.8 o posterior, salvo la 6.12.0 (se instala solo).
 - Windows, macOS o Linux.
 
 ## Estado

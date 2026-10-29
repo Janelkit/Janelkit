@@ -204,7 +204,9 @@ def test_qt_layout_places_like_the_flex_engine(mount, monkeypatch):
     assert set(kinds.values()) == {"JkFlexColumn", "JkFlexRow", "JkFlex"}
     for a, b in zip(fast, slow):
         for i in IDS:
-            assert a[i] == pytest.approx(b[i], abs=0.6), i
+            # Los layouts de Qt redondean a píxeles enteros; el motor, no (en macOS los
+            # textos miden fracciones distintas que en Windows): hasta 1 px de diferencia.
+            assert a[i] == pytest.approx(b[i], abs=1.0), i
     # Comprobaciones directas: el espacio de sobra se queda al final, Spacer centra,
     # align-self y max-width.
     narrow = fast[1]

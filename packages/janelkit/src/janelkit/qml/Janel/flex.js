@@ -270,6 +270,8 @@ function pad(own, all) {
 }
 
 // -- disposición -------------------------------------------------------------
+const result = { w: 0, h: 0, minW: 0, grows: false }
+
 function layout(box) {
     const st = box.jkState
     if (!st) return
@@ -305,7 +307,6 @@ function layout(box) {
     }
 }
 
-const result = { w: 0, h: 0, minW: 0, grows: false }
 
 // <Pages>/<Sections> (JkPages): solo se ve una página, y su raíz se coloca como un bloque
 // en una columna: ocupa todo el contenedor salvo que fije su tamaño (width, height,

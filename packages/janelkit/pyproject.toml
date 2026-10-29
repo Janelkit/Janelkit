@@ -12,7 +12,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "d4ndres", email = "d4ndres@gmail.com" }]
 keywords = ["gui", "desktop", "qt", "pyside6", "qt-quick", "reactive", "components", "framework"]
-dependencies = ["PySide6>=6.8", "qasync>=0.27"]
+dependencies = ["PySide6>=6.8,!=6.12.0", "qasync>=0.27"]  # 6.12.0: segfault en el recolector de Python (Linux, macOS)
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

@@ -6,7 +6,12 @@ import "jk.js" as Jk
 
 Binding {
     property string key
-    value: Jk.inherited(target ? target.jkCtx : null, key)
+    // Si deja de haber valor (p. ej. al destruirse la vista, jkCtx pasa a null), `value`
+    // cambia antes que `when`: sin el respaldo se aplicaría undefined a un color, con aviso.
+    value: {
+        const v = Jk.inherited(target ? target.jkCtx : null, key)
+        return v !== undefined || !target ? v : target[property]
+    }
     // No `value !== undefined`: en Qt 6.8, value no avisa al cambiar y `when` no se reevaluaría.
     when: Jk.inherited(target ? target.jkCtx : null, key) !== undefined
 }

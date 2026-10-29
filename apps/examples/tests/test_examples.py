@@ -118,7 +118,8 @@ def test_example_runs_with_python_main(app):
         [sys.executable, "main.py"], cwd=app.parent.parent, env=env, capture_output=True, text=True, timeout=60
     )
     assert proc.returncode == 0, proc.stderr
-    noise = [line for line in proc.stderr.splitlines() if line.strip() and not line.startswith("qt.qpa")]
+    # qt.qpa: plataforma offscreen; qt.multimedia: aceleración opcional de vídeo (VA-API, PipeWire) ausente en la CI.
+    noise = [line for line in proc.stderr.splitlines() if line.strip() and not line.startswith(("qt.qpa", "qt.multimedia"))]
     assert noise == []
 
 

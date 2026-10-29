@@ -94,5 +94,6 @@ Primera versión pública prevista. Respecto a la prealfa interna (incrementos 0
 
 - Python ≥ 3.10.
 - **PySide6 ≥ 6.8** (antes ≥ 6.6): con 6.6 había fallos de PySide al salir, botones sin `click()` y diálogos con tipos erróneos.
+- Se excluye **PySide6 6.12.0**: en Linux y macOS su recolector de envoltorios termina en un fallo de acceso (`Shiboken::Object::removeParent`) tras montar y desmontar varias vistas. 6.8–6.11 no lo tienen.
 - Nueva dependencia: `qasync` ≥ 0.27 (integra `asyncio` con el bucle de Qt).
 - Formato `.janel`: `FORMAT_VERSION = 1`.

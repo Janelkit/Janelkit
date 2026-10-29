@@ -4,3 +4,4 @@
 # (requirements-dev.txt ya lo incluye todo, con versiones fijas).
 psutil>=5.9              # memoria y CPU en challenges/*/bench.py y challenges/panel
 websockets>=13           # challenges/chat (cliente y servidor de prueba)
+numpy>=1.26              # examples/video (escena sintética y detección)

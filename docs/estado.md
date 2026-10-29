@@ -2,7 +2,7 @@
 
 Referencia: el plan original, archivado en [`archivo/plan-desarrollo-v0.1.md`](archivo/plan-desarrollo-v0.1.md). Actualizado: 26 de octubre de 2026.
 
-**Entornos verificados:** Windows 11 con Python 3.13.9 + PySide6 6.12.0, y con Python 3.10.19 + PySide6 6.8.3 (las versiones mínimas declaradas): las pruebas pasan en ambos (523 entonces; ahora son 539 y se han comprobado con 3.13.9 + 6.12.0) (la vía rápida de `Column`/`Row` y las cajas ligeras, comprobadas con PySide6 6.12.0 y 6.8.3). Linux y macOS **no se han probado** todavía: la CI (`.github/workflows/ci.yml`) está preparada para hacerlo en cuanto el repositorio tenga un remoto en GitHub.
+**Entornos verificados:** Windows 11 con Python 3.13.9 + PySide6 6.12.0, y con Python 3.10.19 + PySide6 6.8.3 (las versiones mínimas declaradas): las pruebas pasan en ambos (523 entonces; ahora son 539 y se han comprobado con 3.13.9 + 6.12.0) (la vía rápida de `Column`/`Row` y las cajas ligeras, comprobadas con PySide6 6.12.0 y 6.8.3). Linux (ubuntu-latest) y macOS (macos-latest) se verifican en la CI de GitHub (`.github/workflows/ci.yml`) desde el 2026-10-29: pasan todas las suites en los tres sistemas, con Python 3.10 y 3.13, con la última PySide6 y con la mínima (6.8), y los wheels se instalan en un entorno limpio. PySide6 6.12.0 se excluye por un fallo de acceso en Linux y macOS (punto 15).
 
 ## Backlog inicial (sección 11)
 
@@ -186,9 +186,8 @@ Explorador (`apps/examples/files`) sobre una carpeta de 5000 archivos:
 
 ## Siguientes pasos
 
-Todos los pendientes P0, P1 y P2 de [lanzamiento.md](lanzamiento.md) están hechos salvo dos, que dependen de decisiones o de infraestructura del autor:
+Todos los pendientes P0, P1 y P2 de [lanzamiento.md](lanzamiento.md) están hechos salvo uno, que depende de la infraestructura del autor:
 
-1. **CI en Linux y macOS (punto 11):** la configuración está lista en `.github/workflows/ci.yml`; falta un repositorio remoto en GitHub para ejecutarla.
-2. **Publicación (punto 17):** nombre y licencia (MIT) decididos; falta publicar primero en TestPyPI y después en PyPI con `.github/workflows/release.yml`.
+1. **Publicación (punto 17):** nombre y licencia (MIT) decididos; falta publicar primero en TestPyPI y después en PyPI con `.github/workflows/release.yml`.
 
 Después: Incremento 9 (validación con usuarios externos, a partir del [tutorial](tutorial.md)).

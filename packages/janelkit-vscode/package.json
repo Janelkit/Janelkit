@@ -2,17 +2,47 @@
   "name": "janelkit-janel",
   "displayName": "JanelKit (.janel)",
   "description": "Resaltado de sintaxis para componentes .janel de JanelKit: Python en <script> y {expresiones}, CSS en <style>.",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "publisher": "janelkit",
-  "license": "UNLICENSED",
-  "engines": { "vscode": "^1.80.0" },
-  "categories": ["Programming Languages"],
+  "license": "MIT",
+  "author": {
+    "name": "d4ndres",
+    "email": "d4ndres@gmail.com"
+  },
+  "homepage": "https://github.com/janelkit/janelkit/tree/main/packages/janelkit-vscode#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/janelkit/janelkit.git",
+    "directory": "packages/janelkit-vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/janelkit/janelkit/issues"
+  },
+  "keywords": [
+    "janelkit",
+    "janel",
+    "python",
+    "qt",
+    "pyside6",
+    "syntax"
+  ],
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
   "contributes": {
     "languages": [
       {
         "id": "janel",
-        "aliases": ["JanelKit", "janel"],
-        "extensions": [".janel"],
+        "aliases": [
+          "JanelKit",
+          "janel"
+        ],
+        "extensions": [
+          ".janel"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],

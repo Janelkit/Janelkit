@@ -11,7 +11,7 @@ Necesitas Python 3.10 o posterior. Tiempo estimado: 30 minutos. El código compl
 ```bash
 python -m venv .venv
 .venv\Scripts\activate            # Linux/macOS: source .venv/bin/activate
-pip install janelkit                 # mientras no esté en PyPI: pip install -e <carpeta de JanelKit>
+pip install janelkit
 
 janel new compra
 cd compra

@@ -1,19 +1,43 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "janelkit-desktop"
-version = "0.0.1.dev0"
+version = "0.1.0"
 description = "Diálogos nativos, portapapeles y notificaciones del sistema para JanelKit"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["janelkit>=0.0.1.dev0,<0.1"]  # rango del núcleo probado (docs/api.md, política de versiones)
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "d4ndres", email = "d4ndres@gmail.com" }]
+keywords = ["janelkit", "dialogs", "clipboard", "notifications", "desktop", "qt", "pyside6"]
+dependencies = ["janelkit>=0.1,<0.2"]  # rango del núcleo probado (docs/api.md, política de versiones)
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Environment :: X11 Applications :: Qt",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Topic :: Software Development :: User Interfaces",
+    "Topic :: Desktop Environment",
+    "Natural Language :: Spanish",
 ]
+
+[project.urls]
+Homepage = "https://github.com/janelkit/janelkit"
+Documentation = "https://github.com/janelkit/janelkit/tree/main/packages/janelkit-desktop#readme"
+Repository = "https://github.com/janelkit/janelkit"
+Issues = "https://github.com/janelkit/janelkit/issues"
+Changelog = "https://github.com/janelkit/janelkit/blob/main/packages/janelkit-desktop/README.md#cambios"
 
 [tool.setuptools.packages.find]
 where = ["src"]

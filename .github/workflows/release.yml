@@ -1,0 +1,104 @@
+# Publicación en PyPI, un paquete cada vez, con Trusted Publishing (sin tokens guardados).
+#
+# - Una etiqueta publica ese paquete en PyPI:
+#     git tag janelkit-v0.1.0 && git push origin janelkit-v0.1.0
+#   (también janelkit-i18n-v0.1.0, janelkit-desktop-v0.1.0). La versión de la etiqueta
+#   tiene que coincidir con la del pyproject.toml.
+# - A mano (Actions → Publicar → Run workflow): elegir paquete y destino; sirve para
+#   probar primero en TestPyPI.
+#
+# En pypi.org y test.pypi.org, cada proyecto tiene que tener este workflow como
+# «trusted publisher»: propietario janelkit, repositorio janelkit, workflow release.yml
+# y entorno pypi o testpypi.
+name: Publicar
+
+on:
+  push:
+    tags: ["janelkit-v*", "janelkit-i18n-v*", "janelkit-desktop-v*"]
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Paquete
+        type: choice
+        options: [janelkit, janelkit-i18n, janelkit-desktop]
+      target:
+        description: Destino
+        type: choice
+        options: [testpypi, pypi]
+        default: testpypi
+
+jobs:
+  build:
+    name: Construir ${{ inputs.package || github.ref_name }}
+    runs-on: ubuntu-latest
+    outputs:
+      package: ${{ steps.meta.outputs.package }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Paquete y versión
+        id: meta
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            tag="${{ github.ref_name }}"
+            package="${tag%-v*}"
+            expected="${tag##*-v}"
+          else
+            package="${{ inputs.package }}"
+            expected=""
+          fi
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' "packages/$package/pyproject.toml")
+          if [ -n "$expected" ] && [ "$version" != "$expected" ]; then
+            echo "::error::la etiqueta dice $expected, pero packages/$package/pyproject.toml dice $version"
+            exit 1
+          fi
+          echo "Publicando $package $version"
+          echo "package=$package" >> "$GITHUB_OUTPUT"
+      - name: Construir wheel y sdist
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build --outdir dist packages/${{ steps.meta.outputs.package }}
+          python -m twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  testpypi:
+    name: Publicar en TestPyPI
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/${{ needs.build.outputs.package }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  pypi:
+    name: Publicar en PyPI
+    if: github.event_name == 'push' || inputs.target == 'pypi'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/${{ needs.build.outputs.package }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

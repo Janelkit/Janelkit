@@ -1,6 +1,11 @@
 # JanelKit
 
-> **Prealfa.** La API es provisional. No está publicado en PyPI.
+[![PyPI](https://img.shields.io/pypi/v/janelkit)](https://pypi.org/project/janelkit/)
+[![Python](https://img.shields.io/pypi/pyversions/janelkit)](https://pypi.org/project/janelkit/)
+[![CI](https://github.com/janelkit/janelkit/actions/workflows/ci.yml/badge.svg)](https://github.com/janelkit/janelkit/actions/workflows/ci.yml)
+[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue)](LICENSE)
+
+> **Alfa (0.1).** Lo público está documentado y protegido por pruebas ([api.md](docs/api.md)); en la serie 0.x una versión menor puede romperlo, siempre con notas de migración ([cambios.md](docs/cambios.md)).
 
 Componentes de archivo único (`.janel`) para aplicaciones de escritorio: **Python** para la lógica, una plantilla declarativa reactiva y **Qt Quick** (PySide6) para el renderizado. Sin JavaScript ni QML escrito a mano.
 
@@ -46,6 +51,14 @@ def remove(todo_id):
 </style>
 ```
 
+```bash
+pip install janelkit
+janel new mi-app && cd mi-app
+python main.py
+```
+
+<p align="center"><img src="docs/img/tutorial.png" alt="La aplicación del tutorial: una lista de la compra" width="360"></p>
+
 ## Qué incluye
 
 - **Reactividad:** `state` (con listas y diccionarios reactivos), `@computed`, `effect`, interpolación `{expr}`, `on:evento` (también en línea: `on:click={n += 1}`), `bind:value`/`bind:checked`. Solo se actualiza lo que depende de lo que cambió.
@@ -71,7 +84,7 @@ Un solo repositorio con el núcleo y los paquetes del ecosistema, que se publica
 
 Las extensiones solo usan la API pública del núcleo (`tests/test_boundaries.py` lo comprueba), y el núcleo no las importa. Qué va en cada sitio: [docs/alcance.md](docs/alcance.md).
 
-## Probarlo (desde el repositorio)
+## Desde el repositorio
 
 ```bash
 python -m venv .venv
@@ -140,3 +153,7 @@ Las expresiones de la plantilla se evalúan en **Python**; cuando cambia un `sta
 python -m pytest                 # pruebas (Qt en modo offscreen)
 python tools/check_wheel.py      # construye wheel/sdist, instala en un venv limpio y prueba janel new + python main.py
 ```
+
+## Licencia
+
+[MIT](LICENSE). JanelKit usa [PySide6](https://pypi.org/project/PySide6/) (Qt for Python), que se distribuye bajo LGPL-3.0: si empaquetas una aplicación con Qt incluido, revisa sus [condiciones](https://doc.qt.io/qtforpython-6/licenses.html).

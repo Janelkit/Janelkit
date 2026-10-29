@@ -30,7 +30,7 @@ from .tasks import Task, background, spawn, task
 from .timers import Timer, interval, timeout
 from .windows import open_window
 
-__version__ = "0.0.1.dev0"
+__version__ = "0.1.0"
 
 # API pública: lo que se importa desde `janelkit` es estable dentro de una
 # versión menor (ver docs/api.md). Cualquier otro módulo es interno.

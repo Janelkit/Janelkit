@@ -1,22 +1,49 @@
-# Resaltado de `.janel` para VS Code
+# JanelKit (.janel) para VS Code
 
-Extensión mínima (solo gramática) para los componentes de JanelKit:
+Resaltado de sintaxis para los componentes `.janel` de [JanelKit](https://github.com/janelkit/janelkit), el framework de aplicaciones de escritorio con Python y Qt Quick.
 
-- Python en `<script lang="python">` y dentro de `{expresiones}` y bloques `{#if}`, `{#each}`, `{#key}`.
-- CSS en `<style>`.
-- Directivas `on:`, `bind:` y `class:` destacadas.
+Un archivo `.janel` mezcla tres lenguajes, y la extensión colorea cada uno como tal:
 
-## Instalarla localmente
+- **Python** en `<script lang="python">`, dentro de las `{expresiones}` y en los bloques `{#if}`, `{#each}`, `{#key}` y `{#hidden}`.
+- **CSS** en `<style>`.
+- **La plantilla**: etiquetas, atributos y directivas `on:`, `bind:`, `class:` y `transition:`, que se destacan.
 
-Copia esta carpeta en la carpeta de extensiones de VS Code y reinicia el editor:
+Además añade:
 
-| Sistema | Carpeta |
-|---|---|
-| Windows | `%USERPROFILE%\.vscode\extensions\janelkit-janel` |
-| macOS / Linux | `~/.vscode/extensions/janelkit-janel` |
+- Comentarios con `<!-- -->` (Ctrl+/).
+- Cierre automático de llaves, corchetes, paréntesis y comillas.
+- Plegado de `<script>`, `<style>` y de los bloques `{#…}` … `{/…}`.
 
-O empaquétala con `npx @vscode/vsce package` e instala el `.vsix` resultante con
-`code --install-extension janelkit-janel-0.0.1.vsix`.
+## Instalación
 
-No hay autocompletado ni diagnósticos en el editor todavía: para ver errores usa
-`janel build` o `janel dev`, que los muestran con archivo, línea y columna.
+Busca **JanelKit** en la vista de extensiones de VS Code o ejecuta:
+
+```bash
+code --install-extension janelkit.janelkit-janel
+```
+
+También puedes instalarla desde el repositorio:
+
+```bash
+cd packages/janelkit-vscode
+npx @vscode/vsce package
+code --install-extension janelkit-janel-0.1.0.vsix
+```
+
+## Errores y diagnósticos
+
+La extensión solo colorea: todavía no tiene autocompletado ni marca errores. Para ver los errores usa `janel dev` o `janel build`. Los muestran con archivo, línea, columna y sugerencias, y la terminal integrada de VS Code permite hacer clic en la ubicación para ir a ella.
+
+## Requisitos
+
+VS Code 1.80 o posterior. Para ejecutar las aplicaciones, `pip install janelkit`.
+
+## Cambios
+
+### 0.1.0
+
+- Primera versión publicada: gramática de `.janel` (Python, plantilla y CSS), comentarios, cierre automático y plegado.
+
+## Licencia
+
+[MIT](https://github.com/janelkit/janelkit/blob/main/LICENSE).

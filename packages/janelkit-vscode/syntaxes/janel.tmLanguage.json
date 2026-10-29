@@ -51,8 +51,8 @@
       "patterns": [{ "include": "source.css" }]
     },
     "block": {
-      "comment": "{#if x}, {:else if y}, {:else}, {/if}, {#each xs as x, i (key)}, {#key k}",
-      "begin": "(\\{)([#:/])(if|each|key|else(?:\\s+if)?)\\b",
+      "comment": "{#if x}, {:else if y}, {:else}, {/if}, {#each xs as x, i (key)}, {#key k}, {#hidden c}",
+      "begin": "(\\{)([#:/])(if|each|key|hidden|else(?:\\s+if)?)\\b",
       "beginCaptures": {
         "1": { "name": "punctuation.section.embedded.begin.janel" },
         "2": { "name": "keyword.control.janel" },
@@ -94,7 +94,7 @@
     "attribute": {
       "patterns": [
         {
-          "match": "\\b(on|bind|class)(:)([\\w-]+)",
+          "match": "\\b(on|bind|class|transition|in|out)(:)([\\w-]+)",
           "captures": {
             "1": { "name": "keyword.other.directive.janel" },
             "2": { "name": "punctuation.separator.key-value.janel" },

@@ -182,13 +182,13 @@ Explorador (`apps/examples/files`) sobre una carpeta de 5000 archivos:
 
 - Los objetos propios modificados en el sitio no se detectan (las listas, diccionarios y conjuntos sí): llama a `estado.notify()`.
 - Sin empaquetado de aplicaciones (`.exe`, `.app`).
-- Licencia sin decidir y nada publicado todavía. El nombre, JanelKit, ya está decidido y aplicado (decisión 23).
+- Nombre (JanelKit, decisión 23) y licencia (MIT) decididos; falta publicar en PyPI (`.github/workflows/release.yml`).
 
 ## Siguientes pasos
 
 Todos los pendientes P0, P1 y P2 de [lanzamiento.md](lanzamiento.md) están hechos salvo dos, que dependen de decisiones o de infraestructura del autor:
 
 1. **CI en Linux y macOS (punto 11):** la configuración está lista en `.github/workflows/ci.yml`; falta un repositorio remoto en GitHub para ejecutarla.
-2. **Nombre, licencia y publicación (punto 17):** verificar `janelkit`/`janel` en PyPI, elegir licencia y publicar primero en TestPyPI.
+2. **Publicación (punto 17):** nombre y licencia (MIT) decididos; falta publicar primero en TestPyPI y después en PyPI con `.github/workflows/release.yml`.
 
 Después: Incremento 9 (validación con usuarios externos, a partir del [tutorial](tutorial.md)).

@@ -47,3 +47,9 @@ VS Code 1.80 o posterior. Para ejecutar las aplicaciones, `pip install janelkit`
 ## Licencia
 
 [MIT](https://github.com/janelkit/janelkit/blob/main/LICENSE).
+
+
+## Local
+cd packages/janelkit-vscode
+npx @vscode/vsce package          # crea janelkit-janel-0.1.0.vsix (necesita Node.js)
+code --install-extension janelkit-janel-0.1.0.vsix

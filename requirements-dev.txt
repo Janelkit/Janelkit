@@ -16,6 +16,7 @@ build==1.6.1             # tools/check_wheel.py: construir wheel y sdist
 # Ejemplos y mediciones
 psutil==7.2.2            # memoria y CPU en apps/challenges/*/bench.py y tools
 websockets==17.3         # apps/challenges/chat (servidor de prueba)
+numpy==2.5.4             # Frames con arrays (packages/janelkit/tests/test_video.py) y apps/examples/video
 
 # Empaquetado (docs/empaquetado.md); opcional, solo para generar ejecutables
 # pyinstaller==6.22.3

@@ -504,6 +504,49 @@ def mover(tarjeta, origen, destino):
 
 Ejemplos: `apps/challenges/kanban` (todo con `step`) y `apps/challenges/hoja` (con `add`, porque lo escrito vive en un diccionario normal por rendimiento).
 
+## Vídeo: `<Video>` y `Frames`
+
+Para mostrar vídeo a tiempo real (una cámara, un vídeo procesado, una simulación) los fotogramas no pasan por la reactividad: van por un `Frames`, que se puede alimentar desde cualquier hilo, y `<Video>` muestra siempre el más reciente. El plan completo, con cámaras y el paquete `janelkit-vision`, está en [vision.md](vision.md).
+
+```python
+import threading
+from janelkit import Frames, background, on_mount, spawn, state
+
+frames = Frames(color="bgr")       # "bgr" para OpenCV; por defecto "rgb"
+caras = state([])
+
+def capturar():                    # en un hilo propio: aquí no se toca el estado
+    while True:
+        ok, img = camara.read()
+        frames.push(img)
+
+async def detectar():
+    async for img in frames:       # el más reciente cada vez que el modelo queda libre
+        caras.value = await background(modelo, img)
+
+on_mount(lambda: (threading.Thread(target=capturar, daemon=True).start(), spawn(detectar())))
+
+def pct(valor, eje):               # de píxeles de la imagen a % de la capa (eje 0: x, 1: y)
+    tamaño = frames.size or (1, 1)
+    return f"{100 * valor / tamaño[eje]}%"
+```
+
+```html
+<Video source={frames} flex={1} label="Cámara">
+  {#each caras as c}
+    <flex class="cara" style={{"left": pct(c[0], 0), "top": pct(c[1], 1), "width": pct(c[2], 0), "height": pct(c[3], 1)}} />
+  {/each}
+</Video>
+<Text>{frames.fps:.0f} fps</Text>
+```
+
+- `frames.push(img)` acepta un array de numpy o cualquier objeto con el protocolo de búfer, de bytes y forma alto × ancho (gris), alto × ancho × 3 (`color="rgb"` o `"bgr"`) o × 4 (`"rgba"`, `"bgra"`); también un `QImage`. Copia la imagen (el búfer se puede reutilizar) y la convierte en el hilo que llama, no en el de la interfaz.
+- Si llegan fotogramas más deprisa de lo que la interfaz los entrega, se saltan: nunca se encolan. `<Video>` y `async for` reciben siempre el último.
+- `async for img in frames` da el objeto que se pasó a `push`. Con `background()`, el modelo corre en otro hilo y la vista previa no espera por él. `await frames.next()` espera al próximo.
+- `frames.size` (`(ancho, alto)` o `None`) y `frames.fps` son reactivos. `frames.latest()` es el último fotograma; `frames.clear()` deja la vista en blanco.
+- Los hijos de `<Video>` van en una caja con `position: relative` del tamaño exacto de la imagen que se ve, así que los porcentajes son de la imagen, también con `fit="contain"` (bandas) o `"cover"` (recortada). Para un espejo (cámara frontal), voltea la imagen antes de `push` (`cv2.flip(img, 1)`): así las coordenadas siguen coincidiendo.
+- Abrir cámaras no es del núcleo: con OpenCV (`cv2.VideoCapture`) o QtMultimedia, en un hilo propio. Lo hará `janelkit-vision` ([vision.md](vision.md#janelkit-vision-planeado-sin-implementar)).
+
 ## Listas grandes: `<List>`
 
 `<Scroll>` crea todas sus filas. Para cientos o miles de elementos, `<List>` solo crea las que se ven (más un margen):
@@ -864,6 +907,7 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 | `Tabs` | `TabBar` | `options`, `value` | `on:change(valor)` | `bind:value` |
 | `ProgressBar` | `ProgressBar` | `value`, `max` (1), `indeterminate` | — | — |
 | `Image` | `Image` | `src`, `fit` (`contain`, `cover`, `fill`, `none`), `alt` | — | — |
+| `Video` | `VideoOutput` | `source` (un `Frames`), `fit` (`contain`, `cover`, `fill`) | — | — |
 | `Shortcut` | `Shortcut` | `keys` | `on:activate` | — |
 | `Spacer` | `Item` | — | — | — |
 
@@ -872,6 +916,7 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 - **Opciones** (`Select`, `RadioGroup`, `Tabs`): `options` es una lista de textos (`["rojo", "verde"]`) o de diccionarios `{"label": "Mediano", "value": 2}`; `value` es el valor elegido. La elección del usuario se ve al momento; si Python cambia `value`, manda Python.
 - `Tabs` es solo la barra: el contenido de cada pestaña se elige con `{#if pestaña == "general"}`.
 - `Image`: `src` puede ser una ruta relativa a la carpeta del `.janel`, una ruta absoluta o una URL (`https:`, `qrc:`, `data:`). Sin `width`/`height`, toma el tamaño de la imagen.
+- `Video` muestra los fotogramas de un `Frames` ([Vídeo](#vídeo-video-y-frames)). Sus hijos van en una capa sobre la imagen.
 - `Shortcut` no ocupa espacio: escucha el teclado de su ventana mientras existe (`<Shortcut keys="Ctrl+S" on:activate={guardar} />`; teclas como en Qt: `Ctrl+Shift+N`, `F5`, `Esc`). Dentro de un `{#if}`, solo está activo con la rama.
 - `TextArea` emite `on:input` solo con los cambios del usuario, no con los que llegan de Python.
 - **Teclado y foco en los campos** (`TextField`, `TextArea`, `Select`): `on:keydown`, `on:keyup`, `on:focus` y `on:blur` funcionan como en `<flex>` ([eventos](flex.md)): suben a los contenedores, `event.stop()` corta la subida y `event.prevent()` hace que la tecla no llegue al campo (no se escribe). Por ejemplo, Escape para cancelar una edición y guardar al salir del campo:

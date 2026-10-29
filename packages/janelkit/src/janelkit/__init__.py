@@ -41,6 +41,7 @@ __all__ = [
     "Event",
     "History",
     "FocusEvent",
+    "Frames",
     "KeyEvent",
     "Prop",
     "PageStack",
@@ -85,6 +86,7 @@ __all__ = [
 
 if TYPE_CHECKING:
     from .qt_backend.application import run
+    from .video import Frames
 else:
 
     def run(entry: str | os.PathLike[str], argv: list[str] | None = None) -> int:
@@ -94,3 +96,12 @@ else:
         return _run(entry, argv)
 
     run.__doc__ = "Compila el componente raíz `entry`, abre la ventana y ejecuta el ciclo de eventos de Qt."
+
+
+def __getattr__(name: str):
+    # Importación diferida: Frames carga QtMultimedia, que solo necesitan las apps con vídeo.
+    if name == "Frames":
+        from .video import Frames
+
+        return Frames
+    raise AttributeError(f"module 'janelkit' has no attribute {name!r}")

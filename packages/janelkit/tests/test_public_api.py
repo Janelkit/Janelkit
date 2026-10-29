@@ -12,7 +12,7 @@ API_DOC = (Path(__file__).resolve().parents[3] / "docs" / "api.md").read_text(en
 
 PUBLIC = {
     "janelkit": [
-        "Computed", "DragEvent", "Effect", "Event", "FocusEvent", "History", "KeyEvent", "PageStack", "Persisted", "PointerEvent", "ResizeEvent", "WheelEvent", "Prop", "PropError", "Ref", "Sections", "State", "Task", "Timer", "__version__", "background",
+        "Computed", "DragEvent", "Effect", "Event", "FocusEvent", "Frames", "History", "KeyEvent", "PageStack", "Persisted", "PointerEvent", "ResizeEvent", "WheelEvent", "Prop", "PropError", "Ref", "Sections", "State", "Task", "Timer", "__version__", "background",
         "batch", "before_leave", "computed", "effect", "event", "inject", "interval", "locale", "navigation", "on_destroy", "on_mount", "open_window", "pages", "persisted", "prop", "provide", "ref", "run", "sections",
         "spawn", "state", "task", "theme", "timeout", "untracked",
     ],

@@ -38,6 +38,7 @@ Lo público es:
 | `untracked` | `with untracked():` lee estado sin registrar dependencias. |
 | `persisted` | `persisted(clave, valor_inicial)` crea un `Persisted`: un `state` que se recuerda entre sesiones. Lee el valor guardado al crearse y guarda cada cambio (también en el sitio) en `<carpeta de datos>/<clave>.json`, agrupado y al cerrar. La misma clave devuelve el mismo objeto. Solo valores JSON. Ver [lenguaje.md](lenguaje.md#estado-que-se-recuerda-persisted). |
 | `Persisted` | Tipo de `persisted`: lo de `State` más `.key`, `.file` y `.flush()` (escribe ya lo pendiente). |
+| `Frames` | Fotogramas a tiempo real para `<Video source={frames}>`: `Frames(color="rgb")` (`"bgr"`, `"rgba"`, `"bgra"`); `push(img)` desde cualquier hilo (numpy, objeto con búfer o `QImage`; se copia y se saltan los que no da tiempo a mostrar); `async for img in frames` y `await frames.next()` dan el más reciente; `size` y `fps` reactivos; `latest()`, `clear()`. Ver [lenguaje.md](lenguaje.md#vídeo-video-y-frames). |
 | `History` | Deshacer y rehacer: `historial = History(limit=100)`. `with historial.step("mover tarjeta"):` anota como un paso lo que cambie dentro (cada `State` asignado y cada lista, diccionario o conjunto reactivo modificado); `historial.add(nombre, undo=, redo=)` anota algo que ya se hizo y el historial no ve. `undo()` y `redo()` devuelven el nombre del paso (o `None`); `clear()`, `mark_saved()`. Reactivos: `can_undo`, `can_redo`, `undo_label`, `redo_label`, `modified`. Ver [lenguaje.md](lenguaje.md#deshacer-y-rehacer-history). |
 
 ### Componentes

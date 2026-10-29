@@ -1,0 +1,83 @@
+<script>
+# Vídeo a tiempo real sin cámara: un hilo genera fotogramas, un «modelo» lento los
+# procesa en otro (background) y sus resultados se dibujan como cajas sobre la imagen.
+import threading
+import time
+
+from janelkit import Frames, background, on_destroy, on_mount, spawn, state
+
+from escena import Escena, detectar
+
+escena = Escena(1280, 720)
+frames = Frames()
+retardo = state(80)        # lo que tarda el modelo, en ms
+objetos = state([])
+elegido = state("")
+fps_modelo = state(0.0)
+parar = threading.Event()
+
+
+def generar():
+    inicio = time.perf_counter()
+    siguiente = inicio
+    while not parar.is_set():
+        frames.push(escena.fotograma(time.perf_counter() - inicio))
+        siguiente += 1 / 30
+        parar.wait(max(0.0, siguiente - time.perf_counter()))
+
+
+async def procesar():
+    n, desde = 0, time.perf_counter()
+    async for img in frames:
+        objetos.value = await background(detectar, img, retardo.value)
+        n += 1
+        if time.perf_counter() - desde >= 1:
+            fps_modelo.value = n / (time.perf_counter() - desde)
+            n, desde = 0, time.perf_counter()
+
+
+@on_mount
+def empezar():
+    threading.Thread(target=generar, daemon=True).start()
+    spawn(procesar())
+
+
+on_destroy(parar.set)
+
+
+def pct(valor, eje):
+    tamaño = frames.size or (1, 1)
+    return f"{100 * valor / tamaño[eje]}%"
+
+
+def elegir(nombre):
+    elegido.value = "" if elegido.value == nombre else nombre
+</script>
+
+<Window title="Vídeo" width={960} height={640}>
+  <flex class="raiz">
+    <Video source={frames} flex={1} label="Vídeo">
+      {#each objetos as o (o[4])}
+        <flex class="caja" class:elegida={o[4] == elegido} label={o[4]} on:click={elegir(o[4])}
+              style={{"left": pct(o[0], 0), "top": pct(o[1], 1), "width": pct(o[2], 0), "height": pct(o[3], 1)}}>
+          <Text class="etiqueta">{o[4]}</Text>
+        </flex>
+      {/each}
+    </Video>
+    <flex class="panel">
+      <Text>Vista: {frames.fps:.0f} fps · Modelo: {fps_modelo:.1f} fps · {len(objetos)} objetos</Text>
+      <Text>Retardo del modelo: {retardo} ms</Text>
+      <Slider bind:value={retardo} min={0} max={500} step={10} label="Retardo del modelo" flex={1} />
+      <Text>{f"Elegido: {elegido}" if elegido else "Haz clic en un cuadrado"}</Text>
+    </flex>
+  </flex>
+</Window>
+
+<style>
+.raiz { flex-direction: column; flex: 1; background: #111 }
+.caja { position: absolute; border: 2px solid #ffd43b; border-radius: 4px; cursor: pointer }
+.caja:hover { background: rgba(255, 212, 59, 0.15) }
+.elegida { border: 4px solid #ff6b6b }
+.etiqueta { background: #ffd43b; color: #111; padding: 0 4px; font-size: 12px }
+.panel { flex-direction: row; align-items: center; gap: 16px; padding: 8px 12px; background: var(--surface) }
+</style>

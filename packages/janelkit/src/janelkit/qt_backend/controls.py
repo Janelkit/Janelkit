@@ -249,6 +249,11 @@ CONTROLS: dict[str, ControlSpec] = {
         # Las rutas relativas se resuelven desde la carpeta del .janel (la del QML generado).
         fixed={"jkBase": 'Qt.resolvedUrl(".")'},
     ),
+    "Video": ControlSpec(
+        "JkVideo",
+        props={"source": PropSpec("source"), "fit": PropSpec("fit", "string")},
+        container=True,  # los hijos van en una capa sobre la imagen
+    ),
     "ProgressBar": ControlSpec(
         "JkProgressBar",
         props={

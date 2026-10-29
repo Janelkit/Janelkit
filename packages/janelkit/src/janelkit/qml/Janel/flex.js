@@ -694,10 +694,11 @@ function placeOutside(c, box, lay, padL, padT) {
     const l = edge(c.jkLeft, cb.w), r = edge(c.jkRight, cb.w)
     const t = edge(c.jkTop, cb.h), b = edge(c.jkBottom, cb.h)
     if (h.isFlex) measure(c)
-    let w = h.wp > 0 ? cb.w * h.wp / 100 : h.pw
+    // width: 100% llega como fillWidth (el compilador lo usa para los layouts de Qt): fuera del flujo es el 100 %.
+    let w = h.wp > 0 ? cb.w * h.wp / 100 : h.fillW ? cb.w : h.pw
     if (w < 0) w = !isNaN(l) && !isNaN(r) ? cb.w - l - r - h.ml - h.mr : c.implicitWidth
     place(c, clamp(w, h.minW, h.maxW), null)
-    let ht = h.hp > 0 ? cb.h * h.hp / 100 : h.ph
+    let ht = h.hp > 0 ? cb.h * h.hp / 100 : h.fillH ? cb.h : h.ph
     if (ht < 0) ht = !isNaN(t) && !isNaN(b) ? cb.h - t - b - h.mt - h.mb : c.implicitHeight
     place(c, null, clamp(ht, h.minH, h.maxH))
     const o = cb.item.mapToItem(lay, cb.x, cb.y)

@@ -48,6 +48,7 @@ spikes/                     validaciones técnicas previas
 | **Runtime de componentes** | Instancias, regiones dinámicas, reconciliación por clave, ciclo de vida, referencias a elementos | ✅ |
 | **Asincronía** | Manejadores `async def`, `@task`, `background`, `spawn`, temporizadores; todo ligado al componente | ✅ |
 | **Disposición y controles** | Motor `<flex>` y vía rápida con layouts de Qt; texto, botón, campos, casilla, select, switch, slider, radio, imagen, progreso, pestañas, lista virtualizada | ✅ |
+| **Vídeo** | `<Video>` y `Frames`: fotogramas de cualquier hilo (numpy o búfer) a 30–60 fps, sin pasar por la reactividad; superposiciones en coordenadas de la imagen ([vision.md](vision.md)) | ✅ |
 | **Ventanas y navegación básica** | Varias ventanas, pila de vistas, secciones que se conservan, `navigation()`, `before_leave` | ✅ |
 | **Estilos y temas** | Subconjunto de CSS con pseudo-clases y selectores, tokens `var(--x)`, temas intercambiables | ✅ |
 | **Idioma de la interfaz** | `janelkit.locale`: idioma, dirección de escritura, `QLocale` | ✅ |
@@ -67,6 +68,7 @@ spikes/                     validaciones técnicas previas
 | `janelkit-lsp` | Diagnósticos en vivo, autocompletado de elementos, props y nombres del script, ir a definición | `janelkit.compiler` (`check_source`; falta exponer la estructura: props, eventos, nombres) | Idea |
 | `janelkit-kit` | Tablas con ordenación y filtrado, gráficas, selectores de fecha, árboles, paneles acoplables | Slots, `ref`, QML propio, tokens de tema | Idea |
 | `janelkit-router` | Navegar a direcciones con parámetros, historial con «adelante», rutas anidadas, restaurar la ruta | Navegación básica, contexto, ciclo de vida | Idea ([abajo](#navegación-básica-y-enrutado)) |
+| `janelkit-vision` | Cámaras (listar, elegir resolución, cambiar en caliente), tubería de proceso con «el último fotograma gana» y métricas, coordenadas de imagen, capturar y grabar, fuentes falsas para pruebas ([vision.md](vision.md#janelkit-vision-planeado-sin-implementar)) | `<Video>`, `Frames`, `background`, `janelkit.ext` | Planeado, sin implementar |
 | `janel package` | Ejecutables e instaladores con PyInstaller, Nuitka o Briefcase | Recursos del paquete en ubicación estable, `janel build`, plugins de la CLI | Receta manual en [empaquetado.md](empaquetado.md) |
 | Devtools | Árbol de componentes, estado de cada instancia, bindings que se recalculan | `janelkit.inspect`; faltan ganchos de depuración en la reactividad | Idea |
 

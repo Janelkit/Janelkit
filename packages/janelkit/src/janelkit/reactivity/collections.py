@@ -52,6 +52,9 @@ def to_plain(value: Any, track: bool = False) -> Any:
         if track:
             value._jk_src._track()
         return set(set.__iter__(value))
+    to_qml = getattr(type(value), "__jk_qml__", None)  # p. ej. Frames: QML recibe su parte Qt
+    if to_qml is not None:
+        return to_qml(value)
     return value
 
 

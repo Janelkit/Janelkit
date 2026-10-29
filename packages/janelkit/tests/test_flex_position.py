@@ -159,3 +159,21 @@ def test_catalog_dialog_menu_and_badge():
         QTest.keyClick(app.window, Qt.Key.Key_Escape)
         app.wait(0.05)
         assert not app.get("dialog_open")
+
+
+def test_absolute_child_at_100_percent_takes_the_whole_containing_block():
+    """`width: 100%` llega como fillWidth (para los layouts de Qt); fuera del flujo valía 0."""
+    d = Path(tempfile.mkdtemp())
+    (d / "App.janel").write_text("""<Column>
+  <flex class="capa"><flex class="alto" label="alto" /><flex class="ancho" label="ancho" /></flex>
+</Column>
+<style>
+.capa { position: relative; width: 400px; height: 225px }
+.alto { position: absolute; left: 50%; top: 0; width: 25%; height: 100% }
+.ancho { position: absolute; left: 0; top: 0; width: 100%; height: 50% }
+</style>""", encoding="utf-8")
+    with mount(d / "App.janel") as app:
+        app.wait(0.05)
+        alto, ancho = app.find(label="alto").item, app.find(label="ancho").item
+        assert (alto.x(), alto.width(), alto.height()) == (200, 100, 225)
+        assert (ancho.width(), ancho.height()) == (400, 112.5)

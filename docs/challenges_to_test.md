@@ -20,7 +20,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 | 1 | Panel | ✅ | [apps/challenges/panel](../apps/challenges/panel/) · [hallazgos](../apps/challenges/panel/HALLAZGOS.md). Se añadieron al núcleo los temporizadores (`interval`, `timeout`), el formato en el texto (`{x:.1f}`) y `MountedApp.windows()`, y se corrigieron cuatro fallos (listas modificadas en el sitio que no llegaban a QML, scroll perdido al reordenar, `flex` en QML propio, `janel build` con ventanas); después llegó la rejilla con salto de línea (`flex-wrap`); quedan gráficas (janelkit-kit) y tabla. |
 | 3 | Kanban | ✅ | [apps/challenges/kanban](../apps/challenges/kanban/) · [hallazgos](../apps/challenges/kanban/HALLAZGOS.md). Se añadió al núcleo arrastrar y soltar (`draggable`, `on:dragstart/dragover/drop/dragend`, `:dragging`, `:drag-over`, desplazamiento al acercarse al borde) y en `inspect` doble clic, clic derecho, teclas y arrastre; se corrigió que los eventos de puntero no llegaran a las filas de `<List>`. Arrastrar con 20 × 200 cuesta lo mismo que un fotograma vacío. Una fila que pasa a otra lista de la misma declaración `{#each}` se traslada con su estado y su foco (la tarjeta conserva su estado al cambiar de columna). Quedan `<Menu>` y la memoria por elemento (~0,65 MB por tarjeta, antes ~0,77; ver la fila de la tabla de abajo). |
 | 2 | Hoja de cálculo | ✅ | [apps/challenges/hoja](../apps/challenges/hoja/) · [hallazgos](../apps/challenges/hoja/HALLAZGOS.md). Se añadió a la reactividad el corte por igualdad de `computed` y a `<List>` que las filas fuera de pantalla no recalculen lo que muestran; `inspect.key` acepta los nombres de `event.key`. Abrir 10 000 × 26 tarda 0,37 s y editar una celda de la que dependen 1 000 fórmulas, 1–5 ms. Quedan la tabla con virtualización en 2D (las columnas se virtualizan a mano), el coste de crear filas en Qt (AvPág, 192 ms), la memoria de las filas recorridas y el deshacer del núcleo. |
-| 5 | Editor | ⏳ | |
+| 5 | Visión en tiempo real | ⏳ | Sustituye al editor de código. Plan en [vision.md](vision.md). Ya están en el núcleo `<Video>` y `Frames` (1080p a 60 fps: `push` 1,1 ms en el hilo que lo llama, 1,5 ms hasta la entrega y un 6 % del hilo de la interfaz (`apps/examples/video/bench.py --ventana`); ejemplo sin cámara en `apps/examples/video`). El reto necesita `janelkit-vision`, que de momento solo está planeado. |
 | 6 | Gestor de proyectos | ✅ | [apps/challenges/gestor](../apps/challenges/gestor/) · [hallazgos](../apps/challenges/gestor/HALLAZGOS.md). Antes de empezar se añadió al núcleo la navegación básica (`sections`, `navigation()`, `await push`/`back`, Alt+← y botón del ratón, `before_leave`, `{#hidden}`, transiciones de página). Durante el reto: las cajas ocultas ya no se recolocan (cambiar de pestaña con 200 tarjetas, de 239 a 5 ms), `pop`/`reset` se pueden esperar, y en `inspect` se corrigió aceptar un `confirm` y que dos apps con módulos del mismo nombre se mezclaran. Todas las medidas de «Hecho cuando» se cumplen y la memoria no crece. Quedan adelante y rutas (`janelkit-router`), otra ventana con su propia pila y parte del plan (pestaña Lista, ajustes de etiquetas y columnas). |
 
 ## Resumen
@@ -31,7 +31,7 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 | 2 | Hoja de cálculo | Rejilla grande editable, teclado, dependencias entre celdas | Tabla/rejilla virtualizada en 2D, eventos de teclado, portapapeles, deshacer |
 | 3 | Tablero Kanban | Arrastrar y soltar, reordenar con animación, menús contextuales | Drag and drop, eventos de puntero, menús |
 | 4 | Cliente de chat | Conexión permanente, lista que crece por los dos extremos, texto enriquecido | Control del desplazamiento, notificaciones del sistema, texto enriquecido |
-| 5 | Editor de código ligero | Documentos grandes, pestañas, árbol de archivos, cierre con cambios sin guardar | Árbol, editor con resaltado, interceptar el cierre de ventana, preferencias persistentes |
+| 5 | Visión en tiempo real | Cámaras, vídeo a 30–60 fps, un modelo en otro hilo, superposiciones sobre la imagen | Mostrar fotogramas sin pasar por la reactividad, cámaras, tubería de proceso, coordenadas de imagen |
 | 6 | Gestor de proyectos | Varias pantallas con navegación, estado compartido entre vistas y ventanas, formularios de gestión | Enrutador (`janelkit-router`), conservar vistas ocultas, eventos en los campos |
 
 ---
@@ -139,31 +139,33 @@ El objetivo no es que salgan perfectas, sino responder con evidencia: *¿es Jane
 
 ---
 
-## 5. Editor de código ligero
+## 5. Visión en tiempo real
 
-**La aplicación.** Un editor para proyectos pequeños: árbol de carpetas a la izquierda (expandible, con iconos y menú contextual: nuevo, renombrar, borrar), pestañas de documentos abiertos con marca de "sin guardar", editor con números de línea y resaltado de sintaxis para Python y `.janel`, buscar y reemplazar en el archivo y en todo el proyecto (en segundo plano, con resultados que van apareciendo), paleta de comandos (Ctrl+Shift+P), preferencias (tema, tamaño de letra, idioma) que se guardan entre sesiones, y aviso al cerrar la ventana si hay cambios sin guardar. Se distribuye como ejecutable con la receta de [empaquetado.md](empaquetado.md).
+Sustituye al editor de código ligero (retirado: lo que iba a probar —pestañas que se conservan, cierre cancelable, preferencias— ya lo cubrió el reto 6). El plan completo está en [vision.md](vision.md).
+
+**La aplicación.** Una aplicación de visión con la cámara del equipo: elegir cámara y resolución (y cambiarla sin reiniciar), vista previa en directo y un detector (rostros con OpenCV y YuNet, ligero) cuyos resultados se dibujan como cajas sobre la imagen. Las cajas son clicables (seguir a una persona). Un deslizador de umbral y una región de interés dibujada con el ratón cambian el proceso en vivo. Un panel muestra fps de captura y de proceso, latencia y conteos. Pausa, captura de imagen y grabación de un clip. Dos cámaras a la vez, y desconectar una no tumba la aplicación.
 
 **Qué pone a prueba**
 
 | Aspecto | Por qué es difícil | Estado esperado |
 |---|---|---|
-| Archivos grandes | Abrir y editar un archivo de 50 000 líneas | `<TextArea>` crece con el contenido: sin virtualizar, sin medir |
-| Resaltado y números de línea | Colorear mientras se escribe | **No existe**; solo con QML propio (`QSyntaxHighlighter` desde Python) |
-| Árbol de archivos | Nodos que se expanden bajo demanda | Se puede imitar con `{#each}` y sangría; **no hay** `<Tree>` virtualizado |
-| Pestañas de documentos | Cada pestaña conserva su texto, cursor y scroll | ✅ `<Tabs>` es solo la barra, pero con `{#hidden}` el contenido se oculta sin destruirse (reto 6); sin medir con documentos grandes |
-| Cerrar con cambios | Preguntar antes de cerrar y poder cancelar | ✅ cerrar con la X consulta `before_leave` (reto 6) |
-| Preferencias persistentes | Guardar y cargar ajustes en la carpeta del usuario | ✅ `persisted(clave, valor)` (antes, a mano con JSON) |
-| Búsqueda en el proyecto | Miles de archivos en segundo plano, resultados incrementales | `background` devuelve un único resultado; faltan resultados por partes |
-| Empaquetado | Un ejecutable con Python, Qt y los recursos | Receta verificada; sin probar `--onefile` ni instalador |
+| Mostrar vídeo | 30–60 fotogramas por segundo sin pasar por la reactividad | ✅ `<Video>` y `Frames` en el núcleo ([vision.md](vision.md#en-el-núcleo)) |
+| Proceso en otro hilo | Un modelo lento no debe frenar la vista ni la interfaz; siempre el último fotograma | `async for` sobre `Frames` y `background()` |
+| Superposiciones | Cajas en coordenadas de la imagen, escalada o con bandas | Hijos de `<Video>` en una capa del tamaño de la imagen |
+| Cámaras | Listar, elegir resolución, cambiar en caliente, desconexión | **No existe**: `janelkit-vision` (planeado) |
+| Región de interés con el ratón | Pasar de la vista a píxeles de la imagen | Eventos de puntero; faltan ayudas de coordenadas (`janelkit-vision`) |
+| Grabar | Escribir vídeo sin frenar la captura | **No existe**: `janelkit-vision` |
+| Pruebas | CI sin cámara | Fuente falsa que lee un vídeo (`janelkit-vision`) |
 
 **Hecho cuando**
 
-- Abrir un archivo de 50 000 líneas tarda menos de 1 s y escribir no tiene retraso apreciable.
-- Cambiar de pestaña conserva el texto, el cursor y el scroll de cada documento.
-- Cerrar la ventana con cambios pregunta y permite cancelar; las preferencias sobreviven a reiniciar la aplicación.
-- El ejecutable funciona en un equipo sin Python.
+- La vista previa va a 30 fps con el hilo de la interfaz por debajo del 15 %.
+- Un modelo a 10 fps no baja la vista previa ni retrasa la interfaz (clics y teclas en menos de 50 ms).
+- La latencia que añade JanelKit respecto a la cámara es como mucho de un fotograma.
+- Cambiar de cámara o desconectarla no cuelga la aplicación.
+- Todo se prueba con `janelkit.inspect` y una cámara falsa.
 
-**Hipótesis de carencias:** `<CodeEditor>` o un editor de texto con resaltado y números de línea, `<Tree>`, un `<TextArea>` que aguante 50 000 líneas, y generadores asíncronos para ir mostrando resultados. Conservar pestañas ocultas (`{#hidden}`), el cierre cancelable (`before_leave`) y las preferencias (`persisted`) ya existen.
+**Hipótesis de carencias:** las piezas de `janelkit-vision` (cámaras, tubería, coordenadas, grabación, fuente falsa). En el núcleo, que `<Video>` aguante 1080p a 60 fps sin copias de más.
 
 ## 6. Gestor de proyectos
 
@@ -227,21 +229,23 @@ Lo que aparece en más de un reto es lo que más urge decidir antes de publicar:
 
 | Carencia | Retos | Núcleo o proyecto aparte |
 |---|---|---|
-| Eventos de teclado y de puntero (`on:keydown`, doble clic, clic derecho, arrastrar) | 2, 3, 5, 6 | ✅ Núcleo en `<flex>` (fase 3 y reto 3: arrastrar y soltar); ✅ también en los campos (`TextField`, `TextArea`, `Select`) |
-| Control del desplazamiento (leer y fijar el scroll, anclaje) | 1, 2, 4, 5 | Núcleo · ✅ en `<List>` (retos 4 y 1: también al reordenar); falta en `<Scroll>` |
-| Eventos de ventana (cerrar cancelable, activa) | 4, 5 | Núcleo · ✅ activa (reto 4); ✅ cerrar con la X consulta `before_leave` (reto 6) |
-| Menús (contextual y barra) | 3, 5 | Núcleo (controles básicos) · el reto 3 hizo el contextual con `<flex>` (sin submenús ni recolocación junto al borde) |
+| Eventos de teclado y de puntero (`on:keydown`, doble clic, clic derecho, arrastrar) | 2, 3, 6 | ✅ Núcleo en `<flex>` (fase 3 y reto 3: arrastrar y soltar); ✅ también en los campos (`TextField`, `TextArea`, `Select`) |
+| Control del desplazamiento (leer y fijar el scroll, anclaje) | 1, 2, 4 | Núcleo · ✅ en `<List>` (retos 4 y 1: también al reordenar); falta en `<Scroll>` |
+| Eventos de ventana (cerrar cancelable, activa) | 4, 6 | Núcleo · ✅ activa (reto 4); ✅ cerrar con la X consulta `before_leave` (reto 6) |
+| Menús (contextual y barra) | 3 | Núcleo (controles básicos) · el reto 3 hizo el contextual con `<flex>` (sin submenús ni recolocación junto al borde) |
 | Trasladar una fila entre dos `{#each}` sin recrearla (conserva su estado) | 3, 6 | ✅ Núcleo (reto 3): misma declaración, misma clave, mismo cambio ([lenguaje.md](lenguaje.md#trasladar-filas-entre-listas)) |
 | Memoria por elemento (~30–35 KB por `<Text>` o `<flex>`) | 3 | Núcleo · ✅ primera pasada: el texto heredado crea un enlace por propiedad usada (antes once siempre), `<Text>` es un `Text` y no un `Label`, y las cajas no interactivas no pagan hover, pulsado, foco ni bordes. Una tarjeta con estilos, −22 %; el tablero 20 × 200, de 282 a 249 MB; mismo tiempo de creación. Queda lo estructural: cada `{#if}`/`{#each}` es un `Repeater` (~8,5 KB vacío y ~8 KB más por fila) |
-| Conservar contenido oculto (`keep-alive`) | 5, 6 | ✅ Núcleo (reto 6): `{#hidden}`, secciones y la página de debajo; lo oculto no se recoloca ni recalcula lo que muestra hasta volver a verse (reto 6) |
+| Conservar contenido oculto (`keep-alive`) | 6 | ✅ Núcleo (reto 6): `{#hidden}`, secciones y la página de debajo; lo oculto no se recoloca ni recalcula lo que muestra hasta volver a verse (reto 6) |
 | Enrutado con parámetros, historial y rutas anidadas | 6 | `janelkit-router`. El núcleo da la navegación básica (reto 6): `pages`, `sections`, `navigation()`, resultados, atrás y `before_leave` |
-| Portapapeles, notificaciones, bandeja, ajustes | 2, 4, 5 | Núcleo, como módulos pequeños (`janelkit_desktop.clipboard`, …) · ✅ `notify` (reto 4) · ✅ `clipboard` (texto) |
+| Portapapeles, notificaciones, bandeja, ajustes | 2, 4 | Núcleo, como módulos pequeños (`janelkit_desktop.clipboard`, …) · ✅ `notify` (reto 4) · ✅ `clipboard` (texto) |
 | Temporizadores ligados al componente | 1, 4 | ✅ Núcleo: `interval`, `timeout` (reto 1) |
-| Texto seleccionable | 4, 5 | ✅ Núcleo: `<Text selectable>` o `user-select: text` |
-| Tabla 2D y árbol virtualizados | 1, 2, 5 | Núcleo o `janelkit-kit` · el reto 1 hizo su tabla con `<List>` y anchos repetidos en cabecera y filas; el reto 2, con `<List>` y las columnas virtualizadas a mano (de columna en columna) |
+| Texto seleccionable | 4 | ✅ Núcleo: `<Text selectable>` o `user-select: text` |
+| Tabla 2D y árbol virtualizados | 1, 2 | Núcleo o `janelkit-kit` · el reto 1 hizo su tabla con `<List>` y anchos repetidos en cabecera y filas; el reto 2, con `<List>` y las columnas virtualizadas a mano (de columna en columna) |
 | Reactividad con miles de nodos (estado leído por todas las filas, fórmulas) | 2 | ✅ Núcleo (reto 2): corte por igualdad en `computed` y filas de `<List>` sin vista en espera |
 | Coste de crear la vista de una fila | 2, 3 | Núcleo · ~0,4 ms por `<Text>`: una página de 40 filas × 11 celdas, 192 ms; probar `reuseItems` y aligerar `JkText` |
-| Canvas, gráficas, editor de código | 1, 5 | `janelkit-kit` (sobre la vía de escape QML) · el reto 1 hizo su gráfica en QML propio sin problemas |
+| Canvas, gráficas, editor de código | 1 | `janelkit-kit` (sobre la vía de escape QML) · el reto 1 hizo su gráfica en QML propio sin problemas |
+| Mostrar vídeo a tiempo real (`<Video>`, `Frames`) | 5 | ✅ Núcleo ([vision.md](vision.md#en-el-núcleo)): 1080p a 60 fps con un 6 % del hilo de la interfaz |
+| Cámaras, tubería de proceso, coordenadas de imagen, grabación | 5 | `janelkit-vision`, planeado ([vision.md](vision.md#janelkit-vision-planeado-sin-implementar)) |
 | Rejilla con salto de línea (tarjetas que se recolocan según el ancho) | 1 | ✅ Núcleo: `flex-wrap` en `<flex>`, `Column` y `Row` ([flex.md](flex.md), fase 1) |
 | Texto enriquecido | 4 | ✅ Núcleo: `<Text format="markdown">` (reto 4) · falta que no interprete HTML, para mostrar texto de otras personas sin escaparlo a mano; decidirlo antes de publicar |
 | Deshacer/rehacer y stores | 2, 3 | ✅ deshacer/rehacer: `History` en el núcleo, con pasos que se anotan solos (`step`, lo usa el reto 3) y pasos propios (`add`, lo usa el reto 2); stores con acciones: pendientes |
@@ -272,5 +276,5 @@ Cada reto termina con un `HALLAZGOS.md` en su carpeta:
 
 1. **Chat (4)** y **Panel (1):** ponen a prueba la asincronía y la frecuencia de actualización, lo más nuevo y menos medido.
 2. **Kanban (3):** destapa las carencias de interacción (arrastrar, menús, gestos), que afectan al diseño del lenguaje.
-3. **Hoja de cálculo (2)** ✅ y **Editor (5):** los más exigentes; conviene abordarlos cuando las decisiones de los anteriores estén tomadas.
+3. **Hoja de cálculo (2)** ✅. **Visión en tiempo real (5)**, cuando exista `janelkit-vision` (`<Video>` y `Frames` ya están en el núcleo; ver [vision.md](vision.md)).
 4. **Gestor de proyectos (6):** ✅ hecho con la navegación básica del núcleo; servirá para validar `janelkit-router` cuando exista.

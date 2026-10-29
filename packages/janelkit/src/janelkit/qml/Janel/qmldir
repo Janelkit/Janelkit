@@ -15,6 +15,7 @@ JkSelect 1.0 JkSelect.qml
 JkRadioGroup 1.0 JkRadioGroup.qml
 JkTabs 1.0 JkTabs.qml
 JkImage 1.0 JkImage.qml
+JkVideo 1.0 JkVideo.qml
 JkProgressBar 1.0 JkProgressBar.qml
 JkShortcut 1.0 JkShortcut.qml
 JkList 1.0 JkList.qml

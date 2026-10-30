@@ -73,7 +73,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment:
-      name: testpypi
+      name: ${{ needs.build.outputs.package == 'janelkit' && 'testpypi' || format('testpypi-{0}', needs.build.outputs.package) }}
       url: https://test.pypi.org/project/${{ needs.build.outputs.package }}/
     permissions:
       id-token: write
@@ -92,7 +92,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment:
-      name: pypi
+      name: ${{ needs.build.outputs.package == 'janelkit' && 'pypi' || format('pypi-{0}', needs.build.outputs.package) }}
       url: https://pypi.org/project/${{ needs.build.outputs.package }}/
     permissions:
       id-token: write

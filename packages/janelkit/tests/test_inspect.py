@@ -134,3 +134,30 @@ def test_apps_with_modules_of_the_same_name_do_not_mix(tmp_path):
     for name in ("una", "otra", "una"):
         with mount(tmp_path / name / "App.janel") as app:
             assert app.texts() == [name]
+
+
+SHOT_APP = """<Window title="captura" width={200} height={120} background="#00ff00">
+  <Column class="page">
+    <Text id="t">hola</Text>
+    <flex id="box" class="box"></flex>
+  </Column>
+</Window>
+<style>
+.page { padding: 10px; }
+.box { width: 40px; height: 30px; background: #ff0000; }
+</style>
+"""
+
+
+def test_screenshot_of_window_and_element(tmp_path):
+    entry = tmp_path / "App.janel"
+    entry.write_text(SHOT_APP, encoding="utf-8")
+    with mount(entry) as app:
+        image = app.screenshot(tmp_path / "ventana.png")
+        assert (tmp_path / "ventana.png").stat().st_size > 0
+        ratio = image.devicePixelRatio()
+        assert (image.width(), image.height()) == (round(200 * ratio), round(120 * ratio))
+        assert image.pixelColor(image.width() - 2, image.height() - 2).name() == "#00ff00"
+        box = app.find(id="box").screenshot()
+        assert (box.width(), box.height()) == (round(40 * ratio), round(30 * ratio))
+        assert box.pixelColor(box.width() // 2, box.height() // 2).name() == "#ff0000"

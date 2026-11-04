@@ -8,6 +8,10 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 
 Correcciones a partir del primer proyecto real con JanelKit (una app de visión con varias cámaras). No rompe código de 0.1.0.
 
+### Nuevo
+
+- **Capturas en `janelkit.inspect`:** `app.screenshot(ruta)` y `elemento.screenshot(ruta)` devuelven un `QImage` (y lo guardan si se da una ruta): sirven para revisar pantallas en pruebas o en guiones. Con `headless=True` en Windows la captura puede salir sin fuentes ni vídeo; para mirarla, `mount(..., headless=False)`. Pruebas: `test_inspect.py::test_screenshot_of_window_and_element`.
+
 ### Corregido
 
 - **Ámbito tras un `await`:** un `timeout` o `interval` creado después de un `await` (en un manejador async, `on_mount`, un tic async o una `@task`) no se disparaba nunca: quedaba sin ámbito y Python lo recolectaba. Los `effect`, `computed` y `spawn` creados ahí tampoco se liberaban al desmontar. El ámbito activo ahora es una variable de contexto (`contextvars`) que `asyncio` conserva en cada tarea. Pruebas: `packages/janelkit/tests/test_scope_await_qt.py`.

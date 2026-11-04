@@ -241,6 +241,17 @@ class Element:
         _send_keys(self._app.window, keys)
         return self._settle()
 
+    def screenshot(self, path: str | os.PathLike | None = None) -> Any:
+        """Captura solo este elemento: la de la ventana, recortada a su rectángulo. Ver `MountedApp.screenshot`."""
+        from PySide6.QtCore import QRectF
+
+        self._app.process()
+        image = _grab(self.item.window())
+        ratio = image.devicePixelRatio()
+        box = self.item.mapRectToScene(QRectF(0, 0, self.item.width(), self.item.height()))
+        image = image.copy(*(round(v * ratio) for v in (box.x(), box.y(), box.width(), box.height())))
+        return _save(image, path)
+
     def double_click(self) -> "Element":
         """Doble clic real en el centro del elemento (on:dblclick)."""
         from PySide6.QtCore import Qt
@@ -391,6 +402,20 @@ def _invoke(item: Any, method: str, *args: Any) -> None:
         raise InspectError(f"no se pudo invocar {method} en {item.metaObject().className()}")
 
 
+def _grab(window: Any) -> Any:
+    if window is None:
+        raise InspectError("el elemento no está en ninguna ventana: no se puede capturar")
+    return window.grabWindow()
+
+
+def _save(image: Any, path: str | os.PathLike | None) -> Any:
+    if image.isNull():
+        raise InspectError("la captura salió vacía (¿la ventana tiene tamaño?)")
+    if path is not None and not image.save(os.fspath(path)):
+        raise InspectError(f"no se pudo guardar la captura en {os.fspath(path)}")
+    return image
+
+
 class MountedApp:
     """Una vista montada para inspeccionarla."""
 
@@ -492,6 +517,16 @@ class MountedApp:
                 if item.inherits("QQuickListView"):
                     _invoke(item, "forceLayout")
         self.application.process_events()
+
+    def screenshot(self, path: str | os.PathLike | None = None) -> Any:
+        """Captura la ventana como `QImage` y, si se da `path`, la guarda (el formato sale de la extensión).
+
+        Con `headless=True` (plataforma `offscreen`) la imagen tiene la disposición y los colores,
+        pero en Windows puede salir sin fuentes ni vídeo: para revisar a ojo usa `headless=False`.
+        """
+        self.process()
+        root = self.window
+        return _save(_grab(root if root.isWindowType() else root.window()), path)
 
     def wait(self, seconds: float = 0.0, until: Callable[[], bool] | None = None, timeout: float = 5.0) -> None:
         """Deja correr el bucle (tareas asíncronas, temporizadores) `seconds`, o hasta que `until()` sea cierto."""

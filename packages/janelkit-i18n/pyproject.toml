@@ -12,7 +12,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "d4ndres", email = "d4ndres@gmail.com" }]
 keywords = ["janelkit", "i18n", "translations", "localization", "plurals", "rtl", "qt", "pyside6"]
-dependencies = ["janelkit>=0.1,<0.2"]  # rango del núcleo probado (docs/api.md, política de versiones)
+dependencies = ["janelkit>=0.1,<0.3"]  # rango del núcleo probado (docs/api.md, política de versiones)
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

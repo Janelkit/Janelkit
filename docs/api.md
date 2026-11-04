@@ -61,6 +61,7 @@ Se llaman mientras se ejecuta el `<script>` de un componente; fuera de él lanza
 | `on_destroy` | `on_destroy(fn)` ejecuta `fn` al desmontar el componente. |
 | `before_leave` | `before_leave(fn)` (o como decorador): `fn()` se consulta antes de descartar la página que lo contiene o de cerrar su ventana con la X; si devuelve `False`, no se sale. Puede ser `async`. |
 | `provide` | `provide(clave, valor)` pone un valor a disposición de los descendientes. |
+| `is_visible` | `is_visible()` devuelve un `computed` que dice si el componente se ve: `False` en una página de debajo de la pila, en una sección que no es la actual, dentro de un `{#hidden}` que lo oculta o en una fila de `<List>` fuera de la vista. La raíz de una ventana siempre se ve (minimizarla no cuenta). Se llama en el script, como `on_mount`. |
 | `inject` | `inject(clave, defecto)` lee el valor del antecesor más cercano que lo provee. Sin defecto y sin proveedor: `LookupError`. |
 | `ref` | `ref()` crea una referencia para `ref={nombre}` en la plantilla. |
 | `Ref` | Tipo de `ref`: `.value` (reactivo; el objeto Qt o `None`), `.exists`, `.focused` (¿tiene el foco él o algo de dentro?; no reactivo), `.focus()`, `.blur()`, `.select_all()`; en una `<List>`, `.scroll_to_start()`, `.scroll_to_end()`, `.scroll_to(índice)`. |
@@ -90,9 +91,9 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 
 | Nombre | Descripción |
 |---|---|
-| `interval` | `interval(ms, fn)` llama a `fn` cada `ms` milisegundos. También como decorador: `@interval(250)`. Devuelve un `Timer`. |
-| `timeout` | `timeout(ms, fn)` llama a `fn` una vez, pasados `ms` milisegundos. También como decorador. Devuelve un `Timer`. |
-| `Timer` | Tipo de `interval` y `timeout`: `.active` (reactivo), `.ms` (se aplica al volver a arrancar), `.start()`, `.restart()` (vuelve a contar desde cero), `.stop()`; llamarlo (`muestrear()`) ejecuta la función ahora. Un error en la función se registra en el logger `janelkit` y el temporizador sigue. |
+| `interval` | `interval(ms, fn, when=None)` llama a `fn` cada `ms` milisegundos. También como decorador: `@interval(250)`. Con `when=` (un `state`, un `computed`, `is_visible()` o una función que los lea), solo cuenta mientras se cumple; al volver a cumplirse, cuenta desde cero. Devuelve un `Timer`. |
+| `timeout` | `timeout(ms, fn, when=None)` llama a `fn` una vez, pasados `ms` milisegundos. También como decorador. `when=` como en `interval`. Devuelve un `Timer`. |
+| `Timer` | Tipo de `interval` y `timeout`: `.active` (reactivo), `.ms` (se aplica al volver a arrancar), `.start()`, `.restart()` (vuelve a contar desde cero), `.stop()` (gana a `when=`: parado a mano, no vuelve a arrancar solo); llamarlo (`muestrear()`) ejecuta la función ahora. Un error en la función se registra en el logger `janelkit` y el temporizador sigue. |
 
 ### Ventanas
 

@@ -73,18 +73,19 @@ Además, `state(valor)` **copia** las listas, diccionarios y conjuntos: modifica
 
 ## Vistas ocultas que siguen trabajando
 
-Con `sections` (o `{#hidden}`), una vista oculta se conserva: la plantilla deja de actualizarse, pero lo del script sigue funcionando, también sus `interval`. Para no hacer trabajo que nadie ve, comprueba al empezar el tic si la vista está activa:
+Con `sections` (o `{#hidden}`, o en una página de debajo), una vista oculta se conserva: la plantilla deja de actualizarse, pero lo del script sigue funcionando, también sus `interval`. Para no hacer trabajo que nadie ve, condiciona el temporizador a que el componente se vea:
 
 ```python
-views = inject("views")                       # la Sections de la app: provide("views", sections(live=Live, …))
-active = computed(lambda: views.current == "live")
+from janelkit import interval, is_visible
 
-@interval(15)
+visible = is_visible()
+
+@interval(15, when=visible)          # no cuenta mientras el componente no se ve
 async def tick():
-    if not active.value:
-        return
     ...
 ```
+
+`when=` acepta cualquier condición reactiva: `when=hub.ready`, `when=lambda: visible.value and hub.ready.value`. Un `effect` puede usar `visible` igual, por ejemplo para soltar la cámara mientras no se ve. (Antes de 0.2 había que comprobarlo a mano al empezar cada tic.)
 
 ## Servicios compartidos con `state`
 

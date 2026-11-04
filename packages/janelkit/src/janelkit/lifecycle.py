@@ -25,7 +25,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator, Protocol, TypeVar
 
-from .reactivity import State
+from .reactivity import Computed, State
 
 F = TypeVar("F", bound=Callable[..., Any])
 _MISSING: Any = object()
@@ -37,6 +37,7 @@ class _Setup(Protocol):
     def add_leave(self, fn: Callable[[], Any]) -> None: ...
     def provide(self, key: Any, value: Any) -> None: ...
     def inject(self, key: Any) -> Any: ...
+    gate: Any  # compuerta de visibilidad del sitio donde se montó (reactivity.Gate) o None
 
 
 _stack: list[_Setup] = []
@@ -206,6 +207,25 @@ class Ref:
     def __repr__(self) -> str:
         item = self._item.peek()
         return f"ref({type(item).__name__ if item is not None else 'sin elemento'})"
+
+
+def is_visible() -> Computed[bool]:
+    """Reactivo: si el componente se ve ahora mismo.
+
+    Es False mientras está en una página de debajo de la pila, en una sección que no es la
+    actual, dentro de un `{#hidden}` que lo oculta o en una fila de `<List>` fuera de la vista.
+    Lo que muestra la plantilla ya se aplaza solo; esto sirve para parar a propósito lo que
+    hace el script (un muestreo, una cámara):
+
+        visible = is_visible()
+
+        @interval(33, when=visible)
+        def refrescar(): ...
+    """
+    gate = _current("is_visible").gate
+    if gate is None:  # la raíz de una ventana
+        return Computed(lambda: True)
+    return Computed(lambda: gate.visible)
 
 
 def ref() -> Ref:

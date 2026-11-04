@@ -20,6 +20,14 @@
   muestreo lento no se acumula.
 - Un error en la función se registra en el logger `janelkit`; el temporizador sigue.
 - `.active` es reactivo; `.stop()`, `.start()` y `.restart()` lo controlan.
+- `when=` lo condiciona a algo reactivo (un `state`, un `computed`, `is_visible()` o una
+  función que los lea): mientras sea falso, el temporizador no cuenta; al volver a ser
+  verdadero, cuenta de nuevo desde cero.
+
+    visible = is_visible()
+
+    @interval(33, when=visible)        # solo mientras el componente se ve
+    def refrescar(): ...
 """
 from __future__ import annotations
 
@@ -28,11 +36,12 @@ import logging
 from contextlib import nullcontext
 from typing import Any, Callable, overload
 
-from .reactivity import State, batch, untracked
+from .reactivity import Effect, State, batch, untracked
 from .reactivity.effects import current_scope
 
 log = logging.getLogger("janelkit")
 Fn = Callable[[], Any]
+When = Any  # State, Computed, Prop o una función sin argumentos que lea estado reactivo
 
 # Temporizadores activos sin ámbito: sin esta referencia, Python los recolectaría
 # (con su QTimer) antes de dispararse.
@@ -42,19 +51,26 @@ _unscoped: set["Timer"] = set()
 class Timer:
     """Un temporizador de `interval` o `timeout`."""
 
-    def __init__(self, ms: float, fn: Fn, repeat: bool):
+    def __init__(self, ms: float, fn: Fn, repeat: bool, when: When = None):
         self.ms = max(0, int(ms))
         self.fn = fn
         self.repeat = repeat
         self._active = State(False)
         self._qt: Any = None
         self._running: Any = None  # tarea de la última ejecución, si fn es async
+        self._wanted = False  # lo pidió start() y no lo ha parado stop()
+        self._allowed = True  # lo que dice `when` (True si no hay)
+        self._when: Effect | None = None
         self._scope = current_scope()
         if self._scope is not None:
             self._scope.add(self)
         self.__name__ = getattr(fn, "__name__", "temporizador")
         if self._scope is None:
             log.debug("temporizador %s creado fuera de un componente: no se detendrá solo", self.__name__)
+        if when is not None:
+            read = _reader(when)
+            # El efecto queda en el mismo ámbito que el temporizador (se libera con él).
+            self._when = Effect(lambda: self._set_allowed(bool(read())))
         self.start()
 
     @property
@@ -63,8 +79,32 @@ class Timer:
         return self._active.value
 
     def start(self) -> None:
-        """Arranca (o vuelve a arrancar desde cero) el temporizador."""
+        """Arranca (o vuelve a arrancar desde cero) el temporizador. Con `when=`, empieza a
+        contar cuando la condición se cumpla."""
         if self._scope is not None and self._scope.disposed:
+            return
+        self._wanted = True
+        self._run_qt()
+
+    restart = start
+
+    def stop(self) -> None:
+        self._wanted = False
+        self._stop_qt()
+
+    def _set_allowed(self, allowed: bool) -> None:
+        with untracked():
+            if allowed == self._allowed:
+                return
+            self._allowed = allowed
+            if not allowed:
+                self._stop_qt()
+            elif self._wanted:
+                self._run_qt()
+
+    def _run_qt(self) -> None:
+        if not self._allowed:
+            self._stop_qt()
             return
         if self._qt is None:
             from PySide6.QtCore import QCoreApplication, Qt, QTimer
@@ -82,9 +122,7 @@ class Timer:
         if self._scope is None:
             _unscoped.add(self)
 
-    restart = start
-
-    def stop(self) -> None:
+    def _stop_qt(self) -> None:
         if self._qt is not None:
             self._qt.stop()
         self._active.value = False
@@ -92,12 +130,15 @@ class Timer:
 
     def dispose(self) -> None:
         self.stop()
+        if self._when is not None:
+            self._when.dispose()
         if self._qt is not None:
             self._qt.deleteLater()
             self._qt = None
 
     def _tick(self) -> None:
         if not self.repeat:
+            self._wanted = False
             self._active.value = False
             _unscoped.discard(self)
         if self._running is not None and not self._running.done():
@@ -121,26 +162,41 @@ class Timer:
 
     def __repr__(self) -> str:
         kind = "interval" if self.repeat else "timeout"
-        return f"{kind}({self.ms} ms, {self.__name__}, {'activo' if self._active.peek() else 'parado'})"
+        if self._active.peek():
+            status = "activo"
+        elif self._wanted and not self._allowed:
+            status = "en espera de when"
+        else:
+            status = "parado"
+        return f"{kind}({self.ms} ms, {self.__name__}, {status})"
+
+
+def _reader(when: When) -> Callable[[], Any]:
+    if hasattr(when, "value"):  # State, Computed, Prop
+        return lambda: when.value
+    if callable(when):
+        return when
+    raise TypeError(f"when= espera un state, un computed o una función, no {type(when).__name__}")
 
 
 @overload
-def interval(ms: float) -> Callable[[Fn], Timer]: ...
+def interval(ms: float, *, when: When = None) -> Callable[[Fn], Timer]: ...
 @overload
-def interval(ms: float, fn: Fn) -> Timer: ...
-def interval(ms: float, fn: Fn | None = None) -> Any:
-    """Llama a `fn` cada `ms` milisegundos. También como decorador: `@interval(250)`."""
+def interval(ms: float, fn: Fn, *, when: When = None) -> Timer: ...
+def interval(ms: float, fn: Fn | None = None, *, when: When = None) -> Any:
+    """Llama a `fn` cada `ms` milisegundos (con `when=`, solo mientras se cumpla). También como
+    decorador: `@interval(250)`."""
     if fn is None:
-        return lambda f: Timer(ms, f, repeat=True)
-    return Timer(ms, fn, repeat=True)
+        return lambda f: Timer(ms, f, repeat=True, when=when)
+    return Timer(ms, fn, repeat=True, when=when)
 
 
 @overload
-def timeout(ms: float) -> Callable[[Fn], Timer]: ...
+def timeout(ms: float, *, when: When = None) -> Callable[[Fn], Timer]: ...
 @overload
-def timeout(ms: float, fn: Fn) -> Timer: ...
-def timeout(ms: float, fn: Fn | None = None) -> Any:
+def timeout(ms: float, fn: Fn, *, when: When = None) -> Timer: ...
+def timeout(ms: float, fn: Fn | None = None, *, when: When = None) -> Any:
     """Llama a `fn` una vez, pasados `ms` milisegundos. También como decorador."""
     if fn is None:
-        return lambda f: Timer(ms, f, repeat=False)
-    return Timer(ms, fn, repeat=False)
+        return lambda f: Timer(ms, f, repeat=False, when=when)
+    return Timer(ms, fn, repeat=False, when=when)

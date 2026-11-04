@@ -1150,6 +1150,7 @@ class ComponentInstance:
         self.children: list[ComponentInstance] = []
         self.parent = parent
         self.scope = Scope()
+        self.gate = gate  # la usa is_visible()
         if parent is not None:
             parent.children.append(self)
             self.scope.add(_Release(lambda: self.parent.children.remove(self) if self in self.parent.children else None))

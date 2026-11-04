@@ -22,7 +22,7 @@ from .reactivity import (
 )
 from .locale import locale
 from .events import DragEvent, FocusEvent, KeyEvent, PointerEvent, ResizeEvent, WheelEvent
-from .lifecycle import Ref, before_leave, inject, on_destroy, on_mount, provide, ref
+from .lifecycle import Ref, before_leave, inject, is_visible, on_destroy, on_mount, provide, ref
 from .pages import PageStack, Sections, navigation, pages, sections
 from .storage import Persisted, persisted
 from .themes import theme
@@ -65,6 +65,7 @@ __all__ = [
     "effect",
     "event",
     "inject",
+    "is_visible",
     "interval",
     "locale",
     "navigation",

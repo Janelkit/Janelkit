@@ -118,6 +118,7 @@ ocultar.restart()                     # vuelve a contar los 3 s (p. ej. con cada
 - Se detienen solos al desmontar el componente que los creó, también si se crearon tras un `await`. Fuera de un componente (en un servicio), viven hasta `.stop()`; JanelKit los mantiene vivos aunque no guardes la referencia.
 - Cada ejecución agrupa sus cambios de estado en un solo `batch`: actualizar 50 métricas en un tic recalcula la interfaz una vez.
 - `.active` es reactivo (`{#if muestrear.active}`); `.stop()`, `.start()` y `.restart()` lo controlan. Para cambiar el periodo: `muestrear.ms = 500` y `muestrear.restart()`.
+- `when=` lo condiciona a algo reactivo: `@interval(33, when=visible)` con `visible = is_visible()` solo muestrea mientras el componente se ve (no en otra sección, en una página de debajo ni en un `{#hidden}`). Mientras la condición es falsa no cuenta; al volver a cumplirse, cuenta desde cero. `.stop()` le gana: parado a mano, no vuelve a arrancar solo.
 - Un error en la función se registra con su nombre en el logger `janelkit` y el temporizador sigue.
 
 ## Expresiones en la plantilla
@@ -298,7 +299,7 @@ Oculta el contenido mientras la condición es verdadera, **sin destruirlo**: al 
 - El contenido se crea la primera vez que la condición es falsa. Si empieza oculto, no cuesta nada hasta que se muestra.
 - Después, ocultar y mostrar solo cambia su visibilidad: `on_mount` no se repite y `on_destroy` no llega hasta que se desmonta lo que contiene el bloque.
 - Mientras está oculto no ocupa sitio y **lo que muestra espera**: sus textos, estilos, props, `{#if}` y `{#each}` no se recalculan aunque cambien los datos, ni se recoloca. Al volver a verse se ponen al día una sola vez, con los valores de ese momento.
-- Lo que escribes en el script **sigue funcionando**: `effect`, `interval`, `timeout`, tareas y `on_destroy`. Un `effect` que guarda o sincroniza datos no se detiene por ocultar su componente.
+- Lo que escribes en el script **sigue funcionando**: `effect`, `interval`, `timeout`, tareas y `on_destroy`. Un `effect` que guarda o sincroniza datos no se detiene por ocultar su componente. Para parar algo a propósito, `is_visible()` dice si el componente se ve, y `interval(ms, when=…)` lo usa directamente (ver [Temporizadores](#temporizadores)).
 - Úsalo para lo que se alterna a menudo y es caro de crear o tiene estado que importa. Para lo demás, `{#if}` libera memoria.
 - `{:else}` es lo contrario: se muestra mientras la condición es verdadera, y también se crea la primera vez que se muestra y después solo se oculta.
 - Las transiciones (`transition:fade`, `in:`, `out:`) en la raíz del bloque se reproducen al mostrar y al ocultar; el contenido desaparece al terminar la salida.

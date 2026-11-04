@@ -234,6 +234,9 @@ def apply(root: Path, today: str | None = None) -> dict[str, tuple[int, int, int
 
 # -- línea de órdenes ------------------------------------------------------------
 def main(argv: list[str]) -> int:
+    for stream in (sys.stdout, sys.stderr):  # la consola de Windows no es UTF-8 por defecto
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     root = Path(git(Path.cwd(), "rev-parse", "--show-toplevel").strip())
     command, *args = argv or ["plan"]
     try:

@@ -6,6 +6,8 @@
 #   tiene que coincidir con la del pyproject.toml.
 # - A mano (Actions → Publicar → Run workflow): elegir paquete y destino; sirve para
 #   probar primero en TestPyPI.
+# - Desde version.yml: tras subir la versión y crear la etiqueta, la lanza sobre esa
+#   etiqueta (una etiqueta creada por el workflow no dispara el `push` de arriba).
 #
 # En pypi.org y test.pypi.org, cada proyecto tiene que tener este workflow como
 # «trusted publisher»: propietario janelkit, repositorio janelkit, workflow release.yml
@@ -85,6 +87,7 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
 
   pypi:
     name: Publicar en PyPI
@@ -102,3 +105,5 @@ jobs:
           name: dist
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true  # volver a lanzar una versión ya publicada no falla

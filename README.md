@@ -153,7 +153,11 @@ Las expresiones de la plantilla se evalúan en **Python**; cuando cambia un `sta
 ```bash
 python -m pytest                 # pruebas (Qt en modo offscreen)
 python tools/check_wheel.py      # construye wheel/sdist, instala en un venv limpio y prueba janel new + python main.py
+git config core.hooksPath .githooks   # una vez: comprueba el prefijo de cada commit
+python tools/versioning.py plan       # qué versión tocaría publicar y por qué
 ```
+
+Cada commit empieza por `mayor:`, `menor:`, `interno:` o `docs:`: de ahí sale la versión de cada paquete, que calcula y publica la CI ([política de versiones](docs/api.md#cómo-se-calcula-la-versión)).
 
 ## Licencia
 

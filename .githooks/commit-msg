@@ -1,0 +1,10 @@
+#!/bin/sh
+# Rechaza commits sin prefijo de versión (mayor:, menor:, interno:, docs:).
+# Activar una vez por clon:  git config core.hooksPath .githooks
+root=$(git rev-parse --show-toplevel)
+for py in "$root/.venv/Scripts/python.exe" "$root/.venv/bin/python" python3 python; do
+  if command -v "$py" >/dev/null 2>&1 || [ -x "$py" ]; then
+    exec "$py" "$root/tools/versioning.py" check-message "$1"
+  fi
+done
+echo "commit-msg: no se encontró Python; no se comprobó el prefijo" >&2

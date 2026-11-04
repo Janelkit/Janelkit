@@ -1,0 +1,85 @@
+# Versiones automáticas a partir de los prefijos de los commits (tools/versioning.py).
+#
+# Cuando la CI pasa en main:
+#   1. calcula, para cada paquete, la versión que toca desde su última etiqueta
+#      (mayor: → 0.#.0, menor: → 0.0.#; interno: y docs: no suben nada; la 1.0.0 es a mano);
+#   2. escribe pyproject.toml, __version__ y el registro de cambios;
+#   3. hace el commit «version: …» y las etiquetas <paquete>-vX.Y.Z, y las sube a main;
+#   4. lanza release.yml sobre cada etiqueta, que publica en PyPI.
+#
+# Requisitos del repositorio: Settings → Actions → General → «Read and write permissions»,
+# y que la protección de main (si la hay) permita que este workflow haga push.
+name: Versiones
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: versiones
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Calcular y publicar versiones
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # commit de versión y etiquetas
+      actions: write    # lanzar release.yml
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+      - name: ¿Sigue main en el commit que pasó la CI?
+        id: fresh
+        shell: bash
+        run: |
+          if [ "$(git rev-parse HEAD)" != "${{ github.event.workflow_run.head_sha }}" ]; then
+            echo "main avanzó desde ese commit: lo resolverá la CI del siguiente"
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-python@v5
+        if: steps.fresh.outputs.go == 'true'
+        with:
+          python-version: "3.13"
+      - name: Calcular
+        if: steps.fresh.outputs.go == 'true'
+        run: |
+          python -m pip install --quiet packaging
+          python tools/versioning.py plan
+      - name: Escribir, etiquetar y subir
+        id: apply
+        if: steps.fresh.outputs.go == 'true'
+        shell: bash
+        run: |
+          python tools/versioning.py apply > released.txt
+          if [ ! -s released.txt ]; then
+            echo "nada que publicar"
+            exit 0
+          fi
+          git config user.name "d4ndres"
+          git config user.email "d4ndres@gmail.com"
+          summary=$(paste -sd ',' released.txt | sed 's/,/, /g')
+          git commit -am "version: $summary"
+          tags=$(awk '{print $1 "-v" $2}' released.txt)
+          for tag in $tags; do git tag "$tag"; done
+          git push origin HEAD:main $tags
+          echo "tags=$(echo $tags)" >> "$GITHUB_OUTPUT"
+      - name: Publicar
+        if: steps.apply.outputs.tags != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for tag in ${{ steps.apply.outputs.tags }}; do
+            package="${tag%-v*}"
+            gh workflow run release.yml --ref "$tag" -f package="$package" -f target=pypi
+            echo "publicando $tag"
+          done

@@ -179,6 +179,24 @@ Mientras JanelKit esté en la serie **0.x**:
 - **Formato `.janel`**: `FORMAT_VERSION` sube solo cuando un archivo que compilaba deja de compilar o cambia de significado. Añadir sintaxis nueva no lo cambia. Las herramientas (editores, linters) pueden usarlo para saber qué esperar.
 - Desde la **1.0**, se aplica versionado semántico estricto.
 
+### Cómo se calcula la versión
+
+La versión no se escribe a mano: la calcula `.github/workflows/version.yml` (con `tools/versioning.py`) cuando la CI pasa en `main`, a partir del **prefijo** de cada commit. El prefijo dice qué nota quien usa JanelKit, no cuánto costó el cambio:
+
+| Prefijo | Sube | Cuándo |
+|---|---|---|
+| `mayor:` | 0.**#**.0 | API pública nueva, algo que se rompe o se retira, un cambio de comportamiento. |
+| `menor:` | 0.0.**#** | Corrige o mejora sin añadir ni quitar API: errores, rendimiento, mensajes. |
+| `interno:` | — | Reorganización, pruebas, CI, herramientas: el usuario no lo nota. |
+| `docs:` | — | Solo documentación. |
+| `version:` | — | Reservado al commit que hace el workflow. |
+
+- Cada paquete de `packages/` sube por separado: un commit cuenta para los paquetes cuyos archivos toca. Se miran los commits desde la última etiqueta del paquete (`janelkit-v0.2.0`, `janelkit-desktop-v0.1.1`), y `mayor:` gana a `menor:`.
+- El workflow escribe la versión (`pyproject.toml` y `__version__`) y el registro de cambios. Si ya hay una sección con esa versión escrita a mano (`## 0.2.0 (sin publicar)`), solo le pone la fecha; si no, la crea con los asuntos de los commits. Después hace el commit `version: …`, las etiquetas, y lanza `release.yml`, que publica en PyPI.
+- Si el núcleo va a salir de un rango que declara una extensión (`janelkit>=0.1,<0.2` y el núcleo pasa a 0.2.0), el cálculo se detiene con un error: primero se amplía el rango con un commit `menor:` de la extensión.
+- La **1.0.0** nunca se calcula: se decide y se escribe a mano.
+- La CI rechaza commits sin prefijo válido. En local, el hook lo comprueba al hacer commit: `git config core.hooksPath .githooks` (una vez por clon). `python tools/versioning.py plan` dice qué versión tocaría ahora y por qué.
+
 ### Paquetes del ecosistema
 
 `janelkit-i18n` y `janelkit-desktop` tienen **versión propia** y siguen la misma política para su propia API. Cada uno declara en su `pyproject.toml` las versiones del núcleo con las que funciona (por ejemplo `janelkit>=0.1,<0.2`) y solo usa la API pública del núcleo, así que una versión de parche del núcleo no los rompe. Cuando el núcleo publica una versión menor, se prueban contra ella y se amplía el rango (con una versión de parche de la extensión) o se adaptan (con una versión menor). En el repositorio, la CI prueba cada extensión contra el núcleo de la misma rama, y `tests/test_packages.py` comprueba que el rango declarado incluye esa versión.

@@ -12,7 +12,7 @@ from typing import Callable
 
 from ..compiler.ir import TokenUse, qml_string
 from ..diagnostics import Diagnostic
-from ..qt_backend.controls import CONTROLS
+from ..compiler.elements import CONTROLS
 from .parser import Declaration
 
 THEME_OBJECT = "jktheme"  # propiedad de contexto QML con los tokens del tema activo

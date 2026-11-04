@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Callable, Union
 
 from ..diagnostics import Diagnostic, JanelError, SourceLocation
-from ..qt_backend.controls import (
+from .elements import (
     BASE_ELEMENTS,
     CHOICES,
     CONTROLS,

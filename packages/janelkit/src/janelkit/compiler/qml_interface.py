@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..diagnostics import Diagnostic, JanelError
-from ..qt_backend.controls import ControlSpec, EventSpec, PropSpec, TwoWaySpec
+from .elements import ControlSpec, EventSpec, PropSpec, TwoWaySpec
 
 _TYPES = {
     "string": "string", "url": "string", "int": "number", "real": "number", "double": "number",

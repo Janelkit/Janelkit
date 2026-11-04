@@ -35,18 +35,10 @@ WITHOUT_QT = 1  # L0 y L1 no importan PySide6 ni shiboken6
 
 # Deudas conocidas (2026-11-04, auditoría de planeacion-0.2.0/arquitectura.md).
 # Cada entrada: "módulo -> módulo importado". Ver los hallazgos H1-H4 del plan.
-DEUDAS: set[str] = {
-    # H1: el catálogo de elementos del lenguaje vive en el backend (qt_backend/controls.py no usa Qt).
-    "compiler.layout_choice -> qt_backend.controls",
-    "compiler.lowering -> qt_backend.controls",
-    "compiler.qml_interface -> qt_backend.controls",
-    "styling.compiler -> qt_backend.controls",
-}
+DEUDAS: set[str] = set()  # H1 resuelta: el catálogo vive en compiler/elements.py
 
 # Ciclos conocidos entre áreas («área» = primer nivel del paquete).
 CICLOS: set[frozenset[str]] = {
-    frozenset({"compiler", "qt_backend"}),  # H1
-    frozenset({"qt_backend", "styling"}),   # H1: styling.compiler usa el catálogo
     frozenset({"compiler", "styling"}),     # H2: el CSS es parte del compilador pero vive fuera
     frozenset({"pages", "runtime"}),        # H3: runtime usa PageStack/Sections y pages crea instancias
 }

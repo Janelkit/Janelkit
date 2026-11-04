@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from ..qt_backend.controls import CONTROLS
+from .elements import CONTROLS
 from ..styling.compiler import compile_declarations
 from ..styling.parser import Declaration, parse_stylesheet
 from .ast_nodes import SFC, Element, Expression

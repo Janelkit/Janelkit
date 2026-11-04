@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "janelkit"  # libre en PyPI (verificado el 28-10-2026; ver docs/estado.md, decisión 23)
-version = "0.1.0"
+version = "0.1.1"
 description = "Componentes de archivo único (.janel) para aplicaciones de escritorio con Python y Qt Quick"
 readme = "README.md"
 requires-python = ">=3.10"

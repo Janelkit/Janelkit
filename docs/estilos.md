@@ -142,6 +142,8 @@ Toda la disposición sigue las reglas de [`<flex>`](flex.md), un subconjunto del
 - En la etiqueta de un componente (`<Panel flex={2} />`), `flex` se aplica a su raíz si es una caja; si no, a una caja exterior que la raíz ocupa entera (ver "Estilos en la etiqueta del componente" en [lenguaje.md](lenguaje.md)).
 - En una `Column`, `Text`, `TextField`, `TextArea`, `Column`, `Row` y `Scroll` ocupan todo el ancho por defecto (como bloques); botones y casillas conservan su tamaño. `align-items` en el contenedor (o `align-self` en el hijo) cambia ese comportamiento.
 - En una `Row`, los hijos se centran verticalmente por defecto.
+
+> **A diferencia de CSS**, en `Column` y `Row` el valor por defecto de `align-items` **no** es `stretch`: en una `Row`, los hijos toman su alto natural y se centran; no llenan la fila. Para un diseño «panel lateral + contenido» que llene la ventana, pon `align-items: stretch` en la fila (o `align-self: stretch` en cada hijo, como en el ejemplo de abajo), o usa `<flex>`, que sí sigue los valores de la web.
 - `width`/`height` en px fijan el tamaño preferido; `100%` ocupa el espacio disponible en ese eje; otro porcentaje es del contenedor.
 - En `Column` y `Row` solo encoge lo que tiene `flex` (en `<flex>`, todo, como en CSS, sin bajar del contenido mínimo: un texto que se corta puede estrecharse; un botón, no).
 - La raíz de la ventana ocupa la ventana entera.

@@ -138,6 +138,7 @@ Las expresiones de la plantilla se evalúan en **Python**; cuando cambia un `sta
 - [docs/tutorial.md](docs/tutorial.md) — **empieza aquí**: una aplicación completa paso a paso (código en `apps/examples/compra`).
 - [docs/lenguaje.md](docs/lenguaje.md) — formato `.janel`, expresiones, bloques, componentes y elementos.
 - [docs/estilos.md](docs/estilos.md) — CSS soportado, disposición (flex), tokens y temas.
+- [docs/patrones.md](docs/patrones.md) — patrones para aplicaciones en tiempo real (visión, adquisición de datos): el ciclo con `background`, el estado tras un `await`, qué avisa al modificarse.
 - [docs/desarrollo.md](docs/desarrollo.md) — `janel dev`, `janel build`, errores y editor.
 - [docs/api.md](docs/api.md) — qué es API pública y política de versiones.
 - [docs/cambios.md](docs/cambios.md) — cambios entre versiones y cómo migrar.

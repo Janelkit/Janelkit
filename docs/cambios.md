@@ -12,6 +12,8 @@ Correcciones a partir del primer proyecto real con JanelKit (una app de visión 
 
 - **Capturas en `janelkit.inspect`:** `app.screenshot(ruta)` y `elemento.screenshot(ruta)` devuelven un `QImage` (y lo guardan si se da una ruta): sirven para revisar pantallas en pruebas o en guiones. Con `headless=True` en Windows la captura puede salir sin fuentes ni vídeo; para mirarla, `mount(..., headless=False)`. Pruebas: `test_inspect.py::test_screenshot_of_window_and_element`.
 
+- **Documentación:** [patrones.md](patrones.md), patrones para aplicaciones en tiempo real (el ciclo runner/`Options`/`Snapshot`, el estado a medias tras un `await`, qué tipos avisan al modificarse, vistas ocultas, medir en Windows). [estilos.md](estilos.md#disposición) y el tutorial avisan de que en `Row`/`Column` los hijos no se estiran como en CSS.
+
 ### Corregido
 
 - **Ámbito tras un `await`:** un `timeout` o `interval` creado después de un `await` (en un manejador async, `on_mount`, un tic async o una `@task`) no se disparaba nunca: quedaba sin ámbito y Python lo recolectaba. Los `effect`, `computed` y `spawn` creados ahí tampoco se liberaban al desmontar. El ámbito activo ahora es una variable de contexto (`contextvars`) que `asyncio` conserva en cada tarea. Pruebas: `packages/janelkit/tests/test_scope_await_qt.py`.

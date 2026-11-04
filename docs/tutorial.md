@@ -92,6 +92,8 @@ Cambia `<Text>{len(items)} productos</Text>` por un bloque `{#each}`:
 
 y añade a `<style>`: `.row { gap: 8px; align-items: center; }` y `.muted { color: var(--text-muted); }`.
 
+> En una `Row`, los hijos se centran en vertical y **no** se estiran como en CSS. Si una columna lateral debe ocupar todo el alto, añade `align-items: stretch` a la fila. Ver [estilos.md](estilos.md#disposición).
+
 - `(item["id"])` es la **clave** de cada fila: al borrar o reordenar, cada fila conserva su identidad.
 - `on:change={item["done"] = event}` es un **manejador en línea**: `event` es lo que manda el control (si quedó marcado).
 - `{:else}` se muestra cuando la lista está vacía.

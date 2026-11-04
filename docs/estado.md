@@ -158,6 +158,22 @@ Explorador (`apps/examples/files`) sobre una carpeta de 5000 archivos:
 3. **Procesar eventos de Qt dentro de una corrutina** hacía que asyncio ejecutara una tarea dentro de otra. `Application.process_events()` procesa con el bucle marcado como activo y fuera de cualquier corrutina.
 4. **En pruebas, un clic sobre el texto de una fila** no llegaba a la fila. `Element.click()` sube hasta el contenedor con `on:click`, como un clic real.
 
+### Primer usuario externo (0.1.0 → 0.1.1)
+
+Una app de visión por computador (`assembly_training`: tres cámaras USB a 30 FPS, YOLO en cada ciclo, una ventana en un proyector) y 16 capítulos de laboratorio. Lo que salió, con su prueba:
+
+| # | Hallazgo | Estado | Evidencia |
+|---|---|---|---|
+| 1 | Un `timeout`/`interval` creado tras un `await` no se disparaba; `effect`/`spawn` creados ahí no se liberaban | ✅ 0.1.1: ámbito en `ContextVar` | `test_scope_await_qt.py` |
+| 2 | `@dataclass` en el script fallaba con un error confuso | ✅ 0.1.1: el script es un módulo en `sys.modules` | `test_script_module_qt.py` |
+| 3 | `{hub.status}` mostraba `state('…')` y no se actualizaba | ✅ 0.1.1 | `test_attribute_state_qt.py` |
+| 4 | En `Row` los hijos no se estiran en alto como en CSS | ✅ intencional, documentado ([estilos.md](estilos.md#disposición)) | — |
+| 5 | `<Window>` sin `screen` ni `fullscreen`; lista reactiva de pantallas | ⏳ 0.2.0 | — |
+| 6 | Temporizadores de vistas ocultas: `interval(ms, when=…)` / «¿se ve?» | ⏳ 0.2.0 (patrón actual en [patrones.md](patrones.md#vistas-ocultas-que-siguen-trabajando)) | — |
+| 7 | Capturas en `janelkit.inspect` | ✅ 0.1.1: `screenshot()` | `test_inspect.py::test_screenshot_of_window_and_element` |
+| 8 | Métricas de depuración (tics saltados, observadores, duración) | ⏳ 0.2.0 | — |
+| 9 | Patrones para apps de visión | ✅ [patrones.md](patrones.md) | — |
+
 ### Retos ([challenges_to_test.md](challenges_to_test.md))
 
 - **Chat (reto 4):** hecho, en `apps/challenges/chat`, con pruebas en `apps/challenges/tests/test_challenge_chat.py` y [registro de hallazgos](../apps/challenges/chat/HALLAZGOS.md). Añadió al núcleo el desplazamiento de `<List>` (`follow`, `on:top`/`on:bottom`/`on:scroll`, `ref.scroll_to_*`), las inserciones por bloques sin reiniciar la lista, `<Text format="markdown">` con `on:link`, fondo y borde en `<Text>`, `on:activate`/`on:deactivate` en `<Window>`, `janelkit.notify`, y parámetros de señal declarados en el QML generado. Medido: 20 mensajes/s durante 5 min con menos del 10 % de CPU; la memoria se estabiliza.
@@ -190,4 +206,8 @@ Todos los pendientes P0, P1 y P2 de [lanzamiento.md](lanzamiento.md) están hech
 
 1. **Publicación (punto 17):** nombre y licencia (MIT) decididos; falta publicar primero en TestPyPI y después en PyPI con `.github/workflows/release.yml`.
 
-Después: Incremento 9 (validación con usuarios externos, a partir del [tutorial](tutorial.md)).
+Incremento 9 (validación con usuarios externos) en marcha: el primer proyecto externo dio lugar a 0.1.1 (ver [arriba](#primer-usuario-externo-010--011)). Para 0.2.0 quedan sus funciones nuevas:
+
+1. **`<Window screen={i} fullscreen={bool}>`** y `screens`, lista reactiva de pantallas (`screenAdded`/`screenRemoved`). Mover una ventana a pantalla completa obliga a salir de ella, cambiar de pantalla y volver a entrar.
+2. **`interval(ms, when=estado)`**, que detiene el `QTimer` mientras `when` sea falso, y una forma de saber si el componente actual se ve (la compuerta de su página o sección).
+3. **Métricas:** tics saltados y duración del último tic en `Timer`, observadores de un `state` (`subscriber_count`, hoy sin documentar) y `repr` de `Effect` y `Scope`.

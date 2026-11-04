@@ -80,6 +80,7 @@ class Source:
 
     @property
     def subscriber_count(self) -> int:
+        """Cuántos efectos y computed la leen ahora mismo (para depurar fugas: debe bajar al desmontar)."""
         return len(self._subscribers)
 
 
@@ -166,6 +167,13 @@ class Effect(Observer):
                 return True
         return False
 
+    def __repr__(self) -> str:
+        name = getattr(self._fn, "__qualname__", None) or type(self._fn).__name__
+        if self.disposed:
+            return f"effect {name} (liberado)"
+        held = " (en espera: no se ve)" if self.gate is not None and self in _gate_held(self.gate) else ""
+        return f"effect {name}: lee {len(self._dependencies)} fuente{'s' if len(self._dependencies) != 1 else ''}{held}"
+
     def _run_cleanup(self) -> None:
         cleanup, self._cleanup = self._cleanup, None
         if cleanup is not None:
@@ -203,6 +211,15 @@ class Effect(Observer):
                 return True
             gate = gate.parent
         return False
+
+
+def _gate_held(gate: "Gate | None") -> set["Effect"]:
+    """Efectos en espera en `gate` o en una de fuera."""
+    held: set[Effect] = set()
+    while gate is not None:
+        held.update(gate._held)
+        gate = gate.parent
+    return held
 
 
 class Gate:
@@ -283,6 +300,16 @@ class Scope:
 
     def __len__(self) -> int:
         return len(self._observers)
+
+    def __repr__(self) -> str:
+        if self.disposed:
+            return "Scope (liberado)"
+        kinds: dict[str, int] = {}
+        for observer in self._observers:
+            kind = type(observer).__name__
+            kinds[kind] = kinds.get(kind, 0) + 1
+        detail = ", ".join(f"{n} {k}" for k, n in sorted(kinds.items()))
+        return f"Scope({detail or 'vacío'})"
 
     @contextmanager
     def active(self) -> Iterator["Scope"]:

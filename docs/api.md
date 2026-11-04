@@ -29,11 +29,11 @@ Lo público es:
 | Nombre | Descripción |
 |---|---|
 | `state` | `state(valor)` crea un `State`. Las listas, diccionarios y conjuntos se vuelven reactivos: modificarlos en el sitio notifica. |
-| `State` | Tipo de `state`. `.value`, `.set()`, `.update(fn)`, `.peek()`, `.notify()`. |
+| `State` | Tipo de `state`. `.value`, `.set()`, `.update(fn)`, `.peek()`, `.notify()`. Para depurar: `.subscriber_count`, cuántos efectos y `computed` lo leen ahora (debe bajar al desmontar lo que lo usa; también en `Computed`). |
 | `computed` | Decorador de valores derivados, perezosos y en caché. Si al recalcularse da el mismo valor (números, texto, tuplas… no objetos mutables), lo que depende solo de él no se vuelve a ejecutar. |
 | `Computed` | Tipo de `computed`. `.value`, `.peek()`. |
 | `effect` | `effect(fn)` ejecuta `fn` ahora y cada vez que cambie lo que leyó. Dentro de un componente se libera al desmontarlo. |
-| `Effect` | Tipo de `effect`. `.dispose()`. |
+| `Effect` | Tipo de `effect`. `.dispose()`. Su `repr` dice qué función ejecuta, cuántas fuentes lee y si está liberado o en espera porque no se ve. |
 | `batch` | `with batch():` agrupa cambios; los efectos se ejecutan una vez al final. |
 | `untracked` | `with untracked():` lee estado sin registrar dependencias. |
 | `persisted` | `persisted(clave, valor_inicial)` crea un `Persisted`: un `state` que se recuerda entre sesiones. Lee el valor guardado al crearse y guarda cada cambio (también en el sitio) en `<carpeta de datos>/<clave>.json`, agrupado y al cerrar. La misma clave devuelve el mismo objeto. Solo valores JSON. Ver [lenguaje.md](lenguaje.md#estado-que-se-recuerda-persisted). |
@@ -93,7 +93,7 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 |---|---|
 | `interval` | `interval(ms, fn, when=None)` llama a `fn` cada `ms` milisegundos. También como decorador: `@interval(250)`. Con `when=` (un `state`, un `computed`, `is_visible()` o una función que los lea), solo cuenta mientras se cumple; al volver a cumplirse, cuenta desde cero. Devuelve un `Timer`. |
 | `timeout` | `timeout(ms, fn, when=None)` llama a `fn` una vez, pasados `ms` milisegundos. También como decorador. `when=` como en `interval`. Devuelve un `Timer`. |
-| `Timer` | Tipo de `interval` y `timeout`: `.active` (reactivo), `.ms` (se aplica al volver a arrancar), `.start()`, `.restart()` (vuelve a contar desde cero), `.stop()` (gana a `when=`: parado a mano, no vuelve a arrancar solo); llamarlo (`muestrear()`) ejecuta la función ahora. Un error en la función se registra en el logger `janelkit` y el temporizador sigue. |
+| `Timer` | Tipo de `interval` y `timeout`: `.active` (reactivo), `.ms` (se aplica al volver a arrancar), `.start()`, `.restart()` (vuelve a contar desde cero), `.stop()` (gana a `when=`: parado a mano, no vuelve a arrancar solo); llamarlo (`muestrear()`) ejecuta la función ahora. Un error en la función se registra en el logger `janelkit` y el temporizador sigue. Para medir (no reactivos): `.runs`, `.skipped` (tics saltados porque la ejecución async anterior seguía) y `.last_duration` (segundos de la última ejecución completa, incluida la parte async). |
 
 ### Ventanas
 

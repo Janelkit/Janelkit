@@ -10,6 +10,7 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 
 - **Ventanas en otra pantalla y a pantalla completa:** `<Window screen={i} fullscreen={bool}>` (por índice o por nombre de pantalla) y `screens`, la lista reactiva de pantallas (`Screen`), que cambia al conectar o desconectar una. Cambiar de pantalla estando a pantalla completa sale de ella, mueve la ventana y vuelve a entrar. Si la pantalla no existe, la ventana se queda donde está. Pedido por el primer usuario externo (ventana de proyección). Pruebas: `test_screens_qt.py`, con dos pantallas simuladas.
 - **Parar lo que no se ve:** `is_visible()` devuelve un `computed` que dice si el componente se ve (otra sección, una página de debajo, un `{#hidden}` o una fila de `<List>` fuera de la vista no se ven). `interval(ms, fn, when=…)` y `timeout(..., when=…)` solo cuentan mientras se cumple una condición reactiva: `@interval(33, when=is_visible())` sustituye a la comprobación a mano al empezar cada tic. Pedido por el primer usuario externo. Pruebas: `test_visibility_qt.py`.
+- **Métricas para depurar:** `Timer.runs`, `.skipped` y `.last_duration`; `subscriber_count` de `state` y `computed`, ahora documentado; `repr` de `Effect` (función, fuentes, liberado o en espera) y de `Scope` (qué contiene). Pruebas: `test_metrics_qt.py`.
 
 ## 0.1.1 (2026-11-04)
 

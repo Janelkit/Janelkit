@@ -202,12 +202,10 @@ Una app de visión por computador (`assembly_training`: tres cámaras USB a 30 F
 
 ## Siguientes pasos
 
-Todos los pendientes P0, P1 y P2 de [lanzamiento.md](lanzamiento.md) están hechos salvo uno, que depende de la infraestructura del autor:
+Todos los pendientes P0, P1 y P2 de [lanzamiento.md](lanzamiento.md) están hechos. La publicación (punto 17) también: `janelkit` 0.1.0 y 0.1.1 están en PyPI. Desde 0.1.1, la CI calcula y publica cada versión a partir de los prefijos de los commits ([api.md](api.md#cómo-se-calcula-la-versión)).
 
-1. **Publicación (punto 17):** nombre y licencia (MIT) decididos; falta publicar primero en TestPyPI y después en PyPI con `.github/workflows/release.yml`.
+Incremento 9 (validación con usuarios externos) en marcha: el primer proyecto externo dio lugar a 0.1.1 (ver [arriba](#primer-usuario-externo-010--011)). Sus funciones nuevas para 0.2.0 están hechas en la rama de desarrollo (ver [cambios.md](cambios.md)):
 
-Incremento 9 (validación con usuarios externos) en marcha: el primer proyecto externo dio lugar a 0.1.1 (ver [arriba](#primer-usuario-externo-010--011)). Para 0.2.0 quedan sus funciones nuevas:
-
-1. **`<Window screen={i} fullscreen={bool}>`** y `screens`, lista reactiva de pantallas (`screenAdded`/`screenRemoved`). Mover una ventana a pantalla completa obliga a salir de ella, cambiar de pantalla y volver a entrar.
-2. **`interval(ms, when=estado)`**, que detiene el `QTimer` mientras `when` sea falso, y una forma de saber si el componente actual se ve (la compuerta de su página o sección).
-3. **Métricas:** tics saltados y duración del último tic en `Timer`, observadores de un `state` (`subscriber_count`, hoy sin documentar) y `repr` de `Effect` y `Scope`.
+1. ✅ **`<Window screen={i} fullscreen={bool}>`** y `screens`, lista reactiva de pantallas. Prueba: `test_screens_qt.py` (dos pantallas simuladas).
+2. ✅ **`interval(ms, when=…)`** y **`is_visible()`**, que expone la compuerta de visibilidad del componente (página, sección, `{#hidden}`, fila de `<List>`). Prueba: `test_visibility_qt.py`.
+3. ✅ **Métricas:** `Timer.runs`, `.skipped` y `.last_duration`; `subscriber_count` documentado; `repr` de `Effect` y `Scope`. Prueba: `test_metrics_qt.py`.

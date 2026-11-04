@@ -120,6 +120,7 @@ ocultar.restart()                     # vuelve a contar los 3 s (p. ej. con cada
 - `.active` es reactivo (`{#if muestrear.active}`); `.stop()`, `.start()` y `.restart()` lo controlan. Para cambiar el periodo: `muestrear.ms = 500` y `muestrear.restart()`.
 - `when=` lo condiciona a algo reactivo: `@interval(33, when=visible)` con `visible = is_visible()` solo muestrea mientras el componente se ve (no en otra sección, en una página de debajo ni en un `{#hidden}`). Mientras la condición es falsa no cuenta; al volver a cumplirse, cuenta desde cero. `.stop()` le gana: parado a mano, no vuelve a arrancar solo.
 - Un error en la función se registra con su nombre en el logger `janelkit` y el temporizador sigue.
+- Para medir: `muestrear.runs`, `muestrear.skipped` (tics saltados) y `muestrear.last_duration` (segundos de la última ejecución, también la parte async). No son reactivos; `repr(muestrear)` los resume.
 
 ## Expresiones en la plantilla
 

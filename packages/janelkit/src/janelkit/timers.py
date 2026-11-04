@@ -20,6 +20,9 @@
   muestreo lento no se acumula.
 - Un error en la función se registra en el logger `janelkit`; el temporizador sigue.
 - `.active` es reactivo; `.stop()`, `.start()` y `.restart()` lo controlan.
+- Métricas (no reactivas, para medir): `.runs` (ejecuciones), `.skipped` (tics saltados
+  porque la anterior seguía en marcha) y `.last_duration` (segundos de la última
+  ejecución completa, contando la parte async; None antes de la primera).
 - `when=` lo condiciona a algo reactivo (un `state`, un `computed`, `is_visible()` o una
   función que los lea): mientras sea falso, el temporizador no cuenta; al volver a ser
   verdadero, cuenta de nuevo desde cero.
@@ -33,6 +36,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+import time
 from contextlib import nullcontext
 from typing import Any, Callable, overload
 
@@ -61,6 +65,9 @@ class Timer:
         self._wanted = False  # lo pidió start() y no lo ha parado stop()
         self._allowed = True  # lo que dice `when` (True si no hay)
         self._when: Effect | None = None
+        self.runs = 0
+        self.skipped = 0
+        self.last_duration: float | None = None
         self._scope = current_scope()
         if self._scope is not None:
             self._scope.add(self)
@@ -142,7 +149,10 @@ class Timer:
             self._active.value = False
             _unscoped.discard(self)
         if self._running is not None and not self._running.done():
+            self.skipped += 1
             return  # la ejecución asíncrona anterior no ha terminado: se salta este tic
+        self.runs += 1
+        started = time.perf_counter()
         try:
             # En el ámbito del componente: lo que cree la función (otro timeout, un efecto,
             # la tarea de una función async) también se libera al desmontarlo.
@@ -153,8 +163,14 @@ class Timer:
                     from .tasks import spawn
 
                     self._running = spawn(result)
+                    self._running.add_done_callback(lambda _t: self._measure(started))
+                    return
         except Exception as exc:  # noqa: BLE001 - un error del usuario no debe parar la app
             log.error("error en el temporizador %s: %s: %s", self.__name__, type(exc).__name__, exc, exc_info=exc)
+        self._measure(started)
+
+    def _measure(self, started: float) -> None:
+        self.last_duration = time.perf_counter() - started
 
     def __call__(self) -> Any:
         """Ejecuta la función ahora (sin cambiar cuándo toca la siguiente vez)."""
@@ -168,7 +184,12 @@ class Timer:
             status = "en espera de when"
         else:
             status = "parado"
-        return f"{kind}({self.ms} ms, {self.__name__}, {status})"
+        extra = f", {self.runs} ejecuciones" if self.runs else ""
+        if self.skipped:
+            extra += f", {self.skipped} saltados"
+        if self.last_duration is not None:
+            extra += f", última {self.last_duration * 1000:.1f} ms"
+        return f"{kind}({self.ms} ms, {self.__name__}, {status}{extra})"
 
 
 def _reader(when: When) -> Callable[[], Any]:

@@ -97,6 +97,8 @@ Un temporizador del servicio (por ejemplo, el que oculta un aviso) no necesita g
 
 `time.monotonic()` avanza de 15,6 en 15,6 ms en Windows (usa `GetTickCount64`): no sirve para medir un ciclo de 15 ms. Usa `time.perf_counter()`.
 
+El propio temporizador ya mide: `tick.last_duration` (segundos de la última ejecución, también la parte async), `tick.runs` y `tick.skipped` (tics que se saltaron porque la anterior seguía). Si `skipped` crece, el ciclo no cabe en el periodo.
+
 Como referencia, el temporizador de JanelKit (`PreciseTimer` por debajo de 1 s), con la ventana sin trabajo:
 
 | Periodo pedido | 1 ms | 5 ms | 10 ms | 15 ms | 33 ms | 100 ms |

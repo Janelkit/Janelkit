@@ -3,8 +3,8 @@
 Capas (de abajo arriba), según la ubicación del módulo:
 
     L0  reactividad   reactivity · diagnostics · events                         (sin Qt)
-    L1  lenguaje      compiler · styling.parser · styling.compiler              (sin Qt)
-    L2  runtime       runtime · lifecycle · pages · windows · tasks · timers · storage · locale · styling.theme
+    L1  lenguaje      compiler (también el catálogo de elementos y el CSS)       (sin Qt)
+    L2  runtime       runtime · lifecycle · pages · windows · tasks · timers · storage · locale · themes
     L3  backend Qt    qt_backend · video
     L4  herramientas  cli · inspect · testing · ext · el paquete raíz (fachada pública)
 
@@ -25,9 +25,9 @@ CORE = Path(__file__).resolve().parents[1] / "packages" / "janelkit" / "src" / "
 # Prefijo de módulo (sin "janelkit.") → capa. Gana el prefijo más largo.
 LAYERS = {
     "reactivity": 0, "diagnostics": 0, "events": 0,
-    "compiler": 1, "styling": 1, "styling.parser": 1, "styling.compiler": 1,
+    "compiler": 1,
     "runtime": 2, "lifecycle": 2, "pages": 2, "windows": 2, "tasks": 2, "timers": 2,
-    "storage": 2, "locale": 2, "styling.theme": 2,
+    "storage": 2, "locale": 2, "themes": 2,
     "qt_backend": 3, "video": 3,
     "cli": 4, "inspect": 4, "testing": 4, "ext": 4, "": 4,
 }
@@ -39,7 +39,6 @@ DEUDAS: set[str] = set()  # H1 resuelta: el catálogo vive en compiler/elements.
 
 # Ciclos conocidos entre áreas («área» = primer nivel del paquete).
 CICLOS: set[frozenset[str]] = {
-    frozenset({"compiler", "styling"}),     # H2: el CSS es parte del compilador pero vive fuera
     frozenset({"pages", "runtime"}),        # H3: runtime usa PageStack/Sections y pages crea instancias
 }
 

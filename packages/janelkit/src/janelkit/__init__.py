@@ -25,7 +25,7 @@ from .events import DragEvent, FocusEvent, KeyEvent, PointerEvent, ResizeEvent, 
 from .lifecycle import Ref, before_leave, inject, on_destroy, on_mount, provide, ref
 from .pages import PageStack, Sections, navigation, pages, sections
 from .storage import Persisted, persisted
-from .styling.theme import theme
+from .themes import theme
 from .tasks import Task, background, spawn, task
 from .timers import Timer, interval, timeout
 from .windows import open_window

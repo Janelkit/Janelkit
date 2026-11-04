@@ -10,10 +10,10 @@ from __future__ import annotations
 import re
 from typing import Callable
 
-from ..compiler.ir import TokenUse, qml_string
+from .ir import TokenUse, qml_string
 from ..diagnostics import Diagnostic
-from ..compiler.elements import CONTROLS
-from .parser import Declaration
+from .elements import CONTROLS
+from .css_parser import Declaration
 
 THEME_OBJECT = "jktheme"  # propiedad de contexto QML con los tokens del tema activo
 

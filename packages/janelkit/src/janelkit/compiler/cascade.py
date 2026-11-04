@@ -17,7 +17,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable
 
-from ..styling.parser import Compound, Declaration, Rule, Selector
+from .css_parser import Compound, Declaration, Rule, Selector
 from .ir import IRElement, Literal
 
 ALWAYS = "true"

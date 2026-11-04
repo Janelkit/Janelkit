@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from ..reactivity import State
+from .reactivity import State
 
 _KEY_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 

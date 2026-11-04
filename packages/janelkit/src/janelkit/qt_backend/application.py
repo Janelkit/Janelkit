@@ -28,8 +28,8 @@ from ..diagnostics import Diagnostic, JanelError
 from ..locale import locale
 from ..reactivity import Effect, Scope
 from ..runtime.component import ComponentInstance, flush_mounts
-from ..styling.compiler import THEME_OBJECT
-from ..styling.theme import theme
+from ..compiler.css import THEME_OBJECT
+from ..themes import theme
 from .events import router as event_router
 from .polish import register_types
 

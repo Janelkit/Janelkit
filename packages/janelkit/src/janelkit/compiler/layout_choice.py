@@ -23,8 +23,8 @@ from __future__ import annotations
 from typing import Callable
 
 from .elements import CONTROLS
-from ..styling.compiler import compile_declarations
-from ..styling.parser import Declaration, parse_stylesheet
+from .css import compile_declarations
+from .css_parser import Declaration, parse_stylesheet
 from .ast_nodes import SFC, Element, Expression
 from .ir import IRElement, IRNode, IRRepeater, Literal
 

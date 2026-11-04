@@ -29,8 +29,8 @@ from .elements import (
     prop_spec,
     tag_of,
 )
-from ..styling.compiler import BEHAVIOR, INHERITED, SUPPORTED, TEXT_PREFIX, VAR_PREFIX, compile_declarations, token_key
-from ..styling.parser import Declaration, Rule, parse_stylesheet
+from .css import BEHAVIOR, INHERITED, SUPPORTED, TEXT_PREFIX, VAR_PREFIX, compile_declarations, token_key
+from .css_parser import Declaration, Rule, parse_stylesheet
 from .cascade import ALWAYS, Cascade, StyleNode
 from .layout_choice import BOX_TYPES, choose_layouts
 from .ast_nodes import SFC, Attribute, EachBlock, Element, Expression, IfBlock, Interpolation, KeyBlock, Node, Text

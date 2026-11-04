@@ -51,8 +51,7 @@ from ..compiler.ir import (
 )
 from ..compiler.script_analysis import EVENT_FACTORY, PROP_FACTORY
 from ..diagnostics import Diagnostic, SourceLocation
-from ..lifecycle import Ref, _setup
-from ..pages import PageStack, Sections
+from ..lifecycle import ElementHost, Ref, _setup
 from ..tasks import spawn
 from ..reactivity import Computed, Effect, Event, Prop, PropError, Scope, State, batch, untracked
 from ..reactivity.props import REQUIRED
@@ -299,7 +298,7 @@ class TemplateInstance:
             target = self.resolve(use.name)
         except NameError:
             target = None
-        if isinstance(target, (PageStack, Sections)):  # <Pages stack={nav}>, <Sections of={...}>
+        if isinstance(target, ElementHost):  # <Pages stack={nav}>, <Sections of={...}>
             if attached:
                 target._attach(item, self)
                 self._attached.append((target, item))

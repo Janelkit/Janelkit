@@ -38,9 +38,7 @@ WITHOUT_QT = 1  # L0 y L1 no importan PySide6 ni shiboken6
 DEUDAS: set[str] = set()  # H1 resuelta: el catálogo vive en compiler/elements.py
 
 # Ciclos conocidos entre áreas («área» = primer nivel del paquete).
-CICLOS: set[frozenset[str]] = {
-    frozenset({"pages", "runtime"}),        # H3: runtime usa PageStack/Sections y pages crea instancias
-}
+CICLOS: set[frozenset[str]] = set()  # H1, H2 y H3 resueltos en F3
 
 
 def _modules() -> dict[str, Path]:

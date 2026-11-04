@@ -23,6 +23,7 @@ from __future__ import annotations
 import inspect
 from typing import Any, Callable
 
+from .lifecycle import ElementHost
 from .reactivity import State
 from .reactivity.effects import Gate
 
@@ -91,7 +92,7 @@ def ask_to_leave(guards: list[Callable[[], Any]], proceed: Callable[[], Any], re
     return True
 
 
-class PageStack:
+class PageStack(ElementHost):
     """Pila de páginas. Cada entrada es un componente importado y sus props/eventos."""
 
     def __init__(self, first: Any, owner: Any, **kwargs: Any):
@@ -334,7 +335,7 @@ def navigation() -> PageStack:
     )
 
 
-class Sections:
+class Sections(ElementHost):
     """Secciones paralelas, cada una con su pila de páginas: `sections(proyectos=Proyectos, ...)`.
 
     `<Sections of={secciones} />` muestra la actual. Una sección se crea la primera vez

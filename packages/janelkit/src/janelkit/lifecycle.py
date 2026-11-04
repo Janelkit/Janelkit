@@ -103,6 +103,20 @@ def inject(key: Any, default: Any = _MISSING) -> Any:
         return default
 
 
+class ElementHost:
+    """Objeto del script que gestiona un elemento de la plantilla al que se conecta.
+
+    `<Pages stack={nav}>` y `<Sections of={secciones}>` conectan su contenedor con la pila o las
+    secciones del script. El runtime solo conoce esta interfaz, no la navegación.
+    """
+
+    def _attach(self, container: Any, template: Any) -> None:  # pragma: no cover - abstracto
+        raise NotImplementedError
+
+    def _detach(self, container: Any) -> None:  # pragma: no cover - abstracto
+        raise NotImplementedError
+
+
 class Ref:
     """Referencia a un elemento de la plantilla: `campo = ref()` y `<TextField ref={campo} />`.
 

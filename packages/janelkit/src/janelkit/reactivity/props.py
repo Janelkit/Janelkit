@@ -56,6 +56,14 @@ class Prop(Generic[T]):
     def __repr__(self) -> str:
         return f"prop {self.name} = {self._state.peek()!r}"
 
+    # En un f-string o str() se muestra el valor (y se registra la dependencia, como al leer
+    # .value): f"{hub.status}" en una plantilla se actualiza solo. repr() sigue diciendo qué es.
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def __format__(self, spec: str) -> str:
+        return format(self.value, spec)
+
 
 class Event:
     """Evento que un componente emite hacia su padre."""

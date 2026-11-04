@@ -11,6 +11,8 @@ Correcciones a partir del primer proyecto real con JanelKit (una app de visión 
 ### Corregido
 
 - **Ámbito tras un `await`:** un `timeout` o `interval` creado después de un `await` (en un manejador async, `on_mount`, un tic async o una `@task`) no se disparaba nunca: quedaba sin ámbito y Python lo recolectaba. Los `effect`, `computed` y `spawn` creados ahí tampoco se liberaban al desmontar. El ámbito activo ahora es una variable de contexto (`contextvars`) que `asyncio` conserva en cada tarea. Pruebas: `packages/janelkit/tests/test_scope_await_qt.py`.
+- **`dataclass` en el script de un `.janel`:** fallaba con `AttributeError: 'NoneType' object has no attribute '__dict__'` (con anotaciones en texto). El script se ejecuta ahora en un módulo registrado en `sys.modules` mientras vive la instancia (un nombre por instancia, `janelkit.components.<Archivo>_<n>`); `typing.get_type_hints` y `pickle` también funcionan. Pruebas: `test_script_module_qt.py`.
+- **Un `state` que es atributo en la plantilla:** `{hub.status}` mostraba `state('cerrada')` y no se actualizaba. Ahora se muestra el valor y se actualiza, también en f-strings, formatos, `{#if}` y `{#each}`. `str()` y `format()` de `state`, `computed` y props dan su valor (`repr()` no cambia). Pruebas: `test_attribute_state_qt.py`.
 - **Temporizadores sin componente:** un `timeout`/`interval` creado fuera de todo componente (en un servicio) se mantiene vivo mientras está activo, aunque no se guarde la referencia.
 
 ## 0.1.0

@@ -19,6 +19,7 @@ El componente raíz de la aplicación (`src/App.janel`) puede tener `<Window>` c
 ## El script
 
 - Se ejecuta **una vez por instancia** del componente, en un espacio de nombres propio: dos instancias nunca comparten estado local.
+- Se ejecuta en un módulo propio, registrado en `sys.modules` mientras la instancia existe: `@dataclass` (también con `from __future__ import annotations`), `typing.get_type_hints` y `pickle` funcionan con las clases que defina.
 - Es Python normal: puede importar módulos del proyecto. La carpeta del componente raíz (`src/`) se añade a `sys.path`, de modo que `from services.users import display_name` funciona.
 - Los errores de sintaxis se detectan al compilar, con archivo, línea y columna. Los errores al ejecutarse apuntan a la línea real del `.janel` en el traceback.
 - **El código del componente se ejecuta como código del proyecto.** No hay aislamiento: no cargues componentes no confiables.
@@ -124,6 +125,7 @@ ocultar.restart()                     # vuelve a contar los 3 s (p. ej. con cada
 `{expresión}` admite **expresiones** Python (no sentencias). Se evalúan en Python; QML nunca ejecuta lógica del usuario.
 
 - **Desenvolvido automático:** un nombre que apunta a un `state`, `computed` o prop se sustituye por su valor. `{count + 1}` equivale a `count.value + 1`. Por eso, en la plantilla **no** se escribe `.value`.
+- **Un `state` que es atributo** (un servicio con `self.status = state(...)`) se muestra con su valor y se actualiza: `{hub.status}`, `{f"cámara: {hub.status}"}`, `{hub.count:.1f}`, `{#if hub.ready}` y `{#each hub.items as item}` funcionan, porque al final se desenvuelve el resultado y `str()`/`format()` de un `state` dan su valor. Dentro de una operación hay que pedir el valor: `{hub.ready.value and "lista"}`, `{hub.items.value[0]}`; o asignarlo a un nombre del script (`status = hub.status`) y usar el nombre.
 - Para modificar estado desde un evento se usa un [manejador en línea](#manejadores-de-eventos) (`on:click={count += 1}`) o una función del script. Dentro de una `lambda`, `count.set(0)` falla, porque `count` ya es un número; el error lo explica.
 - Los nombres se resuelven **al evaluarse**, también dentro de `lambda`: un manejador de una fila de `{#each}` siempre ve el elemento actual de esa fila.
 - Las dependencias se registran solas: cada binding se recalcula solo cuando cambia algo de lo que leyó, y solo se notifica a QML la propiedad afectada.

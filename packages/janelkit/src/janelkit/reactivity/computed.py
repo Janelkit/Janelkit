@@ -65,6 +65,14 @@ class Computed(Observer, Source, Generic[T]):
         shown = "<sin calcular>" if self._value is _UNSET else repr(self._value)
         return f"computed {self.__name__} = {shown}"
 
+    # En un f-string o str() se muestra el valor (y se registra la dependencia, como al leer
+    # .value): f"{hub.status}" en una plantilla se actualiza solo. repr() sigue diciendo qué es.
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def __format__(self, spec: str) -> str:
+        return format(self.value, spec)
+
 
 def computed(fn: Callable[[], T]) -> Computed[T]:
     """Decorador: `@computed def total(): return a.value + b.value`."""

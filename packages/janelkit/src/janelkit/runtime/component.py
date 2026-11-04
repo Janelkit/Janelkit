@@ -17,7 +17,9 @@ from __future__ import annotations
 import bisect
 import builtins
 import inspect
+import itertools
 import logging
+import sys
 import types
 import typing
 import weakref
@@ -125,6 +127,7 @@ def _unwrap(value: Any) -> Any:
 
 
 def _display(value: Any) -> str:
+    value = _unwrap(value)  # {hub.status}: un state que es atributo muestra su valor, no state('…')
     return "" if value is None else str(value)
 
 
@@ -133,6 +136,7 @@ _CONVERSIONS = {"r": repr, "s": str, "a": ascii}
 
 def _formatted(value: Any, expr: FormattedExpression) -> str:
     """`{valor!r:.1f}`: conversión y después formato, como en un f-string (None sigue siendo "")."""
+    value = _unwrap(value)
     if value is None:
         return ""
     if expr.conversion:
@@ -249,9 +253,9 @@ class TemplateInstance:
 
     def _evaluate(self, binding: Binding) -> Any:
         if isinstance(binding, ExprBinding):
-            value = self.eval(binding.expression)
-            if binding.id in self._writes:  # bind:value={prefs.tema}: el atributo es el state, no su valor
-                value = _unwrap(value)
+            # {hub.ready}: solo los nombres se desenvuelven al leerlos; un state que es atributo
+            # se desenvuelve aquí, al final. Con bind:value={prefs.tema} el atributo es el state.
+            value = _unwrap(self.eval(binding.expression))
             return self._class_string(value, binding) if binding.classes else value
         return "".join(
             p if isinstance(p, str) else _formatted(self.eval(p), p) if isinstance(p, FormattedExpression) else _display(self.eval(p))
@@ -596,7 +600,7 @@ class _EachRegion(_Region):
         Effect(self.update, on_error=on_error).gate = owner.gate
 
     def update(self) -> None:
-        value = self.owner.eval(self.slot.iterable)
+        value = _unwrap(self.owner.eval(self.slot.iterable))
         items = [] if value is None else list(value)
         with untracked():
             if not self.slot.fragment.empty:
@@ -695,7 +699,7 @@ class _EachRegion(_Region):
     def give(self, row: _Row) -> "dict[int, ComponentInstance] | None":
         """Otra lista reclama `row` antes de que esta se actualice: se la cede si ya no está en sus datos."""
         with untracked():
-            value = self.owner.eval(self.slot.iterable)
+            value = _unwrap(self.owner.eval(self.slot.iterable))
             if row.key in set(self.keys_for([] if value is None else list(value))):
                 return None  # la misma clave en dos listas a la vez: son dos filas
         carried = self.carry(row)
@@ -893,7 +897,7 @@ class _IfRegion(_Region):
     def update(self) -> None:
         index = None
         for i, branch in enumerate(self.slot.branches):
-            if branch.condition is None or self.owner.eval(branch.condition):
+            if branch.condition is None or _unwrap(self.owner.eval(branch.condition)):
                 index = i
                 break
         if index == self.active:
@@ -926,7 +930,7 @@ class _KeyRegion(_Region):
         Effect(self.update, on_error=on_error).gate = owner.gate
 
     def update(self) -> None:
-        value = self.owner.eval(self.slot.expression)
+        value = _unwrap(self.owner.eval(self.slot.expression))
         if self.slot.hidden:  # se crea la primera vez que se muestra; su `visible` hace el resto
             with untracked():
                 self.gate.set_open(not value)
@@ -1087,6 +1091,9 @@ def _script_source(compiled: CompiledComponent) -> str:
     return script.content if script is not None else ""
 
 
+_instance_ids = itertools.count(1)
+
+
 class _Release:
     def __init__(self, fn: Any):
         self.fn = fn
@@ -1161,13 +1168,20 @@ class ComponentInstance:
         self._event_handlers = events or {}
         self.props: dict[str, Prop] = {}
         self.events: dict[str, Event] = {}
-        self.namespace: dict[str, Any] = {
-            "__name__": f"janelkit.components.{Path(compiled.file).stem}",
+        # El script se ejecuta en un módulo de verdad, registrado en sys.modules mientras la
+        # instancia vive: así funcionan dataclass, pickle y typing.get_type_hints, que buscan
+        # el módulo de una clase por su nombre. Un nombre por instancia: cada una ejecuta el
+        # script y tiene sus propias clases.
+        module = types.ModuleType(f"janelkit.components.{Path(compiled.file).stem}_{next(_instance_ids)}")
+        module.__dict__.update({
             "__file__": compiled.file,
             "__builtins__": builtins,
             PROP_FACTORY: self._make_prop,
             EVENT_FACTORY: self._make_event,
-        }
+        })
+        self.namespace: dict[str, Any] = module.__dict__
+        sys.modules[module.__name__] = module
+        self.scope.add(_Release(lambda: sys.modules.pop(module.__name__, None)))
         info = compiled.ir.script_info
         if info is not None:
             for name, imp in info.components.items():

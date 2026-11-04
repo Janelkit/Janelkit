@@ -83,6 +83,15 @@ def enviar():
 | `interval(ms, fn)`, `timeout(ms, fn)` | Repetir algo cada cierto tiempo, o hacerlo una vez más tarde. Ver [Temporizadores](#temporizadores). |
 
 - Lo lanzado desde un componente (manejadores, `@task`, `spawn`, `on_mount` asíncrono) se **cancela al desmontarlo**: una corrutina nunca actualiza una vista que ya no existe. Una fila de `{#each}` cancela lo suyo al eliminarse.
+- Una corrutina lanzada desde un componente sigue perteneciéndole **después de cada `await`**: un `timeout`, `interval`, `effect` o `spawn` creado tras `await` se libera al desmontar, igual que si se hubiera creado antes. El patrón «guardar, esperar y mostrar un aviso que se va solo» funciona sin guardar el temporizador:
+
+  ```python
+  async def guardar():
+      await background(escribir, datos.value)
+      aviso.value = "Guardado"
+      timeout(3000, lambda: aviso.set(""))
+  ```
+- Tras un `await` los cambios ya no van en el `batch` del manejador: cada asignación avisa por separado. Para aplicar varios a la vez, usa `with batch():` o asigna un único valor (p. ej. un `NamedTuple`). Ver [patrones.md](patrones.md#el-estado-a-medias-tras-un-await).
 - Los errores de un manejador asíncrono se registran con archivo y línea, como los síncronos. Los de una `@task` quedan en `.error` para mostrarlos.
 - El trabajo de `background` en curso no se puede interrumpir (es un hilo), pero su resultado se descarta si la tarea se canceló.
 
@@ -105,7 +114,7 @@ ocultar = timeout(3000, lambda: aviso.set(""))
 ocultar.restart()                     # vuelve a contar los 3 s (p. ej. con cada «escribiendo…»)
 ```
 
-- Se detienen solos al desmontar el componente que los creó. Fuera de un componente (en un servicio), viven hasta `.stop()`.
+- Se detienen solos al desmontar el componente que los creó, también si se crearon tras un `await`. Fuera de un componente (en un servicio), viven hasta `.stop()`; JanelKit los mantiene vivos aunque no guardes la referencia.
 - Cada ejecución agrupa sus cambios de estado en un solo `batch`: actualizar 50 métricas en un tic recalcula la interfaz una vez.
 - `.active` es reactivo (`{#if muestrear.active}`); `.stop()`, `.start()` y `.restart()` lo controlan. Para cambiar el periodo: `muestrear.ms = 500` y `muestrear.restart()`.
 - Un error en la función se registra con su nombre en el logger `janelkit` y el temporizador sigue.

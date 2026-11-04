@@ -10,7 +10,10 @@
     ocultar.restart()                  # vuelve a contar desde cero (p. ej. "escribiendo…")
 
 - Creados en el script de un componente (o en algo que se ejecuta dentro de
-  él, como `on_mount`), se detienen solos al desmontarlo.
+  él, como `on_mount` o un manejador, también después de un `await`), se
+  detienen solos al desmontarlo.
+- Creados fuera de todo componente (p. ej. en un servicio), JanelKit los guarda
+  mientras estén activos: no hace falta conservar la referencia para que se disparen.
 - Cada ejecución agrupa sus cambios de estado (`batch`) y, si la función es
   `async def`, se lanza con `spawn` (y se cancela con el componente). Mientras
   una ejecución asíncrona no termina, los tics siguientes se saltan: un
@@ -22,6 +25,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+from contextlib import nullcontext
 from typing import Any, Callable, overload
 
 from .reactivity import State, batch, untracked
@@ -29,6 +33,10 @@ from .reactivity.effects import current_scope
 
 log = logging.getLogger("janelkit")
 Fn = Callable[[], Any]
+
+# Temporizadores activos sin ámbito: sin esta referencia, Python los recolectaría
+# (con su QTimer) antes de dispararse.
+_unscoped: set["Timer"] = set()
 
 
 class Timer:
@@ -45,6 +53,8 @@ class Timer:
         if self._scope is not None:
             self._scope.add(self)
         self.__name__ = getattr(fn, "__name__", "temporizador")
+        if self._scope is None:
+            log.debug("temporizador %s creado fuera de un componente: no se detendrá solo", self.__name__)
         self.start()
 
     @property
@@ -69,6 +79,8 @@ class Timer:
             self._qt.timeout.connect(self._tick)
         self._qt.start(self.ms)
         self._active.value = True
+        if self._scope is None:
+            _unscoped.add(self)
 
     restart = start
 
@@ -76,6 +88,7 @@ class Timer:
         if self._qt is not None:
             self._qt.stop()
         self._active.value = False
+        _unscoped.discard(self)
 
     def dispose(self) -> None:
         self.stop()
@@ -86,18 +99,18 @@ class Timer:
     def _tick(self) -> None:
         if not self.repeat:
             self._active.value = False
+            _unscoped.discard(self)
         if self._running is not None and not self._running.done():
             return  # la ejecución asíncrona anterior no ha terminado: se salta este tic
         try:
-            with untracked(), batch():
-                result = self.fn()
-            if inspect.isawaitable(result):
-                from .tasks import spawn
+            # En el ámbito del componente: lo que cree la función (otro timeout, un efecto,
+            # la tarea de una función async) también se libera al desmontarlo.
+            with self._scope.active() if self._scope is not None else nullcontext():
+                with untracked(), batch():
+                    result = self.fn()
+                if inspect.isawaitable(result):
+                    from .tasks import spawn
 
-                if self._scope is not None:
-                    with self._scope.active():
-                        self._running = spawn(result)
-                else:
                     self._running = spawn(result)
         except Exception as exc:  # noqa: BLE001 - un error del usuario no debe parar la app
             log.error("error en el temporizador %s: %s: %s", self.__name__, type(exc).__name__, exc, exc_info=exc)

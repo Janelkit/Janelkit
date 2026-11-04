@@ -115,9 +115,9 @@ class Task(Generic[T]):
         self._loading = State(False)
         self._task: asyncio.Task | None = None
         self.__name__ = getattr(fn, "__name__", "task")
-        scope = current_scope()
-        if scope is not None:
-            scope.add(self)
+        self._scope = current_scope()
+        if self._scope is not None:
+            self._scope.add(self)
 
     @property
     def value(self) -> T | None:
@@ -138,7 +138,13 @@ class Task(Generic[T]):
         with batch():
             self._loading.value = True
             self._error.value = None
-        self._task = _loop().create_task(self._execute(args, kwargs))
+        # La corrutina hereda el ámbito de la tarea (se copia el contexto al crearla): lo que
+        # cree tras un `await` se libera con el componente aunque `run()` se llame desde fuera.
+        if self._scope is not None and not self._scope.disposed:
+            with self._scope.active():
+                self._task = _loop().create_task(self._execute(args, kwargs))
+        else:
+            self._task = _loop().create_task(self._execute(args, kwargs))
         return self._task
 
     __call__ = run

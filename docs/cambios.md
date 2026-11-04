@@ -4,7 +4,16 @@ Cada versión lista lo nuevo y, aparte, lo que **rompe** código existente con c
 
 Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`janelkit-i18n`, `janelkit-desktop`) llevan sus cambios en la sección «Cambios» de su README.
 
-## 0.1.0 (sin publicar)
+## 0.1.1 (sin publicar)
+
+Correcciones a partir del primer proyecto real con JanelKit (una app de visión con varias cámaras). No rompe código de 0.1.0.
+
+### Corregido
+
+- **Ámbito tras un `await`:** un `timeout` o `interval` creado después de un `await` (en un manejador async, `on_mount`, un tic async o una `@task`) no se disparaba nunca: quedaba sin ámbito y Python lo recolectaba. Los `effect`, `computed` y `spawn` creados ahí tampoco se liberaban al desmontar. El ámbito activo ahora es una variable de contexto (`contextvars`) que `asyncio` conserva en cada tarea. Pruebas: `packages/janelkit/tests/test_scope_await_qt.py`.
+- **Temporizadores sin componente:** un `timeout`/`interval` creado fuera de todo componente (en un servicio) se mantiene vivo mientras está activo, aunque no se guarde la referencia.
+
+## 0.1.0
 
 Primera versión pública prevista. Respecto a la prealfa interna (incrementos 0–7):
 

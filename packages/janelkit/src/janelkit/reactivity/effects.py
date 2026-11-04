@@ -20,10 +20,15 @@ from __future__ import annotations
 import itertools
 import threading
 from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any, Callable, Iterator
 
 _observer_stack: list["Observer"] = []
-_scope_stack: list["Scope"] = []
+# El ámbito activo vive en una variable de contexto, no en una pila global: `asyncio` copia
+# el contexto al crear cada tarea, así que una corrutina lanzada dentro de un ámbito (un
+# manejador async, un tic async, `on_mount`) lo conserva tras cada `await`. Lo que cree
+# después (temporizadores, efectos, tareas) sigue perteneciendo al componente.
+_current_scope: ContextVar["Scope | None"] = ContextVar("janelkit_scope", default=None)
 _batch_depth = 0
 _flushing = False
 _pending: dict["Effect", None] = {}  # conjunto ordenado
@@ -82,8 +87,9 @@ class Observer:
     def __init__(self) -> None:
         self._dependencies: dict[Source, None] = {}
         self.disposed = False
-        if _scope_stack:
-            _scope_stack[-1].add(self)
+        scope = _current_scope.get()
+        if scope is not None:
+            scope.add(self)
 
     def _add_dependency(self, source: Source) -> None:
         if source not in self._dependencies:
@@ -254,11 +260,11 @@ class Scope:
 
     @contextmanager
     def active(self) -> Iterator["Scope"]:
-        _scope_stack.append(self)
+        token = _current_scope.set(self)
         try:
             yield self
         finally:
-            _scope_stack.pop()
+            _current_scope.reset(token)
 
     def dispose(self) -> None:
         self.disposed = True
@@ -327,7 +333,7 @@ def untracked() -> Iterator[None]:
 
 def current_scope() -> "Scope | None":
     """Ámbito activo (p. ej. el del componente que se está preparando), o None."""
-    return _scope_stack[-1] if _scope_stack else None
+    return _current_scope.get()
 
 
 def effect(fn: Callable[[], Any]) -> Effect:

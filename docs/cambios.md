@@ -4,6 +4,12 @@ Cada versión lista lo nuevo y, aparte, lo que **rompe** código existente con c
 
 Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`janelkit-i18n`, `janelkit-desktop`) llevan sus cambios en la sección «Cambios» de su README.
 
+## 0.2.0 (sin publicar)
+
+### Nuevo
+
+- **Ventanas en otra pantalla y a pantalla completa:** `<Window screen={i} fullscreen={bool}>` (por índice o por nombre de pantalla) y `screens`, la lista reactiva de pantallas (`Screen`), que cambia al conectar o desconectar una. Cambiar de pantalla estando a pantalla completa sale de ella, mueve la ventana y vuelve a entrar. Si la pantalla no existe, la ventana se queda donde está. Pedido por el primer usuario externo (ventana de proyección). Pruebas: `test_screens_qt.py`, con dos pantallas simuladas.
+
 ## 0.1.1 (2026-11-04)
 
 Correcciones a partir del primer proyecto real con JanelKit (una app de visión con varias cámaras). No rompe código de 0.1.0.

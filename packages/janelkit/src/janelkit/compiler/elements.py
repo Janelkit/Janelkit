@@ -99,6 +99,8 @@ CONTROLS: dict[str, ControlSpec] = {
             "minWidth": PropSpec("minimumWidth", "number"),
             "minHeight": PropSpec("minimumHeight", "number"),
             "background": PropSpec("color", "color"),
+            "screen": PropSpec("jkScreen", "any"),  # índice en `screens` o nombre de la pantalla
+            "fullscreen": PropSpec("jkFullscreen", "bool"),
         },
         events={
             "activate": EventSpec("onActiveChanged", when="active"),

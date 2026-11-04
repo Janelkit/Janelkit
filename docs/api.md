@@ -107,6 +107,8 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 | `pages` | `nav = pages(Inicio, **props)` en el script crea una pila de páginas; `<Pages stack={nav} />` muestra la de arriba. |
 | `PageStack` | Tipo de `pages`: `.push(C, **props_y_on_eventos)` (se puede esperar: `await` devuelve el valor de `.back(valor)`), `.pop()`, `.back(valor=None)`, `.replace(...)`, `.reset(...)` (los cuatro se pueden esperar: `True` si se salió, `False` si un `before_leave` lo impidió); reactivos `.current`, `.depth`, `.can_go_back`; `.page` (instancia visible). |
 | `navigation` | `nav = navigation()` en el script de una página (o de un componente dentro de ella) da su pila. |
+| `screens` | Pantallas conectadas, reactivo y de solo lectura: `screens.value` es una lista de `Screen`. Cambia sola al conectar o desconectar una pantalla, al cambiar la principal o la resolución. Vacía hasta que la aplicación arranca. Con `<Window screen={i} fullscreen={bool}>` se elige dónde se abre la ventana. |
+| `Screen` | Una pantalla de `screens`: `index`, `name`, `width`, `height`, `x`, `y` (píxeles lógicos del escritorio virtual), `primary`, `scale` (píxeles físicos por píxel lógico). |
 | `sections` | `secciones = sections(a=A, b=B)` crea secciones paralelas, cada una con su pila; `<Sections of={secciones} />` muestra la actual. |
 | `Sections` | Tipo de `sections`: `.show(nombre)`, `[nombre]` (su pila), `.stack` (la de la visible), `.names`; reactivo `.current`. |
 

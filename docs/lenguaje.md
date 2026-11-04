@@ -901,7 +901,7 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 
 | Elemento | Qt Quick | Propiedades | Eventos | `bind:` |
 |---|---|---|---|---|
-| `Window` | `ApplicationWindow` | `title`, `width`, `height`, `minWidth`, `minHeight`, `background` | `on:activate`, `on:deactivate` | — |
+| `Window` | `ApplicationWindow` | `title`, `width`, `height`, `minWidth`, `minHeight`, `background`, `screen`, `fullscreen` | `on:activate`, `on:deactivate` | — |
 | `Column` | `<flex direction="column">` | `gap`, `padding` | `on:click` | — |
 | `Row` | `<flex direction="row">` | `gap`, `padding` | `on:click` | — |
 | `Scroll` | `ScrollView` + columna | `gap`, `padding` | — | — |
@@ -924,6 +924,15 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 
 - **`List`** es una lista virtualizada para colecciones grandes; ver [Listas grandes](#listas-grandes-list) y [Desplazamiento](#desplazamiento).
 - **`Window`**: `on:activate` y `on:deactivate` avisan cuando la ventana pasa a primer plano o deja de estarlo (para marcar como leído o decidir si mostrar una notificación con `notify`).
+- **`Window` en otra pantalla:** `screen={i}` la abre en la pantalla `i` de `screens` (o `screen={"nombre"}`, por su nombre), centrada; `fullscreen={bool}` la pone a pantalla completa o la saca. Los dos son reactivos: cambiar `screen` estando a pantalla completa mueve la ventana a la otra pantalla y la deja a pantalla completa allí. Si la pantalla no existe (un proyector desconectado), la ventana se queda donde está y vuelve a colocarse cuando se conecta. `screens` es la lista reactiva de pantallas (`Screen`: `index`, `name`, `width`, `height`, `x`, `y`, `primary`, `scale`):
+
+  ```html
+  <script>
+  from janelkit import screens, computed
+  proyector = computed(lambda: 1 if len(screens.value) > 1 else 0)
+  </script>
+  <Window title="Proyección" screen={proyector} fullscreen={True}>…</Window>
+  ```
 - **Opciones** (`Select`, `RadioGroup`, `Tabs`): `options` es una lista de textos (`["rojo", "verde"]`) o de diccionarios `{"label": "Mediano", "value": 2}`; `value` es el valor elegido. La elección del usuario se ve al momento; si Python cambia `value`, manda Python.
 - `Tabs` es solo la barra: el contenido de cada pestaña se elige con `{#if pestaña == "general"}`.
 - `Image`: `src` puede ser una ruta relativa a la carpeta del `.janel`, una ruta absoluta o una URL (`https:`, `qrc:`, `data:`). Sin `width`/`height`, toma el tamaño de la imagen.

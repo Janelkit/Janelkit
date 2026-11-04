@@ -101,6 +101,9 @@ class Application:
         # asyncio sobre el bucle de Qt: las corrutinas corren en el hilo de la interfaz.
         self.loop = qasync.QEventLoop(self.qt_app)
         asyncio.set_event_loop(self.loop)
+        from .. import displays
+
+        displays.connect(self.qt_app)  # `screens`, la lista reactiva de pantallas
         self._create_engine()
         self._by_url: dict[str, CompiledComponent] = {}
         self._delegates: dict[int, tuple[CompiledComponent, QQmlComponent]] = {}

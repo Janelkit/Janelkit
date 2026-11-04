@@ -29,6 +29,7 @@ from .themes import theme
 from .tasks import Task, background, spawn, task
 from .timers import Timer, interval, timeout
 from .windows import open_window
+from .displays import Screen, screens
 
 __version__ = "0.1.1"
 
@@ -49,6 +50,7 @@ __all__ = [
     "PointerEvent",
     "PropError",
     "Ref",
+    "Screen",
     "Sections",
     "ResizeEvent",
     "State",
@@ -75,6 +77,7 @@ __all__ = [
     "provide",
     "ref",
     "run",
+    "screens",
     "sections",
     "spawn",
     "state",

@@ -4,9 +4,11 @@ Cada versión lista lo nuevo y, aparte, lo que **rompe** código existente con c
 
 Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`janelkit-i18n`, `janelkit-desktop`) llevan sus cambios en la sección «Cambios» de su README.
 
-## 0.1.1 (sin publicar)
+## 0.1.1 (2026-11-04)
 
 Correcciones a partir del primer proyecto real con JanelKit (una app de visión con varias cámaras). No rompe código de 0.1.0.
+
+Es la última versión numerada a mano. Desde aquí, la versión la calcula la CI a partir del prefijo de cada commit ([api.md](api.md#cómo-se-calcula-la-versión)). Con esa regla, `screenshot()`, que es API nueva, habría llevado a 0.2.0.
 
 ### Nuevo
 

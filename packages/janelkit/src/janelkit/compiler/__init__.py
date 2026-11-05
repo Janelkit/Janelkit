@@ -11,6 +11,7 @@ resto de este paquete es interno.
 """
 from __future__ import annotations
 
+import importlib.util
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -98,6 +99,7 @@ class CompileSession:
         # Componentes cuya raíz va dentro de una caja con el motor de <flex>: su raíz usa
         # también el motor (layout_choice.py). Los anota el padre, que se compila antes.
         self._engine_roots: set[str] = set()
+        self._packages: dict[str, list[Path]] = {}  # paquete instalado -> sus carpetas
 
     def compile(self, path: Path, as_window: bool) -> CompiledComponent:
         key = _key(path)
@@ -161,20 +163,43 @@ class CompileSession:
                 bases = self.roots
             parts = module.split(".") if module else []
             for base in bases:
-                folder = base.joinpath(*parts)
-                for suffix in (".janel", ".qml"):
-                    # from components import TodoItem  -> components/TodoItem.janel
-                    candidate = folder / f"{name}{suffix}"
-                    if candidate.is_file():
-                        return candidate.resolve()
-                    # from components.TodoItem import TodoItem  -> components/TodoItem.janel
-                    if parts and folder.name == name:
-                        candidate = folder.with_suffix(suffix)
-                        if candidate.is_file():
-                            return candidate.resolve()
+                found = _find_in(base.joinpath(*parts), name, bool(parts))
+                if found is not None:
+                    return found
+            # Un paquete instalado: from janelkit_router import Pages -> <paquete>/Pages.qml
+            if not level and parts:
+                for folder in self._package_dirs(parts[0]):
+                    found = _find_in(folder.joinpath(*parts[1:]), name, True)
+                    if found is not None:
+                        return found
             return None
 
         return resolve
+
+    def _package_dirs(self, top: str) -> list[Path]:
+        """Carpetas del paquete `top` instalado (o en sys.path), sin importarlo."""
+        if top not in self._packages:
+            try:
+                spec = importlib.util.find_spec(top)
+            except (ImportError, ValueError):
+                spec = None
+            locations = spec.submodule_search_locations if spec is not None else None
+            self._packages[top] = [Path(p) for p in locations or ()]
+        return self._packages[top]
+
+
+def _find_in(folder: Path, name: str, nested: bool) -> Path | None:
+    for suffix in (".janel", ".qml"):
+        # from components import TodoItem  -> components/TodoItem.janel
+        candidate = folder / f"{name}{suffix}"
+        if candidate.is_file():
+            return candidate.resolve()
+        # from components.TodoItem import TodoItem  -> components/TodoItem.janel
+        if nested and folder.name == name:
+            candidate = folder.with_suffix(suffix)
+            if candidate.is_file():
+                return candidate.resolve()
+    return None
 
 
 def _slot_names(nodes: list[Node]) -> set[str]:

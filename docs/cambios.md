@@ -9,6 +9,7 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 ### Nuevo
 
 - **`janel migrate`:** actualiza un proyecto a esta versión. Muestra los cambios como un diff y los aplica con `--write`; con `--tests`, también las pruebas. Ver [desarrollo.md](desarrollo.md#comandos).
+- **Componentes desde paquetes instalados:** `from mi_paquete import Tarjeta` usa `Tarjeta.janel` (o `.qml`) de la carpeta del paquete de Python, si no está en `src/`. `janel build` escribe su QML en `build/qml/_paquetes/`. Ver [lenguaje.md](lenguaje.md#componentes).
 - **Ventanas en otra pantalla y a pantalla completa:** `<window screen={i} fullscreen={bool}>` (por índice o por nombre de pantalla) y `screens`, la lista reactiva de pantallas (`Screen`), que cambia al conectar o desconectar una. Cambiar de pantalla estando a pantalla completa sale de ella, mueve la ventana y vuelve a entrar. Si la pantalla no existe, la ventana se queda donde está.
 - **Parar lo que no se ve:** `is_visible()` devuelve un `computed` que dice si el componente se ve (otra sección, una página de debajo, un `{#hidden}` o una fila de `<list>` fuera de la vista no se ven). `interval(ms, fn, when=…)` y `timeout(..., when=…)` solo cuentan mientras se cumple una condición reactiva: `@interval(33, when=is_visible())` sustituye a la comprobación a mano al empezar cada tic.
 - **Mover un `<scroll>` desde el código:** `follow`, `on:top`, `on:bottom` y `on:scroll`, como en `<list>`; con un `ref`, `scroll_to_start()`, `scroll_to_end()` y `scroll_to(ref)`, que lleva a la vista un elemento de dentro.

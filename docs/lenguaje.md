@@ -330,6 +330,7 @@ from .TodoItem import TodoItem                # relativo al archivo actual
 ```
 
 - Los imports absolutos se resuelven desde la carpeta del componente raíz (`src/`); los relativos, desde el archivo que importa.
+- **Desde un paquete instalado:** si no está en `src/`, se busca en el paquete de Python con ese nombre (sin importarlo): `from janelkit_router import Pages` usa `Pages.qml` o `Pages.janel` de la carpeta del paquete, y `from mi_ui.formularios import Campo`, el de su subcarpeta. Así un paquete de `pip` reparte componentes. Dentro del paquete, sus componentes se importan entre sí con imports relativos (`from .Campo import Campo`) o con el nombre del paquete.
 - El compilador compila los componentes importados (una vez cada uno) y valida su uso: props y eventos desconocidos, props obligatorias que faltan, etc. Los componentes pueden ser recursivos.
 
 ### Props y eventos (en el hijo)

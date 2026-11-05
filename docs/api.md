@@ -6,7 +6,7 @@ Lo público es:
 
 1. Los nombres que se importan desde `janelkit` (listados abajo).
 2. Los nombres listados de `janelkit.compiler`, `janelkit.diagnostics` y `janelkit.inspect`, pensados para herramientas y pruebas, y los de `janelkit.ext`, para paquetes que extienden JanelKit.
-3. El formato `.janel`: secciones, sintaxis de plantilla, elementos con sus props y eventos, la importación de componentes `.janel` y de elementos `.qml`, y el CSS soportado ([lenguaje.md](lenguaje.md), [estilos.md](estilos.md)).
+3. El formato `.janel`: secciones, sintaxis de plantilla, elementos con sus props y eventos, la importación de componentes `.janel` y de elementos `.qml` (del proyecto o de un paquete instalado), y el CSS soportado ([lenguaje.md](lenguaje.md), [estilos.md](estilos.md)).
 4. Los comandos `janel` y sus opciones ([desarrollo.md](desarrollo.md)), y el grupo de entry points `janelkit.commands` para añadir subcomandos ([abajo](#janelkitext-extensiones)).
 5. Las variables de entorno `JANELKIT_DEV`, `JANELKIT_EXIT_AFTER_MS`, `JANELKIT_DATA_DIR` y `QT_QUICK_CONTROLS_STYLE`.
 6. En los archivos `.qml` propios: el objeto `jktheme`, con los tokens del tema activo (`jktheme.primary`, `jktheme.radius`…).

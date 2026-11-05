@@ -35,6 +35,7 @@ Cada paquete tiene versión propia y se prueba por separado. Las extensiones dec
 | Plugins de la CLI | Subcomandos de `janel` desde otros paquetes (entry points `janelkit.commands`) |
 | Compilador para herramientas | `check_source`/`check_file`: diagnósticos sin ejecutar el script. La estructura (props, eventos, nombres) no es pública |
 | Elementos propios | Un `.qml` importado como componente; el compilador lee sus `property` y `signal` |
+| Componentes en paquetes | Un paquete instalado reparte `.janel` y `.qml` en su carpeta; se importan por el nombre del paquete (`from janelkit_router import Pages`) |
 | Versión del formato | `FORMAT_VERSION`, con política de cambios |
 
 ### Añadir un paquete

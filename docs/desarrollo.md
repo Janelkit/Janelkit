@@ -21,7 +21,7 @@ Todos admiten `--help`.
   [janel dev] App.janel recargado en 38 ms; estado conservado en 4 componente(s); script cambiado, estado reiniciado: Contador.janel
   ```
 
-  Cada componente se reconoce por su sitio en el árbol (qué componente es, cuántos iguales tiene delante en la plantilla de su padre y la clave de la fila de `{#each}` en la que está), así que añadir líneas o estilos no lo pierde. No se conservan el foco, la selección de texto ni las ventanas abiertas con `open_window`.
+  Añadir líneas o estilos no pierde el estado. No se conservan el foco, la selección de texto ni las ventanas abiertas con `open_window`.
 - **Si el archivo tiene errores**, se muestran en la consola y en una ventana de errores, con archivo, línea y columna; la última versión correcta sigue abierta. Al corregir y guardar, la ventana de errores se cierra sola.
 - **Al guardar un `.py` o un `.qml` propio del proyecto** (por ejemplo, `src/services/…` o `src/widgets/…`), se reinicia el proceso: los módulos Python no se pueden recargar de forma fiable dentro del mismo proceso, y Qt no siempre vuelve a leer un `.qml` ya cargado.
 - Si la aplicación termina con error, `janel dev` espera a que cambie un `.py` y vuelve a arrancarla. Si se cierra la ventana normalmente, `janel dev` termina.
@@ -51,7 +51,7 @@ logging.getLogger("janelkit").setLevel(logging.DEBUG)
 `janelkit.inspect` monta la aplicación sin ventana y la maneja como lo haría un usuario. Funciona con pytest o con cualquier otro sistema de pruebas:
 
 ```python
-# packages/janelkit/tests/test_app.py
+# tests/test_app.py
 from janelkit.inspect import mount
 
 def test_añadir_tarea():
@@ -72,7 +72,8 @@ def test_búsqueda_asíncrona():
 - Las acciones (`click`, `type`, `check`, `choose`, `slide`, `submit`) emiten las mismas señales que el usuario: pasan por los manejadores y los `bind:` reales. Sobre un control desactivado fallan, como fallaría el usuario.
 - `app.texts()` devuelve los textos visibles en orden de lectura.
 - `app.wait(segundos)` o `app.wait(until=condición)` deja correr las tareas asíncronas y los temporizadores.
-- Diálogos: `app.answer_dialog(ruta)` responde a un diálogo de archivo; `app.answer_dialog(True/False)`, a una confirmación.
+- Diálogos y notificaciones de `janelkit-desktop`: `app.answer_dialog(...)`, `app.notifications()` (ver su [README](../packages/janelkit-desktop/README.md#en-pruebas)).
+- Capturas: `app.screenshot("pantalla.png")` o `elemento.screenshot(...)` devuelven un `QImage` (y lo guardan si se da una ruta). Con `headless=True` (por defecto) en Windows la captura sale sin fuentes ni vídeo; para revisarla a ojo, `mount(..., headless=False)`.
 
 Ver la referencia en [api.md](api.md#janelkitinspect-pruebas-y-herramientas).
 
@@ -84,7 +85,7 @@ Ver la referencia en [api.md](api.md#janelkitinspect-pruebas-y-herramientas).
 
 [PyInstaller](https://pyinstaller.org) genera una carpeta con un ejecutable que funciona sin Python instalado. La receta se probó en Windows 11 (Python 3.10, PySide6 6.8, PyInstaller 6.22) empaquetando `apps/examples/files`; en Linux y macOS el procedimiento es el mismo.
 
-### Receta con PyInstaller
+### Receta
 
 Desde la carpeta del proyecto (la que tiene `main.py` y `src/`), con el entorno de la aplicación activado:
 

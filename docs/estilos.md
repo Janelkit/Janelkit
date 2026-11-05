@@ -134,21 +134,18 @@ Lo heredan los `<Text>`; el texto de los controles de Qt (`Button`, `TextField`�
 
 ## Disposición
 
-Toda la disposición sigue las reglas de `<flex>`, un subconjunto del flexbox de CSS. `<flex>` sigue los valores por defecto de la web (fila, `align-items: stretch`, los hijos encogen si no caben). `Column` y `Row` son atajos de `<flex>` con los valores por defecto de siempre. Cuando no usan nada que lo impida, el compilador los coloca con un layout de Qt, más rápido, con el mismo resultado:
+Toda la disposición sigue las reglas de `<flex>`, un subconjunto del flexbox de CSS. `<flex>` sigue los valores por defecto de la web (fila, `align-items: stretch`, los hijos encogen si no caben). `Column` y `Row` son atajos de `<flex>` con otros valores por defecto:
 
 - Los hijos se colocan en orden, separados por `gap`. El espacio sobrante **no** se reparte entre ellos: queda al final, salvo que `justify-content` diga otra cosa.
 - `flex: 1` (o el atributo `flex={1}`) hace que un hijo ocupe el espacio libre del eje principal (alto en una `Column`, ancho en una `Row`). Si varios tienen `flex`, se lo reparten **en proporción**, sin importar su contenido (como `flex: N 1 0` en CSS): `flex: 2` y `flex: 1` reciben dos tercios y un tercio del espacio que dejan los demás.
 - El reparto proporcional se aplica cuando el tamaño del contenedor en ese eje viene de fuera (llena la ventana, tiene `flex` o se estira). Si el contenedor se ajusta a su contenido, cada hijo toma su tamaño natural.
-- En la etiqueta de un componente (`<Panel flex={2} />`), `flex` se aplica a su raíz si es una caja; si no, a una caja exterior que la raíz ocupa entera (ver "Estilos en la etiqueta del componente" en [lenguaje.md](lenguaje.md)).
 - En una `Column`, `Text`, `TextField`, `TextArea`, `Column`, `Row` y `Scroll` ocupan todo el ancho por defecto (como bloques); botones y casillas conservan su tamaño. `align-items` en el contenedor (o `align-self` en el hijo) cambia ese comportamiento.
-- En una `Row`, los hijos se centran verticalmente por defecto.
-
-> **A diferencia de CSS**, en `Column` y `Row` el valor por defecto de `align-items` **no** es `stretch`: en una `Row`, los hijos toman su alto natural y se centran; no llenan la fila. Para un diseño «panel lateral + contenido» que llene la ventana, pon `align-items: stretch` en la fila (o `align-self: stretch` en cada hijo, como en el ejemplo de abajo), o usa `<flex>`, que sí sigue los valores de la web.
+- En una `Row`, los hijos se centran en vertical y toman su alto natural: **no** se estiran como en CSS. Para un panel lateral que llene el alto, pon `align-items: stretch` en la fila o `align-self: stretch` en el hijo (ejemplo abajo), o usa `<flex>`, que sigue los valores de la web.
 - `width`/`height` en px fijan el tamaño preferido; `100%` ocupa el espacio disponible en ese eje; otro porcentaje es del contenedor.
 - En `Column` y `Row` solo encoge lo que tiene `flex` (en `<flex>`, todo, como en CSS, sin bajar del contenido mínimo: un texto que se corta puede estrecharse; un botón, no).
 - La raíz de la ventana ocupa la ventana entera.
 
-**Rejilla con `flex-wrap`** (se recoloca al cambiar el ancho, sin Python):
+**Rejilla** con `flex-wrap` (se recoloca al cambiar el ancho, sin Python):
 
 ```html
 <flex class="rejilla">{#each fichas as f}<Ficha class="celda" … />{/each}</flex>
@@ -171,11 +168,9 @@ Un bloque `{#if}` o `{#each}` con varios elementos se agrupa en una caja que cop
 </style>
 ```
 
-## Controles base y temas
+## Temas
 
-Los elementos se dibujan con un conjunto propio de controles (módulo QML interno `Janel`) que usa los tokens del tema: el mismo código se ve coherente en Windows, macOS y Linux, y cambia de aspecto al cambiar de tema.
-
-`Button` tiene variantes: `variant="primary"`, `"danger"`, `"ghost"` (sin fondo) y `"default"`.
+Los controles usan los tokens del tema: el mismo código se ve igual en Windows, macOS y Linux, y cambia de aspecto al cambiar de tema.
 
 ### Tokens
 

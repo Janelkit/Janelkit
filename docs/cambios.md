@@ -8,38 +8,36 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 
 ### Nuevo
 
-- **Ventanas en otra pantalla y a pantalla completa:** `<Window screen={i} fullscreen={bool}>` (por índice o por nombre de pantalla) y `screens`, la lista reactiva de pantallas (`Screen`), que cambia al conectar o desconectar una. Cambiar de pantalla estando a pantalla completa sale de ella, mueve la ventana y vuelve a entrar. Si la pantalla no existe, la ventana se queda donde está. Pedido por el primer usuario externo (ventana de proyección). Pruebas: `test_screens_qt.py`, con dos pantallas simuladas.
-- **Parar lo que no se ve:** `is_visible()` devuelve un `computed` que dice si el componente se ve (otra sección, una página de debajo, un `{#hidden}` o una fila de `<List>` fuera de la vista no se ven). `interval(ms, fn, when=…)` y `timeout(..., when=…)` solo cuentan mientras se cumple una condición reactiva: `@interval(33, when=is_visible())` sustituye a la comprobación a mano al empezar cada tic. Pedido por el primer usuario externo. Pruebas: `test_visibility_qt.py`.
-- **Métricas para depurar:** `Timer.runs`, `.skipped` y `.last_duration`; `subscriber_count` de `state` y `computed`, ahora documentado; `repr` de `Effect` (función, fuentes, liberado o en espera) y de `Scope` (qué contiene). Pruebas: `test_metrics_qt.py`.
+- **Ventanas en otra pantalla y a pantalla completa:** `<Window screen={i} fullscreen={bool}>` (por índice o por nombre de pantalla) y `screens`, la lista reactiva de pantallas (`Screen`), que cambia al conectar o desconectar una. Cambiar de pantalla estando a pantalla completa sale de ella, mueve la ventana y vuelve a entrar. Si la pantalla no existe, la ventana se queda donde está.
+- **Parar lo que no se ve:** `is_visible()` devuelve un `computed` que dice si el componente se ve (otra sección, una página de debajo, un `{#hidden}` o una fila de `<List>` fuera de la vista no se ven). `interval(ms, fn, when=…)` y `timeout(..., when=…)` solo cuentan mientras se cumple una condición reactiva: `@interval(33, when=is_visible())` sustituye a la comprobación a mano al empezar cada tic.
+- **Métricas para depurar:** `Timer.runs`, `.skipped` y `.last_duration`; `subscriber_count` de `state` y `computed`, ahora documentado; `repr` de `Effect` (función, fuentes, liberado o en espera) y de `Scope` (qué contiene).
 
 ### Cambia (puede requerir ajustes)
 
 | Antes | Ahora | Cómo migrar |
 |---|---|---|
-| `<Text format="markdown">` aplicaba el HTML del texto (`<b>`, `<img>`, `<span style=…>`): el texto de otras personas había que escaparlo a mano, y el escape se veía dentro del código (`a &lt; b`). | No interpreta HTML: se muestra tal cual, y el código se ve como se escribió. Se comprueba con el propio Markdown de Qt (md4c): el texto que recibe se ve igual con HTML que sin él. Pruebas: `test_safe_markdown_qt.py`. | Para usar HTML, `format="html"`. El escape a mano con `&lt;` sigue funcionando; se puede quitar. |
+| `<Text format="markdown">` aplicaba el HTML del texto (`<b>`, `<img>`, `<span style=…>`): el texto de otras personas había que escaparlo a mano, y el escape se veía dentro del código (`a &lt; b`). | No interpreta HTML: se muestra tal cual, y el código se ve como se escribió. | Para usar HTML, `format="html"`. El escape a mano con `&lt;` sigue funcionando; se puede quitar. |
 
 ## 0.1.1 (2026-11-04)
 
 Correcciones a partir del primer proyecto real con JanelKit (una app de visión con varias cámaras). No rompe código de 0.1.0.
 
-Es la última versión numerada a mano. Desde aquí, la versión la calcula la CI a partir del prefijo de cada commit ([api.md](api.md#cómo-se-calcula-la-versión)). Con esa regla, `screenshot()`, que es API nueva, habría llevado a 0.2.0.
-
 ### Nuevo
 
-- **Capturas en `janelkit.inspect`:** `app.screenshot(ruta)` y `elemento.screenshot(ruta)` devuelven un `QImage` (y lo guardan si se da una ruta): sirven para revisar pantallas en pruebas o en guiones. Con `headless=True` en Windows la captura puede salir sin fuentes ni vídeo; para mirarla, `mount(..., headless=False)`. Pruebas: `test_inspect.py::test_screenshot_of_window_and_element`.
+- **Capturas en `janelkit.inspect`:** `app.screenshot(ruta)` y `elemento.screenshot(ruta)` devuelven un `QImage` (y lo guardan si se da una ruta): sirven para revisar pantallas en pruebas o en guiones. Con `headless=True` en Windows la captura puede salir sin fuentes ni vídeo; para mirarla, `mount(..., headless=False)`.
 
-- **Documentación:** [patrones.md](patrones.md), patrones para aplicaciones en tiempo real (el ciclo runner/`Options`/`Snapshot`, el estado a medias tras un `await`, qué tipos avisan al modificarse, vistas ocultas, medir en Windows). [estilos.md](estilos.md#disposición) y el tutorial avisan de que en `Row`/`Column` los hijos no se estiran como en CSS.
+- **Documentación:** [patrones.md](patrones.md), patrones para aplicaciones en tiempo real (el ciclo runner/`Options`/`Snapshot`, el estado a medias tras un `await`, qué tipos avisan al modificarse, vistas ocultas, medir en Windows). [estilos.md](estilos.md#disposición) avisa de que en `Row`/`Column` los hijos no se estiran como en CSS.
 
 ### Corregido
 
-- **Ámbito tras un `await`:** un `timeout` o `interval` creado después de un `await` (en un manejador async, `on_mount`, un tic async o una `@task`) no se disparaba nunca: quedaba sin ámbito y Python lo recolectaba. Los `effect`, `computed` y `spawn` creados ahí tampoco se liberaban al desmontar. El ámbito activo ahora es una variable de contexto (`contextvars`) que `asyncio` conserva en cada tarea. Pruebas: `packages/janelkit/tests/test_scope_await_qt.py`.
-- **`dataclass` en el script de un `.janel`:** fallaba con `AttributeError: 'NoneType' object has no attribute '__dict__'` (con anotaciones en texto). El script se ejecuta ahora en un módulo registrado en `sys.modules` mientras vive la instancia (un nombre por instancia, `janelkit.components.<Archivo>_<n>`); `typing.get_type_hints` y `pickle` también funcionan. Pruebas: `test_script_module_qt.py`.
-- **Un `state` que es atributo en la plantilla:** `{hub.status}` mostraba `state('cerrada')` y no se actualizaba. Ahora se muestra el valor y se actualiza, también en f-strings, formatos, `{#if}` y `{#each}`. `str()` y `format()` de `state`, `computed` y props dan su valor (`repr()` no cambia). Pruebas: `test_attribute_state_qt.py`.
+- **Ámbito tras un `await`:** un `timeout` o `interval` creado después de un `await` (en un manejador async, `on_mount`, un tic async o una `@task`) no se disparaba nunca: quedaba sin ámbito y Python lo recolectaba. Los `effect`, `computed` y `spawn` creados ahí tampoco se liberaban al desmontar. El ámbito activo ahora es una variable de contexto (`contextvars`) que `asyncio` conserva en cada tarea.
+- **`dataclass` en el script de un `.janel`:** fallaba con `AttributeError: 'NoneType' object has no attribute '__dict__'` (con anotaciones en texto). El script se ejecuta ahora en un módulo registrado en `sys.modules` mientras vive la instancia (un nombre por instancia, `janelkit.components.<Archivo>_<n>`); `typing.get_type_hints` y `pickle` también funcionan.
+- **Un `state` que es atributo en la plantilla:** `{hub.status}` mostraba `state('cerrada')` y no se actualizaba. Ahora se muestra el valor y se actualiza, también en f-strings, formatos, `{#if}` y `{#each}`. `str()` y `format()` de `state`, `computed` y props dan su valor (`repr()` no cambia).
 - **Temporizadores sin componente:** un `timeout`/`interval` creado fuera de todo componente (en un servicio) se mantiene vivo mientras está activo, aunque no se guarde la referencia.
 
 ## 0.1.0
 
-Primera versión pública prevista. Respecto a la prealfa interna (incrementos 0–7):
+Primera versión pública.
 
 ### Nuevo
 
@@ -78,7 +76,7 @@ Primera versión pública prevista. Respecto a la prealfa interna (incrementos 0
 - **Portapapeles:** `janelkit_desktop.clipboard` con `copy`, `paste` (reactivo, también ante cambios de otras aplicaciones) y `clear`.
 - **Texto seleccionable:** `<Text selectable>` o `user-select: text`: se selecciona con el ratón o Ctrl+A y se copia con Ctrl+C; conserva los enlaces y el clic de la caja que lo contiene.
 - **Reactividad a gran escala** (reto de la hoja de cálculo): un efecto o binding avisado solo por `computed` se ejecuta solo si alguno cambió de valor (corte por igualdad, para valores inmutables). Las filas de `<List>` que salen de pantalla dejan de recalcular lo que muestran y se actualizan una vez al volver. Con 10 000 filas y la selección leída por cada celda, una flecha pasa de 47 a 29 ms y editar una celda de la que dependen 1 000 fórmulas fuera de la vista, de 155 a 0,02 ms.
-- **Vídeo:** `<Video source={frames}>` y `Frames`: fotogramas desde cualquier hilo (arrays de numpy, objetos con búfer o `QImage`) sin pasar por la reactividad; el último gana; `async for img in frames` para procesarlos con `background()`; `size` y `fps` reactivos. Los hijos de `<Video>` van en una capa del tamaño de la imagen (porcentajes de la imagen). 1080p a 60 fps: `push` 1,1 ms en el hilo que lo llama, 1,5 ms hasta la entrega y un 6 % del hilo de la interfaz (`apps/examples/video/bench.py --ventana`). Ejemplo en `apps/examples/video`; plan en [patrones.md](patrones.md#fotogramas-y-resultados-van-por-caminos-distintos).
+- **Vídeo:** `<Video source={frames}>` y `Frames`: fotogramas desde cualquier hilo (arrays de numpy, objetos con búfer o `QImage`) sin pasar por la reactividad; el último gana; `async for img in frames` para procesarlos con `background()`; `size` y `fps` reactivos. Los hijos de `<Video>` van en una capa del tamaño de la imagen (porcentajes de la imagen). 1080p a 60 fps: `push` 1,1 ms en el hilo que lo llama, 1,5 ms hasta la entrega y un 6 % del hilo de la interfaz (`apps/examples/video/bench.py --ventana`). Ejemplo en `apps/examples/video`; patrón en [patrones.md](patrones.md#fotogramas-y-resultados-van-por-caminos-distintos).
 - **Corregido:** un hijo con `position: absolute` y `width` o `height` al `100%` medía 0.
 - **Deshacer y rehacer:** `History`. `with historial.step("nombre"):` anota como un paso los cambios de `state` y colecciones reactivas hechos dentro; `add(nombre, undo=, redo=)` para lo que no es reactivo. `can_undo`, `undo_label`, `modified`… reactivos; `mark_saved()`, `clear()`, `limit`. Ver [lenguaje.md](lenguaje.md#deshacer-y-rehacer-history).
 - **`inspect`:** `key()` acepta los nombres de `event.key` (`"PageDown"`, `"ArrowRight"`) y da error con una tecla que no entiende (antes no pulsaba nada).

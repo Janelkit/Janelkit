@@ -182,21 +182,15 @@ El contenido de `<Text>`, `<Button>` y `<Checkbox>` es su texto: `<Button>Clicks
 - Los enlaces automáticos con `<…>` tampoco se interpretan; las direcciones sueltas (`https://…`) y `[texto](url)` sí son enlaces.
 - En casos raros en los que el código de un mensaje se lee de forma ambigua, puede verse una `\` antes de un `<` dentro del código; nunca pasa HTML.
 
-### Texto seleccionable y portapapeles
+### Texto seleccionable
 
 Por defecto, un `<Text>` no se puede seleccionar, como una etiqueta de escritorio. Con `selectable` (o `user-select: text` en el estilo) se selecciona arrastrando el ratón y se copia con Ctrl+C; con el foco en él, Ctrl+A lo selecciona todo. Sirve para números de pedido, mensajes de error o el texto de un chat. Los enlaces siguen funcionando, y un clic sin arrastrar sigue pulsando la caja con `on:click` que lo contenga:
 
 ```html
-<script>
-from janelkit_desktop import clipboard
-</script>
-
 <Text selectable>Pedido {pedido["id"]}</Text>
-<Button on:click={clipboard.copy(pedido["id"])}>Copiar</Button>
-<Text>En el portapapeles: {clipboard.paste() or "nada"}</Text>
 ```
 
-El portapapeles es del paquete [`janelkit-desktop`](../packages/janelkit-desktop/README.md). `janelkit_desktop.clipboard` copia (`copy`), lee (`paste`) y vacía (`clear`) el portapapeles del sistema. `paste()` es reactivo: lo que dependa de él se actualiza cuando el portapapeles cambia, también si se copia en otra aplicación.
+Para copiar desde el código, `clipboard` de [`janelkit-desktop`](../packages/janelkit-desktop/README.md).
 
 Límites de `selectable`: con `text-overflow: ellipsis` corta el texto en el borde, sin puntos suspensivos, y no tiene menú contextual. Además, crear un texto seleccionable cuesta unas 2,8 veces lo que uno normal (unos 0,35 ms frente a 0,12 ms), así que en listas de miles de filas conviene usarlo solo donde haga falta. Un texto sin `selectable` no paga nada.
 
@@ -402,7 +396,6 @@ Lo que la etiqueta lleva y el componente no declara como prop o evento se aplica
 - Si el componente declara una prop o un evento con ese nombre, gana lo declarado.
 - `inherit_attrs = False` en el script del componente lo desactiva: la etiqueta solo admite sus props y eventos, y `class`, `id`, `flex`, `width`, `height` y `visible` van a una caja exterior que lo envuelve, como cuando la raíz no es una caja.
 - Si la raíz no es una caja (un `<Button>`, varios elementos, un `{#if}`), esos seis atributos van a una **caja exterior** que lo envuelve, y un evento sin declarar es un error de compilación.
-- Algunas cosas no se pueden fijar desde fuera en la raíz: una `transition` o el texto heredado (`color`, la fuente) y las variables (`--x`) puestos desde el padre. Con ellas el componente lleva también una caja exterior, que se encarga de eso; el resultado se ve igual.
 
 ### Ciclo de vida
 
@@ -623,36 +616,11 @@ Con 10 000 filas, crear la lista tarda unos 40 ms (ver `python tools/bench.py`).
 <Image src="logo.png" alt="Logotipo de la empresa" />
 ```
 
-## Idiomas
+## Idioma y dirección de escritura
 
-Las traducciones son del paquete [`janelkit-i18n`](../packages/janelkit-i18n/README.md) (`pip install janelkit-i18n`).
+`janelkit.locale` es el idioma de la interfaz: `locale.set("ar")` refleja toda la interfaz (filas, alineación del texto, indicadores de los controles) en los idiomas de derecha a izquierda y hace que Qt use ese idioma en sus controles. `locale.rtl` dice si el activo se escribe de derecha a izquierda. Es reactivo.
 
-```python
-from pathlib import Path
-from janelkit_i18n import i18n, t
-
-i18n.load(Path(__file__).parent / "locales")   # locales/es.json, en.json, ar.json…
-i18n.set("es")
-```
-
-```json
-{ "saludo": "Hola, {nombre}", "archivos": {"zero": "Ningún archivo", "one": "{n} archivo", "other": "{n} archivos"} }
-```
-
-```html
-<Text>{t("saludo", nombre=nombre)}</Text>
-<Text>{t("archivos", n=len(archivos))}</Text>
-<Text>{i18n.number(total, 2)} · {i18n.date(hoy, "long")}</Text>
-```
-
-- `t` lee el idioma activo: al llamar a `i18n.set("en")` se actualiza todo lo que traduce, sin reiniciar.
-- Plurales: un diccionario con `zero` (opcional), `one` y `other`, elegido con el parámetro `n`.
-- Si falta una clave en el idioma activo, se usa la de `i18n.default` (por defecto `"es"`) y, si tampoco está, la propia clave, con un aviso en el logger `janelkit`.
-- `i18n.number(x, decimales)`, `i18n.currency(x, "€")` e `i18n.date(fecha, "short" | "long")` dan formato según el idioma activo (separadores, nombres de meses, cifras árabes…).
-- En idiomas de **derecha a izquierda** (`ar`, `he`, `fa`, `ur`…) toda la interfaz se refleja: filas, alineación del texto e indicadores de los controles. `i18n.rtl` dice si el idioma activo lo es.
-- El idioma de la interfaz es del núcleo: `janelkit.locale`. `i18n.set()` lo cambia, y sin traducciones basta `locale.set("ar")` para reflejar la interfaz y que Qt use ese idioma.
-
-Ejemplo: `apps/examples/idiomas` (español, inglés y árabe).
+Las traducciones (catálogos, plurales, formatos de número y fecha) son del paquete [`janelkit-i18n`](../packages/janelkit-i18n/README.md), cuyo `i18n.set()` cambia también este idioma. Ejemplo: `apps/examples/idiomas`.
 
 ## Navegación entre pantallas
 
@@ -787,33 +755,9 @@ def abrir_ajustes():
 - `modal=True` bloquea la ventana que la abrió mientras está abierta. `theme="dark"` le da un tema propio (también a los componentes que contiene), sin cambiar el de la aplicación.
 - Devuelve un objeto con `is_open` (reactivo: úsalo en la plantilla o en un `computed`), `close()`, `focus()` e `instance`.
 
-## Diálogos del sistema
+## Diálogos, portapapeles y notificaciones
 
-Son del paquete [`janelkit-desktop`](../packages/janelkit-desktop/README.md) (`pip install janelkit-desktop`), como el portapapeles y las notificaciones.
-
-```python
-from janelkit_desktop import dialogs
-
-async def abrir():                                # on:click={abrir}
-    ruta = await dialogs.open_file("Abrir nota", filters=["Notas (*.md *.txt)", "Todos (*)"])
-    if ruta is not None:                          # None: el usuario canceló
-        texto.value = ruta.read_text(encoding="utf-8")
-
-async def borrar():
-    if await dialogs.confirm("¿Borrar la nota?", details="No se puede deshacer."):
-        ...
-```
-
-| Función | Devuelve |
-|---|---|
-| `open_file(title, filters, folder)` | `Path` o `None` |
-| `open_files(title, filters, folder)` | `list[Path]` (vacía si se cancela) |
-| `save_file(title, filters, folder, name)` | `Path` o `None` |
-| `choose_folder(title, folder)` | `Path` o `None` |
-| `message(text, title, details)` | `None` al cerrarse |
-| `confirm(text, title, details)` | `True` si se acepta |
-
-Son nativos cuando la plataforma los ofrece y se muestran sobre la ventana de la aplicación. Al ser `async`, se usan desde un manejador `async def`, y se cierran solos si el componente que los abrió se desmonta.
+Son del paquete [`janelkit-desktop`](../packages/janelkit-desktop/README.md): diálogos nativos que se esperan con `await` (`await dialogs.open_file(...)`, `await dialogs.confirm(...)`), el portapapeles reactivo y las notificaciones del sistema.
 
 ## Elementos propios en QML
 

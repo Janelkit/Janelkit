@@ -153,7 +153,7 @@ git config core.hooksPath .githooks   # una vez: comprueba el prefijo de cada co
 python tools/versioning.py plan       # qué versión tocaría publicar y por qué
 ```
 
-Cada commit empieza por `mayor:`, `menor:`, `interno:` o `docs:`: de ahí sale la versión de cada paquete, que calcula y publica la CI ([política de versiones](docs/api.md#cómo-se-calcula-la-versión)).
+Cada commit empieza por `mayor:`, `menor:`, `interno:` o `docs:`: de ahí sale la versión de cada paquete, que calcula y publica la CI ([cómo se calcula](docs/arquitectura.md#versiones-y-publicación)).
 
 ## Licencia
 

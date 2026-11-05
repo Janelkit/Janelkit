@@ -79,7 +79,7 @@ Ejemplos: [`apps/examples/files`](https://github.com/janelkit/janelkit/tree/main
 
 | janelkit-desktop | janelkit | Python |
 |---|---|---|
-| 0.1.x | ≥ 0.1, < 0.2 | ≥ 3.10 |
+| 0.1.x | ≥ 0.1, < 0.3 | ≥ 3.10 |
 
 Sigue la misma [política de versiones](https://github.com/janelkit/janelkit/blob/main/docs/api.md#paquetes-del-ecosistema) que el núcleo, con versión propia.
 

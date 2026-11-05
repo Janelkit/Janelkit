@@ -38,7 +38,6 @@ Lo público es:
 | `untracked` | `with untracked():` lee estado sin registrar dependencias. |
 | `persisted` | `persisted(clave, valor_inicial)` crea un `Persisted`: un `state` que se recuerda entre sesiones. Lee el valor guardado al crearse y guarda cada cambio (también en el sitio) en `<carpeta de datos>/<clave>.json`, agrupado y al cerrar. La misma clave devuelve el mismo objeto. Solo valores JSON. Ver [lenguaje.md](lenguaje.md#estado-que-se-recuerda-persisted). |
 | `Persisted` | Tipo de `persisted`: lo de `State` más `.key`, `.file` y `.flush()` (escribe ya lo pendiente). |
-| `Frames` | Fotogramas a tiempo real para `<Video source={frames}>`: `Frames(color="rgb")` (`"bgr"`, `"rgba"`, `"bgra"`); `push(img)` desde cualquier hilo (numpy, objeto con búfer o `QImage`; se copia y se saltan los que no da tiempo a mostrar); `async for img in frames` y `await frames.next()` dan el más reciente; `size` y `fps` reactivos; `latest()`, `clear()`. Ver [lenguaje.md](lenguaje.md#vídeo-video-y-frames). |
 | `History` | Deshacer y rehacer: `historial = History(limit=100)`. `with historial.step("mover tarjeta"):` anota como un paso lo que cambie dentro (cada `State` asignado y cada lista, diccionario o conjunto reactivo modificado); `historial.add(nombre, undo=, redo=)` anota algo que ya se hizo y el historial no ve. `undo()` y `redo()` devuelven el nombre del paso (o `None`); `clear()`, `mark_saved()`. Reactivos: `can_undo`, `can_redo`, `undo_label`, `redo_label`, `modified`. Ver [lenguaje.md](lenguaje.md#deshacer-y-rehacer-history). |
 
 ### Componentes
@@ -65,7 +64,14 @@ Se llaman mientras se ejecuta el `<script>` de un componente; fuera de él lanza
 | `inject` | `inject(clave, defecto)` lee el valor del antecesor más cercano que lo provee. Sin defecto y sin proveedor: `LookupError`. |
 | `ref` | `ref()` crea una referencia para `ref={nombre}` en la plantilla. |
 | `Ref` | Tipo de `ref`: `.value` (reactivo; el objeto Qt o `None`), `.exists`, `.focused` (¿tiene el foco él o algo de dentro?; no reactivo), `.focus()`, `.blur()`, `.select_all()`; en una `<List>`, `.scroll_to_start()`, `.scroll_to_end()`, `.scroll_to(índice)`. |
-| `PointerEvent` | Lo que recibe `on:click`, `on:dblclick`, `on:contextmenu` y `on:pointer*` de las cajas: `.x`, `.y` (respecto al elemento), `.window_x`, `.window_y`, `.button`, `.buttons`, `.pointer` (`"mouse"`, `"touch"`, `"pen"`, `"keyboard"`), `.clicks`, `.ctrl`, `.shift`, `.alt`, `.meta`. Como todos los eventos: `.prevent()`, `.stop()`, `.type`. |
+
+### Eventos de las cajas
+
+Lo que recibe el manejador de un evento de `<flex>`, `Column` o `Row` ([lenguaje.md](lenguaje.md#eventos-de-las-cajas)). Todos tienen `.prevent()`, `.stop()` y `.type`.
+
+| Nombre | Descripción |
+|---|---|
+| `PointerEvent` | Lo que recibe `on:click`, `on:dblclick`, `on:contextmenu` y `on:pointer*` de las cajas: `.x`, `.y` (respecto al elemento), `.window_x`, `.window_y`, `.button`, `.buttons`, `.pointer` (`"mouse"`, `"touch"`, `"pen"`, `"keyboard"`), `.clicks`, `.ctrl`, `.shift`, `.alt`, `.meta`. |
 | `DragEvent` | `on:dragstart`, `on:dragover`, `on:drop`, `on:dragend` de un `<flex draggable>`: lo de `PointerEvent` más `.data` (lo que se arrastra: lo pone `on:dragstart` y llega igual al resto) y `.dropped` (en `on:dragend`: si algún `on:drop` lo recibió). |
 | `KeyEvent` | `on:keydown`, `on:keyup`: `.key` (como en la web: `"a"`, `"Enter"`, `"ArrowUp"`…), `.code`, `.text`, `.repeat` y los modificadores. |
 | `WheelEvent` | `on:wheel`: `.dx`, `.dy` (px; positivo hacia abajo), `.x`, `.y` y los modificadores. |
@@ -100,6 +106,8 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 | Nombre | Descripción |
 |---|---|
 | `open_window` | `open_window(Componente, modal=False, theme=None, **props_y_on_eventos)` abre un componente importado en otra ventana. Devuelve una ventana con `.is_open` (reactivo), `.close()`, `.focus()` e `.instance`. |
+| `screens` | Pantallas conectadas, reactivo y de solo lectura: `screens.value` es una lista de `Screen`. Cambia sola al conectar o desconectar una pantalla, al cambiar la principal o la resolución. Vacía hasta que la aplicación arranca. Con `<Window screen={i} fullscreen={bool}>` se elige dónde se abre la ventana. |
+| `Screen` | Una pantalla de `screens`: `index`, `name`, `width`, `height`, `x`, `y` (píxeles lógicos del escritorio virtual), `primary`, `scale` (píxeles físicos por píxel lógico). |
 
 ### Navegación
 
@@ -108,10 +116,14 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 | `pages` | `nav = pages(Inicio, **props)` en el script crea una pila de páginas; `<Pages stack={nav} />` muestra la de arriba. |
 | `PageStack` | Tipo de `pages`: `.push(C, **props_y_on_eventos)` (se puede esperar: `await` devuelve el valor de `.back(valor)`), `.pop()`, `.back(valor=None)`, `.replace(...)`, `.reset(...)` (los cuatro se pueden esperar: `True` si se salió, `False` si un `before_leave` lo impidió); reactivos `.current`, `.depth`, `.can_go_back`; `.page` (instancia visible). |
 | `navigation` | `nav = navigation()` en el script de una página (o de un componente dentro de ella) da su pila. |
-| `screens` | Pantallas conectadas, reactivo y de solo lectura: `screens.value` es una lista de `Screen`. Cambia sola al conectar o desconectar una pantalla, al cambiar la principal o la resolución. Vacía hasta que la aplicación arranca. Con `<Window screen={i} fullscreen={bool}>` se elige dónde se abre la ventana. |
-| `Screen` | Una pantalla de `screens`: `index`, `name`, `width`, `height`, `x`, `y` (píxeles lógicos del escritorio virtual), `primary`, `scale` (píxeles físicos por píxel lógico). |
 | `sections` | `secciones = sections(a=A, b=B)` crea secciones paralelas, cada una con su pila; `<Sections of={secciones} />` muestra la actual. |
 | `Sections` | Tipo de `sections`: `.show(nombre)`, `[nombre]` (su pila), `.stack` (la de la visible), `.names`; reactivo `.current`. |
+
+### Vídeo
+
+| Nombre | Descripción |
+|---|---|
+| `Frames` | Fotogramas a tiempo real para `<Video source={frames}>`: `Frames(color="rgb")` (`"bgr"`, `"rgba"`, `"bgra"`); `push(img)` desde cualquier hilo (numpy, objeto con búfer o `QImage`; se copia y se saltan los que no da tiempo a mostrar); `async for img in frames` y `await frames.next()` dan el más reciente; `size` y `fps` reactivos; `latest()`, `clear()`. Ver [lenguaje.md](lenguaje.md#vídeo-video-y-frames). |
 
 ### Idioma de la interfaz
 
@@ -151,13 +163,13 @@ Las traducciones (`t`, `i18n`) están en [`janelkit-i18n`](../packages/janelkit-
 | Nombre | Descripción |
 |---|---|
 | `mount` | `with mount("src/App.janel", headless=True) as app:` monta la aplicación sin ventana visible y la desmonta al salir. |
-| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.key("Ctrl+Z")` (pulsa una combinación sobre lo que tenga el foco: atajos), `app.windows()` (las ventanas abiertas con `open_window`, cada una inspeccionable igual), `app.screenshot(ruta=None)` (captura la ventana como `QImage` y la guarda si se da una ruta; con `headless=True` en Windows puede salir sin fuentes ni vídeo: para revisarla a ojo, `mount(..., headless=False)`). Las extensiones añaden más con [`janelkit.ext.inspector`](#janelkitext-extensiones): `janelkit-desktop` añade `app.dialogs()`, `app.answer_dialog(resultado)` y `app.notifications()`. |
+| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.key("Ctrl+Z")` (pulsa una combinación sobre lo que tenga el foco: atajos), `app.windows()` (las ventanas abiertas con `open_window`, cada una inspeccionable igual), `app.screenshot(ruta=None)` (captura la ventana como `QImage` y la guarda si se da una ruta; ver [desarrollo.md](desarrollo.md#pruebas-automáticas-de-una-aplicación)). Las extensiones añaden más con [`janelkit.ext.inspector`](#janelkitext-extensiones): `janelkit-desktop` añade `app.dialogs()`, `app.answer_dialog(resultado)` y `app.notifications()`. |
 | `Element` | `.tag`, `.id`, `.text`, `.label`, `.value`, `.visible`, `.enabled`, `.prop(nombre)`; acciones `.click()`, `.type(texto)`, `.submit()`, `.check(bool)`, `.slide(valor)`, `.choose(opción)`, `.focus()`, `.hover()`/`.unhover()` (puntero encima: estilos `:hover`), `.press()`/`.release()` (botón del ratón: `:pressed`; soltar encima es un clic real). `.double_click()`, `.right_click()` (`on:dblclick`, `on:contextmenu`), `.key("Ctrl+D")` (le da el foco y pulsa la combinación). `.drag_to(destino, x=, y=, cancel=False)` arrastra un `<flex draggable>` y lo suelta sobre `destino` (o pulsa Escape con `cancel=True`). `.screenshot(ruta=None)` captura solo ese elemento. `.item` es el objeto Qt (no cubierto por la política de versiones). |
 | `InspectError` | Elemento no encontrado, ambiguo, desactivado o que no admite la acción. Es un `AssertionError`. |
 
 ## `janelkit.ext` (extensiones)
 
-Para paquetes que amplían JanelKit sin tocar el núcleo (`janelkit-i18n`, `janelkit-desktop`…). Una extensión usa solo la API pública: los nombres de `janelkit` y los de estos módulos. `tests/test_boundaries.py`, en la raíz del repositorio, comprueba que las de este repositorio lo cumplen y que el núcleo no las importa.
+Para paquetes que amplían JanelKit sin tocar el núcleo (`janelkit-i18n`, `janelkit-desktop`…). Una extensión usa solo la API pública: los nombres de `janelkit` y los de estos módulos.
 
 | Nombre | Descripción |
 |---|---|
@@ -182,26 +194,6 @@ Mientras JanelKit esté en la serie **0.x**:
 - **Formato `.janel`**: `FORMAT_VERSION` sube solo cuando un archivo que compilaba deja de compilar o cambia de significado. Añadir sintaxis nueva no lo cambia. Las herramientas (editores, linters) pueden usarlo para saber qué esperar.
 - Desde la **1.0**, se aplica versionado semántico estricto.
 
-### Cómo se calcula la versión
-
-La versión no se escribe a mano: la calcula `.github/workflows/version.yml` (con `tools/versioning.py`) cuando la CI pasa en `main`, a partir del **prefijo** de cada commit. El prefijo dice qué nota quien usa JanelKit, no cuánto costó el cambio:
-
-| Prefijo | Sube | Cuándo |
-|---|---|---|
-| `mayor:` | 0.**#**.0 | API pública nueva, algo que se rompe o se retira, un cambio de comportamiento. |
-| `menor:` | 0.0.**#** | Corrige o mejora sin añadir ni quitar API: errores, rendimiento, mensajes. |
-| `interno:` | — | Reorganización, pruebas, CI, herramientas: el usuario no lo nota. |
-| `docs:` | — | Solo documentación. |
-| `version:` | — | Reservado al commit que hace el workflow. |
-
-- Cada paquete de `packages/` sube por separado: un commit cuenta para los paquetes cuyos archivos toca. Se miran los commits desde la última etiqueta del paquete (`janelkit-v0.2.0`, `janelkit-desktop-v0.1.1`), y `mayor:` gana a `menor:`.
-- El workflow escribe la versión (`pyproject.toml` y `__version__`) y el registro de cambios. Si ya hay una sección con esa versión escrita a mano (`## 0.2.0 (sin publicar)`), solo le pone la fecha; si no, la crea con los asuntos de los commits. Después hace el commit `version: …`, las etiquetas, y lanza `release.yml`, que publica en PyPI.
-- Si el núcleo va a salir de un rango que declara una extensión (`janelkit>=0.1,<0.2` y el núcleo pasa a 0.2.0), el cálculo se detiene con un error: primero se amplía el rango con un commit `menor:` de la extensión.
-- La **1.0.0** nunca se calcula: se decide y se escribe a mano.
-- La CI rechaza commits sin prefijo válido. En local, el hook lo comprueba al hacer commit: `git config core.hooksPath .githooks` (una vez por clon). `python tools/versioning.py plan` dice qué versión tocaría ahora y por qué.
-
 ### Paquetes del ecosistema
 
-`janelkit-i18n` y `janelkit-desktop` tienen **versión propia** y siguen la misma política para su propia API. Cada uno declara en su `pyproject.toml` las versiones del núcleo con las que funciona (por ejemplo `janelkit>=0.1,<0.2`) y solo usa la API pública del núcleo, así que una versión de parche del núcleo no los rompe. Cuando el núcleo publica una versión menor, se prueban contra ella y se amplía el rango (con una versión de parche de la extensión) o se adaptan (con una versión menor). En el repositorio, la CI prueba cada extensión contra el núcleo de la misma rama, y `tests/test_packages.py` comprueba que el rango declarado incluye esa versión.
-
-Las pruebas de `packages/janelkit/tests/test_public_api.py` fallan si cambia la lista de nombres públicos sin actualizar esta página.
+`janelkit-i18n` y `janelkit-desktop` tienen **versión propia** y siguen la misma política para su propia API. Cada uno declara en su `pyproject.toml` las versiones del núcleo con las que funciona (por ejemplo `janelkit>=0.1,<0.2`) y solo usa la API pública del núcleo, así que una versión de parche del núcleo no los rompe. Cuando el núcleo publica una versión menor, se prueban contra ella y se amplía el rango (con una versión de parche de la extensión) o se adaptan (con una versión menor).

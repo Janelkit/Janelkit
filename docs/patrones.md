@@ -1,6 +1,6 @@
 # Patrones para aplicaciones en tiempo real
 
-Lo que cuesta entender al hacer una aplicación que se actualiza sola muchas veces por segundo: visión por computador, adquisición de datos, paneles de máquinas. Sale del primer proyecto real con JanelKit (tres cámaras USB a 30 FPS, detección con YOLO en cada ciclo, una ventana en un proyector). Lo básico está en [lenguaje.md](lenguaje.md#trabajo-asíncrono).
+Lo que cuesta entender al hacer una aplicación que se actualiza sola muchas veces por segundo: visión por computador, adquisición de datos, paneles de máquinas. Lo básico está en [lenguaje.md](lenguaje.md#trabajo-asíncrono).
 
 ## Fotogramas y resultados van por caminos distintos
 
@@ -102,13 +102,13 @@ async def tick():
     ...
 ```
 
-`when=` acepta cualquier condición reactiva: `when=hub.ready`, `when=lambda: visible.value and hub.ready.value`. Un `effect` puede usar `visible` igual, por ejemplo para soltar la cámara mientras no se ve. (Antes de 0.2 había que comprobarlo a mano al empezar cada tic.)
+`when=` acepta cualquier condición reactiva: `when=hub.ready`, `when=lambda: visible.value and hub.ready.value`. Un `effect` puede usar `visible` igual, por ejemplo para soltar la cámara mientras no se ve.
 
 ## Servicios compartidos con `state`
 
 Un servicio (`services/cameras.py`) puede tener `state` como atributos y la plantilla los usa directamente: `{hub.status}`, `{#if hub.ready}`, `{#each hub.errors as e}` se muestran con su valor y se actualizan. Dentro de una operación, pide el valor: `{hub.ready.value and "lista"}`.
 
-Un temporizador del servicio (por ejemplo, el que oculta un aviso) no necesita guardarse: JanelKit lo mantiene vivo mientras está activo. Uno creado en un componente, aunque sea tras un `await`, se detiene al desmontarlo.
+Un temporizador creado en el servicio (por ejemplo, el que oculta un aviso) no hace falta guardarlo: sigue vivo mientras está activo.
 
 ## Medir ciclos en Windows
 
@@ -121,18 +121,3 @@ Como referencia, el temporizador de JanelKit (`PreciseTimer` por debajo de 1 s),
 | Periodo pedido | 1 ms | 5 ms | 10 ms | 15 ms | 33 ms | 100 ms |
 |---|---|---|---|---|---|---|
 | Tics por segundo | 971 | 200 | 100 | 67 | 30 | 10 |
-
-## Probar y revisar pantallas sin abrir la aplicación
-
-`janelkit.inspect.mount()` monta la aplicación, actúa como un usuario y ahora también captura:
-
-```python
-from janelkit.inspect import mount
-
-with mount("src/App.janel", headless=False) as app:
-    app.find(text="Arrancar").click()
-    app.wait(1.0)
-    app.screenshot("arrancado.png")
-```
-
-Con `headless=True` (plataforma `offscreen`) en Windows la captura sale sin fuentes ni vídeo: para revisarla a ojo, `headless=False`.

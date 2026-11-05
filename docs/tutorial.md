@@ -92,8 +92,6 @@ Cambia `<Text>{len(items)} productos</Text>` por un bloque `{#each}`:
 
 y añade a `<style>`: `.row { gap: 8px; align-items: center; }` y `.muted { color: var(--text-muted); }`.
 
-> En una `Row`, los hijos se centran en vertical y **no** se estiran como en CSS. Si una columna lateral debe ocupar todo el alto, añade `align-items: stretch` a la fila. Ver [estilos.md](estilos.md#disposición).
-
 - `(item["id"])` es la **clave** de cada fila: al borrar o reordenar, cada fila conserva su identidad.
 - `on:change={item["done"] = event}` es un **manejador en línea**: `event` es lo que manda el control (si quedó marcado).
 - `{:else}` se muestra cuando la lista está vacía.
@@ -271,7 +269,7 @@ effect(autosave)
 
 ## 8. Probar la aplicación
 
-`janelkit.inspect` monta la aplicación sin ventana y la maneja como lo haría un usuario. Crea `packages/janelkit/tests/test_app.py`:
+`janelkit.inspect` monta la aplicación sin ventana y la maneja como lo haría un usuario. Crea `tests/test_app.py` en el proyecto:
 
 ```python
 import json
@@ -316,8 +314,6 @@ def test_loads_the_saved_list(tmp_path, monkeypatch):
 pip install pytest
 pytest
 ```
-
-Estas pruebas encontraron, al escribir este tutorial, el error de guardar antes de cargar del paso 7.
 
 ## 9. Distribuirla
 

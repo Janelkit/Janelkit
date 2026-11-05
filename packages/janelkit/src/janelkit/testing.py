@@ -5,8 +5,7 @@ cargan desde el `conftest.py` de cada carpeta de pruebas:
 
     from janelkit.testing import isolated_data, janel_app, mount, reset_theme_and_locale
 
-Aún no es API pública: la versión para aplicaciones de usuarios será un plugin de
-pytest (docs/alcance.md). Para probar una aplicación, usa `janelkit.inspect`.
+No es API pública. Para probar una aplicación, usa `janelkit.inspect`.
 """
 from __future__ import annotations
 

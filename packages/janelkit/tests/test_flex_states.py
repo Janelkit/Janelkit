@@ -1,5 +1,5 @@
-"""<flex> fase 2: estados (pseudo-clases), selectores compuestos y de descendiente, transform,
-box-shadow, outline y cursor. Ver docs/flex.md."""
+"""<flex>: estados (pseudo-clases), selectores compuestos y de descendiente, transform,
+box-shadow, outline y cursor."""
 import tempfile
 from pathlib import Path
 

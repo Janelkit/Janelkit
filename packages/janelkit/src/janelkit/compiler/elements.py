@@ -62,7 +62,7 @@ _BOX_PROPS = {
     "padding": PropSpec("padding", "number"),
 }
 
-# Cajas (<flex>, Column, Row): las propiedades de comportamiento y accesibilidad de flex.md.
+# Cajas (<flex>, Column, Row): las propiedades de comportamiento y accesibilidad (docs/lenguaje.md).
 _BOX_PROPS.update({
     "as": PropSpec("jkRole", "string"),  # papel accesible y teclado (ver ROLES)
     "tabindex": PropSpec("jkTabIndex", "number"),  # 0: en el orden de Tab; -1: solo por código

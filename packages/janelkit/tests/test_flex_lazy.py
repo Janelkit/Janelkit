@@ -1,5 +1,5 @@
 """Cajas y textos ligeros: cada pieza se crea solo si se usa (JkHover, JkTap, JkRole,
-JkTranslate, JkTextBox, JkTextLinks). Ver "Vía rápida" en docs/flex.md."""
+JkTranslate, JkTextBox, JkTextLinks). Ver «Disposición» en docs/arquitectura.md."""
 from janelkit.testing import find
 from janelkit.compiler import compile_source
 from PySide6.QtCore import QCoreApplication, QEvent, Qt

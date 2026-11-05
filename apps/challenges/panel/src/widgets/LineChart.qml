@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Shapes
 
-// Gráfica de línea con relleno, escrita en QML (vía de escape: JanelKit no tiene
-// <Canvas> ni <Chart>; según docs/alcance.md las gráficas son de janelkit-kit).
+// Gráfica de línea con relleno, escrita en QML: JanelKit no tiene <Canvas> ni <Chart>,
+// y un .qml propio se importa como un componente más.
 //   <LineChart values={serie.history.value} max={100} color="#3b5bdb" />
 // Se traza con QtQuick.Shapes: los puntos se calculan en JS y se dibujan en la GPU.
 Item {

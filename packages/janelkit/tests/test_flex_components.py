@@ -1,4 +1,4 @@
-"""<flex> fase 5: componentes usados como elementos (atributos a la raíz). Ver docs/flex.md."""
+"""<flex>: componentes usados como elementos (atributos a la raíz)."""
 import tempfile
 from pathlib import Path
 

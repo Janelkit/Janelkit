@@ -1,5 +1,5 @@
 """Vía rápida de Column, Row y <flex direction="column">: layout de Qt cuando se puede,
-motor de <flex> (flex.js) cuando no. Ver compiler/layout_choice.py y docs/flex.md."""
+motor de <flex> (flex.js) cuando no. Ver compiler/layout_choice.py y docs/arquitectura.md."""
 import re
 import tempfile
 from pathlib import Path
@@ -127,7 +127,7 @@ def test_qt_boxes_with_engine_boxes_inside_are_marked():
 def test_qt_box_in_scroll_follows_the_width(mount):
     # JkScroll coloca su contenido con el motor; la columna de dentro es un layout de Qt,
     # que flex.js coloca al momento (settleQt). Lo que ahorra se ve en las mediciones
-    # (docs/flex.md); aquí, que el resultado sea el mismo.
+    # (docs/arquitectura.md); aquí, que el resultado sea el mismo.
     m = mount("""<Window width={400} height={300}><Scroll><Column id="c"><Text id="t">""" + "palabra " * 40
               + """</Text><Text>fin</Text></Column></Scroll></Window>""")
     c, t = find(m, "c"), find(m, "t")

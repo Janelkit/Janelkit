@@ -1,6 +1,16 @@
 # Arquitectura
 
-Cómo está organizado JanelKit por dentro: paquetes, capas del núcleo, el recorrido de un `.janel` desde el archivo hasta la pantalla, y cómo se versiona. Para usar JanelKit no hace falta leerlo; sirve para trabajar en el framework o escribir una extensión. Qué va en el núcleo y qué en el ecosistema está en [alcance.md](alcance.md).
+Para quien trabaja en JanelKit o escribe una extensión: qué va en el núcleo, cómo está organizado, el recorrido de un `.janel` hasta la pantalla, cómo se versiona y cuánto cuesta. Para usar JanelKit no hace falta.
+
+## Qué va en el núcleo
+
+Una funcionalidad es del **núcleo** (`janelkit`) si cumple al menos una de estas condiciones:
+
+1. Sin ella no se puede escribir, ejecutar o componer una aplicación `.janel`: lenguaje, compilador, runtime, controles básicos, CLI.
+2. Necesita detalles internos que no deben ser públicos: el puente QObject, las regiones dinámicas, el IR del compilador.
+3. Define una semántica que todo lo demás asume: cómo se propaga un cambio, cuándo se monta y desmonta un componente, cuándo se agrupan cambios (`batch`).
+
+Si algo puede construirse **solo con la API pública** y no todas las aplicaciones lo necesitan, va en un paquete aparte. Por eso la gestión de estado (`persisted` incluido) y el idioma de la interfaz (`janelkit.locale`, que cambia la dirección de toda la disposición) son del núcleo, y las traducciones, los diálogos del sistema o el enrutado por direcciones no.
 
 ## Paquetes del repositorio
 
@@ -13,11 +23,29 @@ Cómo está organizado JanelKit por dentro: paquetes, capas del núcleo, el reco
 | `apps/examples` | Ejemplos pequeños, uno por tema, con pruebas | `janelkit` y extensiones |
 | `apps/challenges` | Aplicaciones grandes que ponen a prueba el núcleo, con pruebas | `janelkit` y extensiones |
 
-Cada paquete tiene versión propia y se prueba por separado. Las extensiones declaran el rango del núcleo que admiten (`janelkit>=0.1,<0.3`). Dos pruebas del repositorio vigilan la frontera: `tests/test_boundaries.py` (el núcleo no importa el ecosistema y las extensiones no usan nada interno) y `tests/test_packages.py` (versiones y rangos compatibles).
+Cada paquete tiene versión propia y se prueba por separado. Las extensiones declaran el rango del núcleo que admiten (`janelkit>=0.1,<0.3`). `tests/test_boundaries.py` comprueba que el núcleo no importa el ecosistema y que las extensiones no usan nada interno; `tests/test_packages.py`, que versiones y rangos son compatibles.
+
+### Lo que el núcleo ofrece a las extensiones
+
+| Punto | Qué es |
+|---|---|
+| API pública declarada | Lo que exporta `janelkit` y los módulos públicos ([api.md](api.md)); lo demás es interno. Lo vigila `test_public_api.py` |
+| Inspección | `janelkit.inspect`: montar sin ventana, recorrer, disparar eventos, leer el estado. Las extensiones le añaden métodos con `janelkit.ext.inspector` |
+| Acceso a la aplicación | `janelkit.ext.app()`: motor QML, `QApplication` y ventana principal |
+| Plugins de la CLI | Subcomandos de `janel` desde otros paquetes (entry points `janelkit.commands`) |
+| Compilador para herramientas | `check_source`/`check_file`: diagnósticos sin ejecutar el script. La estructura (props, eventos, nombres) no es pública |
+| Elementos propios | Un `.qml` importado como componente; el compilador lee sus `property` y `signal` |
+| Versión del formato | `FORMAT_VERSION`, con política de cambios |
+
+### Añadir un paquete
+
+1. Crear `packages/janelkit-<nombre>/` con `pyproject.toml` (versión propia, `janelkit>=X,<Y`), `README.md` con una sección «Cambios», `src/janelkit_<nombre>/` y `tests/` con un `conftest.py` que importe las fixtures de `janelkit.testing`.
+2. Usar solo la API pública del núcleo. Si falta algo, se añade antes al núcleo, con prueba y entrada en [api.md](api.md).
+3. Añadirlo a `pytest.ini`, a `requirements-dev.txt`, a la matriz `extensions` de la CI y, si tiene wheel, a `EXTENSIONS` en `tools/check_wheel.py`; y crear su etiqueta de partida (`git tag janelkit-<nombre>-v0.1.0`). Actualizar la lista esperada de `tests/test_packages.py`.
 
 ## Capas del núcleo
 
-Cada módulo de `janelkit` pertenece a una capa y solo importa de su capa o de las de abajo. Lo comprueba `tests/test_architecture.py`, que lee los imports de todos los módulos (también los que se hacen dentro de una función): un import hacia arriba o un ciclo entre áreas hace fallar la prueba. Las capas 0 y 1 no importan Qt: `import janelkit.compiler` funciona sin PySide6.
+Cada módulo de `janelkit` pertenece a una capa y solo importa de su capa o de las de abajo. Lo comprueba `tests/test_architecture.py`, que lee los imports de todos los módulos (también los que se hacen dentro de una función): un import hacia arriba o un ciclo entre áreas hace fallar la prueba. Las capas 0 y 1 no importan Qt.
 
 | Capa | Módulos | Qué hace |
 |---|---|---|
@@ -27,10 +55,8 @@ Cada módulo de `janelkit` pertenece a una capa y solo importa de su capa o de l
 | **3** | `qt_backend`, `video` | Arranque de Qt y del bucle de eventos, carga del QML, eventos de `<flex>`, motor de disposición, vídeo |
 | **4** | `cli`, `inspect`, `testing`, `ext`, `janelkit` (raíz) | La CLI `janel`, la inspección para pruebas, las fixtures de pytest, la API para extensiones y lo que exporta `janelkit` |
 
-Reglas que se siguen al mover código:
-
-- Un módulo no se llama igual que un nombre público que exporta su paquete (por eso `themes.py` exporta `theme` y `displays.py` exporta `screens`): el submódulo taparía al objeto.
-- Cuando una capa necesita algo de una de arriba, se invierte la dependencia con una interfaz en la de abajo. Ejemplo: el runtime monta `<Pages stack={…}>` sin conocer la navegación, porque `PageStack` y `Sections` implementan `lifecycle.ElementHost`.
+- Un módulo no se llama igual que un nombre público que exporta su paquete (`themes.py` exporta `theme`; `displays.py`, `screens`): el submódulo taparía al objeto.
+- Cuando una capa necesita algo de una de arriba, se invierte la dependencia con una interfaz en la de abajo: el runtime monta `<Pages stack={…}>` sin conocer la navegación, porque `PageStack` y `Sections` implementan `lifecycle.ElementHost`.
 
 ## De un `.janel` a la pantalla
 
@@ -40,20 +66,46 @@ App.janel ──► sfc_parser ──► template_parser / script_analysis ─�
           ──► qml_generator ──► QML  +  tablas del runtime (bindings, manejadores, regiones)
 ```
 
-1. **Compilar** (capa 1). `sfc_parser` separa `<script>`, plantilla y `<style>` conservando las líneas. `template_parser` lee la plantilla (no es XML: admite expresiones Python entre llaves). `script_analysis` analiza el script sin ejecutarlo (qué es `state`, `prop`, `event`, qué componentes importa). `lowering` valida elementos, atributos y nombres contra el catálogo, resuelve la cascada de estilos al compilar y produce el IR. `layout_choice` decide, caja por caja, si basta un layout de Qt o hace falta el motor de `<flex>`. `qml_generator` escribe el QML y un mapa de origen (línea QML → línea del `.janel`), que usan los errores.
+1. **Compilar** (capa 1). `sfc_parser` separa `<script>`, plantilla y `<style>` conservando las líneas. `template_parser` lee la plantilla (no es XML: admite expresiones Python entre llaves). `script_analysis` analiza el script sin ejecutarlo. `lowering` valida elementos, atributos y nombres contra el catálogo, resuelve la cascada de estilos (los estilos tienen ámbito y la plantilla se conoce entera) y produce el IR. `layout_choice` decide, caja por caja, quién la dispone (abajo). `qml_generator` escribe el QML y un mapa de origen (línea QML → línea del `.janel`) para los errores.
 2. **Montar** (capa 2). `runtime/component.py` crea una instancia por componente: ejecuta el script en un módulo propio (registrado en `sys.modules` mientras vive), crea un puente QObject (`runtime/qt_bridge.py`) con una propiedad por binding, y un `Effect` por binding que recalcula su valor y lo escribe en el puente. Las regiones dinámicas (`{#if}`, `{#each}`, `{#key}`, `{#hidden}`) son modelos Qt (`runtime/list_model.py`) con un puente por fila.
-3. **Dibujar** (capa 3). `qt_backend/application.py` arranca Qt y el bucle de asyncio (qasync), carga el QML generado sobre los controles de `qml/Janel/` y conecta los temas. QML nunca ejecuta lógica del usuario: solo lee propiedades del puente y le devuelve eventos.
+3. **Dibujar** (capa 3). `qt_backend/application.py` arranca Qt y el bucle de asyncio (qasync) y carga el QML generado sobre los controles de `qml/Janel/`. QML no ejecuta lógica del usuario: lee propiedades del puente y le devuelve eventos. Los estados (`:hover`, `:pressed`…) se compilan a estados de la vista, así que no pasan por Python; los eventos de `<flex>` los ve un filtro por ventana (`qt_backend/events.py`) antes que Qt Quick, y los entrega de dentro afuera.
 
 ### Reactividad y ámbitos
 
-- Lo que lee un `Effect` o un `Computed` queda registrado; al cambiar, el efecto se vuelve a ejecutar al terminar el `batch` en curso.
+- Lo que lee un `Effect` o un `Computed` queda registrado; al cambiar, el efecto se vuelve a ejecutar al terminar el `batch` en curso. Si solo lo avisaron `Computed`, primero se recalculan y solo se ejecuta si alguno cambió de valor.
 - Cada instancia de componente tiene un `Scope`: lo que se crea mientras su script, un manejador o un tic se ejecutan (efectos, `computed`, temporizadores, tareas) queda en él y se libera al desmontar. El ámbito activo es una variable de contexto (`contextvars`), así que una corrutina lo conserva tras cada `await`.
-- Una `Gate` (compuerta de visibilidad) aplaza los efectos de la plantilla de lo que no se ve (`{#hidden}`, otra sección, la página de debajo, una fila de `<List>` fuera de la vista). Lo del script sigue funcionando; `is_visible()` expone la compuerta como `computed` para pararlo a propósito.
+- Una `Gate` (compuerta de visibilidad) aplaza los efectos de la plantilla de lo que no se ve (`{#hidden}`, otra sección, la página de debajo, una fila de `<List>` fuera de la vista). Lo del script sigue funcionando; `is_visible()` expone la compuerta como `computed`.
 - El estado reactivo solo se modifica desde el hilo de la interfaz. `background()` ejecuta en otro hilo y devuelve el valor por `await`.
+
+### Disposición: motor de `<flex>` y layouts de Qt
+
+Los `Layout` de Qt Quick no tienen salto de línea, márgenes, `space-between`, `order` ni posición absoluta en el flujo, así que `<flex>` tiene un motor propio (`qml/Janel/flex.js`, un subconjunto del algoritmo de CSS):
+
+- Cada hijo avisa a su contenedor con un binding que depende de lo que afecta a su sitio; el contenedor pasa a una cola que se vacía en la fase de *polish* de Qt Quick, justo antes de dibujar (`JkPolisher`, `qt_backend/polish.py`). Nunca se dibuja un fotograma a medio colocar, y muchos cambios seguidos cuestan una pasada.
+- Se coloca de fuera adentro, y lo leído de cada hijo se guarda hasta que el hijo avisa.
+- En el motor de JS de Qt, `Set`/`Map` buscan de forma lineal, `for…of` es varias veces más lento que un bucle con índice, y un binding que recorre todos los hijos se vuelve cuadrático al añadirlos uno a uno.
+
+El motor es unas 5 veces más lento que un layout de Qt al cambiar el ancho. Por eso `compiler/layout_choice.py` elige, caja por caja:
+
+- **Layout de Qt** (`JkColumn`, `JkRow`, `JkQtBox`) para `Column`, `Row` y `<flex direction="column">` que solo usan dirección, `gap`, `padding`, bordes, `align-items`/`align-self` (sin `baseline`), márgenes fijos, tamaños en px, mínimos y máximos, y un solo hijo con `flex`.
+- **Motor** (`JkFlex`, `JkFlexColumn`, `JkFlexRow`) en todo lo demás: `wrap`, `justify-content`, `overflow: auto`, `order`, `margin: auto`, `%`, `position`, `flex-shrink`/`flex-basis`, `:first-child`/`:last-child`, varios hijos con `flex`, contenido de un `<Slot />`, cajas implícitas de `{#if}`/`{#each}`, cajas exteriores de componentes y `<flex>` en fila. También dentro de una caja con el motor (el motor lee al momento el tamaño de cada hijo; un layout de Qt lo calcula más tarde). Si aun así queda un layout dentro del motor, `flex.js` lo coloca al momento con `ensurePolished()`.
+
+Se decide al compilar con todo lo que la caja y sus hijos pueden llegar a tener, también en estados y clases condicionales. Las dos vías comparten `JkBox.qml` (aspecto, estados, eventos, accesibilidad) y colocan igual: lo comprueba `packages/janelkit/tests/test_layout_choice.py`, que monta las mismas páginas de las dos formas.
+
+Cada pieza de una caja o de un `<Text>` se crea solo si se usa (`jk.js`, `flexDecorations` y `textDecorations`; prueba: `test_flex_lazy.py`):
+
+| Pieza | Se crea si… |
+|---|---|
+| `JkHover.qml` | `on:click`, una regla `:hover`, `cursor` o `title` |
+| `JkTap.qml` | `on:click` o una regla `:pressed` |
+| `JkRole.qml` (lector de pantalla, Espacio/Intro) | un papel distinto de `box` |
+| `JkTranslate.qml` | `transform: translate(...)` distinto de cero |
+| `JkTextBox.qml` | `background` o `border` en un `<Text>` |
+| `JkTextLinks.qml` | `format="markdown"` o `"html"` |
 
 ## Versiones y publicación
 
-La versión de cada paquete la calcula la CI a partir del prefijo de cada commit (`tools/versioning.py`; las reglas están en [api.md](api.md#cómo-se-calcula-la-versión)):
+La versión de cada paquete la calcula la CI a partir del prefijo de cada commit (`tools/versioning.py`; reglas en [api.md](api.md#cómo-se-calcula-la-versión)):
 
 | Prefijo | Sube | Cuándo |
 |---|---|---|
@@ -63,7 +115,35 @@ La versión de cada paquete la calcula la CI a partir del prefijo de cada commit
 
 Un commit cuenta para los paquetes cuyos archivos toca, desde la última etiqueta de cada uno (`janelkit-v0.2.0`). La 1.0.0 se decide a mano.
 
-Flujo: el trabajo de una versión se acumula en una rama. Al integrarla en `main`, la CI (`.github/workflows/ci.yml`) prueba cada paquete por separado. Si pasa, `.github/workflows/version.yml` escribe las versiones y los registros de cambios, crea el commit `version: …` y las etiquetas, y lanza `release.yml`, que publica en PyPI. El hook `.githooks/commit-msg` comprueba el prefijo en local.
+El trabajo de una versión se acumula en una rama. Al integrarla en `main`, la CI (`.github/workflows/ci.yml`) prueba cada paquete por separado. Si pasa, `.github/workflows/version.yml` escribe las versiones y los registros de cambios, crea el commit `version: …` y las etiquetas, y lanza `release.yml`, que publica en PyPI. El hook `.githooks/commit-msg` comprueba el prefijo en local (`git config core.hooksPath .githooks`).
+
+## Rendimiento
+
+Tiempos indicativos (Windows 11, `offscreen` salvo que se diga), para saber qué esperar y detectar regresiones.
+
+**Listas** (`python tools/bench.py`; filas con casilla, texto y botón):
+
+| Operación | `<Scroll>`, 1000 filas | `<List>`, 1000 filas | `<List>`, 10 000 filas |
+|---|---|---|---|
+| Crear | 430 ms | 9 ms | 39 ms |
+| Insertar una fila en medio (`insert`) | 5 ms | 2 ms | 16 ms |
+| Editar una fila en el sitio | <1 ms | <1 ms | <1 ms |
+| Invertir el orden | 93 ms | 11 ms | 25 ms |
+| Vaciar | 39 ms | 1 ms | 3 ms |
+
+**Arranque** (`python tools/bench_app.py`): 260–290 ms en frío para cualquier ejemplo de `apps/examples`. Casi todo es importar PySide6; compilar cuesta menos de 10 ms, así que no hay caché de compilación.
+
+**Disposición** (`python apps/examples/flex/bench.py`, ventana real): rejilla de 200 tarjetas, 17 ms por fotograma; 300 tarjetas en un `<Scroll>`, 8,7 ms por paso al cambiar el ancho. Una caja vacía cuesta ~32 µs al crearse y un `<Text>`, ~30 µs.
+
+**Vídeo** (`python apps/examples/video/bench.py --ventana`; un hilo empuja fotogramas a 60 fps):
+
+| Resolución | Entregados | `push` | De `push` a la entrega (p50 / p95) | CPU del hilo de la interfaz |
+|---|---|---|---|---|
+| 640 × 480 | 59,6 fps | 0,37 ms | 0,57 / 0,69 ms | 3,1 % |
+| 1280 × 720 | 60,1 fps | 0,62 ms | 0,94 / 1,29 ms | 2,6 % |
+| 1920 × 1080 | 59,6 fps | 1,07 ms | 1,54 / 1,84 ms | 6,2 % |
+
+`push` copia y convierte la imagen en el hilo que lo llama, así que el de la interfaz solo entrega un `QVideoFrame` ya listo.
 
 ## Herramientas
 
@@ -71,4 +151,4 @@ Flujo: el trabajo de una versión se acumula en una rama. Al integrarla en `main
 |---|---|
 | `tools/versioning.py` | `plan` (qué versión toca a cada paquete), `apply`, `check` (prefijos) |
 | `tools/check_wheel.py` | Construye los wheels, los instala en un entorno limpio y prueba `janel new` + `python main.py` fuera del repositorio |
-| `tools/bench.py`, `tools/bench_app.py` | Los tiempos de [rendimiento.md](rendimiento.md) |
+| `tools/bench.py`, `tools/bench_app.py` | Los tiempos de [Rendimiento](#rendimiento) |

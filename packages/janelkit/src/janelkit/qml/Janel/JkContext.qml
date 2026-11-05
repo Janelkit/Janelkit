@@ -1,4 +1,4 @@
-// Contexto de estilo de una caja (fase 4 de docs/flex.md): el texto que heredan los
+// Contexto de estilo de una caja: el texto que heredan los
 // <Text> de dentro (color, fuente, alineación…) y las variables propias (--x). Solo lo
 // tienen las cajas que fijan algo de eso; las demás usan el de su contenedor (jkCtx).
 // Cada valor es el de la caja (jkT_*, jkV_*) o, si no lo fija, el del contexto de fuera.

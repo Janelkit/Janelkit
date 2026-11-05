@@ -84,7 +84,7 @@ Los estilos son **locales al componente**: afectan a los elementos escritos en s
 | `visibility` | flex, Column, Row | `hidden`: ocupa su sitio sin verse (ni recibir eventos); `visible` |
 | `transition` | todos salvo Window | `background 200ms, opacity .3s` o `all 150ms`: anima los cambios de `color`, `background`, `border-color`, `opacity`, `width`, `height`, `border-radius` y `transform`, y en las cajas `box-shadow` y `outline` (también los que provocan los estados y las clases condicionales o dinámicas). |
 
-No soportado todavía (advertencia): `position: sticky`, `em`/`rem`, `display: grid`, animaciones con `@keyframes`.
+No soportado (advertencia): `position: sticky`, `em`/`rem`, `display: grid`, `aspect-ratio`, animaciones con `@keyframes`.
 
 ## Posición
 
@@ -111,7 +111,7 @@ Como en CSS, `color`, `font-family`, `font-size`, `font-weight`, `font-style`, `
 .fila:selected { background: var(--primary); color: var(--on-primary); }
 ```
 
-Hoy lo heredan los `<Text>`; el texto de los controles de Qt (`Button`, `TextField`…) sigue con su propio estilo.
+Lo heredan los `<Text>`; el texto de los controles de Qt (`Button`, `TextField`…) sigue con su propio estilo.
 
 ## Variables propias
 
@@ -130,11 +130,11 @@ Hoy lo heredan los `<Text>`; el texto de los controles de Qt (`Button`, `TextFie
 
 - `style="gap: 4px; background: #222"`: las mismas propiedades que `<style>`, para un elemento.
 - `style={{"background": color, "width": f"{pct}%", "--acento": acento}}`: valores calculados en Python, que se actualizan solos. Admite `background`, `color`, `border-color`, `border-width`, `border-radius`, `opacity`, `gap`, `padding`, `font-size`, `width`, `height` (px o `%`) y variables `--x`.
-- Los estilos en línea ganan a las reglas y a los estados (`:hover` no los cambia). Ver las fases de [flex.md](flex.md).
+- Los estilos en línea ganan a las reglas y a los estados (`:hover` no los cambia).
 
 ## Disposición
 
-Toda la disposición sigue las reglas de [`<flex>`](flex.md), un subconjunto del flexbox de CSS. `<flex>` sigue los valores por defecto de la web (fila, `align-items: stretch`, los hijos encogen si no caben). `Column` y `Row` son atajos de `<flex>` con los valores por defecto de siempre. Cuando no usan nada que lo impida, el compilador los coloca con un layout de Qt, más rápido, con el mismo resultado (ver [Vía rápida](flex.md#vía-rápida-layouts-de-qt)):
+Toda la disposición sigue las reglas de `<flex>`, un subconjunto del flexbox de CSS. `<flex>` sigue los valores por defecto de la web (fila, `align-items: stretch`, los hijos encogen si no caben). `Column` y `Row` son atajos de `<flex>` con los valores por defecto de siempre. Cuando no usan nada que lo impida, el compilador los coloca con un layout de Qt, más rápido, con el mismo resultado:
 
 - Los hijos se colocan en orden, separados por `gap`. El espacio sobrante **no** se reparte entre ellos: queda al final, salvo que `justify-content` diga otra cosa.
 - `flex: 1` (o el atributo `flex={1}`) hace que un hijo ocupe el espacio libre del eje principal (alto en una `Column`, ancho en una `Row`). Si varios tienen `flex`, se lo reparten **en proporción**, sin importar su contenido (como `flex: N 1 0` en CSS): `flex: 2` y `flex: 1` reciben dos tercios y un tercio del espacio que dejan los demás.

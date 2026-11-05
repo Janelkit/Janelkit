@@ -1,4 +1,4 @@
-"""apps/examples/flex: elementos construidos solo con <flex> (docs/flex.md, catálogo de validación)."""
+"""apps/examples/flex: elementos construidos solo con <flex>."""
 from pathlib import Path
 
 import pytest

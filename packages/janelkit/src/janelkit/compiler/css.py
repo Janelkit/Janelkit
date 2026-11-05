@@ -27,7 +27,7 @@ ALL = set(CONTROLS)
 _NUM_RE = re.compile(r"^(-?\d+(?:\.\d+)?)(px)?$")
 _VAR_RE = re.compile(r"^var\(\s*--([A-Za-z][\w-]*)\s*(?:,\s*(.+))?\)$")
 
-# Texto que heredan los <Text> de dentro de una caja (fase 4 de docs/flex.md):
+# Texto que heredan los <Text> de dentro de una caja:
 # propiedad QML del texto -> nombre en el contexto de estilo (JkContext.qml).
 INHERITED = {
     "jkColor": "color", "font.family": "family", "font.pixelSize": "size", "font.weight": "weight",

@@ -1,4 +1,4 @@
-"""<flex>: el elemento base con flexbox (fase 1: caja y disposición). Ver docs/flex.md."""
+"""<flex>: el elemento base con flexbox."""
 import pytest
 from janelkit.testing import find, visual_items
 from PySide6.QtCore import QCoreApplication

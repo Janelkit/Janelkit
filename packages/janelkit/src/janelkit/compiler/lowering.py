@@ -1390,7 +1390,7 @@ def _inline_vars(nodes: list[Node]) -> set[str]:
 
 
 def _context_extras(ir: IRElement, cascade: Cascade) -> None:
-    """Texto heredado y variables propias: lo que declara cada elemento (fase 4 de docs/flex.md)."""
+    """Texto heredado y variables propias: lo que declara cada elemento."""
     keys = {*ir.props, *ir.behaviors, *(c[0] for c in ir.conditional)}
     own = sorted(k for k in keys if k.startswith((TEXT_PREFIX, VAR_PREFIX)))
     if own and ir.qml_type in _BOXES:

@@ -133,7 +133,7 @@ JanelKit está en **alfa** (serie 0.x). Lo público está [documentado](https://
 - [Estilos y disposición](https://github.com/janelkit/janelkit/blob/main/docs/estilos.md): CSS soportado, flexbox, tokens y temas.
 - [Desarrollo](https://github.com/janelkit/janelkit/blob/main/docs/desarrollo.md): `janel dev`, `janel build`, errores y editor.
 - [API pública](https://github.com/janelkit/janelkit/blob/main/docs/api.md) y [cambios entre versiones](https://github.com/janelkit/janelkit/blob/main/docs/cambios.md).
-- [Crear un ejecutable](https://github.com/janelkit/janelkit/blob/main/docs/empaquetado.md) con PyInstaller.
+- [Crear un ejecutable](https://github.com/janelkit/janelkit/blob/main/docs/desarrollo.md#distribuir-un-ejecutable-con-pyinstaller) con PyInstaller.
 - [Ejemplos](https://github.com/janelkit/janelkit/tree/main/apps/examples): contador, tareas, notas, explorador de archivos, cliente de una API, idiomas, vídeo…
 
 ## Licencia

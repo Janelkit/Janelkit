@@ -523,7 +523,7 @@ Ejemplos: `apps/challenges/kanban` (todo con `step`) y `apps/challenges/hoja` (c
 
 ## Vídeo: `<Video>` y `Frames`
 
-Para mostrar vídeo a tiempo real (una cámara, un vídeo procesado, una simulación) los fotogramas no pasan por la reactividad: van por un `Frames`, que se puede alimentar desde cualquier hilo, y `<Video>` muestra siempre el más reciente. Cómo montar una aplicación de visión con cámaras y un modelo está en [vision.md](vision.md).
+Para mostrar vídeo a tiempo real (una cámara, un vídeo procesado, una simulación) los fotogramas no pasan por la reactividad: van por un `Frames`, que se puede alimentar desde cualquier hilo, y `<Video>` muestra siempre el más reciente. El patrón completo, con cámara y modelo, está en [patrones.md](patrones.md#fotogramas-y-resultados-van-por-caminos-distintos).
 
 ```python
 import threading
@@ -562,7 +562,7 @@ def pct(valor, eje):               # de píxeles de la imagen a % de la capa (ej
 - `async for img in frames` da el objeto que se pasó a `push`. Con `background()`, el modelo corre en otro hilo y la vista previa no espera por él. `await frames.next()` espera al próximo.
 - `frames.size` (`(ancho, alto)` o `None`) y `frames.fps` son reactivos. `frames.latest()` es el último fotograma; `frames.clear()` deja la vista en blanco.
 - Los hijos de `<Video>` van en una caja con `position: relative` del tamaño exacto de la imagen que se ve, así que los porcentajes son de la imagen, también con `fit="contain"` (bandas) o `"cover"` (recortada). Para un espejo (cámara frontal), voltea la imagen antes de `push` (`cv2.flip(img, 1)`): así las coordenadas siguen coincidiendo.
-- Abrir cámaras no es del núcleo: con OpenCV (`cv2.VideoCapture`) o QtMultimedia, en un hilo propio. Ver [vision.md](vision.md).
+- Abrir cámaras no es del núcleo: con OpenCV (`cv2.VideoCapture`) o QtMultimedia, en un hilo propio.
 
 ## Listas grandes: `<List>`
 
@@ -856,13 +856,13 @@ Ejemplo: `apps/examples/counter` (`src/widgets/Meter.qml`).
 
 ## Elementos disponibles
 
-**Elementos base, en minúscula; componentes y controles, en mayúscula.** Las etiquetas en minúscula están reservadas para los elementos base de JanelKit, a partir de los que se construyen otros elementos sin escribir QML (como `<div>` frente a `<Boton>` en la web). Hoy hay uno, [`<flex>`](flex.md); el de la entrada de datos llegará después. Una etiqueta en minúscula desconocida es un error que lista los elementos base.
+**Elementos base, en minúscula; componentes y controles, en mayúscula.** Las etiquetas en minúscula están reservadas para los elementos base de JanelKit, a partir de los que se construyen otros elementos sin escribir QML (como `<div>` frente a `<Boton>` en la web). Hay uno: `<flex>`. Una etiqueta en minúscula desconocida es un error que lista los elementos base.
 
 | Elemento base | Qt Quick | Propiedades | Eventos |
 |---|---|---|---|
-| `flex` | caja propia con el motor flexbox (`JkFlex`) | `direction` (`row` por defecto, `column`, `row-reverse`, `column-reverse`), `wrap`, `gap`, `padding`, `align` (`align-items`), `justify` (`justify-content`), `as`, `tabindex`, `disabled`, `title`, `checked`, `selected`, `expanded`, `style` | `on:click`, `on:dblclick`, `on:contextmenu`, `on:pointerdown`, `on:pointerup`, `on:pointermove`, `on:pointerenter`, `on:pointerleave`, `on:wheel`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur`, `on:resize` |
+| `flex` | caja propia con el motor flexbox (`JkFlex`) | `direction` (`row` por defecto, `column`, `row-reverse`, `column-reverse`), `wrap`, `gap`, `padding`, `align` (`align-items`), `justify` (`justify-content`), `as`, `tabindex`, `disabled`, `title`, `checked`, `selected`, `expanded`, `draggable`, `style` | `on:click`, `on:dblclick`, `on:contextmenu`, `on:pointerdown`, `on:pointerup`, `on:pointermove`, `on:pointerenter`, `on:pointerleave`, `on:wheel`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur`, `on:resize`, `on:dragstart`, `on:dragover`, `on:drop`, `on:dragend` |
 
-`<flex>` es la caja de la web: fila por defecto, `align-items: stretch` y el resto del flexbox de CSS en `<style>` (`flex-wrap`, márgenes y `margin: auto`, `space-between`, `order`, `%`, bordes por lado, radio por esquina, `overflow`), con estados (`:hover`, `:pressed`, `:focus-visible`…), selectores de descendiente (`.tarjeta:hover .acciones`), sombra, `outline`, `transform` y `cursor`. Ver [estilos.md](estilos.md) y el diseño completo, con lo que llegará en las fases siguientes, en [flex.md](flex.md). Los atributos de texto se comprueban al compilar: `<flex direction="diagonal">` es un error.
+`<flex>` es la caja de la web: fila por defecto, `align-items: stretch` y el resto del flexbox de CSS en `<style>` (`flex-wrap`, márgenes y `margin: auto`, `space-between`, `order`, `%`, bordes por lado, radio por esquina, `overflow`), con estados (`:hover`, `:pressed`, `:focus-visible`…), selectores de descendiente (`.tarjeta:hover .acciones`), sombra, `outline`, `transform` y `cursor`. Ver [estilos.md](estilos.md); hay botones, tarjetas, menús y diálogos hechos con `<flex>` en `apps/examples/flex`. Los atributos de texto se comprueban al compilar: `<flex direction="diagonal">` es un error.
 
 ### Eventos de las cajas
 
@@ -880,8 +880,37 @@ def tecla(event):
 
 - `on:pointerenter` y `on:pointerleave` no suben (como en la web). `on:focus`/`on:blur` tampoco; `event.reason` dice si llegó con Tab, con un clic o por código.
 - `on:click` sigue siendo el de siempre: si un control de Qt (un `<Button>`) se queda el clic, la caja que lo contiene no lo recibe. Entre cajas, sí sube (y se corta con `stop()`). Desde el teclado (Espacio o Intro) llega con `event.pointer == "keyboard"`.
-- `on:contextmenu`: clic derecho o tecla de menú.
+- `on:contextmenu`: clic derecho o tecla de menú (sin pulsación larga).
+- `on:resize` llega una vez por vuelta del bucle de eventos, aunque el tamaño cambie varias veces.
+- `on:pointermove` solo se envía si hay manejador: es frecuente.
 - `prevent()` y `stop()` solo cuentan antes del primer `await` de un manejador `async def`. `prevent()` no impide que se dispare un `<Shortcut>`.
+
+### Arrastrar y soltar
+
+Una caja con `draggable` se arrastra al pulsarla y mover el puntero más que la distancia de arrastre del sistema (una pulsación corta sigue siendo un clic). Lo que se arrastra es un valor de Python:
+
+```html
+<flex class="tarjeta" draggable on:dragstart={event.data = tarjeta["id"]}>…</flex>
+
+<flex class="columna" on:drop={mover(event.data, columna)}>…</flex>
+
+<style>
+.tarjeta:dragging { opacity: 0.4; }      /* la original, mientras su imagen sigue al puntero */
+.columna:drag-over { background: var(--surface-alt); }
+</style>
+```
+
+| Evento | Dónde | Cuándo |
+|---|---|---|
+| `on:dragstart` | la caja `draggable` y sus antecesores | Empieza el arrastre. Pon `event.data`; `event.prevent()` lo cancela. |
+| `on:dragover` | las cajas bajo el puntero | El puntero se mueve; `event.x`/`event.y` dicen dónde se soltaría. |
+| `on:drop` | la caja con `on:drop` más profunda bajo el puntero (y las de fuera si no hace `stop()`) | Se suelta. Solo las cajas con `on:drop` son destino y se marcan con `:drag-over`. |
+| `on:dragend` | la caja `draggable` y sus antecesores | Termina, con `event.dropped` (`False` si se soltó fuera o con Escape). Si `on:drop` quitó la caja, no llega. |
+
+- Todos reciben un `DragEvent`: lo de `PointerEvent` más `.data` y `.dropped`.
+- Mientras se arrastra, Escape cancela y no hay clic al soltar. Cerca del borde (40 px) de una zona con desplazamiento (`<List>`, `<Scroll>`, `overflow: auto`), esta avanza sola.
+- Funciona dentro de una ventana; no entre ventanas ni desde otras aplicaciones (archivos).
+- En pruebas: `Element.drag_to(destino)` de `janelkit.inspect`.
 
 ### Papel, teclado y accesibilidad: `as`
 
@@ -945,12 +974,12 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 - `Video` muestra los fotogramas de un `Frames` ([Vídeo](#vídeo-video-y-frames)). Sus hijos van en una capa sobre la imagen.
 - `Shortcut` no ocupa espacio: escucha el teclado de su ventana mientras existe (`<Shortcut keys="Ctrl+S" on:activate={guardar} />`; teclas como en Qt: `Ctrl+Shift+N`, `F5`, `Esc`). Dentro de un `{#if}`, solo está activo con la rama.
 - `TextArea` emite `on:input` solo con los cambios del usuario, no con los que llegan de Python.
-- **Teclado y foco en los campos** (`TextField`, `TextArea`, `Select`): `on:keydown`, `on:keyup`, `on:focus` y `on:blur` funcionan como en `<flex>` ([eventos](flex.md)): suben a los contenedores, `event.stop()` corta la subida y `event.prevent()` hace que la tecla no llegue al campo (no se escribe). Por ejemplo, Escape para cancelar una edición y guardar al salir del campo:
+- **Teclado y foco en los campos** (`TextField`, `TextArea`, `Select`): `on:keydown`, `on:keyup`, `on:focus` y `on:blur` funcionan como en `<flex>` ([eventos](#eventos-de-las-cajas)): suben a los contenedores, `event.stop()` corta la subida y `event.prevent()` hace que la tecla no llegue al campo (no se escribe). Por ejemplo, Escape para cancelar una edición y guardar al salir del campo:
 
   ```html
   <TextField bind:value={nombre} on:keydown={event.key == "Escape" and cancelar()} on:blur={guardar()} />
   ```
-- `Column` y `Row` son atajos de `<flex>` con sus valores por defecto de siempre: en una columna, texto y cajas ocupan el ancho y los controles se quedan a la izquierda; en una fila, los hijos se centran en vertical; solo encoge lo que tiene `flex`. Admiten todo el flexbox de `<flex>` en `<style>` (también `flex-wrap`). Si solo usan lo básico (`gap`, `padding`, alineación, márgenes fijos, un hijo con `flex`), se colocan con un layout de Qt, más rápido; no hay que hacer nada para ello ([Vía rápida](flex.md#vía-rápida-layouts-de-qt)).
+- `Column` y `Row` son atajos de `<flex>` con sus valores por defecto de siempre: en una columna, texto y cajas ocupan el ancho y los controles se quedan a la izquierda; en una fila, los hijos se centran en vertical; solo encoge lo que tiene `flex`. Admiten todo el flexbox de `<flex>` en `<style>` (también `flex-wrap`). Si solo usan lo básico (`gap`, `padding`, alineación, márgenes fijos, un hijo con `flex`), se colocan con un layout de Qt, más rápido; no hay que hacer nada para ello.
 - `<flex>`, `Column` y `Row` con `on:click` se pueden pulsar en toda su superficie (tarjetas, filas): muestran cursor de mano y un resaltado al pasar el ratón. Un botón dentro sigue funcionando por separado.
 - `Scroll` es una columna con desplazamiento vertical; por defecto ocupa el espacio libre (`flex: 1`).
 - `Spacer` ocupa el espacio libre y empuja a sus hermanos hacia los extremos.

@@ -1,6 +1,6 @@
 <script lang="python">
 # Tabla hecha con <flex>. La fila elegida cambia el fondo y el color en la fila, y todo
-# su texto lo hereda (fase 4 de docs/flex.md). El color del estado es una variable
+# su texto lo hereda. El color del estado es una variable
 # (--estado): cada fila la fija según su estado, y la fila elegida la sustituye.
 from janelkit import event, prop
 

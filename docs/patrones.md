@@ -2,6 +2,23 @@
 
 Lo que cuesta entender al hacer una aplicación que se actualiza sola muchas veces por segundo: visión por computador, adquisición de datos, paneles de máquinas. Sale del primer proyecto real con JanelKit (tres cámaras USB a 30 FPS, detección con YOLO en cada ciclo, una ventana en un proyector). Lo básico está en [lenguaje.md](lenguaje.md#trabajo-asíncrono).
 
+## Fotogramas y resultados van por caminos distintos
+
+El fotograma es un array de numpy **en el mismo proceso** que la interfaz: el modelo (OpenCV, ONNX Runtime, PyTorch…) lo procesa ahí y sus resultados (cajas, puntos, conteos) entran en el estado reactivo, sin servidor ni serializar nada. La regla: **los fotogramas no pasan por la reactividad** (a 30–60 por segundo, un `state` por fotograma sería lento); lo reactivo son los resultados.
+
+```
+cámara ──► hilo de captura ──► Frames ──► <Video>  (Qt sube la imagen a la GPU)
+                                  │
+                                  └──► async for f in frames   (siempre el más reciente)
+                                          r = await background(modelo, f)   (otro hilo)
+                                          detecciones.value = r  ──► plantilla
+```
+
+- La captura corre en su propio hilo (`cv2.VideoCapture` o QtMultimedia) y entrega con `frames.push(img)`, que se puede llamar desde cualquier hilo.
+- `<Video source={frames}>` muestra el más reciente; si llegan más rápido de lo que se dibuja, se saltan, nunca se encolan.
+- `async for f in frames` da el más reciente cada vez que el modelo queda libre. Con `background()`, un modelo a 12 fps no frena la vista previa a 30 ni la interfaz (numpy, OpenCV y PyTorch liberan el GIL).
+- Los hijos de `<Video>` se colocan sobre la imagen, en una capa de su tamaño exacto: las cajas de detección son elementos normales, con estilo y clic. Ver [Vídeo](lenguaje.md#vídeo-video-y-frames).
+
 ## El ciclo: runner, `Options` y `Snapshot`
 
 El trabajo pesado (leer las cámaras, el modelo) va en un hilo con `background()`. Ese código **no toca `state`**:

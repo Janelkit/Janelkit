@@ -1,4 +1,4 @@
-"""Frontera entre el núcleo y el ecosistema (docs/alcance.md).
+"""Frontera entre el núcleo y el ecosistema (docs/arquitectura.md).
 
 - El núcleo (`packages/janelkit`) no importa ningún paquete del ecosistema.
 - Los paquetes del ecosistema solo usan la API pública del núcleo: los nombres de

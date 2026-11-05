@@ -31,7 +31,7 @@ Todos admiten `--help`.
 
 ## `janel build`
 
-Valida el proyecto completo y deja el QML generado para inspeccionarlo. **No crea un ejecutable**: instalar JanelKit con `pip` y empaquetar una aplicación para distribuirla son pasos distintos; el empaquetado está previsto para una fase posterior.
+Valida el proyecto completo y deja el QML generado para inspeccionarlo. **No crea un ejecutable**: instalar JanelKit con `pip` y empaquetar una aplicación para distribuirla son pasos distintos (ver [Distribuir](#distribuir-un-ejecutable-con-pyinstaller)).
 
 ## Errores en tiempo de ejecución
 
@@ -44,7 +44,7 @@ logging.getLogger("janelkit").setLevel(logging.DEBUG)
 
 ## Resaltado en el editor
 
-`packages/janelkit-vscode/` contiene una extensión mínima de VS Code con resaltado de sintaxis para `.janel` (Python en `<script>` y en las expresiones, CSS en `<style>`). Ver su [README](../packages/janelkit-vscode/README.md) para instalarla. Todavía no hay autocompletado ni diagnósticos en el editor.
+`packages/janelkit-vscode/` contiene una extensión mínima de VS Code con resaltado de sintaxis para `.janel` (Python en `<script>` y en las expresiones, CSS en `<style>`). Ver su [README](../packages/janelkit-vscode/README.md) para instalarla. No tiene autocompletado ni diagnósticos: los errores los muestran `janel dev` y `janel build`.
 
 ## Pruebas automáticas de una aplicación
 
@@ -79,3 +79,66 @@ Ver la referencia en [api.md](api.md#janelkitinspect-pruebas-y-herramientas).
 **Pruebas de humo:**
 
 `JANELKIT_EXIT_AFTER_MS=500 python main.py` cierra la aplicación tras 500 ms: útil para pruebas de humo en CI. Con `QT_QPA_PLATFORM=offscreen` no se muestra ninguna ventana.
+
+## Distribuir: un ejecutable con PyInstaller
+
+[PyInstaller](https://pyinstaller.org) genera una carpeta con un ejecutable que funciona sin Python instalado. La receta se probó en Windows 11 (Python 3.10, PySide6 6.8, PyInstaller 6.22) empaquetando `apps/examples/files`; en Linux y macOS el procedimiento es el mismo.
+
+### Receta con PyInstaller
+
+Desde la carpeta del proyecto (la que tiene `main.py` y `src/`), con el entorno de la aplicación activado:
+
+```bash
+pip install pyinstaller
+
+# Windows (separador ";" en --add-data)
+pyinstaller --noconfirm --windowed --name MiApp ^
+  --add-data "src;src" ^
+  --collect-data janelkit --collect-submodules janelkit ^
+  --paths src ^
+  --hidden-import services.storage ^
+  main.py
+
+# Linux / macOS (separador ":")
+pyinstaller --noconfirm --windowed --name MiApp \
+  --add-data "src:src" \
+  --collect-data janelkit --collect-submodules janelkit \
+  --paths src \
+  --hidden-import services.storage \
+  main.py
+```
+
+El resultado queda en `dist/MiApp/`: distribuye la carpeta entera (el ejecutable más `_internal/`).
+
+### Qué hace cada opción
+
+| Opción | Por qué |
+|---|---|
+| `--add-data "src;src"` | Copia los `.janel` (y los `.qml` propios) dentro del paquete. `main.py` los busca en `src/` junto a sí mismo, igual que en desarrollo. |
+| `--collect-data janelkit` | Incluye el módulo QML `Janel` y los demás recursos del paquete `janelkit`. |
+| `--collect-submodules janelkit` | JanelKit importa partes de sí mismo bajo demanda; PyInstaller no las ve al analizar `main.py`. |
+| `--paths src` + `--hidden-import services.x` | Los módulos que solo importan tus `.janel` (`from services.storage import ...`) no los ve el análisis de PyInstaller: nómbralos para que se incluyan con sus dependencias. Uno por módulo. |
+| `--windowed` | Sin ventana de consola (en Windows y macOS). Quítalo mientras pruebas el paquete para ver los errores. |
+
+### Comprobar el paquete
+
+Antes de distribuirlo, arráncalo una vez sin `--windowed`. Para una prueba automática (por ejemplo en la CI), estas variables lo cierran solo:
+
+```bash
+set QT_QPA_PLATFORM=offscreen
+set JANELKIT_EXIT_AFTER_MS=1500
+dist\MiApp\MiApp.exe
+echo %ERRORLEVEL%          # 0 = arrancó y montó la vista sin errores
+```
+
+Si falta un `.janel`, un módulo o un tipo QML, el ejecutable termina con código 1 y escribe el error en la consola.
+
+### Tamaño
+
+La carpeta incluye Qt completo: con `apps/examples/files` ocupa 341 MB sin comprimir y 146 MB en un .zip. Se puede reducir excluyendo módulos de Qt que la aplicación no usa (`--exclude-module PySide6.QtWebEngineCore`, `QtMultimedia`, `Qt3D*`…). Comprueba siempre el resultado tras excluir.
+
+### Límites
+
+- Hay que listar a mano (`--hidden-import`) los módulos Python que solo se importan desde los `.janel`.
+- Con `--onefile` (un único ejecutable) arranca más despacio: descomprime todo en cada inicio.
+- Firmar el ejecutable y crear instaladores (MSI, DMG, AppImage) queda fuera de esta receta.

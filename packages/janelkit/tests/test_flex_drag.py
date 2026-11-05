@@ -1,4 +1,4 @@
-"""Arrastrar y soltar en <flex> (docs/flex.md, «Arrastrar y soltar»): draggable,
+"""Arrastrar y soltar en <flex>: draggable,
 on:dragstart/dragover/drop/dragend, :dragging y :drag-over, Escape para cancelar."""
 import pytest
 

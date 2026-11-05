@@ -1,10 +1,7 @@
 <script lang="python">
-# Catálogo de elementos construidos con <flex> (docs/flex.md): rejilla y barra de
-# herramientas (fase 1), tarjeta y botón con estados (fase 2), botón, chip, interruptor
-# y menú con eventos y accesibilidad (fase 3), tabla y pestañas con texto heredado y
-# variables (fase 4), componentes usados como elementos (fase 5), e insignia, menú en
-# el puntero y diálogo superpuesto (fase 6). Ningún tamaño ni columna se calcula en
-# Python; los estados (hover, pulsado, foco) tampoco.
+# Catálogo de elementos construidos con <flex>: rejilla, barra de herramientas, tarjeta,
+# botón, chip, interruptor, menú, tabla, pestañas, insignia y diálogo superpuesto.
+# Ningún tamaño ni columna se calcula en Python; los estados (hover, pulsado, foco) tampoco.
 import os
 
 from janelkit import ref, state

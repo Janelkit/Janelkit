@@ -1,4 +1,4 @@
-"""<flex> fase 6: position (relative, absolute, fixed), top/left…, inset y z-index. Ver docs/flex.md."""
+"""<flex>: position (relative, absolute, fixed), top/left…, inset y z-index."""
 import tempfile
 from pathlib import Path
 

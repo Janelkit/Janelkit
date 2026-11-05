@@ -1,4 +1,4 @@
-"""Mediciones de <Video> y Frames (docs/vision.md).
+"""Mediciones de <Video> y Frames (docs/arquitectura.md, «Rendimiento»).
 
     python bench.py              # 640×480, 1280×720 y 1920×1080 a 60 fps, sin ventana
     python bench.py --ventana    # con la ventana a la vista (incluye subir la imagen a la GPU)

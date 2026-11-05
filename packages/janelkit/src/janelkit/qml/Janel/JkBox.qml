@@ -160,7 +160,7 @@ Rectangle {
     }
     onClicked: if (jkOn && jkOn.click !== undefined) jkevents.click(box, jkClickX, jkClickY, jkClickButton)
 
-    // -- eventos y accesibilidad (fase 3 de docs/flex.md) ---------------------
+    // -- eventos y accesibilidad ---------------------
     // Eventos con propagación: {tipo: id del manejador} y el puente de la plantilla (events.py).
     property var jkOn: null
     property QtObject jkBridge: null

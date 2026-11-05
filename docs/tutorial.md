@@ -322,7 +322,7 @@ Estas pruebas encontraron, al escribir este tutorial, el error de guardar antes 
 ## 9. Distribuirla
 
 - `janel build` comprueba todos los componentes sin abrir la ventana: útil antes de publicar o en la CI.
-- Para crear un ejecutable que se pueda dar a quien no tiene Python, sigue la receta de [empaquetado.md](empaquetado.md).
+- Para crear un ejecutable que se pueda dar a quien no tiene Python, sigue la receta de [desarrollo.md](desarrollo.md#distribuir-un-ejecutable-con-pyinstaller).
 
 ## Siguientes pasos
 

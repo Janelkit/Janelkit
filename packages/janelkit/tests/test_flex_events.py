@@ -1,5 +1,5 @@
-"""<flex> fase 3: eventos con propagación, prevent()/stop(), as, tabindex, disabled, title,
-pointer-events y visibility. Ver docs/flex.md."""
+"""<flex>: eventos con propagación, prevent()/stop(), as, tabindex, disabled, title,
+pointer-events y visibility."""
 import tempfile
 from pathlib import Path
 

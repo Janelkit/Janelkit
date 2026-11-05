@@ -1,4 +1,4 @@
-"""<flex> fase 4: texto heredado, variables propias (--x) y style=. Ver docs/flex.md."""
+"""<flex>: texto heredado, variables propias (--x) y style=."""
 import tempfile
 from pathlib import Path
 

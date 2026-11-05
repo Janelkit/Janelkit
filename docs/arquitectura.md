@@ -179,6 +179,8 @@ Tiempos indicativos (Windows 11, `offscreen` salvo que se diga), para saber qué
     - El hilo de la interfaz queda parado menos tiempo en cada sincronización con el de render: 0,1–0,3 ms frente a 1–1,5 ms.
 - **`frames.stalled` y los eventos con `image_x`** cuestan 0,7 µs por fotograma y 10 µs por evento de puntero en un `<video>` con manejador.
 
+Para qué casos sirve esta latencia y para cuáles no: [patrones.md](patrones.md#qué-latencia-esperar-y-para-qué-no-sirve).
+
 ## Herramientas
 
 | Herramienta | Para qué |

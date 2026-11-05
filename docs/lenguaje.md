@@ -553,6 +553,7 @@ def pct(valor, eje):               # de píxeles de la imagen a % de la capa (ej
 
   Como en las cajas, un evento en un hijo sube al `<video>` (el hijo lo recibe antes y puede pararlo con `event.stop()`). Un hijo con `position: absolute` (una caja de detección) no deja pasar el puntero: su `on:click` no llega al del `<video>`, igual que en `<flex>`; `on:pointerdown` y los demás sí suben. En las pruebas, `app.find(label="Cámara").click(x=100, y=50)` pulsa en ese punto del elemento.
 - Abrir cámaras no es del núcleo: con OpenCV (`cv2.VideoCapture`) o QtMultimedia, en un hilo propio. QtMultimedia está en PySide6-Addons, que JanelKit no instala: `pip install PySide6-Addons`.
+- Latencia: de `push` a la pantalla pasa un refresco del monitor más unos milisegundos. Sirve para ver y marcar vídeo en vivo, pero no para lazos de control con plazos estrictos ni para menos de un refresco: ver [qué latencia esperar y para qué no sirve](patrones.md#qué-latencia-esperar-y-para-qué-no-sirve).
 
 ## Listas grandes: `<list>`
 

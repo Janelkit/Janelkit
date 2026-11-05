@@ -19,6 +19,34 @@ cámara ──► hilo de captura ──► Frames ──► <video>  (Qt sube l
 - `async for f in frames` da el más reciente cada vez que el modelo queda libre. Con `background()`, un modelo a 12 fps no frena la vista previa a 30 ni la interfaz (numpy, OpenCV y PyTorch liberan el GIL).
 - Los hijos de `<video>` se colocan sobre la imagen, en una capa de su tamaño exacto: las cajas de detección son elementos normales, con estilo y clic. Ver [Vídeo](lenguaje.md#vídeo-video-y-frames).
 
+## Qué latencia esperar y para qué no sirve
+
+Desde `push` hasta que la imagen se dibuja pasa **un refresco del monitor más unos milisegundos**. De 640 × 480 a 1080p son de 13 a 17 ms de mediana y de 21 a 32 ms en el p95, medidos en un portátil de 2013 con una pantalla de 60 Hz ([cifras](arquitectura.md#rendimiento)). Casi todo es esperar al siguiente refresco: a 60 Hz, hasta 16,7 ms. A eso se suma lo que tarden la cámara y tu código. Las cifras son de Windows con Direct3D 11; en Linux y macOS no se han medido.
+
+**Sirve para:**
+
+- Ver cámaras o vídeo procesado en vivo, de 15 a 60 fps y hasta 1080p, con cajas, etiquetas y clics encima: inspección, monitorización, etiquetado, calibración, paneles de máquinas.
+- Mostrar lo que se detecta mientras ocurre. La vista va un refresco por detrás del último fotograma, como cualquier visor de vídeo del escritorio.
+- Varias vistas a la vez: cada `push` cuesta en el hilo que lo llama, no en el de la interfaz.
+
+**No sirve para estos casos (o no los garantiza):**
+
+| Caso | Por qué | Qué hacer |
+|---|---|---|
+| Menos de un refresco entre la imagen y la pantalla: realidad virtual o aumentada con casco, algo que siga a la mano sin retraso | El dibujo espera al refresco del monitor y pasa por el compositor del sistema | Un motor gráfico que presente directamente a pantalla completa, fuera de JanelKit |
+| Un lazo de control que decide con lo que se ve en pantalla, o con plazos estrictos (cada 5 ms sin falta) | Python, su recolector de basura y los manejadores de la interfaz pueden retrasar el hilo de la interfaz, y Windows no garantiza tiempos | El control en su propio hilo o proceso, leyendo la cámara directamente; la interfaz solo muestra y configura |
+| Saber en qué refresco exacto se ve cada fotograma, o sincronizar la pantalla con otra cosa (un proyector con la exposición de la cámara, luz estructurada) | `Frames` no da el instante en que se presenta cada fotograma, y uno puede tardar un refresco más que otro | Sincronizar por hardware (el disparo de la cámara), o medir la latencia del sistema completo y compensarla |
+| Mostrar todos los fotogramas, sin perder ninguno | `Frames` se queda con el último: si llegan más deprisa de lo que se dibujan, se saltan a propósito | Para grabar o analizar cada fotograma, una cola propia en el hilo de la cámara; `Frames`, solo para la vista |
+| Reproducir vídeo con el audio sincronizado | `<video>` muestra fotogramas sueltos: no decodifica, ni tiene audio ni marcas de tiempo | Un reproductor: QtMultimedia (en PySide6-Addons) u otro externo |
+| 4K a 60 fps, o muchas vistas de 1080p | El coste crece con los píxeles: a 1080p, de `push` a la entrega ya son unos 5 ms (11 ms en el p95) en ese portátil | Reducir la imagen al tamaño en que se ve antes de `push` (`cv2.resize`): una vista de 960 × 540 no necesita 1080p |
+
+**Para que la latencia sea la mínima:**
+
+- Haz el `push` en el hilo de la cámara o dentro de `background()`, no en el tic ([Dónde llamar a `push`](#dónde-llamar-a-push)).
+- Reduce la imagen antes de `push` al tamaño de la vista.
+- Escribe manejadores y `effect` cortos: mientras el hilo de la interfaz está ocupado, el siguiente fotograma espera para entregarse.
+- Mide en tu equipo, con tu monitor: `python apps/examples/video/bench.py --ventana --fps 47 --rondas 5`.
+
 ## El ciclo: runner, `Options` y `Snapshot`
 
 El trabajo pesado (leer las cámaras, el modelo) va en un hilo con `background()`. Ese código **no toca `state`**:

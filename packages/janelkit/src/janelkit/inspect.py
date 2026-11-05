@@ -90,6 +90,19 @@ def _tag(item: Any) -> str:
     return name.split(".janel")[0]
 
 
+def _kind(item: Any) -> str:
+    """El elemento integrado que es `item`, aunque sea la raíz de un componente
+    (un `Otra.janel` cuya raíz es `<Text>` es un Text); si no lo es, su `_tag`."""
+    meta = item.metaObject()
+    while meta is not None:
+        name = meta.className()
+        for qml_type, tag in _TAGS.items():
+            if name == qml_type or name.startswith(qml_type + "_"):
+                return tag
+        meta = meta.superClass()
+    return _tag(item)
+
+
 class Element:
     """Un elemento de la vista. `item` es el objeto Qt Quick (interfaz de Qt, no de JanelKit)."""
 
@@ -106,6 +119,10 @@ class Element:
     def tag(self) -> str:
         """Nombre del elemento en la plantilla (`Button`, `Text`…) o del tipo QML propio."""
         return _tag(self.item)
+
+    @property
+    def _kind(self) -> str:
+        return _kind(self.item)
 
     @property
     def id(self) -> str:
@@ -130,7 +147,7 @@ class Element:
     @property
     def value(self) -> Any:
         """Valor actual de un control (texto, marcado, número u opción elegida)."""
-        tag = self.tag
+        tag = self._kind
         if tag in ("TextField", "TextArea"):
             return self.item.property("text")
         if tag in ("Checkbox", "Switch"):
@@ -158,7 +175,7 @@ class Element:
     # -- acciones -----------------------------------------------------------
     def click(self) -> "Element":
         """Pulsa un botón, una casilla/interruptor (la alterna) o una caja con on:click."""
-        tag = self.tag
+        tag = self._kind
         self._require_enabled("click")
         if tag in ("Checkbox", "Switch"):
             return self.check(not self.item.property("checked"))
@@ -181,7 +198,7 @@ class Element:
         self._require(("TextField", "TextArea"), "type")
         self._require_enabled("type")
         self.item.setProperty("text", text)
-        if self.tag == "TextField":
+        if self._kind == "TextField":
             self._invoke("textEdited")
         return self._settle()
 
@@ -340,9 +357,9 @@ class Element:
         return options[index][1] if 0 <= index < len(options) else None
 
     def _require(self, tags: tuple[str, ...], action: str) -> str:
-        if self.tag not in tags:
+        if self._kind not in tags:
             raise InspectError(f"{self!r} no admite {action}() (solo {', '.join(tags)})")
-        return self.tag
+        return self._kind
 
     def _require_enabled(self, action: str) -> None:
         if not self.enabled:
@@ -465,12 +482,16 @@ class MountedApp:
         label: str | None = None,
         visible_only: bool = True,
     ) -> list[Element]:
-        """Elementos que cumplen todos los criterios dados."""
+        """Elementos que cumplen todos los criterios dados.
+
+        `tag` acepta el nombre de un componente o el elemento integrado que es su raíz:
+        la raíz `<Text>` de `Otra.janel` aparece con `find("Otra")` y con `find("Text")`.
+        """
         out = []
         for el in self.elements():
             if visible_only and not el.visible:
                 continue
-            if tag is not None and el.tag != tag:
+            if tag is not None and tag not in (el.tag, el._kind):
                 continue
             if text is not None and el.text != text:
                 continue

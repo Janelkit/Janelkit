@@ -161,3 +161,26 @@ def test_screenshot_of_window_and_element(tmp_path):
         box = app.find(id="box").screenshot()
         assert (box.width(), box.height()) == (round(40 * ratio), round(30 * ratio))
         assert box.pixelColor(box.width() // 2, box.height() // 2).name() == "#ff0000"
+
+
+def test_component_whose_root_is_a_builtin_is_found_by_both_names(tmp_path):
+    (tmp_path / "Otra.janel").write_text("<Text>otra</Text>\n", encoding="utf-8")
+    (tmp_path / "Boton.janel").write_text(
+        "<script>\nfrom janelkit import state\nn = state(0)\n</script>\n"
+        "<Button on:click={n += 1}>pulsado {n}</Button>\n", encoding="utf-8")
+    (tmp_path / "App.janel").write_text("""<script>
+from janelkit import sections
+from Otra import Otra
+s = sections(b=Otra)
+</script>
+<Window><Sections of={s} /></Window>
+""", encoding="utf-8")
+    with mount(tmp_path / "App.janel") as app:
+        assert app.texts() == ["otra"]
+        assert app.find("Otra").text == "otra" and app.find("Text").text == "otra"
+
+    (tmp_path / "App.janel").write_text("<script>\nfrom Boton import Boton\n</script>\n<Window><Boton /></Window>\n",
+                                        encoding="utf-8")
+    with mount(tmp_path / "App.janel") as app:
+        app.find("Button").click()
+        assert app.find("Boton").text == "pulsado 1"

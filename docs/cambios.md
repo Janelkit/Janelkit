@@ -12,6 +12,10 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 - **Parar lo que no se ve:** `is_visible()` devuelve un `computed` que dice si el componente se ve (otra sección, una página de debajo, un `{#hidden}` o una fila de `<List>` fuera de la vista no se ven). `interval(ms, fn, when=…)` y `timeout(..., when=…)` solo cuentan mientras se cumple una condición reactiva: `@interval(33, when=is_visible())` sustituye a la comprobación a mano al empezar cada tic.
 - **Métricas para depurar:** `Timer.runs`, `.skipped` y `.last_duration`; `subscriber_count` de `state` y `computed`, ahora documentado; `repr` de `Effect` (función, fuentes, liberado o en espera) y de `Scope` (qué contiene).
 
+### Corregido
+
+- **`janelkit.inspect` y los componentes cuya raíz es un elemento integrado:** una página `Otra.janel` que es solo `<Text>otra</Text>` no salía en `app.texts()` ni en `find("Text")`, y `click()` o `value` no funcionaban sobre un componente cuya raíz es un `<Button>` o un `<TextField>`. Ahora el elemento se encuentra por los dos nombres (`find("Otra")` y `find("Text")`) y se maneja como el control que es.
+
 ### Cambia (puede requerir ajustes)
 
 | Antes | Ahora | Cómo migrar |

@@ -73,7 +73,7 @@ Comparte la serie con el núcleo: janelkit-i18n 0.2.x.x va con janelkit 0.2.x.x.
 
 ## Cambios
 
-### 0.2.0.0 (sin publicar)
+### 0.2.0.0 (2026-11-05)
 
 - Serie 0.2: va con `janelkit` 0.2 (`janelkit>=0.2,<0.3`). La API no cambia; los ejemplos y las pruebas usan los elementos en minúscula (`<text>`).
 

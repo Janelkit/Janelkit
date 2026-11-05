@@ -853,8 +853,12 @@ class _Lowerer:
         else:
             for child in el.children:
                 if not (isinstance(child, Text) and not child.value.strip()):
-                    self.error(f"<{el.tag}> no admite contenido", child.loc, f"usa <{el.tag} ... />")
+                    self.error(f"<{el.tag}> no admite contenido", child.loc, _self_closing_hint(el.tag, spec))
                     break
+            else:
+                # Un campo no tiene texto dentro: su contenido es `value`. Se escribe <TextField ... />.
+                if not el.self_closing and spec.tag is None and el.tag in CONTROLS:
+                    self.error(f"<{el.tag}> se escribe con cierre automático", el.loc, _self_closing_hint(el.tag, spec))
 
     def list_content(self, el: Element, ir: IRElement) -> None:
         """`<List>{#each ...}{/each}</List>`: una lista virtualizada (ListView)."""
@@ -1325,6 +1329,12 @@ class _Lowerer:
 _BOXES = BOX_TYPES
 _TRANSITIONS = ("fade", "scale", "slide")
 _TRANSITION_MS = 200
+
+
+def _self_closing_hint(tag: str, spec: ControlSpec) -> str:
+    if "value" in spec.two_way:
+        return f"usa <{tag} bind:value={{...}} />: lo escrito o elegido es su value, no su contenido"
+    return f"usa <{tag} ... />"
 
 
 def _fill_parent(item: IRElement) -> None:

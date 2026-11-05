@@ -544,3 +544,15 @@ def test_inline_handler_checks_assigned_names():
     assert "no puede asignar a la prop 'limit'" in err.first.message
     err = compile_error(INLINE_SCRIPT + "<Column>{#each items as x}<Button on:click={x = 2}>a</Button>{/each}</Column>")
     assert "variable de bloque 'x'" in err.first.message
+
+
+@pytest.mark.parametrize("tag", ["TextField", "TextArea", "Slider", "Select", "ProgressBar", "Image", "Spacer"])
+def test_elements_without_content_are_self_closing(tag):
+    for source in (f"<Window><{tag}>hola</{tag}></Window>", f"<Window><{tag}></{tag}></Window>"):
+        message = str(compile_error(source))
+        assert f"<{tag}>" in message and f"<{tag} " in message  # la sugerencia: <Tag ... />
+    assert "cierre automático" in str(compile_error(f"<Window><{tag}></{tag}></Window>"))
+
+
+def test_a_field_hint_points_to_value():
+    assert "bind:value" in str(compile_error("<Window><TextField>Pan</TextField></Window>"))

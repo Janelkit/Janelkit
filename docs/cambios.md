@@ -22,6 +22,8 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 
 | Antes | Ahora | Cómo migrar |
 |---|---|---|
+| `<TextField></TextField>` (abierto y cerrado, vacío) compilaba; igual con los demás campos y elementos sin contenido. | Es un error: se escriben con cierre automático. | `<TextField ... />`. Con texto dentro ya era un error. |
+| En `janelkit.inspect`, `.text` de un `TextField` o `TextArea` era lo escrito, y `find(text=...)` encontraba el campo. | `.text` es `None` en los campos y `find(text=...)` no los encuentra. | Lee lo escrito con `.value`; busca el campo por `placeholder`, `label` o `id`. |
 | `<Text format="markdown">` aplicaba el HTML del texto (`<b>`, `<img>`, `<span style=…>`): el texto de otras personas había que escaparlo a mano, y el escape se veía dentro del código (`a &lt; b`). | No interpreta HTML: se muestra tal cual, y el código se ve como se escribió. | Para usar HTML, `format="html"`. El escape a mano con `&lt;` sigue funcionando; se puede quitar. |
 
 ## 0.1.1 (2026-11-04)

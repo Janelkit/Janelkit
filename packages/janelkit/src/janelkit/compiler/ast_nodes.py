@@ -46,6 +46,7 @@ class Element:
     attributes: list[Attribute]
     children: list["Node"]
     loc: SourceLocation
+    self_closing: bool = False  # se escribió <Tag ... />
 
     def attribute(self, name: str) -> Attribute | None:
         return next((a for a in self.attributes if a.name == name), None)

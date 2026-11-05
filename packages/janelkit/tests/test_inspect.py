@@ -184,3 +184,20 @@ s = sections(b=Otra)
     with mount(tmp_path / "App.janel") as app:
         app.find("Button").click()
         assert app.find("Boton").text == "pulsado 1"
+
+
+def test_fields_have_a_value_not_a_text(tmp_path):
+    (tmp_path / "App.janel").write_text("""<script>
+from janelkit import state
+nombre = state("Pan")
+</script>
+<Window><Column>
+  <TextField bind:value={nombre} placeholder="Nombre" />
+  <Text>Pan</Text>
+</Column></Window>
+""", encoding="utf-8")
+    with mount(tmp_path / "App.janel") as app:
+        field = app.find(placeholder="Nombre")
+        assert field.value == "Pan" and field.text is None
+        assert app.find(text="Pan").tag == "Text"  # el campo no cuenta como texto
+        assert app.texts() == ["Pan"]

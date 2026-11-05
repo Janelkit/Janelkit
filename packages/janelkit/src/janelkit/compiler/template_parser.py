@@ -227,6 +227,7 @@ class _TemplateParser:
                 raise self.error(f"la etiqueta <{tag}> no está cerrada", start, "falta '>' o '/>'")
             if self.startswith("/>"):
                 self.pos += 2
+                element.self_closing = True
                 return element
             if self.startswith(">"):
                 self.pos += 1

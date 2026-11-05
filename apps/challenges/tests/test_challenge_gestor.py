@@ -101,7 +101,7 @@ def test_abrir_un_proyecto_y_volver_conserva_la_busqueda(app):
     assert "Ana" in app.texts()  # el responsable (un id) se muestra por su nombre
     app.find("Button", text="← Proyectos").click()
     app.wait(0.2)
-    assert nav.depth == 1 and app.find("TextField", label="Buscar proyectos").text == "we"
+    assert nav.depth == 1 and app.find("TextField", label="Buscar proyectos").value == "we"
 
 
 def test_las_secciones_conservan_su_estado(app):

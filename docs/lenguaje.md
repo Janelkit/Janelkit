@@ -940,6 +940,7 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 - `<flex>`, `Column` y `Row` con `on:click` se pueden pulsar en toda su superficie (tarjetas, filas): muestran cursor de mano y un resaltado al pasar el ratón. Un botón dentro sigue funcionando por separado.
 - `Scroll` es una columna con desplazamiento vertical; por defecto ocupa el espacio libre (`flex: 1`). Para moverlo desde el código, ver [Desplazamiento](#desplazamiento).
 - `Spacer` ocupa el espacio libre y empuja a sus hermanos hacia los extremos.
+- Los campos (`TextField`, `TextArea`, `Slider`, `Select`, `RadioGroup`, `Tabs`) y los demás elementos sin contenido (`Image`, `ProgressBar`, `Spacer`, `Shortcut`, `Pages`, `Sections`) se escriben con cierre automático: `<TextField bind:value={nombre} />`. Un campo no tiene texto dentro: lo escrito o elegido es su `value`. `<TextField>Pan</TextField>` y `<TextField></TextField>` son errores de compilación.
 - `width`/`height` fijan el tamaño preferido dentro del contenedor; `flex={1}` hace crecer el elemento en el eje del contenedor. Ver [estilos.md](estilos.md#disposición).
 
 Un elemento, propiedad, evento o directiva desconocidos producen un error con las opciones válidas y, si hay uno parecido, «¿quisiste decir…?».

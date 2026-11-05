@@ -69,7 +69,7 @@ def test_opens_the_csv_and_computes_the_formulas(app):
 
 def test_typing_edits_in_place_and_dependents_update(app):
     teclas(app, "Down", "Right", "3")  # B2: empezar a escribir sustituye el contenido
-    assert editor(app).text == "3"
+    assert editor(app).value == "3"
     editor(app).key("Enter")  # confirma y baja
     assert app.get("vista").cursor.value == (2, 1)
     assert escrito(app, "B2") == "3"
@@ -81,7 +81,7 @@ def test_typing_edits_in_place_and_dependents_update(app):
 
 def test_f2_edits_the_formula_and_escape_cancels(app):
     teclas(app, "Down", "End", "F2")  # D2
-    assert editor(app).text == "=B2*C2"
+    assert editor(app).value == "=B2*C2"
     editor(app).type("=1")
     editor(app).key("Escape")
     assert escrito(app, "D2") == "=B2*C2"
@@ -170,7 +170,7 @@ def test_mouse_selects_and_double_click_edits(app):
     app.find("Text", text="Leche").press().release()
     assert app.get("vista").cursor.value == (2, 0)
     app.find("Text", text="Huevos").double_click()
-    assert editor(app).text == "Huevos"
+    assert editor(app).value == "Huevos"
     editor(app).type("Huevos camperos")
     rejilla(app).focus()  # perder el foco confirma sin moverse
     assert escrito(app, "A4") == "Huevos camperos" and app.get("vista").cursor.value == (3, 0)
@@ -179,7 +179,7 @@ def test_mouse_selects_and_double_click_edits(app):
 def test_formula_bar_shows_and_edits_the_active_cell(app):
     teclas(app, "Down", "End")
     barra = app.find("TextField", label="Contenido de la celda")
-    assert barra.text == "=B2*C2"
+    assert barra.value == "=B2*C2"
     barra.type("=B2+C2").submit()
     assert texto(app, "D2") == "5.5"
 

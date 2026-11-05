@@ -130,6 +130,10 @@ class Element:
 
     @property
     def text(self) -> str | None:
+        """Texto que muestra el elemento (un `<Text>`, un botón, una casilla). Los campos no tienen:
+        lo escrito en un `TextField` o `TextArea` es su `value`."""
+        if self._kind in ("TextField", "TextArea"):
+            return None
         value = self.item.property("text")
         return value if isinstance(value, str) else None
 

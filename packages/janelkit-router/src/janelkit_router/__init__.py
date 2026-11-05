@@ -32,7 +32,7 @@ from janelkit import State, inject
 from janelkit.ext import Child, Container, Gate, Host, app, ask_to_leave, is_component
 
 __version__ = "0.2.0.0"
-__all__ = ["PageStack", "SectionSet", "navigation", "pages", "sections"]
+__all__ = ["PageStack", "SectionSet", "__version__", "navigation", "pages", "sections"]
 
 _NAV = object()  # clave de contexto: la pila de la página (la lee navigation())
 _PAGES_QML = Path(__file__).with_name("Pages.qml")

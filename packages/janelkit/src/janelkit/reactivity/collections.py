@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-from . import history as _history
+from . import writes as _writes
 from .effects import Source, batch, check_thread
 
 
@@ -102,9 +102,9 @@ class _Mixin:
             self._jk_src._notify()
 
     def _jk_before(self) -> None:
-        """Antes de modificarse: si hay un paso de `History` abierto, anota el contenido."""
-        if _history._step is not None:
-            _history._step.touch(self)
+        """Antes de modificarse: avisa a quien observe las escrituras (`writes.py`)."""
+        if _writes.listener is not None:
+            _writes.listener.collection(self)
 
 
 _LIST_READS = (

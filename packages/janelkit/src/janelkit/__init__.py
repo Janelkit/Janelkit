@@ -8,7 +8,6 @@ from .reactivity import (
     Computed,
     Effect,
     Event,
-    History,
     Prop,
     PropError,
     State,
@@ -40,7 +39,6 @@ __all__ = [
     "Effect",
     "DragEvent",
     "Event",
-    "History",
     "FocusEvent",
     "Frames",
     "KeyEvent",
@@ -102,10 +100,19 @@ else:
     run.__doc__ = "Compila el componente raíz `entry`, abre la ventana y ejecuta el ciclo de eventos de Qt."
 
 
+# Lo que salió del núcleo: importarlo da un error que dice qué hacer.
+_REMOVED = {
+    "History": "History se quitó en JanelKit 0.2.0: el núcleo ya no incluye deshacer y rehacer. "
+    "Anota tus pasos con funciones (deshacer, rehacer); ver docs/cambios.md.",
+}
+
+
 def __getattr__(name: str):
     # Importación diferida: Frames carga QtMultimedia, que solo necesitan las apps con vídeo.
     if name == "Frames":
         from .video import Frames
 
         return Frames
+    if name in _REMOVED:
+        raise ImportError(_REMOVED[name])
     raise AttributeError(f"module 'janelkit' has no attribute {name!r}")

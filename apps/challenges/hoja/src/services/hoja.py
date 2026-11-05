@@ -6,7 +6,7 @@ escrito y un `computed` con su valor) se crea la primera vez que alguien la lee:
 al mostrarla o una fórmula que la usa. Como los `computed` son perezosos, cambiar una
 celda de la que dependen mil fórmulas solo recalcula las que están a la vista.
 
-Todo cambio pasa por `escribir()`, que anota en el historial (`janelkit.History`) lo
+Todo cambio pasa por `escribir()`, que anota en el historial (`services/deshacer.py`) lo
 que había y lo que hay. Como el diccionario de lo escrito no es reactivo, el historial
 no lo ve: el paso se anota con `add()` y dos funciones que aplican cada versión.
 """
@@ -17,8 +17,9 @@ import io
 from pathlib import Path
 from typing import Any
 
-from janelkit import Computed, History, State, batch, computed, state, untracked
+from janelkit import Computed, State, batch, computed, state, untracked
 
+from services.deshacer import Historial
 from services.formulas import Error, FalloFormula, evaluar, mostrar, nombre
 
 FILAS = 10_000
@@ -41,7 +42,7 @@ class Hoja:
         self._raw: dict[Pos, str] = {k: v for k, v in (datos or {}).items() if v}
         self._celdas: dict[Pos, Celda] = {}
         self._evaluando: set[Pos] = set()
-        self.historial = History(limit=LIMITE_DESHACER)
+        self.historial = Historial(limit=LIMITE_DESHACER)
         self.separador = ","  # el del último CSV abierto; se usa al guardar
 
     # -- lectura ------------------------------------------------------------------

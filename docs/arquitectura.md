@@ -49,7 +49,7 @@ Cada módulo de `janelkit` pertenece a una capa y solo importa de su capa o de l
 
 | Capa | Módulos | Qué hace |
 |---|---|---|
-| **0** | `reactivity`, `diagnostics`, `events` | Estado reactivo (`State`, `Computed`, `Effect`, `batch`, `Scope`, `Gate`, colecciones, props, `History`); errores con ubicación; los objetos de evento de `<flex>`. Python puro |
+| **0** | `reactivity`, `diagnostics`, `events` | Estado reactivo (`State`, `Computed`, `Effect`, `batch`, `Scope`, `Gate`, colecciones, props, enganche de escrituras); errores con ubicación; los objetos de evento de `<flex>`. Python puro |
 | **1** | `compiler` | `.janel` → AST → IR → QML, con el catálogo de elementos (`elements.py`) y el CSS (`css_parser.py`, `css.py`, `cascade.py`). Python puro |
 | **2** | `runtime`, `lifecycle`, `pages`, `windows`, `tasks`, `timers`, `storage`, `locale`, `themes`, `displays` | Instancias de componentes, puente con QML, ciclo de vida, navegación, ventanas, asincronía, temporizadores, `persisted`, idioma, temas, pantallas |
 | **3** | `qt_backend`, `video` | Arranque de Qt y del bucle de eventos, carga del QML, eventos de `<flex>`, motor de disposición, vídeo |

@@ -37,6 +37,7 @@ Limitaciones de la aplicación (no del framework): al copiar o mover fórmulas s
 | `src/components/Fila.janel` | Una fila: número y celdas visibles (un `<Text>` cada una), puntero y editor. |
 | `src/components/Editor.janel` | El campo que edita una celda en el sitio. |
 | `src/services/hoja.py` | Lo escrito, celdas reactivas perezosas, deshacer/rehacer, portapapeles, ordenar y CSV. |
+| `src/services/deshacer.py` | El historial de pasos (pares deshacer/rehacer), con la API pública de JanelKit. |
 | `src/services/formulas.py` | Analizador y evaluador de fórmulas. |
 | `src/services/vista.py` | Celda activa, selección, columnas visibles, celdas congeladas, edición y teclado. |
 | `bench.py` | Mediciones. |

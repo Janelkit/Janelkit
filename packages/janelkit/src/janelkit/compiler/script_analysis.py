@@ -87,7 +87,7 @@ class ScriptInfo:
     props: dict[str, PropDecl] = field(default_factory=dict)
     events: dict[str, EventDecl] = field(default_factory=dict)
     components: dict[str, ComponentImport] = field(default_factory=dict)
-    # `inherit_attrs = False`: los atributos de la etiqueta no pasan a la raíz (docs/flex.md)
+    # `inherit_attrs = False`: los atributos de la etiqueta no pasan a la raíz (docs/lenguaje.md)
     inherit_attrs: bool = True
 
 

@@ -70,8 +70,8 @@ def responsiveness(files: int = 5000) -> None:
         field = app.find(placeholder="Filtrar por nombre (Ctrl+F)")
         timed("Filtrar (quedan 10)", lambda: field.type("_0004"))
         timed("Quitar el filtro (vuelven todos)", lambda: field.type(""))
-        timed("Ordenar por tamaño", lambda: app.find("Select").choose("Tamaño"))
-        timed("Elegir un archivo", lambda: app.find("Text", text=app.get("visible")[0]["name"]).click())
+        timed("Ordenar por tamaño", lambda: app.find("select").choose("Tamaño"))
+        timed("Elegir un archivo", lambda: app.find("text", text=app.get("visible")[0]["name"]).click())
 
 
 if __name__ == "__main__":

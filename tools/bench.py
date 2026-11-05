@@ -21,16 +21,16 @@ from janelkit.qt_backend.application import Application  # noqa: E402
 
 ROW = """
   {#each todos as todo (todo["id"])}
-    <Row>
-      <Checkbox checked={todo["done"]} on:change={todo["done"] = event}>{todo["title"]}</Checkbox>
-      <Button on:click={todos.remove(todo)}>x</Button>
-    </Row>
+    <row>
+      <checkbox checked={todo["done"]} on:change={todo["done"] = event}>{todo["title"]}</checkbox>
+      <button on:click={todos.remove(todo)}>x</button>
+    </row>
   {/each}
 """
 HEAD = "<script>\nfrom janelkit import state\ntodos = state([])\n</script>\n"
 APPS = {
-    "Scroll": HEAD + "<Scroll>" + ROW + "</Scroll>",  # todas las filas existen
-    "List": HEAD + "<Window width={400} height={600}><List>" + ROW + "</List></Window>",  # virtualizada
+    "Scroll": HEAD + "<scroll>" + ROW + "</scroll>",  # todas las filas existen
+    "List": HEAD + "<window width={400} height={600}><list>" + ROW + "</list></window>",  # virtualizada
 }
 
 

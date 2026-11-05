@@ -35,10 +35,10 @@ i18n.set("es")
 Y se usan en la plantilla:
 
 ```html
-<Text>{t("hello", name=name)}</Text>
-<Text>{t("files", n=len(files))}</Text>
-<Text>{i18n.number(total, 2)} · {i18n.currency(price, "€")} · {i18n.date(today, "long")}</Text>
-<Button on:click={i18n.set("ar")}>العربية</Button>
+<text>{t("hello", name=name)}</text>
+<text>{t("files", n=len(files))}</text>
+<text>{i18n.number(total, 2)} · {i18n.currency(price, "€")} · {i18n.date(today, "long")}</text>
+<button on:click={i18n.set("ar")}>العربية</button>
 ```
 
 Al llamar a `i18n.set()`, todos los textos se actualizan sin reiniciar la aplicación. En árabe, hebreo o persa, la interfaz entera se refleja.
@@ -66,11 +66,16 @@ Ejemplo completo, con español, inglés y árabe: [`apps/examples/idiomas`](http
 
 | janelkit-i18n | janelkit | Python |
 |---|---|---|
-| 0.1.x | ≥ 0.1, < 0.2 | ≥ 3.10 |
+| 0.2.x.x | 0.2.x.x | ≥ 3.10 |
+| 0.1.x | 0.1.x | ≥ 3.10 |
 
-Sigue la misma [política de versiones](https://github.com/janelkit/janelkit/blob/main/docs/api.md#paquetes-del-ecosistema) que el núcleo, con versión propia.
+Comparte la serie con el núcleo: janelkit-i18n 0.2.x.x va con janelkit 0.2.x.x. Los dos últimos números son suyos ([política de versiones](https://github.com/janelkit/janelkit/blob/main/docs/api.md#paquetes-del-ecosistema)).
 
 ## Cambios
+
+### 0.2.0.0 (sin publicar)
+
+- Serie 0.2: va con `janelkit` 0.2 (`janelkit>=0.2,<0.3`). La API no cambia; los ejemplos y las pruebas usan los elementos en minúscula (`<text>`).
 
 ### 0.1.0
 

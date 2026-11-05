@@ -8,7 +8,7 @@ from janelkit_desktop import dialogs
 
 
 def test_open_file_dialog_returns_the_selected_path(janel_app, mount, tmp_path):
-    mount("<Text>x</Text>")
+    mount("<text>x</text>")
     target = tmp_path / "nota.txt"
     target.write_text("x", encoding="utf-8")  # FileDialog solo acepta archivos que existen
 
@@ -26,7 +26,7 @@ def test_open_file_dialog_returns_the_selected_path(janel_app, mount, tmp_path):
 
 
 def test_cancelled_dialogs_return_none_or_false(janel_app, mount):
-    mount("<Text>x</Text>")
+    mount("<text>x</text>")
 
     async def cancel_next(coro):
         task = asyncio.ensure_future(coro)
@@ -41,7 +41,7 @@ def test_cancelled_dialogs_return_none_or_false(janel_app, mount):
 
 
 def test_confirm_accepts(janel_app, mount):
-    mount("<Text>x</Text>")
+    mount("<text>x</text>")
 
     async def scenario():
         task = asyncio.ensure_future(dialogs.confirm("¿Borrar?", title="Notas"))
@@ -65,7 +65,7 @@ chosen = state(None)
 async def pick():
     chosen.value = await dialogs.open_file()
 </script>
-<Column><Button on:click={pick}>Abrir</Button></Column>
+<column><button on:click={pick}>Abrir</button></column>
 """,
         encoding="utf-8",
     )
@@ -90,7 +90,7 @@ answers = state([])
 async def ask():
     answers.value = answers.value + [await dialogs.confirm("¿Seguro?")]
 </script>
-<Window><Button text="Preguntar" on:click={ask()} /></Window>
+<window><button text="Preguntar" on:click={ask()} /></window>
 """,
         encoding="utf-8",
     )

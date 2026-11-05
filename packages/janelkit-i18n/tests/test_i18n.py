@@ -15,12 +15,12 @@ from janelkit_i18n import t, i18n
 n = state(1)
 name = state("Ana")
 </script>
-<Window width={300} height={200}>
-  <Column>
-    <Row id="row"><Text id="a">{t("hello", name=name)}</Text><Spacer /><Text id="b">{t("tasks", n=n)}</Text></Row>
-    <Text>{i18n.number(12345.5, 1)}</Text>
-  </Column>
-</Window>
+<window width={300} height={200}>
+  <column>
+    <row id="row"><text id="a">{t("hello", name=name)}</text><spacer /><text id="b">{t("tasks", n=n)}</text></row>
+    <text>{i18n.number(12345.5, 1)}</text>
+  </column>
+</window>
 """
 
 

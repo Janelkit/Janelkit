@@ -1,6 +1,6 @@
 """Lo que la aplicación recuerda entre sesiones. Cualquier componente lo importa y lo usa
 como un state: los cambios se guardan solos (persisted)."""
-from janelkit import persisted
+from janelkit_store import persisted
 
 DEFAULTS = {"nombre": "", "tema": "light", "letra": 14, "notas": []}
 

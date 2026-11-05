@@ -6,6 +6,7 @@ aplicaciones para distribuirlas es un paso distinto, previsto para más adelante
 """
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -66,7 +67,7 @@ def build_project(target: Path, out_dir: Path | None = None) -> BuildResult:
 
     for key, comp in compiled.items():
         result.warnings.extend(comp.warnings)
-        rel = Path(key).relative_to(src) if Path(key).is_relative_to(src) else Path(Path(key).name)
+        rel = _relative(Path(key), src)
         target_file = out / rel.with_suffix(".qml")
         target_file.parent.mkdir(parents=True, exist_ok=True)
         target_file.write_text(comp.qml, encoding="utf-8")
@@ -74,11 +75,22 @@ def build_project(target: Path, out_dir: Path | None = None) -> BuildResult:
     return result
 
 
+def _relative(path: Path, src: Path) -> Path:
+    """Dónde va el QML de `path`: su ruta en `src`, o la de su paquete instalado en `_paquetes/`."""
+    if path.is_relative_to(src):
+        return path.relative_to(src)
+    entries = [Path(e).resolve() for e in sys.path if e and Path(e).is_dir()]
+    inside = [e for e in entries if path.is_relative_to(e)]
+    if inside:
+        return Path("_paquetes") / path.relative_to(max(inside, key=lambda e: len(e.parts)))
+    return Path("_paquetes") / path.name
+
+
 def _is_window(session: CompileSession, path: Path) -> bool:
-    """El archivo tiene <Window> como raíz (se abrirá con open_window)."""
+    """El archivo tiene <window> como raíz (se abrirá con open_window)."""
     try:
         sfc, _ = session.load(path)
     except JanelError:
         return False
     roots = sfc.root_elements
-    return bool(roots) and getattr(roots[0], "tag", None) == "Window"
+    return bool(roots) and getattr(roots[0], "tag", None) == "window"

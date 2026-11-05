@@ -64,10 +64,7 @@ def main() -> None:
     os.environ["CHAT_URL"] = f"ws://127.0.0.1:{port}"
     time.sleep(1)
 
-    from janelkit import notifications
     from janelkit.inspect import mount
-
-    notifications._tray_icon = lambda: None  # sin avisos reales del sistema durante la medición
 
     lags: list[float] = []
 
@@ -92,7 +89,7 @@ def main() -> None:
                 app.wait(10)
                 tick += 1
                 if tick % 3 == 0:  # el usuario cambia de sala de vez en cuando
-                    app.find("Row", label=client.rooms[rooms[tick // 3 % 4]].name).click()
+                    app.find("row", label=client.rooms[rooms[tick // 3 % 4]].name).click()
                 now, cpu = time.perf_counter(), time.process_time()
                 kept = "/".join(str(len(client.rooms[r].messages.value)) for r in rooms)
                 window = sorted(lags)

@@ -46,6 +46,7 @@ class Element:
     attributes: list[Attribute]
     children: list["Node"]
     loc: SourceLocation
+    self_closing: bool = False  # se escribió <Tag ... />
 
     def attribute(self, name: str) -> Attribute | None:
         return next((a for a in self.attributes if a.name == name), None)
@@ -125,6 +126,7 @@ class SFC:
     script: ScriptBlock | None
     style: StyleBlock | None
     template: list[Node] = field(default_factory=list)
+    notices: list = field(default_factory=list)  # avisos al cargarlo (nombres antiguos, legacy.py)
 
     @property
     def root_elements(self) -> list[Element]:

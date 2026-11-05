@@ -21,7 +21,7 @@ from PySide6.QtQml import QQmlComponent, QQmlContext, QQmlEngine, QQmlError, QQm
 from PySide6.QtQuickControls2 import QQuickStyle
 from shiboken6 import Shiboken
 
-from .. import storage
+from .. import session
 from ..compiler import CompiledComponent, compile_file
 from ..compiler.qml_generator import BRIDGE_NAME
 from ..diagnostics import Diagnostic, JanelError
@@ -67,7 +67,7 @@ class _CloseGuard(QObject):
             self._approved = False
         if event.type() != QEvent.Type.Close or self._approved or self._instance.disposed:
             return False
-        from ..pages import ask_to_leave, leave_guards
+        from ..lifecycle import ask_to_leave, leave_guards
 
         guards = leave_guards(self._instance)
         if not guards:
@@ -101,6 +101,9 @@ class Application:
         # asyncio sobre el bucle de Qt: las corrutinas corren en el hilo de la interfaz.
         self.loop = qasync.QEventLoop(self.qt_app)
         asyncio.set_event_loop(self.loop)
+        from .. import displays
+
+        displays.connect(self.qt_app)  # `screens`, la lista reactiva de pantallas
         self._create_engine()
         self._by_url: dict[str, CompiledComponent] = {}
         self._delegates: dict[int, tuple[CompiledComponent, QQmlComponent]] = {}
@@ -502,7 +505,7 @@ def run(entry: str | os.PathLike[str], argv: list[str] | None = None) -> int:
     if str(path.parent) not in sys.path:
         sys.path.insert(0, str(path.parent))
     dev = os.environ.get(DEV_ENV) == "1"
-    storage.use_app(path)  # persisted() guarda en la carpeta de datos de esta aplicación
+    session.start(path)  # la sesión de esta aplicación (sus datos, janelkit.ext.session())
 
     compiled: CompiledComponent | None = None
     try:
@@ -533,4 +536,7 @@ def run(entry: str | os.PathLike[str], argv: list[str] | None = None) -> int:
             reloader.show_error([Diagnostic("la aplicación no pudo arrancar; corrige el error y guarda el archivo")])
         print(f"[janel dev] observando cambios en {path.parent}", file=sys.stderr, flush=True)
         app.dev_reloader = reloader  # mantener vivo
-    return app.exec()
+    try:
+        return app.exec()
+    finally:
+        session.end()  # guarda lo pendiente (persisted, stores) antes de salir

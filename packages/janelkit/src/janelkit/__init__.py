@@ -8,7 +8,6 @@ from .reactivity import (
     Computed,
     Effect,
     Event,
-    History,
     Prop,
     PropError,
     State,
@@ -22,34 +21,30 @@ from .reactivity import (
 )
 from .locale import locale
 from .events import DragEvent, FocusEvent, KeyEvent, PointerEvent, ResizeEvent, WheelEvent
-from .lifecycle import Ref, before_leave, inject, on_destroy, on_mount, provide, ref
-from .pages import PageStack, Sections, navigation, pages, sections
-from .storage import Persisted, persisted
+from .lifecycle import Ref, before_leave, inject, is_visible, on_destroy, on_mount, provide, ref
 from .themes import theme
 from .tasks import Task, background, spawn, task
 from .timers import Timer, interval, timeout
 from .windows import open_window
+from .displays import Screen, screens
 
-__version__ = "0.1.1"
+__version__ = "0.2.0.0"
 
-# API pública: lo que se importa desde `janelkit` es estable dentro de una
-# versión menor (ver docs/api.md). Cualquier otro módulo es interno.
+# API pública: lo que se importa desde `janelkit` sigue la política de versiones
+# (ver docs/api.md). Cualquier otro módulo es interno.
 __all__ = [
     "Computed",
     "Effect",
     "DragEvent",
     "Event",
-    "History",
     "FocusEvent",
     "Frames",
     "KeyEvent",
     "Prop",
-    "PageStack",
-    "Persisted",
     "PointerEvent",
     "PropError",
     "Ref",
-    "Sections",
+    "Screen",
     "ResizeEvent",
     "State",
     "Task",
@@ -63,19 +58,17 @@ __all__ = [
     "effect",
     "event",
     "inject",
+    "is_visible",
     "interval",
     "locale",
-    "navigation",
     "on_destroy",
     "on_mount",
-    "pages",
-    "persisted",
     "open_window",
     "prop",
     "provide",
     "ref",
     "run",
-    "sections",
+    "screens",
     "spawn",
     "state",
     "task",
@@ -98,10 +91,31 @@ else:
     run.__doc__ = "Compila el componente raíz `entry`, abre la ventana y ejecuta el ciclo de eventos de Qt."
 
 
+# Lo que salió del núcleo: importarlo da un error que dice qué hacer.
+_REMOVED = {
+    "History": "History se quitó en JanelKit 0.2: el núcleo ya no incluye deshacer y rehacer. "
+    "Anota tus pasos con funciones (deshacer, rehacer); ver docs/cambios.md.",
+    **{
+        name: f"{name} pasó al paquete janelkit-router en JanelKit 0.2: pip install janelkit-router y "
+        f"from janelkit_router import {name}" + (" (y Pages para <Pages>)" if name == "pages" else "")
+        for name in ("pages", "sections", "navigation", "PageStack")
+    },
+    **{
+        name: f"{name} pasó al paquete janelkit-store en JanelKit 0.2: pip install janelkit-store y "
+        f"from janelkit_store import {name}"
+        for name in ("persisted", "Persisted")
+    },
+    "Sections": "Sections pasó a janelkit-router en JanelKit 0.2: el tipo de sections() se llama "
+    "SectionSet y la etiqueta <Sections> se importa con from janelkit_router import Sections",
+}
+
+
 def __getattr__(name: str):
-    # Importación diferida: Frames carga QtMultimedia, que solo necesitan las apps con vídeo.
+    # Importación diferida: Frames carga QtGui, que `from janelkit import state` no necesita.
     if name == "Frames":
         from .video import Frames
 
         return Frames
+    if name in _REMOVED:
+        raise ImportError(_REMOVED[name])
     raise AttributeError(f"module 'janelkit' has no attribute {name!r}")

@@ -5,14 +5,14 @@ title = prop()
 subtitle = prop("")
 </script>
 
-<Column class="panel">
-  <Row class="head">
-    <Text class="title">{title}</Text>
-    <Spacer />
-    <Text class="subtitle">{subtitle}</Text>
-  </Row>
-  <Slot />
-</Column>
+<column class="panel">
+  <row class="head">
+    <text class="title">{title}</text>
+    <spacer />
+    <text class="subtitle">{subtitle}</text>
+  </row>
+  <slot />
+</column>
 
 <style>
 .panel { padding: 12px; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }

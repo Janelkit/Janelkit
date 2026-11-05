@@ -97,7 +97,7 @@ def _make_bridge_class(binding_ids: list[str], model_ids: list[str], name: str) 
     def mounted(self, item: QObject) -> None:
         self._owner.bridge_mounted(item)
 
-    # Filas de <List>: su vista se crea al hacerse visible y se destruye al salir de pantalla.
+    # Filas de <list>: su vista se crea al hacerse visible y se destruye al salir de pantalla.
     def shown(self, value: bool) -> None:
         self._owner.bridge_shown(value)
 

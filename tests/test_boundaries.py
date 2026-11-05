@@ -1,4 +1,4 @@
-"""Frontera entre el núcleo y el ecosistema (docs/alcance.md).
+"""Frontera entre el núcleo y el ecosistema (docs/arquitectura.md).
 
 - El núcleo (`packages/janelkit`) no importa ningún paquete del ecosistema.
 - Los paquetes del ecosistema solo usan la API pública del núcleo: los nombres de
@@ -29,7 +29,7 @@ def imports(path: Path) -> list[tuple[str, list[str], int]]:
 
 
 def test_there_are_ecosystem_packages_to_check():
-    assert {p.name for p in ECOSYSTEM} >= {"janelkit_i18n", "janelkit_desktop"}
+    assert {p.name for p in ECOSYSTEM} >= {"janelkit_i18n", "janelkit_desktop", "janelkit_router", "janelkit_store"}
 
 
 def test_the_core_does_not_import_the_ecosystem():
@@ -56,3 +56,42 @@ def test_ecosystem_packages_only_use_the_public_api(package):
             elif target.startswith("janelkit.") and target not in PUBLIC_MODULES:
                 offenders.append(f"{where}: {target} es interno")
     assert offenders == []
+
+
+# -- solo PySide6-Essentials -----------------------------------------------------------
+# JanelKit depende de PySide6-Essentials, no de PySide6 completo (que añade PySide6-Addons:
+# QtMultimedia, QtCharts, QtWebEngine…, unos 436 MB). Ningún paquete puede usar un módulo
+# de Addons: en una instalación limpia no estaría.
+ESSENTIALS = {
+    "QtConcurrent", "QtCore", "QtDBus", "QtDesigner", "QtGui", "QtHelp", "QtNetwork", "QtOpenGL",
+    "QtOpenGLWidgets", "QtPrintSupport", "QtQml", "QtQuick", "QtQuickControls2", "QtQuickTest",
+    "QtQuickWidgets", "QtSql", "QtSvg", "QtSvgWidgets", "QtTest", "QtUiTools", "QtWidgets", "QtXml",
+}  # fmt: skip
+QML_ESSENTIALS = ("QtQuick", "QtQml", "QtCore", "Qt.labs.")
+SOURCES = [REPO / "packages" / "janelkit" / "src" / "janelkit", *ECOSYSTEM]
+
+
+@pytest.mark.parametrize("package", SOURCES, ids=lambda p: p.name)
+def test_packages_only_use_qt_modules_from_pyside6_essentials(package):
+    import re
+
+    offenders = []
+    for path in package.rglob("*"):
+        if path.suffix == ".py":
+            for target, names, level in imports(path):
+                modules = [target] + [f"{target}.{n}" for n in names]
+                offenders += [
+                    f"{path.relative_to(package.parent)}: {m}"
+                    for m in modules
+                    if not level and m.startswith("PySide6.Qt") and m.split(".")[1] not in ESSENTIALS
+                ]
+        if path.suffix in (".py", ".qml", ".js", ".janel"):
+            for module in re.findall(r"^\s*import (Qt[\w.]*)", path.read_text(encoding="utf-8"), re.M):
+                if module != "Qt" and not module.startswith(QML_ESSENTIALS):
+                    offenders.append(f"{path.relative_to(package.parent)}: QML import {module}")
+    assert offenders == []
+
+
+def test_the_core_depends_on_pyside6_essentials():
+    pyproject = (REPO / "packages" / "janelkit" / "pyproject.toml").read_text(encoding="utf-8")
+    assert '"PySide6-Essentials>=' in pyproject and '"PySide6>' not in pyproject

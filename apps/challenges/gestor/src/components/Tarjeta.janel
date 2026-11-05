@@ -3,13 +3,15 @@
 # se coloca delante (o detrás, si baja en su misma columna). Doble clic o Intro abren
 # el detalle; clic derecho, el menú. Cada acción del menú tiene su tecla (ver tecla()).
 # `abierta` es estado local de la tarjeta: sobrevive al arrastre, también a otra columna
-# (la fila se traslada entre las dos <List>, con su estado y su foco).
+# (la fila se traslada entre las dos <list>, con su estado y su foco).
 from janelkit import inject, on_destroy, on_mount, prop, ref, state
+from janelkit_store import use
+from services.datos import Datos
 
 t = prop({})
 atenuada = prop(False)
 tablero = inject("tablero")
-datos = inject("datos")  # el responsable es un id del directorio de personas
+datos = use(Datos)  # el responsable es un id del directorio de personas
 ui = inject("ui")  # estado compartido de la ventana: detalle, menú y tarjeta nueva que enfocar
 abierta = state(False)
 caja = ref()
@@ -64,21 +66,21 @@ def tecla(event):
   {#if t["etiquetas"]}
     <flex class="etiquetas">
       {#each t["etiquetas"] as e (e)}
-        <flex class="etiqueta" style={{"background": tablero.etiquetas.get(e, "#868e96")}}><Text>{e}</Text></flex>
+        <flex class="etiqueta" style={{"background": tablero.etiquetas.get(e, "#868e96")}}><text>{e}</text></flex>
       {/each}
     </flex>
   {/if}
-  <Text class="titulo">{t["titulo"]}</Text>
+  <text class="titulo">{t["titulo"]}</text>
   <flex class="pie">
-    {#if t["responsable"]}<Text class="persona">{datos.nombre(t["responsable"]).split(" ")[0]}</Text>{/if}
-    {#if t["fecha"]}<Text class="fecha">{t["fecha"]}</Text>{/if}
+    {#if t["responsable"]}<text class="persona">{datos.nombre(t["responsable"]).split(" ")[0]}</text>{/if}
+    {#if t["fecha"]}<text class="fecha">{t["fecha"]}</text>{/if}
     <flex as="button" class="mas" label={("Ocultar" if abierta else "Ver") + f" descripción de {t['titulo']}"} expanded={abierta}
           on:click={abierta = not abierta}>
-      <Text>{"▾" if abierta else "▸"}</Text>
+      <text>{"▾" if abierta else "▸"}</text>
     </flex>
   </flex>
   {#if abierta}
-    <Text class="descripcion">{t["descripcion"] or "Sin descripción."}</Text>
+    <text class="descripcion">{t["descripcion"] or "Sin descripción."}</text>
   {/if}
 </flex>
 

@@ -1,4 +1,4 @@
-"""<flex> fase 5: componentes usados como elementos (atributos a la raíz). Ver docs/flex.md."""
+"""<flex>: componentes usados como elementos (atributos a la raíz)."""
 import tempfile
 from pathlib import Path
 
@@ -14,7 +14,7 @@ CAJA = """<script>
 from janelkit import prop
 texto = prop("")
 </script>
-<flex class="caja" as="button" label={texto}><Text>{texto}</Text></flex>
+<flex class="caja" as="button" label={texto}><text>{texto}</text></flex>
 <style>
 .caja { padding: 4px; background: #eeeeee; }
 .caja.fuerte { background: #000000; }
@@ -26,7 +26,7 @@ from janelkit import prop
 inherit_attrs = False
 texto = prop("")
 </script>
-<flex class="cerrada"><Text>{texto}</Text></flex>
+<flex class="cerrada"><text>{texto}</text></flex>
 """
 
 APP = """<script>
@@ -40,7 +40,7 @@ off = state(False)
 def foco():
     caja.focus()
 </script>
-<Column>
+<column>
   <Caja texto="uno" class="a" on:click={log = log + ["uno"]} />
   <Caja texto="dos" class="fuerte" ref={caja} disabled={off} title="pista" />
   <Caja texto="tres" />
@@ -50,9 +50,9 @@ def foco():
       <Caja texto={f"n{i}"} class="celda" on:keydown={log = log + [event.key]} />
     {/each}
   </flex>
-  <Button text="rev" on:click={items = list(reversed(items))} />
-  <Button text="foco" on:click={foco()} />
-</Column>
+  <button text="rev" on:click={items = list(reversed(items))} />
+  <button text="foco" on:click={foco()} />
+</column>
 <style>
 .a { width: 150px; }
 .a:hover { background: #00ff00; }
@@ -103,7 +103,7 @@ def test_native_events_ref_and_disabled_reach_root(app):
     c = cajas(app)
     c["uno"].click()
     assert app.get("log") == ["uno"]
-    app.find("Button", text="foco").click()
+    app.find("button", text="foco").click()
     assert c["dos"].item.hasActiveFocus()
     app.namespace["off"].set(True)
     app.wait(0.02)
@@ -125,7 +125,7 @@ def test_reordered_rows_keep_their_place(app):
     xs = lambda: {e.label: round(e.item.x()) for e in cajas(app).values() if e.label.startswith("n")}  # noqa: E731
     before = xs()
     assert before["n1"] < before["n2"] < before["n3"]
-    app.find("Button", text="rev").click()
+    app.find("button", text="rev").click()
     app.wait(0.05)
     after = xs()
     assert after["n3"] < after["n2"] < after["n1"]
@@ -133,10 +133,10 @@ def test_reordered_rows_keep_their_place(app):
 
 def test_undeclared_attrs_still_error_without_box_root(project):
     (project / "components" / "Boton2.janel").write_text(
-        '<script>\nfrom janelkit import prop\ntext = prop("")\n</script>\n<Button text={text} />\n', encoding="utf-8"
+        '<script>\nfrom janelkit import prop\ntext = prop("")\n</script>\n<button text={text} />\n', encoding="utf-8"
     )
     (project / "B.janel").write_text(
-        "<script>\nfrom components.Boton2 import Boton2\n</script>\n<Column><Boton2 text=\"x\" on:click={print(1)} /></Column>\n",
+        "<script>\nfrom components.Boton2 import Boton2\n</script>\n<column><Boton2 text=\"x\" on:click={print(1)} /></column>\n",
         encoding="utf-8",
     )
     with pytest.raises(JanelError, match="no declara el evento 'click'"):

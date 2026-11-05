@@ -7,7 +7,7 @@
 
 `paste()` es reactivo: un binding o un `computed` que lo lee se actualiza cuando el
 portapapeles cambia, también desde otra aplicación. Por ejemplo, un botón «Pegar» que
-solo se activa si hay algo que pegar: `<Button enabled={bool(clipboard.paste())} …>`.
+solo se activa si hay algo que pegar: `<button enabled={bool(clipboard.paste())} …>`.
 
 Necesita la aplicación en marcha (el script de un componente, o después de `run()`).
 Los campos de texto ya copian y pegan solos con Ctrl+C y Ctrl+V; esto es para lo demás

@@ -147,7 +147,7 @@ class SlotModel(QAbstractListModel):
 
 
 class LazySlotModel(SlotModel):
-    """Modelo de una lista virtualizada (`<List>`).
+    """Modelo de una lista virtualizada (`<list>`).
 
     Cada fila empieza como un *hueco* (cualquier objeto que no es un QObject)
     y su puente se crea con `factory(hueco)` la primera vez que Qt lo pide, es

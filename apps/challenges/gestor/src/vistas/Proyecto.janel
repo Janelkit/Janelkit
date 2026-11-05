@@ -2,18 +2,20 @@
 # Un proyecto: pestañas Tablero, Miembros y Ajustes. Las pestañas usan {#hidden}: al
 # cambiar de una a otra se conservan (filtros, desplazamiento, detalle abierto).
 # El tablero es el del reto 3, con las etiquetas y los miembros del proyecto.
-from janelkit import inject, navigation, prop, provide, state
+from janelkit import inject, prop, provide, state
+from janelkit_router import navigation
+from janelkit_store import use
 from components.AjustesProyecto import AjustesProyecto
 from components.Columna import Columna
 from components.Detalle import Detalle
 from components.Miembros import Miembros
 from components.MenuContextual import MenuContextual
-from services.datos import cuenta
+from services.datos import cuenta, Datos
 from services.interfaz import Interfaz
 
 ident = prop("")
 enfocar = prop("")  # id de una tarjeta que enfocar al abrir (enlaces de «Mi trabajo»)
-datos = inject("datos")
+datos = use(Datos)
 nav = navigation()
 tablero = datos.tablero(ident.value)
 proyecto = tablero.proyecto
@@ -93,21 +95,21 @@ def limpiar_filtros():
 <flex class="proyecto">
   <flex class="cabecera">
     <flex class="arriba">
-      <Button text="← Proyectos" variant="ghost" enabled={nav.can_go_back} label="Volver a Proyectos (Alt+←)" on:click={nav.pop()} />
+      <button text="← Proyectos" variant="ghost" enabled={nav.can_go_back} label="Volver a Proyectos (Alt+←)" on:click={nav.pop()} />
       <flex class="color" style={{"background": proyecto["color"]}} />
       <flex class="titulos">
         <flex class="fila-titulo">
-          <Text class="nombre">{proyecto["nombre"]}</Text>
-          {#if proyecto["archivado"]}<Text class="archivado">Archivado</Text>{/if}
+          <text class="nombre">{proyecto["nombre"]}</text>
+          {#if proyecto["archivado"]}<text class="archivado">Archivado</text>{/if}
         </flex>
-        {#if proyecto["descripcion"]}<Text class="descripcion">{proyecto["descripcion"]}</Text>{/if}
+        {#if proyecto["descripcion"]}<text class="descripcion">{proyecto["descripcion"]}</text>{/if}
       </flex>
     </flex>
     <flex as="tablist" class="pestañas" label="Vistas del proyecto">
       {#each PESTAÑAS as p (p[0])}
         <flex as="tab" class="pestaña" class:activa={pestaña == p[0]} label={p[1]} selected={pestaña == p[0]}
               on:click={pestaña = p[0]}>
-          <Text>{p[1]}</Text>
+          <text>{p[1]}</text>
         </flex>
       {/each}
     </flex>
@@ -115,15 +117,15 @@ def limpiar_filtros():
   {#hidden pestaña != "tablero"}
     <flex class="vista">
       <flex class="barra">
-        <TextField class="buscar" bind:value={texto} placeholder="Buscar tarjetas…" label="Buscar" />
-        <Select options={etiquetas_opc()} bind:value={etiqueta} label="Filtrar por etiqueta" />
-        <Select options={personas_opc()} bind:value={persona} label="Filtrar por persona" />
+        <textfield class="buscar" bind:value={texto} placeholder="Buscar tarjetas…" label="Buscar" />
+        <select options={etiquetas_opc()} bind:value={etiqueta} label="Filtrar por etiqueta" />
+        <select options={personas_opc()} bind:value={persona} label="Filtrar por persona" />
         {#if texto or etiqueta or persona}
-          <Button text="Quitar filtros" variant="ghost" on:click={limpiar_filtros()} />
+          <button text="Quitar filtros" variant="ghost" on:click={limpiar_filtros()} />
         {/if}
-        <Spacer />
-        <Text class="resumen">{f"{cuenta(total_tarjetas(), 'tarjeta')} en {cuenta(len(columnas), 'columna')}"}</Text>
-        <Button text="+ Columna" variant="primary" on:click={nueva_columna()} />
+        <spacer />
+        <text class="resumen">{f"{cuenta(total_tarjetas(), 'tarjeta')} en {cuenta(len(columnas), 'columna')}"}</text>
+        <button text="+ Columna" variant="primary" on:click={nueva_columna()} />
       </flex>
       <flex class="cuerpo">
         <flex class="tablero" label="Columnas del tablero">
@@ -131,7 +133,7 @@ def limpiar_filtros():
             <Columna columna={c} />
           {/each}
           <flex as="button" class="otra-columna" label="Añadir columna" on:click={nueva_columna()}>
-            <Text>+ Añadir columna</Text>
+            <text>+ Añadir columna</text>
           </flex>
         </flex>
         {#if detalle}

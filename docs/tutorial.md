@@ -51,16 +51,16 @@ def add():
         draft.value = ""
 </script>
 
-<Window title="Lista de la compra" width={420} height={520}>
-  <Column class="page">
-    <Text class="title">La compra</Text>
-    <Row class="new">
-      <TextField bind:value={draft} on:submit={add} placeholder="¿Qué falta?" flex={1} />
-      <Button variant="primary" on:click={add} enabled={bool(draft.strip())}>Añadir</Button>
-    </Row>
-    <Text>{len(items)} productos</Text>
-  </Column>
-</Window>
+<window title="Lista de la compra" width={420} height={520}>
+  <column class="page">
+    <text class="title">La compra</text>
+    <row class="new">
+      <textfield bind:value={draft} on:submit={add} placeholder="¿Qué falta?" flex={1} />
+      <button variant="primary" on:click={add} enabled={bool(draft.strip())}>Añadir</button>
+    </row>
+    <text>{len(items)} productos</text>
+  </column>
+</window>
 
 <style>
 .page { padding: 24px; gap: 16px; }
@@ -77,22 +77,20 @@ def add():
 
 ## 3. Mostrar la lista
 
-Cambia `<Text>{len(items)} productos</Text>` por un bloque `{#each}`:
+Cambia `<text>{len(items)} productos</text>` por un bloque `{#each}`:
 
 ```html
 {#each items as item (item["id"])}
-  <Row class="row">
-    <Checkbox checked={item["done"]} on:change={item["done"] = event} flex={1}>{item["name"]}</Checkbox>
-    <Button variant="ghost" on:click={items.remove(item)}>Quitar</Button>
-  </Row>
+  <row class="row">
+    <checkbox checked={item["done"]} on:change={item["done"] = event} flex={1}>{item["name"]}</checkbox>
+    <button variant="ghost" on:click={items.remove(item)}>Quitar</button>
+  </row>
 {:else}
-  <Text class="muted">La lista está vacía.</Text>
+  <text class="muted">La lista está vacía.</text>
 {/each}
 ```
 
 y añade a `<style>`: `.row { gap: 8px; align-items: center; }` y `.muted { color: var(--text-muted); }`.
-
-> En una `Row`, los hijos se centran en vertical y **no** se estiran como en CSS. Si una columna lateral debe ocupar todo el alto, añade `align-items: stretch` a la fila. Ver [estilos.md](estilos.md#disposición).
 
 - `(item["id"])` es la **clave** de cada fila: al borrar o reordenar, cada fila conserva su identidad.
 - `on:change={item["done"] = event}` es un **manejador en línea**: `event` es lo que manda el control (si quedó marcado).
@@ -110,7 +108,7 @@ def pending():
     return sum(not i["done"] for i in items.value)
 ```
 
-y úsalo en la plantilla: `<Text>Pendientes: {pending}</Text>`. Un `computed` se recalcula solo cuando cambia algo de lo que leyó: marcar una casilla actualiza el contador.
+y úsalo en la plantilla: `<text>Pendientes: {pending}</text>`. Un `computed` se recalcula solo cuando cambia algo de lo que leyó: marcar una casilla actualiza el contador.
 
 ## 5. Componentes
 
@@ -125,17 +123,17 @@ toggled = event()    # avisos hacia el padre
 removed = event()
 </script>
 
-<Row class="row">
-  <Checkbox checked={item["done"]} on:change={toggled.emit(event)} flex={1}>{item["name"]}</Checkbox>
-  <Button variant="ghost" on:click={removed.emit()}>Quitar</Button>
-</Row>
+<row class="row">
+  <checkbox checked={item["done"]} on:change={toggled.emit(event)} flex={1}>{item["name"]}</checkbox>
+  <button variant="ghost" on:click={removed.emit()}>Quitar</button>
+</row>
 
 <style>
 .row { gap: 8px; align-items: center; }
 </style>
 ```
 
-Y `src/components/Card.janel`, una tarjeta que recibe contenido con `<Slot />`:
+Y `src/components/Card.janel`, una tarjeta que recibe contenido con `<slot />`:
 
 ```html
 <script lang="python">
@@ -144,10 +142,10 @@ from janelkit import prop
 title = prop()
 </script>
 
-<Column class="card">
-  <Text class="title">{title}</Text>
-  <Slot />
-</Column>
+<column class="card">
+  <text class="title">{title}</text>
+  <slot />
+</column>
 
 <style>
 .card { padding: 16px; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
@@ -167,13 +165,13 @@ from components.ItemRow import ItemRow
   {#each items as item (item["id"])}
     <ItemRow item={item} on:toggled={item["done"] = event} on:removed={items.remove(item)} />
   {:else}
-    <Text class="muted">La lista está vacía.</Text>
+    <text class="muted">La lista está vacía.</text>
   {/each}
 </Card>
 ```
 
 - Las **props** son de solo lectura en el hijo; para cambiar algo, el hijo emite un **evento** y el padre decide.
-- Lo que va entre `<Card>` y `</Card>` aparece donde la tarjeta pone `<Slot />`, y se evalúa en el padre: ve `items`, `pending`…
+- Lo que va entre `<Card>` y `</Card>` aparece donde la tarjeta pone `<slot />`, y se evalúa en el padre: ve `items`, `pending`…
 - Si te equivocas de nombre (`<ItemRow itme={...}>`), el compilador lo dice con archivo, línea y sugerencia.
 
 ## 6. Tema claro y oscuro
@@ -185,11 +183,11 @@ from janelkit import theme
 ```
 
 ```html
-<Row class="header">
-  <Text class="title">La compra</Text>
-  <Spacer />
-  <Button variant="ghost" on:click={theme.toggle()}>{"Oscuro" if theme.name == "light" else "Claro"}</Button>
-</Row>
+<row class="header">
+  <text class="title">La compra</text>
+  <spacer />
+  <button variant="ghost" on:click={theme.toggle()}>{"Oscuro" if theme.name == "light" else "Claro"}</button>
+</row>
 ```
 
 con `.header { align-items: center; }` en el estilo.
@@ -260,7 +258,7 @@ effect(autosave)
 
   ```html
   {#if save.error}
-    <Text class="error">No se pudo guardar: {save.error}</Text>
+    <text class="error">No se pudo guardar: {save.error}</text>
   {/if}
   ```
 
@@ -271,7 +269,7 @@ effect(autosave)
 
 ## 8. Probar la aplicación
 
-`janelkit.inspect` monta la aplicación sin ventana y la maneja como lo haría un usuario. Crea `packages/janelkit/tests/test_app.py`:
+`janelkit.inspect` monta la aplicación sin ventana y la maneja como lo haría un usuario. Crea `tests/test_app.py` en el proyecto:
 
 ```python
 import json
@@ -292,10 +290,10 @@ def test_add_check_and_remove(tmp_path, monkeypatch):
         assert app.find("Card").visible  # los componentes se buscan por su nombre
         assert "Pendientes: 2" in app.texts()
 
-        app.find("Checkbox", text="Pan").check()
+        app.find("checkbox", text="Pan").check()
         assert "Pendientes: 1" in app.texts()
 
-        app.find_all("Button", text="Quitar")[1].click()  # quita «Leche»
+        app.find_all("button", text="Quitar")[1].click()  # quita «Leche»
         assert [i["name"] for i in app.get("items")] == ["Pan"]
 
         app.wait(until=lambda: not app.get("save").loading)
@@ -309,7 +307,7 @@ def test_loads_the_saved_list(tmp_path, monkeypatch):
 
     with mount("src/App.janel") as app:
         app.wait(until=lambda: app.get("loaded"))
-        assert app.find("Checkbox", text="Café").value is False
+        assert app.find("checkbox", text="Café").value is False
 ```
 
 ```bash
@@ -317,16 +315,22 @@ pip install pytest
 pytest
 ```
 
-Estas pruebas encontraron, al escribir este tutorial, el error de guardar antes de cargar del paso 7.
-
 ## 9. Distribuirla
 
 - `janel build` comprueba todos los componentes sin abrir la ventana: útil antes de publicar o en la CI.
-- Para crear un ejecutable que se pueda dar a quien no tiene Python, sigue la receta de [empaquetado.md](empaquetado.md).
+- Para crear un ejecutable que se pueda dar a quien no tiene Python, sigue la receta de [desarrollo.md](desarrollo.md#distribuir-un-ejecutable-con-pyinstaller).
 
 ## Siguientes pasos
 
-- [lenguaje.md](lenguaje.md): todo el formato `.janel`, los elementos disponibles, `<List>` para listas grandes, diálogos, accesibilidad y elementos propios en QML.
+El tutorial solo usa el núcleo (`janelkit`). Cuando la aplicación crezca:
+
+- **Varias pantallas** (una lista y su detalle, una barra lateral): [`janelkit-router`](../packages/janelkit-router/README.md).
+- **Datos que comparten varias vistas o ventanas**, o que se recuerdan al cerrar: [`janelkit-store`](../packages/janelkit-store/README.md).
+- **Abrir y guardar archivos con los diálogos del sistema**: [`janelkit-desktop`](../packages/janelkit-desktop/README.md). **Traducciones**: [`janelkit-i18n`](../packages/janelkit-i18n/README.md).
+
+Y para profundizar:
+
+- [lenguaje.md](lenguaje.md): todo el formato `.janel`, los elementos disponibles, `<list>` para listas grandes, accesibilidad y elementos propios en QML.
 - [estilos.md](estilos.md): propiedades de estilo, `flex` y temas.
 - [desarrollo.md](desarrollo.md): `janel dev`, errores y pruebas.
 - Los ejemplos de `apps/examples/`, en especial `files` (explorador de archivos) y `books` (cliente de una API).

@@ -8,19 +8,19 @@ action = event()
 </script>
 
 <flex class="barra">
-  <Text class="titulo">{title}</Text>
+  <text class="titulo">{title}</text>
   <flex class="grupos">
     <flex class="grupo">
-      <Button flat on:click={action.emit("nuevo")}>Nuevo</Button>
-      <Button flat on:click={action.emit("abrir")}>Abrir</Button>
+      <button flat on:click={action.emit("nuevo")}>Nuevo</button>
+      <button flat on:click={action.emit("abrir")}>Abrir</button>
     </flex>
     <flex class="grupo separado">
-      <Button flat on:click={action.emit("cortar")}>Cortar</Button>
-      <Button flat on:click={action.emit("copiar")}>Copiar</Button>
-      <Button flat on:click={action.emit("pegar")}>Pegar</Button>
+      <button flat on:click={action.emit("cortar")}>Cortar</button>
+      <button flat on:click={action.emit("copiar")}>Copiar</button>
+      <button flat on:click={action.emit("pegar")}>Pegar</button>
     </flex>
     <flex class="grupo separado">
-      <Button variant="primary" on:click={action.emit("compartir")}>Compartir</Button>
+      <button variant="primary" on:click={action.emit("compartir")}>Compartir</button>
     </flex>
   </flex>
 </flex>

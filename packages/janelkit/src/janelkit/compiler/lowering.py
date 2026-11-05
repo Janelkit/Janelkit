@@ -109,7 +109,7 @@ class ComponentInterface:
 
     props: dict[str, PropDecl] = field(default_factory=dict)
     events: dict[str, EventDecl] = field(default_factory=dict)
-    slots: frozenset[str] | None = None  # nombres de <Slot>; None = desconocido (no se valida)
+    slots: frozenset[str] | None = None  # nombres de <slot>; None = desconocido (no se valida)
     root_box: bool = False  # su raíz es una caja y hereda atributos: van a ella (JkRemote)
     inherit_attrs: bool = True
     root_items: frozenset[str] | None = None  # lo que su raíz pide a la caja que lo contiene (None: no se sabe)
@@ -158,7 +158,7 @@ class _Lowerer:
         self.as_window = as_window
         self.interface = interface
         self.errors: list[Diagnostic] = []
-        self.warnings: list[Diagnostic] = []
+        self.warnings: list[Diagnostic] = list(sfc.notices)
         self.tokens: list[TokenUse] = []
         self.rules: list[Rule] = []
         self.counters: dict[str, int] = {}
@@ -169,6 +169,7 @@ class _Lowerer:
         self.slot_fragments: list[Fragment] = []
         self.qml_imports: dict[str, QmlImport] = {}  # tag -> import
         self.pending_transitions: dict[int, SourceLocation] = {}  # id(IRElement) -> ubicación
+        self.decks: set[int] = set()  # id(IRElement) de los mazos (elementos .qml con raíz JkDeck)
         self.use_counts: dict[str, int] = {}  # etiqueta de componente -> usos vistos
         self.qml_specs: dict[str, ControlSpec] = {}
         self._reported: set[tuple] = set()
@@ -271,28 +272,28 @@ class _Lowerer:
         roots = sfc.root_elements
         if (
             not self.as_window and len(roots) == 1 and isinstance(roots[0], Element)
-            and roots[0].tag in ("flex", "Column", "Row") and self.info.inherit_attrs
+            and roots[0].tag in ("flex", "column", "row") and self.info.inherit_attrs
         ):  # fmt: skip
             self.passed_root = roots[0]
         root_ir: IRElement | None = None
         if not roots:
-            self.error("la plantilla está vacía", SourceLocation(sfc.file, 1, 1), "añade un elemento raíz, por ejemplo <Window>")
+            self.error("la plantilla está vacía", SourceLocation(sfc.file, 1, 1), "añade un elemento raíz, por ejemplo <window>")
         else:
             for extra in roots[1:]:
                 self.error(
                     "solo se admite un elemento raíz en la plantilla",
                     extra.loc,
-                    "agrupa los elementos dentro de un <Window> o <Column>",
+                    "agrupa los elementos dentro de un <window> o <column>",
                 )
             first = roots[0]
             if not isinstance(first, Element):
-                self.error("la raíz de la plantilla debe ser un elemento", first.loc, "envuélvela en <Column>")
-            elif first.tag == "Window":
+                self.error("la raíz de la plantilla debe ser un elemento", first.loc, "envuélvela en <column>")
+            elif first.tag == "window":
                 if not self.as_window:
                     self.error(
-                        "un componente usado dentro de otro no puede tener <Window> como raíz",
+                        "un componente usado dentro de otro no puede tener <window> como raíz",
                         first.loc,
-                        "usa <Column> u otro contenedor como raíz del componente",
+                        "usa <column> u otro contenedor como raíz del componente",
                     )
                 root_ir = self.window(first)
             else:
@@ -307,7 +308,7 @@ class _Lowerer:
             self.error(
                 "transition:, in: y out: solo se aplican al elemento raíz de un bloque {#if}, {#each} o {#key}",
                 loc,
-                "si el bloque tiene varios elementos, agrúpalos en un <Column> o <Row> y pon ahí la transición",
+                "si el bloque tiene varios elementos, agrúpalos en un <column> o <row> y pon ahí la transición",
             )
         if self.errors:
             raise JanelError(self.errors)
@@ -382,14 +383,14 @@ class _Lowerer:
                 'p. ej. style={{"background": color, "width": f"{pct}%", "--acento": acento}}; para clases usa class={...}',
             )
             return
-        box = el.tag in ("flex", "Column", "Row")
+        box = el.tag in ("flex", "column", "row")
         values: dict[str, Literal] = {}
         for key_node, value_node in zip(node.keys, node.values):
             name = key_node.value.strip().lower()
             expr = Expression(ast.get_source_segment(attr.value.code.strip(), value_node) or "None", attr.loc)
             if name.startswith("--"):
                 if not box:
-                    self.error(f"las variables propias ({name}) se definen en <flex>, Column o Row", attr.loc)
+                    self.error(f"las variables propias ({name}) se definen en <flex>, <column> o <row>", attr.loc)
                     continue
                 values[VAR_PREFIX + token_key(name[2:])] = Literal(f"jk.{self.add_expr_binding(expr, attr.loc)}")
                 continue
@@ -446,11 +447,14 @@ class _Lowerer:
         if spec is None:
             self.unknown_element(el)
             return None
-        if el.tag == "Window" and not allow_window:
-            self.error("<Window> solo puede usarse como raíz de la plantilla", el.loc, "usa <Column> o <Row>")
+        if el.tag == "window" and not allow_window:
+            self.error("<window> solo puede usarse como raíz de la plantilla", el.loc, "usa <column> o <row>")
             return None
         ir = IRElement(spec.qml_type, el.loc)
         ir.props.update({k: Literal(v) for k, v in spec.fixed.items()})
+        if spec.deck:  # un mazo crece sin pedirlo (flex: 1), como <scroll>; flex={0} lo cambia
+            self.decks.add(id(ir))
+            ir.props["jkFlex"] = Literal("1")
         node = self.style_node(el, ir, match_tag)
         node.passed = el is self.passed_root
         self.last_node = node
@@ -467,7 +471,7 @@ class _Lowerer:
                     ir.props["objectName"] = Literal(qml_string(attr.value))
                 else:
                     self.error('el atributo id debe ser un texto literal, p. ej. id="guardar"', attr.loc)
-            elif attr.name == "ref" or (el.tag == "Pages" and attr.name == "stack") or (el.tag == "Sections" and attr.name == "of"):
+            elif attr.name == "ref" or attr.name in spec.hosts:
                 self.ref(attr, ir)
             elif attr.directive == "on":
                 self.event(attr, spec, ir)
@@ -508,7 +512,35 @@ class _Lowerer:
             self.content(el, spec, ir)
         finally:
             self.style_stack.pop()
+        if spec.qml_type == "JkText":
+            self.markdown_without_html(ir)
         return ir
+
+    def markdown_without_html(self, ir: IRElement) -> None:
+        """<text format="markdown">: el texto pasa por el runtime, que escapa el HTML."""
+        fmt, text = ir.props.get("format"), ir.props.get("text")
+        if fmt is None or text is None:
+            return
+        if isinstance(fmt, Literal):
+            if fmt.qml != qml_string("markdown"):
+                return
+            when: bool | str = True
+        else:
+            when = fmt.binding_id
+        if isinstance(text, Literal):  # texto fijo: también, para que valga lo mismo
+            try:
+                raw = json.loads(text.qml)
+            except ValueError:
+                return
+            if not isinstance(raw, str):
+                return
+            bid = self.next_id("b")
+            self.tpl.bindings.append(TextBinding(bid, [raw], ir.loc, markdown=when))
+            ir.props["text"] = Bound(bid)
+            return
+        for binding in self.tpl.bindings:
+            if binding.id == text.binding_id:
+                binding.markdown = when
 
     def transition(self, attr: Attribute, ir: IRElement) -> None:
         """`transition:fade`, `in:scale={300}`, `out:slide`: animación al montar/desmontar el bloque."""
@@ -523,7 +555,7 @@ class _Lowerer:
                 self.error(f"{attr.name} espera la duración en milisegundos, p. ej. {attr.name}={{300}}", attr.loc)
                 return
             ms = value
-        if ir.qml_type == "JkPages":  # <Pages transition:slide>: anima la página que entra
+        if id(ir) in self.decks:  # mazo (JkDeck), p. ej. <Pages transition:slide>: anima el hijo que entra
             ir.props["jkTransition"] = Literal(qml_string(kind))
             ir.props["jkTransitionMs"] = Literal(str(ms))
             return
@@ -552,15 +584,20 @@ class _Lowerer:
             frag.leave_ms = root.transitions["out"][1]
 
     def ref(self, attr: Attribute, ir: IRElement) -> None:
+        """ref={campo}, o un atributo que recibe un anfitrión (<Pages stack={nav}>): el elemento se le pasa al nombre."""
         name = _parse_name(attr.value.code) if isinstance(attr.value, Expression) else None
         if name is None:
+            if attr.name != "ref":
+                self.error(f"{attr.name} necesita el nombre de una variable del script", attr.loc, f"{attr.name}={{nombre}}")
+                return
             self.error("ref necesita el nombre de una referencia", attr.loc, "declara campo = ref() en el script y usa ref={campo}")
             return
         if name in self.local_names():
-            self.error(f"ref no puede usar la variable de {{#each}} '{name}'", attr.loc, "declara la referencia en el script")
+            what = "la referencia" if attr.name == "ref" else "la variable"
+            self.error(f"{attr.name} no puede usar la variable de {{#each}} '{name}'", attr.loc, f"declara {what} en el script")
             return
         self.check_expr(attr.value)
-        use = RefUse(self.next_id("r"), name, attr.loc)
+        use = RefUse(self.next_id("r"), name, attr.loc, attr.name)
         self.tpl.refs.append(use)
         ir.handlers.setdefault("Component.onCompleted", []).append(f'jk.setRef("{use.id}", this, true)')
 
@@ -624,21 +661,30 @@ class _Lowerer:
 
     def unknown_element(self, el: Element) -> None:
         if el.tag[:1].islower():
-            # Las etiquetas en minúscula son los elementos base de JanelKit.
+            # Las etiquetas en minúscula son los elementos del núcleo.
             close = difflib.get_close_matches(el.tag, BASE_ELEMENTS, n=1)
-            hint = (f"¿quisiste decir <{close[0]}>? " if close else "") + "elementos base: " + ", ".join(
+            hint = (f"¿quisiste decir <{close[0]}>? " if close else "") + "elementos del núcleo: " + ", ".join(
                 f"<{t}>" for t in BASE_ELEMENTS
-            ) + ". Los componentes se escriben en mayúscula"
-            self.error(f"elemento base desconocido <{el.tag}>", el.loc, hint)
+            ) + ". Los componentes se escriben en mayúscula y se importan en el script"
+            self.error(f"elemento desconocido <{el.tag}>", el.loc, hint)
             return
-        options = sorted({*CONTROLS, *self.info.components})
+        if el.tag.lower() in BASE_ELEMENTS:
+            self.error(f"elemento desconocido <{el.tag}>", el.loc, f"los elementos del núcleo van en minúscula: <{el.tag.lower()}>")
+            return
+        if el.tag in _MOVED_ELEMENTS:
+            package = _MOVED_ELEMENTS[el.tag]
+            hint = f"pasó al paquete {package.replace('_', '-')}: from {package} import {el.tag}"
+            self.error(f"elemento desconocido <{el.tag}>", el.loc, hint)
+            return
+        options = sorted({*(t for t in CONTROLS if t not in BASE_ELEMENTS), *self.info.components})
         close = difflib.get_close_matches(el.tag, options, n=1)
         if close:
             hint = f"¿quisiste decir <{close[0]}>?"
-        elif el.tag[:1].isupper():
-            hint = f"si es un componente, impórtalo en el script: from components.{el.tag} import {el.tag}"
         else:
-            hint = "elementos disponibles: " + ", ".join(sorted(CONTROLS))
+            hint = f"si es un componente, impórtalo en el script: from components.{el.tag} import {el.tag}"
+            core = difflib.get_close_matches(el.tag.lower(), BASE_ELEMENTS, n=1, cutoff=0.75)
+            if core:
+                hint += f"; si es un elemento del núcleo, va en minúscula: <{core[0]}>"
         self.error(f"elemento desconocido <{el.tag}>", el.loc, hint)
 
     def classes(self, el: Element) -> list[str]:
@@ -810,11 +856,11 @@ class _Lowerer:
 
     # -- contenido -----------------------------------------------------------
     def content(self, el: Element, spec: ControlSpec, ir: IRElement) -> None:
-        if el.tag == "List":
+        if el.tag == "list":
             self.list_content(el, ir)
         elif spec.text_prop:
             self.text_content(el, spec, ir)
-        elif el.tag == "Window":
+        elif el.tag == "window":
             kids = self.children(el.children, horizontal=False)
             item = self.as_item(kids, el.loc)
             if item is not None:
@@ -825,23 +871,27 @@ class _Lowerer:
         else:
             for child in el.children:
                 if not (isinstance(child, Text) and not child.value.strip()):
-                    self.error(f"<{el.tag}> no admite contenido", child.loc, f"usa <{el.tag} ... />")
+                    self.error(f"<{el.tag}> no admite contenido", child.loc, _self_closing_hint(el.tag, spec))
                     break
+            else:
+                # Un campo no tiene texto dentro: su contenido es `value`. Se escribe <textfield ... />.
+                if not el.self_closing and spec.tag is None and el.tag in CONTROLS:
+                    self.error(f"<{el.tag}> se escribe con cierre automático", el.loc, _self_closing_hint(el.tag, spec))
 
     def list_content(self, el: Element, ir: IRElement) -> None:
-        """`<List>{#each ...}{/each}</List>`: una lista virtualizada (ListView)."""
+        """`<list>{#each ...}{/each}</list>`: una lista virtualizada (ListView)."""
         blocks = [n for n in el.children if not (isinstance(n, Text) and not n.value.strip())]
         if len(blocks) != 1 or not isinstance(blocks[0], EachBlock):
             loc = blocks[0].loc if blocks else el.loc
             self.error(
-                "<List> debe contener exactamente un bloque {#each}",
+                "<list> debe contener exactamente un bloque {#each}",
                 loc,
-                "<List>{#each elementos as e (e['id'])}<Row>...</Row>{/each}</List>; para contenido libre usa <Scroll>",
+                "<list>{#each elementos as e (e['id'])}<row>...</row>{/each}</list>; para contenido libre usa <scroll>",
             )
             return
         node = blocks[0]
         if node.else_children is not None:
-            self.error("{:else} no está disponible dentro de <List>", node.loc, "muestra el estado vacío con un {#if} fuera de la lista")
+            self.error("{:else} no está disponible dentro de <list>", node.loc, "muestra el estado vacío con un {#if} fuera de la lista")
         for rep in self.each_block(node, horizontal=False, lazy=True):
             ir.props["model"] = Literal(f"jk.{rep.model_id}")
             ir.delegate = rep.delegate
@@ -892,7 +942,7 @@ class _Lowerer:
                 continue
             flush_text()
             if isinstance(node, Element):
-                if node.tag == "Slot" and not self.is_component("Slot"):
+                if node.tag == "slot" and not self.is_component("slot"):
                     out.extend(self.slot_outlet(node, horizontal))
                 elif self.is_component(node.tag):
                     out.append(self.component_slot(node))
@@ -938,7 +988,7 @@ class _Lowerer:
                 own = "row" if horizontal else "column"
                 box.props["direction"] = Literal(f'parent && parent.jkBox ? parent.jkBox.direction : "{own}"')
             frag = Fragment(tpl, root=box)
-            if component_root:  # en <List> las filas se animan con <List animate>
+            if component_root:  # en <list> las filas se animan con <list animate>
                 self.attach_transitions(frag)
             return frag
         finally:
@@ -1047,13 +1097,13 @@ class _Lowerer:
 
     # -- slots ---------------------------------------------------------------
     def slot_outlet(self, el: Element, horizontal: bool) -> list[IRNode]:
-        """`<Slot />` o `<Slot name="x">reserva</Slot>` en la plantilla de un componente."""
+        """`<slot />` o `<slot name="x">reserva</slot>` en la plantilla de un componente."""
         name = "default"
         for attr in el.attributes:
             if attr.name == "name" and isinstance(attr.value, str) and attr.value.isidentifier():
                 name = attr.value
             else:
-                self.error('<Slot> solo admite name="nombre" (un identificador literal)', attr.loc)
+                self.error('<slot> solo admite name="nombre" (un identificador literal)', attr.loc)
         fallback = self.fragment(el.children, horizontal, (), el.loc)
         slot = SlotOutlet(name, self.next_id("m"), None if fallback.empty else fallback, el.loc)
         out: list[IRNode] = [IRRepeater(slot.model_id, el.loc, opaque=True)]
@@ -1077,7 +1127,7 @@ class _Lowerer:
                 self.error(
                     f"el slot '{attr.value}' se rellena dos veces en <{el.tag}>",
                     attr.loc,
-                    "agrupa el contenido en un <Column> o <Row>",
+                    "agrupa el contenido en un <column> o <row>",
                 )
             else:
                 named[attr.value] = Element(child.tag, [a for a in child.attributes if a is not attr], child.children, child.loc)
@@ -1089,12 +1139,12 @@ class _Lowerer:
         slots: dict[str, Fragment] = {}
         for name, (nodes, loc) in contents.items():
             if iface.slots is not None and name not in iface.slots:
-                available = ", ".join("<Slot />" if s == "default" else f'<Slot name="{s}" />' for s in sorted(iface.slots))
+                available = ", ".join("<slot />" if s == "default" else f'<slot name="{s}" />' for s in sorted(iface.slots))
                 what = "contenido entre etiquetas" if name == "default" else f"el slot '{name}'"
                 self.error(
                     f"<{el.tag}> no admite {what}",
                     loc,
-                    f"slots de <{el.tag}>: {available}" if available else f"<{el.tag}> no declara ningún <Slot />",
+                    f"slots de <{el.tag}>: {available}" if available else f"<{el.tag}> no declara ningún <slot />",
                 )
                 continue
             saved_doc = self.doc
@@ -1156,7 +1206,7 @@ class _Lowerer:
             box = ir
         else:
             # Caja exterior con los estilos de la etiqueta: <Tarjeta class="ancha" flex={1} />
-            box = self.element(Element("Column", attrs, [], el.loc), match_tag=el.tag)
+            box = self.element(Element("column", attrs, [], el.loc), match_tag=el.tag)
             if box is None:
                 return repeater
         box.props["jkFill"] = Literal("true")  # la raíz del componente ocupa toda la caja
@@ -1297,6 +1347,14 @@ class _Lowerer:
 _BOXES = BOX_TYPES
 _TRANSITIONS = ("fade", "scale", "slide")
 _TRANSITION_MS = 200
+# Elementos que salieron del núcleo a un paquete: <Pages> sin importar dice dónde está.
+_MOVED_ELEMENTS = {"Pages": "janelkit_router", "Sections": "janelkit_router"}
+
+
+def _self_closing_hint(tag: str, spec: ControlSpec) -> str:
+    if "value" in spec.two_way:
+        return f"usa <{tag} bind:value={{...}} />: lo escrito o elegido es su value, no su contenido"
+    return f"usa <{tag} ... />"
 
 
 def _fill_parent(item: IRElement) -> None:
@@ -1362,7 +1420,7 @@ def _inline_vars(nodes: list[Node]) -> set[str]:
 
 
 def _context_extras(ir: IRElement, cascade: Cascade) -> None:
-    """Texto heredado y variables propias: lo que declara cada elemento (fase 4 de docs/flex.md)."""
+    """Texto heredado y variables propias: lo que declara cada elemento."""
     keys = {*ir.props, *ir.behaviors, *(c[0] for c in ir.conditional)}
     own = sorted(k for k in keys if k.startswith((TEXT_PREFIX, VAR_PREFIX)))
     if own and ir.qml_type in _BOXES:
@@ -1418,7 +1476,7 @@ def _has_text(nodes: list[Node]) -> bool:
         if isinstance(node, Interpolation):
             return True
         if isinstance(node, Element):
-            if node.tag == "Slot" or node.attribute("text") is not None or node.attribute("label") is not None:
+            if node.tag == "slot" or node.attribute("text") is not None or node.attribute("label") is not None:
                 return True
             if _has_text(node.children):
                 return True

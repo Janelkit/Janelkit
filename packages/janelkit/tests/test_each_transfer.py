@@ -20,9 +20,9 @@ on_mount(lambda: log.append(f"mount {n.value}"))
 on_destroy(lambda: log.append(f"destroy {n.value}"))
 </script>
 <flex class="ficha" label={n} tabindex={0}>
-  <Text>{f"{n} en {col}" + (" abierta" if abierta else "")}</Text>
-  <flex label={f"abrir {n}"} on:click={abierta = not abierta}><Text>abrir</Text></flex>
-  <flex label={f"quitar {n}"} on:click={quitar.emit(n)}><Text>x</Text></flex>
+  <text>{f"{n} en {col}" + (" abierta" if abierta else "")}</text>
+  <flex label={f"abrir {n}"} on:click={abierta = not abierta}><text>abrir</text></flex>
+  <flex label={f"quitar {n}"} on:click={quitar.emit(n)}><text>x</text></flex>
 </flex>
 <style>
 .ficha { direction: column; height: 40px; }
@@ -51,7 +51,7 @@ def mover(n, desde, hacia, destino_primero=False):
 """
 
 # La misma declaración {#each} para las columnas "a" y "b"; "otra" es otra declaración.
-CAJAS = SCRIPT + """<Window width={600} height={400}>
+CAJAS = SCRIPT + """<window width={600} height={400}>
   <flex>
     {#each ["a", "b"] as c (c)}
       <flex label={c} direction="column" width={200}>
@@ -64,23 +64,23 @@ CAJAS = SCRIPT + """<Window width={600} height={400}>
       {#each listas["otra"] as n (n)}<Ficha n={n} col="otra" />{/each}
     </flex>
   </flex>
-</Window>
+</window>
 """
 
-LISTAS = SCRIPT + """<Window width={600} height={400}>
+LISTAS = SCRIPT + """<window width={600} height={400}>
   <flex>
     {#each ["a", "b"] as c (c)}
-      <List label={c} width={200} height={300}>
+      <list label={c} width={200} height={300}>
         {#each listas[c] as n (n)}
           <Ficha n={n} col={c} on:quitar={quitadas.append(f"{n}@{c}")} />
         {/each}
-      </List>
+      </list>
     {/each}
     <flex label="otra" direction="column" width={150}>
       {#each listas["otra"] as n (n)}<Ficha n={n} col="otra" />{/each}
     </flex>
   </flex>
-</Window>
+</window>
 """
 
 
@@ -103,7 +103,7 @@ def texto(app, n):
 
 def mover(app, *args, **kwargs):
     app.namespace["mover"](*args, **kwargs)
-    app.wait(0.3)  # <List animate> no, pero ListView crea las filas al pintar
+    app.wait(0.3)  # <list animate> no, pero ListView crea las filas al pintar
 
 
 @pytest.mark.parametrize("destino_primero", [False, True])
@@ -172,7 +172,7 @@ def test_no_leaks_after_many_moves(app):
 def test_a_row_not_yet_created_by_list_moves_without_errors():
     fuente = LISTAS.replace('"a": ["uno", "dos"]', '"a": ["uno", "dos"] + [f"n{i}" for i in range(40)]')
     with montar(fuente) as app:
-        assert "mount n39" not in app.get("log")  # fuera de la vista: <List> no la creó
+        assert "mount n39" not in app.get("log")  # fuera de la vista: <list> no la creó
         mover(app, "n39", "a", "b")
         assert texto(app, "n39") == "n39 en b"
         assert app.get("log").count("mount n39") == 1

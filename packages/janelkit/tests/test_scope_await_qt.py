@@ -40,12 +40,12 @@ async def start_things():
     created["effect"] = effect(lambda: runs.set(runs.peek() + source.value))
     created["task"] = spawn(gate.wait())
 </script>
-<Column>
-  <Button id="a" on:click={sync_handler}>a</Button>
-  <Button id="b" on:click={async_handler}>b</Button>
-  <Button id="start" on:click={start_things}>start</Button>
-  <Text id="out">{",".join(fired)}</Text>
-</Column>
+<column>
+  <button id="a" on:click={sync_handler}>a</button>
+  <button id="b" on:click={async_handler}>b</button>
+  <button id="start" on:click={start_things}>start</button>
+  <text id="out">{",".join(fired)}</text>
+</column>
 """
 
 

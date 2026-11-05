@@ -1,5 +1,5 @@
 <script lang="python">
-# Diálogo superpuesto hecho con <flex> (fase 6 de docs/flex.md). El velo es una caja
+# Diálogo superpuesto hecho con <flex>. El velo es una caja
 # fija sobre toda la ventana (position: fixed; inset: 0): no deja pulsar lo de debajo.
 # Retiene el foco: Tab y Mayús+Tab dan la vuelta entre sus botones (on:keydown con
 # event.prevent()). Escape o un clic en el velo lo cierran, y el foco vuelve a quien lo
@@ -50,8 +50,8 @@ def tecla(event):
 
 <flex class="velo" on:pointerdown={dentro = False} on:click={clic_velo()}>
   <flex as="dialog" class="dialogo" label={title} on:pointerdown={pulsar_dentro} on:keydown={tecla}>
-    <Text class="titulo">{title}</Text>
-    <Text class="texto">{text}</Text>
+    <text class="titulo">{title}</text>
+    <text class="texto">{text}</text>
     <flex class="botones">
       <Boton text="Cancelar" ref={cancelar} on:click={close.emit()} />
       <Boton text="Aceptar" class="primary" ref={aceptar} on:click={accept.emit()} />

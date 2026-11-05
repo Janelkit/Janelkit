@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from janelkit.compiler import compile_file
+from janelkit.inspect import mount
 
 EXAMPLES = sorted((Path(__file__).resolve().parents[1]).glob("*/src/App.janel"))
 
@@ -31,12 +32,10 @@ def test_example_compiles_without_warnings(app):
 
 
 @pytest.mark.parametrize("app", EXAMPLES, ids=lambda p: p.parent.parent.name)
-def test_example_mounts(app, janel_app, app_path, caplog):
-    compiled = compile_file(app_path(app))
-    assert janel_app.check_tokens(compiled) == []
-    m = janel_app.mount(compiled)
-    janel_app.qt_app.processEvents()
-    janel_app.unmount(m)
+def test_example_mounts(app, janel_app, caplog):
+    assert janel_app.check_tokens(compile_file(app)) == []
+    with mount(app):  # como run(): su src/ en sys.path y una sesión de aplicación (los stores la usan)
+        pass
     assert "error" not in caplog.text.lower()
 
 

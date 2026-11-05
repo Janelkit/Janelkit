@@ -1,6 +1,23 @@
 # Patrones para aplicaciones en tiempo real
 
-Lo que cuesta entender al hacer una aplicación que se actualiza sola muchas veces por segundo: visión por computador, adquisición de datos, paneles de máquinas. Sale del primer proyecto real con JanelKit (tres cámaras USB a 30 FPS, detección con YOLO en cada ciclo, una ventana en un proyector). Lo básico está en [lenguaje.md](lenguaje.md#trabajo-asíncrono).
+Lo que cuesta entender al hacer una aplicación que se actualiza sola muchas veces por segundo: visión por computador, adquisición de datos, paneles de máquinas. Lo básico está en [lenguaje.md](lenguaje.md#trabajo-asíncrono).
+
+## Fotogramas y resultados van por caminos distintos
+
+El fotograma es un array de numpy **en el mismo proceso** que la interfaz: el modelo (OpenCV, ONNX Runtime, PyTorch…) lo procesa ahí y sus resultados (cajas, puntos, conteos) entran en el estado reactivo, sin servidor ni serializar nada. La regla: **los fotogramas no pasan por la reactividad** (a 30–60 por segundo, un `state` por fotograma sería lento); lo reactivo son los resultados.
+
+```
+cámara ──► hilo de captura ──► Frames ──► <video>  (Qt sube la imagen a la GPU)
+                                  │
+                                  └──► async for f in frames   (siempre el más reciente)
+                                          r = await background(modelo, f)   (otro hilo)
+                                          detecciones.value = r  ──► plantilla
+```
+
+- La captura corre en su propio hilo (`cv2.VideoCapture`) y entrega con `frames.push(img)`, que se puede llamar desde cualquier hilo. QtMultimedia también puede abrir cámaras, pero está en PySide6-Addons, que JanelKit no instala (`pip install PySide6-Addons`); con OpenCV no hace falta.
+- `<video source={frames}>` muestra el más reciente; si llegan más rápido de lo que se dibuja, se saltan, nunca se encolan.
+- `async for f in frames` da el más reciente cada vez que el modelo queda libre. Con `background()`, un modelo a 12 fps no frena la vista previa a 30 ni la interfaz (numpy, OpenCV y PyTorch liberan el GIL).
+- Los hijos de `<video>` se colocan sobre la imagen, en una capa de su tamaño exacto: las cajas de detección son elementos normales, con estilo y clic. Ver [Vídeo](lenguaje.md#vídeo-video-y-frames).
 
 ## El ciclo: runner, `Options` y `Snapshot`
 
@@ -36,6 +53,40 @@ async def tick():
 - Un `interval` async **se salta los tics** mientras la ejecución anterior no termina: un ciclo de 50 ms con `interval(15)` corre unas 17 veces por segundo, sin acumularse.
 - `Frames.push()` funciona desde cualquier hilo y copia la imagen: el hilo de cada cámara puede empujar su frame directamente a la vista previa.
 - Leer o asignar `state` desde el código de `background()` lanza `WrongThreadError`, con la forma correcta en el mensaje.
+
+## Vídeo y modelos en el mismo proceso
+
+### Las bibliotecas nativas pesadas, al arrancar
+
+PyTorch, ultralytics (YOLO), MediaPipe o TensorFlow cargan bibliotecas nativas grandes al importarse. Impórtalas en el hilo principal y al principio, antes de `run()`; en `background()` crea solo los modelos.
+
+```python
+# main.py
+import torch                    # noqa: F401 — se carga aquí, en el hilo principal
+from ultralytics import YOLO    # noqa: F401
+from janelkit import run
+```
+
+Si la primera importación ocurre dentro de `background()` mientras OpenCV lee cámaras en otros hilos, se ha visto caer el proceso con un fallo de memoria (`access violation` en Windows).
+
+### Dónde llamar a `push`
+
+`push` copia y convierte el fotograma en el hilo que lo llama: unos 0,4 ms a 640 × 480 y 1,1 ms a 1920 × 1080 en el equipo de referencia ([arquitectura.md](arquitectura.md#rendimiento)).
+
+- En el hilo de cada cámara, o dentro de la función que corre en `background()`, ese coste no lo paga la interfaz.
+- En el tic, después del `await` (como en el ejemplo de arriba), sí: con cuatro vistas de 1080p son unos 4 ms de cada ciclo en el hilo de la interfaz. Si el ciclo va justo, pasa los `Frames` a la función de `background()` y haz el `push` allí: `Frames` no necesita el hilo de la interfaz para recibir fotogramas.
+
+### Un fotograma lo pueden tener varios
+
+`async for` y `frames.latest()` dan el mismo objeto que se pasó a `push`, no una copia, y el fotograma de una cámara suele estar a la vez en la vista previa, en el modelo y en una grabación. Nadie debe modificarlo en su sitio:
+
+- Para dibujar encima, copia antes (`img = frame.copy()`). Mejor aún, no dibujes en el array: las cajas y las etiquetas pueden ser hijos de `<video>`, colocados en porcentajes de la imagen ([Vídeo](lenguaje.md#vídeo-video-y-frames)).
+- Para que un error así salte en vez de ensuciar en silencio la vista de otro, marca el array como de solo lectura al leerlo de la cámara: `frame.flags.writeable = False`. Escribir en él da error al primer intento (numpy: `ValueError: assignment destination is read-only`; las funciones de dibujo de OpenCV también lo rechazan), y `push` lo acepta igual.
+
+### Marcar sobre la imagen y saber si la fuente se paró
+
+- `<video on:click={marcar}>` da en `event.image_x` y `event.image_y` el píxel de la imagen, con cualquier `fit`: puntos de calibración, zonas, elegir un objeto. Sin capa hija ni regla de tres.
+- `frames.stalled` pasa a `True` tras `stall_after` segundos sin `push` (`Frames(stall_after=1.5)`): `{#if frames.stalled}<text>Sin señal</text>{/if}`. Solo ve los `push`: una cámara desconectada cuyo último fotograma se sigue empujando en cada ciclo no se detecta así. Eso lo sabe quien lee la cámara, por ejemplo comparando el instante de cada lectura.
 
 ## El estado a medias tras un `await`
 
@@ -73,46 +124,37 @@ Además, `state(valor)` **copia** las listas, diccionarios y conjuntos: modifica
 
 ## Vistas ocultas que siguen trabajando
 
-Con `sections` (o `{#hidden}`), una vista oculta se conserva: la plantilla deja de actualizarse, pero lo del script sigue funcionando, también sus `interval`. Para no hacer trabajo que nadie ve, comprueba al empezar el tic si la vista está activa:
+Con `sections` (o `{#hidden}`, o en una página de debajo), una vista oculta se conserva: la plantilla deja de actualizarse, pero lo del script sigue funcionando, también sus `interval`. Para no hacer trabajo que nadie ve, condiciona el temporizador a que el componente se vea:
 
 ```python
-views = inject("views")                       # la Sections de la app: provide("views", sections(live=Live, …))
-active = computed(lambda: views.current == "live")
+from janelkit import interval, is_visible
 
-@interval(15)
+visible = is_visible()
+
+@interval(15, when=visible)          # no cuenta mientras el componente no se ve
 async def tick():
-    if not active.value:
-        return
     ...
 ```
 
-## Servicios compartidos con `state`
+`when=` acepta cualquier condición reactiva: `when=hub.ready`, `when=lambda: visible.value and hub.ready.value`. Un `effect` puede usar `visible` igual, por ejemplo para soltar la cámara mientras no se ve.
 
-Un servicio (`services/cameras.py`) puede tener `state` como atributos y la plantilla los usa directamente: `{hub.status}`, `{#if hub.ready}`, `{#each hub.errors as e}` se muestran con su valor y se actualizan. Dentro de una operación, pide el valor: `{hub.ready.value and "lista"}`.
+## Datos compartidos: store o `state` en un servicio
 
-Un temporizador del servicio (por ejemplo, el que oculta un aviso) no necesita guardarse: JanelKit lo mantiene vivo mientras está activo. Uno creado en un componente, aunque sea tras un `await`, se detiene al desmontarlo.
+- Lo que comparten varias vistas o ventanas (el usuario, los documentos, el carrito) va en un **store** de [`janelkit-store`](../packages/janelkit-store/README.md): una instancia por aplicación (`use(Carrito)`), acciones que agrupan y anotan cada cambio, modo estricto si se quiere, y una instancia nueva en cada prueba.
+- `state` en un `.py` queda para lo que no es «los datos de la aplicación»: un objeto con estado propio del que hay varios (una `Camara` por cámara con `self.estado = state(...)`), una biblioteca que ofrece una API reactiva, o lógica que se prueba sin Qt.
+
+Un servicio con `state` como atributos se usa directamente en la plantilla: `{hub.status}`, `{#if hub.ready}`, `{#each hub.errors as e}` se muestran con su valor y se actualizan. Dentro de una operación, pide el valor: `{hub.ready.value and "lista"}`. `@computed` sobre un método da un derivado por instancia.
+
+Un temporizador creado en el servicio (por ejemplo, el que oculta un aviso) no hace falta guardarlo: sigue vivo mientras está activo.
 
 ## Medir ciclos en Windows
 
 `time.monotonic()` avanza de 15,6 en 15,6 ms en Windows (usa `GetTickCount64`): no sirve para medir un ciclo de 15 ms. Usa `time.perf_counter()`.
+
+El propio temporizador ya mide: `tick.last_duration` (segundos de la última ejecución, también la parte async), `tick.runs` y `tick.skipped` (tics que se saltaron porque la anterior seguía). Si `skipped` crece, el ciclo no cabe en el periodo.
 
 Como referencia, el temporizador de JanelKit (`PreciseTimer` por debajo de 1 s), con la ventana sin trabajo:
 
 | Periodo pedido | 1 ms | 5 ms | 10 ms | 15 ms | 33 ms | 100 ms |
 |---|---|---|---|---|---|---|
 | Tics por segundo | 971 | 200 | 100 | 67 | 30 | 10 |
-
-## Probar y revisar pantallas sin abrir la aplicación
-
-`janelkit.inspect.mount()` monta la aplicación, actúa como un usuario y ahora también captura:
-
-```python
-from janelkit.inspect import mount
-
-with mount("src/App.janel", headless=False) as app:
-    app.find(text="Arrancar").click()
-    app.wait(1.0)
-    app.screenshot("arrancado.png")
-```
-
-Con `headless=True` (plataforma `offscreen`) en Windows la captura sale sin fuentes ni vídeo: para revisarla a ojo, `headless=False`.

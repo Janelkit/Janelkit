@@ -1,5 +1,5 @@
 <script lang="python">
-# Reto 3: tablero Kanban. Ver ../README.md y ../HALLAZGOS.md.
+# Reto 3: tablero Kanban. Ver ../README.md.
 # KANBAN_FILE: archivo JSON del tablero (por defecto, tablero.json junto a la app).
 # KANBAN_DEMO=20x200: tablero generado de 20 columnas con 200 tarjetas, sin archivo
 # (pruebas y mediciones).
@@ -65,23 +65,23 @@ def limpiar_filtros():
     persona.set("")
 </script>
 
-<Window title="Kanban" width={1200} height={760} minWidth={640} minHeight={420}>
-  <Shortcut keys="Ctrl+Z" on:activate={tablero.deshacer()} />
-  <Shortcut keys="Ctrl+Y" on:activate={tablero.rehacer()} />
-  <Shortcut keys="Ctrl+Shift+Z" on:activate={tablero.rehacer()} />
+<window title="Kanban" width={1200} height={760} minWidth={640} minHeight={420}>
+  <shortcut keys="Ctrl+Z" on:activate={tablero.deshacer()} />
+  <shortcut keys="Ctrl+Y" on:activate={tablero.rehacer()} />
+  <shortcut keys="Ctrl+Shift+Z" on:activate={tablero.rehacer()} />
   <flex class="app">
     <flex class="barra">
-      <Text class="marca">Kanban</Text>
-      <TextField class="buscar" bind:value={texto} placeholder="Buscar tarjetas…" label="Buscar" />
-      <Select options={ETIQUETAS_OPC} bind:value={etiqueta} label="Filtrar por etiqueta" />
-      <Select options={PERSONAS_OPC} bind:value={persona} label="Filtrar por persona" />
+      <text class="marca">Kanban</text>
+      <textfield class="buscar" bind:value={texto} placeholder="Buscar tarjetas…" label="Buscar" />
+      <select options={ETIQUETAS_OPC} bind:value={etiqueta} label="Filtrar por etiqueta" />
+      <select options={PERSONAS_OPC} bind:value={persona} label="Filtrar por persona" />
       {#if texto or etiqueta or persona}
-        <Button text="Quitar filtros" variant="ghost" on:click={limpiar_filtros()} />
+        <button text="Quitar filtros" variant="ghost" on:click={limpiar_filtros()} />
       {/if}
-      <Spacer />
-      <Button text="Deshacer" enabled={historial.can_undo} label={f"Deshacer {historial.undo_label} (Ctrl+Z)"} on:click={tablero.deshacer()} />
-      <Button text="Rehacer" enabled={historial.can_redo} label={f"Rehacer {historial.redo_label} (Ctrl+Y)"} on:click={tablero.rehacer()} />
-      <Button text="+ Columna" variant="primary" on:click={tablero.nueva_columna()} />
+      <spacer />
+      <button text="Deshacer" enabled={historial.can_undo} label={f"Deshacer {historial.undo_label} (Ctrl+Z)"} on:click={tablero.deshacer()} />
+      <button text="Rehacer" enabled={historial.can_redo} label={f"Rehacer {historial.redo_label} (Ctrl+Y)"} on:click={tablero.rehacer()} />
+      <button text="+ Columna" variant="primary" on:click={tablero.nueva_columna()} />
     </flex>
     <flex class="cuerpo">
       <flex class="tablero" label="Tablero">
@@ -101,7 +101,7 @@ def limpiar_filtros():
                     y={menu["y"] if menu["y"] is not None else 120}
                     on:elegir={elegir} on:cerrar={ui.cerrar_menu()} />
   {/if}
-</Window>
+</window>
 
 <style>
 .app { direction: column; flex: 1; background: var(--bg); }

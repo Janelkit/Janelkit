@@ -6,7 +6,7 @@ Lo público es:
 
 1. Los nombres que se importan desde `janelkit` (listados abajo).
 2. Los nombres listados de `janelkit.compiler`, `janelkit.diagnostics` y `janelkit.inspect`, pensados para herramientas y pruebas, y los de `janelkit.ext`, para paquetes que extienden JanelKit.
-3. El formato `.janel`: secciones, sintaxis de plantilla, elementos con sus props y eventos, la importación de componentes `.janel` y de elementos `.qml`, y el CSS soportado ([lenguaje.md](lenguaje.md), [estilos.md](estilos.md)).
+3. El formato `.janel`: secciones, sintaxis de plantilla, elementos con sus props y eventos, la importación de componentes `.janel` y de elementos `.qml` (del proyecto o de un paquete instalado), y el CSS soportado ([lenguaje.md](lenguaje.md), [estilos.md](estilos.md)).
 4. Los comandos `janel` y sus opciones ([desarrollo.md](desarrollo.md)), y el grupo de entry points `janelkit.commands` para añadir subcomandos ([abajo](#janelkitext-extensiones)).
 5. Las variables de entorno `JANELKIT_DEV`, `JANELKIT_EXIT_AFTER_MS`, `JANELKIT_DATA_DIR` y `QT_QUICK_CONTROLS_STYLE`.
 6. En los archivos `.qml` propios: el objeto `jktheme`, con los tokens del tema activo (`jktheme.primary`, `jktheme.radius`…).
@@ -29,17 +29,13 @@ Lo público es:
 | Nombre | Descripción |
 |---|---|
 | `state` | `state(valor)` crea un `State`. Las listas, diccionarios y conjuntos se vuelven reactivos: modificarlos en el sitio notifica. |
-| `State` | Tipo de `state`. `.value`, `.set()`, `.update(fn)`, `.peek()`, `.notify()`. |
-| `computed` | Decorador de valores derivados, perezosos y en caché. Si al recalcularse da el mismo valor (números, texto, tuplas… no objetos mutables), lo que depende solo de él no se vuelve a ejecutar. |
+| `State` | Tipo de `state`. `.value`, `.set()`, `.update(fn)`, `.peek()`, `.notify()`. Para depurar: `.subscriber_count`, cuántos efectos y `computed` lo leen ahora (debe bajar al desmontar lo que lo usa; también en `Computed`). |
+| `computed` | Decorador de valores derivados, perezosos y en caché. Si al recalcularse da el mismo valor (números, texto, tuplas… no objetos mutables), lo que depende solo de él no se vuelve a ejecutar. En un método de una clase (`@computed def total(self)`), cada instancia tiene el suyo: `objeto.total.value`. |
 | `Computed` | Tipo de `computed`. `.value`, `.peek()`. |
 | `effect` | `effect(fn)` ejecuta `fn` ahora y cada vez que cambie lo que leyó. Dentro de un componente se libera al desmontarlo. |
-| `Effect` | Tipo de `effect`. `.dispose()`. |
+| `Effect` | Tipo de `effect`. `.dispose()`. Su `repr` dice qué función ejecuta, cuántas fuentes lee y si está liberado o en espera porque no se ve. |
 | `batch` | `with batch():` agrupa cambios; los efectos se ejecutan una vez al final. |
 | `untracked` | `with untracked():` lee estado sin registrar dependencias. |
-| `persisted` | `persisted(clave, valor_inicial)` crea un `Persisted`: un `state` que se recuerda entre sesiones. Lee el valor guardado al crearse y guarda cada cambio (también en el sitio) en `<carpeta de datos>/<clave>.json`, agrupado y al cerrar. La misma clave devuelve el mismo objeto. Solo valores JSON. Ver [lenguaje.md](lenguaje.md#estado-que-se-recuerda-persisted). |
-| `Persisted` | Tipo de `persisted`: lo de `State` más `.key`, `.file` y `.flush()` (escribe ya lo pendiente). |
-| `Frames` | Fotogramas a tiempo real para `<Video source={frames}>`: `Frames(color="rgb")` (`"bgr"`, `"rgba"`, `"bgra"`); `push(img)` desde cualquier hilo (numpy, objeto con búfer o `QImage`; se copia y se saltan los que no da tiempo a mostrar); `async for img in frames` y `await frames.next()` dan el más reciente; `size` y `fps` reactivos; `latest()`, `clear()`. Ver [lenguaje.md](lenguaje.md#vídeo-video-y-frames). |
-| `History` | Deshacer y rehacer: `historial = History(limit=100)`. `with historial.step("mover tarjeta"):` anota como un paso lo que cambie dentro (cada `State` asignado y cada lista, diccionario o conjunto reactivo modificado); `historial.add(nombre, undo=, redo=)` anota algo que ya se hizo y el historial no ve. `undo()` y `redo()` devuelven el nombre del paso (o `None`); `clear()`, `mark_saved()`. Reactivos: `can_undo`, `can_redo`, `undo_label`, `redo_label`, `modified`. Ver [lenguaje.md](lenguaje.md#deshacer-y-rehacer-history). |
 
 ### Componentes
 
@@ -59,12 +55,20 @@ Se llaman mientras se ejecuta el `<script>` de un componente; fuera de él lanza
 |---|---|
 | `on_mount` | `on_mount(fn)` (o como decorador) ejecuta `fn` cuando la vista del componente existe. Si `fn` devuelve una función, se llama al desmontar. |
 | `on_destroy` | `on_destroy(fn)` ejecuta `fn` al desmontar el componente. |
-| `before_leave` | `before_leave(fn)` (o como decorador): `fn()` se consulta antes de descartar la página que lo contiene o de cerrar su ventana con la X; si devuelve `False`, no se sale. Puede ser `async`. |
+| `before_leave` | `before_leave(fn)` (o como decorador): `fn()` se consulta antes de cerrar con la X la ventana que lo muestra y antes de que un anfitrión lo descarte (p. ej. al volver de una página de `janelkit-router`); si devuelve `False`, no se sale. Puede ser `async`. |
 | `provide` | `provide(clave, valor)` pone un valor a disposición de los descendientes. |
+| `is_visible` | `is_visible()` devuelve un `computed` que dice si el componente se ve: `False` en una página de debajo de la pila, en una sección que no es la actual, dentro de un `{#hidden}` que lo oculta o en una fila de `<list>` fuera de la vista. La raíz de una ventana siempre se ve (minimizarla no cuenta). Se llama en el script, como `on_mount`. |
 | `inject` | `inject(clave, defecto)` lee el valor del antecesor más cercano que lo provee. Sin defecto y sin proveedor: `LookupError`. |
 | `ref` | `ref()` crea una referencia para `ref={nombre}` en la plantilla. |
-| `Ref` | Tipo de `ref`: `.value` (reactivo; el objeto Qt o `None`), `.exists`, `.focused` (¿tiene el foco él o algo de dentro?; no reactivo), `.focus()`, `.blur()`, `.select_all()`; en una `<List>`, `.scroll_to_start()`, `.scroll_to_end()`, `.scroll_to(índice)`. |
-| `PointerEvent` | Lo que recibe `on:click`, `on:dblclick`, `on:contextmenu` y `on:pointer*` de las cajas: `.x`, `.y` (respecto al elemento), `.window_x`, `.window_y`, `.button`, `.buttons`, `.pointer` (`"mouse"`, `"touch"`, `"pen"`, `"keyboard"`), `.clicks`, `.ctrl`, `.shift`, `.alt`, `.meta`. Como todos los eventos: `.prevent()`, `.stop()`, `.type`. |
+| `Ref` | Tipo de `ref`: `.value` (reactivo; el objeto Qt o `None`), `.exists`, `.focused` (¿tiene el foco él o algo de dentro?; no reactivo), `.focus()`, `.blur()`, `.select_all()`; en una `<list>` o un `<scroll>`, `.scroll_to_start()`, `.scroll_to_end()` y `.scroll_to(...)` (el índice de una fila en `<list>`; el `ref` de un elemento de dentro en `<scroll>`). |
+
+### Eventos de las cajas
+
+Lo que recibe el manejador de un evento de `<flex>`, `column` o `row` ([lenguaje.md](lenguaje.md#eventos-de-las-cajas)). Todos tienen `.prevent()`, `.stop()` y `.type`.
+
+| Nombre | Descripción |
+|---|---|
+| `PointerEvent` | Lo que recibe `on:click`, `on:dblclick`, `on:contextmenu` y `on:pointer*` de las cajas y de `<video>`: `.x`, `.y` (respecto al elemento), `.window_x`, `.window_y`, `.button`, `.buttons`, `.pointer` (`"mouse"`, `"touch"`, `"pen"`, `"keyboard"`), `.clicks`, `.ctrl`, `.shift`, `.alt`, `.meta`. En `<video>`, `.image_x`, `.image_y`: la posición en píxeles de la imagen (`float`), o `None` sin fotograma, fuera de la imagen (las bandas de `fit="contain"`) o desde el teclado; en los demás elementos, `None`. |
 | `DragEvent` | `on:dragstart`, `on:dragover`, `on:drop`, `on:dragend` de un `<flex draggable>`: lo de `PointerEvent` más `.data` (lo que se arrastra: lo pone `on:dragstart` y llega igual al resto) y `.dropped` (en `on:dragend`: si algún `on:drop` lo recibió). |
 | `KeyEvent` | `on:keydown`, `on:keyup`: `.key` (como en la web: `"a"`, `"Enter"`, `"ArrowUp"`…), `.code`, `.text`, `.repeat` y los modificadores. |
 | `WheelEvent` | `on:wheel`: `.dx`, `.dy` (px; positivo hacia abajo), `.x`, `.y` y los modificadores. |
@@ -90,25 +94,23 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 
 | Nombre | Descripción |
 |---|---|
-| `interval` | `interval(ms, fn)` llama a `fn` cada `ms` milisegundos. También como decorador: `@interval(250)`. Devuelve un `Timer`. |
-| `timeout` | `timeout(ms, fn)` llama a `fn` una vez, pasados `ms` milisegundos. También como decorador. Devuelve un `Timer`. |
-| `Timer` | Tipo de `interval` y `timeout`: `.active` (reactivo), `.ms` (se aplica al volver a arrancar), `.start()`, `.restart()` (vuelve a contar desde cero), `.stop()`; llamarlo (`muestrear()`) ejecuta la función ahora. Un error en la función se registra en el logger `janelkit` y el temporizador sigue. |
+| `interval` | `interval(ms, fn, when=None)` llama a `fn` cada `ms` milisegundos. También como decorador: `@interval(250)`. Con `when=` (un `state`, un `computed`, `is_visible()` o una función que los lea), solo cuenta mientras se cumple; al volver a cumplirse, cuenta desde cero. Devuelve un `Timer`. |
+| `timeout` | `timeout(ms, fn, when=None)` llama a `fn` una vez, pasados `ms` milisegundos. También como decorador. `when=` como en `interval`. Devuelve un `Timer`. |
+| `Timer` | Tipo de `interval` y `timeout`: `.active` (reactivo), `.ms` (se aplica al volver a arrancar), `.start()`, `.restart()` (vuelve a contar desde cero), `.stop()` (gana a `when=`: parado a mano, no vuelve a arrancar solo); llamarlo (`muestrear()`) ejecuta la función ahora. Un error en la función se registra en el logger `janelkit` y el temporizador sigue. Para medir (no reactivos): `.runs`, `.skipped` (tics saltados porque la ejecución async anterior seguía) y `.last_duration` (segundos de la última ejecución completa, incluida la parte async). |
 
 ### Ventanas
 
 | Nombre | Descripción |
 |---|---|
-| `open_window` | `open_window(Componente, modal=False, theme=None, **props_y_on_eventos)` abre un componente importado en otra ventana. Devuelve una ventana con `.is_open` (reactivo), `.close()`, `.focus()` e `.instance`. |
+| `open_window` | `open_window(Componente, modal=False, theme=None, single=False, **props_y_on_eventos)` abre un componente importado en otra ventana. Con `single=True`, si ya hay una abierta de ese componente, la trae al frente y la devuelve. Devuelve una ventana con `.is_open` (reactivo), `.close()`, `.focus()` e `.instance`. |
+| `screens` | Pantallas conectadas, reactivo y de solo lectura: `screens.value` es una lista de `Screen`. Cambia sola al conectar o desconectar una pantalla, al cambiar la principal o la resolución. Vacía hasta que la aplicación arranca. Con `<window screen={i} fullscreen={bool}>` se elige dónde se abre la ventana. |
+| `Screen` | Una pantalla de `screens`: `index`, `name`, `width`, `height`, `x`, `y` (píxeles lógicos del escritorio virtual), `primary`, `scale` (píxeles físicos por píxel lógico). |
 
-### Navegación
+### Vídeo
 
 | Nombre | Descripción |
 |---|---|
-| `pages` | `nav = pages(Inicio, **props)` en el script crea una pila de páginas; `<Pages stack={nav} />` muestra la de arriba. |
-| `PageStack` | Tipo de `pages`: `.push(C, **props_y_on_eventos)` (se puede esperar: `await` devuelve el valor de `.back(valor)`), `.pop()`, `.back(valor=None)`, `.replace(...)`, `.reset(...)` (los cuatro se pueden esperar: `True` si se salió, `False` si un `before_leave` lo impidió); reactivos `.current`, `.depth`, `.can_go_back`; `.page` (instancia visible). |
-| `navigation` | `nav = navigation()` en el script de una página (o de un componente dentro de ella) da su pila. |
-| `sections` | `secciones = sections(a=A, b=B)` crea secciones paralelas, cada una con su pila; `<Sections of={secciones} />` muestra la actual. |
-| `Sections` | Tipo de `sections`: `.show(nombre)`, `[nombre]` (su pila), `.stack` (la de la visible), `.names`; reactivo `.current`. |
+| `Frames` | Fotogramas a tiempo real para `<video source={frames}>`: `Frames(color="rgb", stall_after=1.5)` (`"bgr"`, `"rgba"`, `"bgra"`); `push(img)` desde cualquier hilo (numpy, objeto con búfer o `QImage`; se copia y se saltan los que no da tiempo a mostrar); `async for img in frames` y `await frames.next()` dan el más reciente; `size`, `fps` y `stalled` reactivos (`stalled`: más de `stall_after` segundos sin fotogramas; `fps` baja a 0 a la vez); `latest()`, `clear()`. Ver [lenguaje.md](lenguaje.md#vídeo-video-y-frames). |
 
 ### Idioma de la interfaz
 
@@ -116,7 +118,7 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 |---|---|
 | `locale` | Idioma de la interfaz: `.language`, `.set(idioma)`, `.reset()`, `.rtl` (¿se escribe de derecha a izquierda? Entonces toda la interfaz se refleja). Reactivo; también fija el `QLocale` por defecto de Qt. `janelkit_i18n.i18n.set()` lo cambia. |
 
-Las traducciones (`t`, `i18n`) están en [`janelkit-i18n`](../packages/janelkit-i18n/README.md), y los diálogos, el portapapeles y las notificaciones (`dialogs`, `clipboard`, `notify`), en [`janelkit-desktop`](../packages/janelkit-desktop/README.md).
+La navegación (`pages`, `sections`, `navigation`, `<Pages>`, `<Sections>`) está en [`janelkit-router`](../packages/janelkit-router/README.md); los stores y `persisted`, en [`janelkit-store`](../packages/janelkit-store/README.md); las traducciones (`t`, `i18n`), en [`janelkit-i18n`](../packages/janelkit-i18n/README.md), y los diálogos y el portapapeles (`dialogs`, `clipboard`), en [`janelkit-desktop`](../packages/janelkit-desktop/README.md).
 
 ### Estilos
 
@@ -148,18 +150,31 @@ Las traducciones (`t`, `i18n`) están en [`janelkit-i18n`](../packages/janelkit-
 | Nombre | Descripción |
 |---|---|
 | `mount` | `with mount("src/App.janel", headless=True) as app:` monta la aplicación sin ventana visible y la desmonta al salir. |
-| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.key("Ctrl+Z")` (pulsa una combinación sobre lo que tenga el foco: atajos), `app.windows()` (las ventanas abiertas con `open_window`, cada una inspeccionable igual), `app.screenshot(ruta=None)` (captura la ventana como `QImage` y la guarda si se da una ruta; con `headless=True` en Windows puede salir sin fuentes ni vídeo: para revisarla a ojo, `mount(..., headless=False)`). Las extensiones añaden más con [`janelkit.ext.inspector`](#janelkitext-extensiones): `janelkit-desktop` añade `app.dialogs()`, `app.answer_dialog(resultado)` y `app.notifications()`. |
-| `Element` | `.tag`, `.id`, `.text`, `.label`, `.value`, `.visible`, `.enabled`, `.prop(nombre)`; acciones `.click()`, `.type(texto)`, `.submit()`, `.check(bool)`, `.slide(valor)`, `.choose(opción)`, `.focus()`, `.hover()`/`.unhover()` (puntero encima: estilos `:hover`), `.press()`/`.release()` (botón del ratón: `:pressed`; soltar encima es un clic real). `.double_click()`, `.right_click()` (`on:dblclick`, `on:contextmenu`), `.key("Ctrl+D")` (le da el foco y pulsa la combinación). `.drag_to(destino, x=, y=, cancel=False)` arrastra un `<flex draggable>` y lo suelta sobre `destino` (o pulsa Escape con `cancel=True`). `.screenshot(ruta=None)` captura solo ese elemento. `.item` es el objeto Qt (no cubierto por la política de versiones). |
+| `MountedApp` | `app.find(tag, text=, id=, placeholder=, label=)`, `app.find_all(...)`, `app.texts()`, `app.get(nombre)`, `app.namespace`, `app.wait(segundos, until=)`, `app.process()`, `app.key("Ctrl+Z")` (pulsa una combinación sobre lo que tenga el foco: atajos), `app.windows()` (las ventanas abiertas con `open_window`, cada una inspeccionable igual), `app.screenshot(ruta=None)` (captura la ventana como `QImage` y la guarda si se da una ruta; ver [desarrollo.md](desarrollo.md#pruebas-automáticas-de-una-aplicación)). Las extensiones añaden más con [`janelkit.ext.inspector`](#janelkitext-extensiones): `janelkit-desktop` añade `app.dialogs()` y `app.answer_dialog(resultado)`. |
+| `Element` | `.tag`, `.id`, `.text` (lo que muestra; `None` en los campos), `.label`, `.value` (lo escrito o elegido en un campo), `.visible`, `.enabled`, `.prop(nombre)`; acciones `.click()`, `.type(texto)`, `.submit()`, `.check(bool)`, `.slide(valor)`, `.choose(opción)`, `.focus()`, `.hover()`/`.unhover()` (puntero encima: estilos `:hover`), `.press()`/`.release()` (botón del ratón: `:pressed`; soltar encima es un clic real). `.double_click()`, `.right_click()` (`on:dblclick`, `on:contextmenu`). `click`, `double_click`, `right_click`, `hover`, `press` y `release` actúan en el centro del elemento o en `x=`, `y=` (respecto a él); `click(x=, y=)` es un clic real del ratón en ese punto (sin posición, `click()` activa el elemento como el teclado). `.key("Ctrl+D")` (le da el foco y pulsa la combinación). `.drag_to(destino, x=, y=, cancel=False)` arrastra un `<flex draggable>` y lo suelta sobre `destino` (o pulsa Escape con `cancel=True`). `.screenshot(ruta=None)` captura solo ese elemento. `.item` es el objeto Qt (no cubierto por la política de versiones). |
 | `InspectError` | Elemento no encontrado, ambiguo, desactivado o que no admite la acción. Es un `AssertionError`. |
 
 ## `janelkit.ext` (extensiones)
 
-Para paquetes que amplían JanelKit sin tocar el núcleo (`janelkit-i18n`, `janelkit-desktop`…). Una extensión usa solo la API pública: los nombres de `janelkit` y los de estos módulos. `tests/test_boundaries.py`, en la raíz del repositorio, comprueba que las de este repositorio lo cumplen y que el núcleo no las importa.
+Para paquetes que amplían JanelKit sin tocar el núcleo (`janelkit-router`, `janelkit-i18n`, `janelkit-desktop`…). Una extensión usa solo la API pública: los nombres de `janelkit` y los de estos módulos.
 
 | Nombre | Descripción |
 |---|---|
 | `app` | `app()` devuelve la aplicación en marcha, o `None`. Son públicos `.engine` (el `QQmlEngine`), `.qt_app` (la `QGuiApplication`) y `.main_window()` (la ventana de la vista montada más reciente, o `None`). |
-| `inspector` | Decorador: `@inspector("nombre")` sobre `fn(app, *args)` añade el método `MountedApp.nombre` de `janelkit.inspect`. Así `janelkit_desktop.dialogs` aporta `dialogs()` y `answer_dialog()`, y `janelkit_desktop.notifications` aporta `notifications()`. |
+| `Host` | Base de un anfitrión: un objeto del script que monta componentes dentro de un elemento `.qml` con una propiedad `property JkHost nombre` (y raíz `JkDeck`, para que muestre uno de sus hijos; ver [lenguaje.md](lenguaje.md#elementos-propios-en-qml)). `<Elemento nombre={objeto} />` llama a `objeto.attach(container)` cuando el elemento existe y a `objeto.detach(container)` cuando se destruye. Así está hecho `janelkit-router`. |
+| `Container` | Lo que recibe `attach`: `.item` (el objeto Qt del elemento), `.visibility` (la compuerta del sitio donde está, o `None`), `.mount(Componente, visibility=None, context=None, **props_y_on_eventos)` (crea el componente dentro del elemento, como hijo del que tiene la plantilla; `context` son valores que el hijo y sus descendientes leen con `inject`) y `.nested(item)` (otro elemento creado dentro, con el mismo dueño). |
+| `Child` | Lo que devuelve `mount`: `.name`, `.instance` (su `.namespace`), `.item`, `.visibility` (su `Gate`), `.leave_guards()` y `.dispose()` (lo libera: sus `on_destroy` se ejecutan). |
+| `Gate` | Compuerta de visibilidad: `Gate(parent=None)`, `.set_open(bool)`, `.parent`, `.visible` (reactivo). Mientras ella o una de fuera está cerrada, lo que muestran los componentes que la llevan espera y se pone al día al abrirse; `is_visible()` la lee. |
+| `ask_to_leave` | `ask_to_leave(guards, proceed, refuse=None)`: consulta los `before_leave` en orden y llama a `proceed` si ninguno devuelve `False` (si no, a `refuse`). Si todos responden al momento, devuelve `True` tras llamar a `proceed`; si alguno es `async`, devuelve `False` y responde más tarde. |
+| `is_component` | `is_component(valor)`: si es un componente importado de un `.janel` (lo que aceptan `mount` y `open_window`; tiene `.name`). |
+| `Scope` | Un ámbito propio para lo que no es de ningún componente (un store): `Scope()`; `with ambito.active():` hace suyo lo que se crea dentro (`effect`, `computed`, temporizadores, tareas, también tras un `await`); `.dispose()` lo libera todo; `.disposed`. |
+| `session` | `session()` da la sesión de la aplicación en marcha, o `None`. Cada `run()` abre una y cada `inspect.mount()` otra nueva, con su carpeta de datos temporal: lo que un paquete guarda en ella es de esa aplicación, no del proceso, y una prueba no ve lo que dejó la anterior. |
+| `Session` | Tipo de `session()`: `.name` (el de la carpeta del proyecto), `.data_dir` (`JANELKIT_DATA_DIR`, la temporal de `mount` o la carpeta de datos del usuario más `.name`), `.data` (un diccionario para los paquetes; cada uno con su clave), `.on_end(fn)` (al cerrar la aplicación o desmontarla; en orden inverso, y un error en una no impide las demás). `persisted` y los stores de `janelkit-store` guardan en su `.data_dir`. |
+| `on_write` | `on_write(fn)` llama a `fn(destino, dueño, antes)` justo **antes** de cada escritura de estado: al asignar un `State` (`antes` es su valor) y al modificar en el sitio una lista, diccionario o conjunto reactivo (`antes` es `None`; la colección aún tiene el contenido de antes). `dueño` es lo que se le dio con `own`, o `None`. Si `fn` lanza una excepción, la escritura no se hace. Devuelve la función que lo quita. Sin nadie escuchando no cuesta nada. |
+| `own` | `own(destino, dueño)` marca un `State` o una colección reactiva, y todo lo que contiene, como de `dueño`; lo que se inserte o se asigne después lo hereda. Así un store sabe que `items[3]["hecho"] = True` es de su campo `items`. |
+| `inspector` | Decorador: `@inspector("nombre")` sobre `fn(app, *args)` añade el método `MountedApp.nombre` de `janelkit.inspect`. Así `janelkit_desktop.dialogs` aporta `dialogs()` y `answer_dialog()`. |
+
+**`bind:` a un atributo gestionado:** si el final de `bind:value={objeto.campo}` es un atributo cuya clase lo gestiona con un descriptor que define `__jk_bind__(self, objeto, valor)`, las escrituras de `bind:` pasan por él (puede negarse lanzando una excepción, que se registra como error de `bind:`). Lo usan los campos de `janelkit-store`.
 
 **Subcomandos de `janel`:** un paquete los declara como entry points del grupo `janelkit.commands`. El nombre del entry point es el del comando y apunta a `configurar(parser)`, que recibe el `ArgumentParser` del subcomando, le añade sus argumentos y fija `parser.set_defaults(func=ejecutar)`. `ejecutar(args)` devuelve el código de salida, y la primera línea de la documentación de `configurar` es la ayuda.
 
@@ -172,33 +187,21 @@ Un plugin que falla al cargarse, o que intenta redefinir un comando de JanelKit,
 
 ## Política de versiones
 
-Mientras JanelKit esté en la serie **0.x**:
+Una versión tiene cuatro números, `E.S.M.m` (por ejemplo `0.2.3.1`):
 
-- **Versión de parche** (0.1.0 → 0.1.1): nunca rompe lo público.
-- **Versión menor** (0.1 → 0.2): puede romper lo público, pero cada cambio se anuncia en las notas de la versión con cómo migrar. Cuando sea viable, lo antiguo sigue funcionando una versión menor más con un aviso (`DeprecationWarning` o advertencia del compilador).
-- **Formato `.janel`**: `FORMAT_VERSION` sube solo cuando un archivo que compilaba deja de compilar o cambia de significado. Añadir sintaxis nueva no lo cambia. Las herramientas (editores, linters) pueden usarlo para saber qué esperar.
-- Desde la **1.0**, se aplica versionado semántico estricto.
-
-### Cómo se calcula la versión
-
-La versión no se escribe a mano: la calcula `.github/workflows/version.yml` (con `tools/versioning.py`) cuando la CI pasa en `main`, a partir del **prefijo** de cada commit. El prefijo dice qué nota quien usa JanelKit, no cuánto costó el cambio:
-
-| Prefijo | Sube | Cuándo |
+| Nivel | Sube cuando… | Lo decide |
 |---|---|---|
-| `mayor:` | 0.**#**.0 | API pública nueva, algo que se rompe o se retira, un cambio de comportamiento. |
-| `menor:` | 0.0.**#** | Corrige o mejora sin añadir ni quitar API: errores, rendimiento, mensajes. |
-| `interno:` | — | Reorganización, pruebas, CI, herramientas: el usuario no lo nota. |
-| `docs:` | — | Solo documentación. |
-| `version:` | — | Reservado al commit que hace el workflow. |
+| **Estable** (#.0.0.0) | JanelKit es estable según el uso y la comunidad: la 1.0.0.0. | Una persona |
+| **Serie** (0.#.0.0) | Hay un cambio fuerte de arquitectura o de paradigma que rompe, como el de la 0.2 (núcleo más pequeño, navegación y stores en sus propios paquetes). | Una persona |
+| **Mayor** (0.0.#.0) | API pública nueva, algo que se rompe o se retira, un cambio de comportamiento. | Los commits `mayor:` |
+| **Menor** (0.0.0.#) | Corrige o mejora sin añadir ni quitar API: errores, rendimiento, mensajes. | Los commits `menor:` |
 
-- Cada paquete de `packages/` sube por separado: un commit cuenta para los paquetes cuyos archivos toca. Se miran los commits desde la última etiqueta del paquete (`janelkit-v0.2.0`, `janelkit-desktop-v0.1.1`), y `mayor:` gana a `menor:`.
-- El workflow escribe la versión (`pyproject.toml` y `__version__`) y el registro de cambios. Si ya hay una sección con esa versión escrita a mano (`## 0.2.0 (sin publicar)`), solo le pone la fecha; si no, la crea con los asuntos de los commits. Después hace el commit `version: …`, las etiquetas, y lanza `release.yml`, que publica en PyPI.
-- Si el núcleo va a salir de un rango que declara una extensión (`janelkit>=0.1,<0.2` y el núcleo pasa a 0.2.0), el cálculo se detiene con un error: primero se amplía el rango con un commit `menor:` de la extensión.
-- La **1.0.0** nunca se calcula: se decide y se escribe a mano.
-- La CI rechaza commits sin prefijo válido. En local, el hook lo comprueba al hacer commit: `git config core.hooksPath .githooks` (una vez por clon). `python tools/versioning.py plan` dice qué versión tocaría ahora y por qué.
+- **Al cambiar de serie** puede romperse mucho de lo público. Cada cambio se anuncia en las notas de la versión con cómo migrar y, cuando se puede, `janel migrate` lo hace.
+- **Dentro de una serie**, si una versión mayor rompe o retira algo público, se anuncia en las notas con cómo migrar y, cuando es viable, lo antiguo sigue funcionando con un aviso (`DeprecationWarning` o advertencia del compilador) hasta la serie siguiente.
+- **Formato `.janel`**: `FORMAT_VERSION` sube solo cuando un archivo que compilaba deja de compilar o cambia de significado. Añadir sintaxis nueva no lo cambia. Las herramientas (editores, linters) pueden usarlo para saber qué esperar.
+
+Cómo se calcula cada versión: [arquitectura.md](arquitectura.md#versiones-y-publicación).
 
 ### Paquetes del ecosistema
 
-`janelkit-i18n` y `janelkit-desktop` tienen **versión propia** y siguen la misma política para su propia API. Cada uno declara en su `pyproject.toml` las versiones del núcleo con las que funciona (por ejemplo `janelkit>=0.1,<0.2`) y solo usa la API pública del núcleo, así que una versión de parche del núcleo no los rompe. Cuando el núcleo publica una versión menor, se prueban contra ella y se amplía el rango (con una versión de parche de la extensión) o se adaptan (con una versión menor). En el repositorio, la CI prueba cada extensión contra el núcleo de la misma rama, y `tests/test_packages.py` comprueba que el rango declarado incluye esa versión.
-
-Las pruebas de `packages/janelkit/tests/test_public_api.py` fallan si cambia la lista de nombres públicos sin actualizar esta página.
+`janelkit-i18n`, `janelkit-desktop`, `janelkit-router` y `janelkit-store` **comparten la serie con el núcleo**: `janelkit-desktop` 0.2.x.x va con `janelkit` 0.2.x.x, y cada uno lo declara en su `pyproject.toml` (`janelkit>=0.2,<0.3`). Al cambiar de serie, todos los paquetes pasan a la nueva (0.3.0.0), aunque no tengan cambios, para que la compatibilidad se vea en el número. Los niveles mayor y menor son de cada paquete y siguen la misma política para su propia API. Las extensiones solo usan la API pública del núcleo, y la CI prueba cada una contra el núcleo de la misma rama, así que no se publica una versión del núcleo que rompa una extensión del repositorio.

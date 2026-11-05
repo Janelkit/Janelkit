@@ -29,7 +29,7 @@ def tecla(event):
 </script>
 
 <flex class="editor" style={{"left": f"{x}px"}}>
-  <TextField class="campo" ref={campo} bind:value={borrador} on:keydown={tecla}
+  <textfield class="campo" ref={campo} bind:value={borrador} on:keydown={tecla}
              on:blur={vista.confirmar(mover=False)} label="Editar celda" />
 </flex>
 

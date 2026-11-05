@@ -1,5 +1,5 @@
 """Mediciones del reto 6: N proyectos de C columnas × T tarjetas y P personas
-(por defecto 10 × 4 × 50 y 300, los de «Hecho cuando» en docs/challenges_to_test.md).
+(por defecto 10 × 4 × 50 y 300, los del enunciado del reto en README.md).
 
     python bench.py
     python bench.py --proyectos 20 --tarjetas 100 --personas 1000
@@ -83,10 +83,10 @@ def main() -> None:
 
         datos, secciones = app.get("datos"), app.get("secciones")
         nav = secciones["proyectos"]
-        proyectos = [p["id"] for p in datos.proyectos.peek()]
+        proyectos = [p["id"] for p in datos.proyectos]
         Proyecto = nav.page.namespace["Proyecto"]
-        total = sum(datos.resumen(p)["total"] for p in datos.proyectos.peek())
-        print(f"{len(proyectos)} proyectos, {total} tarjetas, {len(datos.personas.peek())} personas")
+        total = sum(datos.resumen(p)["total"] for p in datos.proyectos)
+        print(f"{len(proyectos)} proyectos, {total} tarjetas, {len(datos.personas)} personas")
         line("montar (compilar, crear, primer fotograma)", [montar])
 
         primera, abrir, volver = [], [], []
@@ -137,7 +137,7 @@ def main() -> None:
         secciones.show("proyectos")
         calma()
         renombrar, mover, deshacer = [], [], []
-        u = datos.personas.peek()[0]["id"]
+        u = datos.personas[0]["id"]
         tablero = datos.tablero(proyectos[0])
         cols = tablero.columnas.peek()
         for i in range(args.vueltas * 2):

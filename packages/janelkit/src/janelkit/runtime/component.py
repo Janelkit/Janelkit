@@ -51,14 +51,17 @@ from ..compiler.ir import (
 )
 from ..compiler.script_analysis import EVENT_FACTORY, PROP_FACTORY
 from ..diagnostics import Diagnostic, SourceLocation
-from ..lifecycle import ElementHost, Ref, _setup
+from ..lifecycle import Ref, _setup
 from ..tasks import spawn
 from ..reactivity import Computed, Effect, Event, Prop, PropError, Scope, State, batch, untracked
 from ..reactivity.props import REQUIRED
 from ..reactivity.collections import to_plain
 from ..reactivity.effects import Gate, when_settled
 from ..reactivity.state import _same
+from .hosts import Container
+from .hosts import Host as ElementHost
 from .list_model import LazySlotModel, SlotModel
+from .markdown import safe_markdown
 from .qt_bridge import make_bridge_class
 
 log = logging.getLogger("janelkit")
@@ -165,7 +168,7 @@ class TemplateInstance:
         self._ungated = ungated
         self.names = names
         self.row_key: Any = None  # clave de la fila de {#each} que crea esta plantilla (si la hay)
-        self.view_gate: Gate | None = None  # fila de <List>: abierta solo mientras se ve
+        self.view_gate: Gate | None = None  # fila de <list>: abierta solo mientras se ve
         self._views = 0
         self.parent = parent
         self.scope = scope if scope is not None else Scope()
@@ -255,11 +258,22 @@ class TemplateInstance:
             # {hub.ready}: solo los nombres se desenvuelven al leerlos; un state que es atributo
             # se desenvuelve aquí, al final. Con bind:value={prefs.tema} el atributo es el state.
             value = _unwrap(self.eval(binding.expression))
-            return self._class_string(value, binding) if binding.classes else value
-        return "".join(
-            p if isinstance(p, str) else _formatted(self.eval(p), p) if isinstance(p, FormattedExpression) else _display(self.eval(p))
-            for p in binding.parts
-        )
+            value = self._class_string(value, binding) if binding.classes else value
+        else:
+            value = "".join(
+                p if isinstance(p, str) else _formatted(self.eval(p), p) if isinstance(p, FormattedExpression) else _display(self.eval(p))
+                for p in binding.parts
+            )
+        if binding.markdown and self._is_markdown(binding.markdown):
+            value = safe_markdown(_display(value))
+        return value
+
+    def _is_markdown(self, when: "bool | str") -> bool:
+        """format="markdown" fijo (True) o el valor actual del binding de `format`."""
+        if when is True:
+            return True
+        fmt = next(b for b in self.template.bindings if b.id == when)
+        return self._evaluate(fmt) == "markdown"
 
     def _class_string(self, value: Any, binding: ExprBinding) -> str:
         """class={expr}: texto, lista/tupla/conjunto (se ignoran los vacíos) o dict {clase: condición}."""
@@ -280,7 +294,7 @@ class TemplateInstance:
         self._write(binding_id, value)
 
     def bridge_shown(self, shown: bool) -> None:
-        """Fila de <List>: abre su compuerta mientras tiene alguna vista (ver _LazyEachRegion)."""
+        """Fila de <list>: abre su compuerta mientras tiene alguna vista (ver _LazyEachRegion)."""
         if self.view_gate is None:
             return
         self._views += 1 if shown else -1
@@ -298,17 +312,23 @@ class TemplateInstance:
             target = self.resolve(use.name)
         except NameError:
             target = None
-        if isinstance(target, ElementHost):  # <Pages stack={nav}>, <Sections of={...}>
+        if isinstance(target, ElementHost):  # una propiedad JkHost, p. ej. <Pages stack={nav}>
             if attached:
-                target._attach(item, self)
-                self._attached.append((target, item))
+                container = Container(item, self)
+                target.attach(container)
+                self._attached.append((target, container))
             else:
-                target._detach(item)
+                for pair in [p for p in self._attached if p[0] is target and getattr(p[1], "item", None) is item]:
+                    self._attached.remove(pair)
+                    target.detach(pair[1])
             return
         if not isinstance(target, Ref):
             if attached:
                 kind = "no está definido" if target is None else f"es {type(target).__name__}"
-                self.report(f"ref: '{use.name}' {kind}; declara {use.name} = ref() en el script", use.loc)
+                if use.attr == "ref":
+                    self.report(f"ref: '{use.name}' {kind}; declara {use.name} = ref() en el script", use.loc)
+                else:
+                    self.report(f"{use.attr}: '{use.name}' {kind}; espera un anfitrión (janelkit.ext.Host)", use.loc)
             return
         if attached:
             target._attach(item)
@@ -319,7 +339,10 @@ class TemplateInstance:
     def _release_refs(self) -> None:
         attached, self._attached = self._attached, []
         for target, item in attached:
-            target._detach(item)
+            if isinstance(target, ElementHost):
+                target.detach(item)
+            else:
+                target._detach(item)
 
     def call_handler(self, handler: Handler, args: list, kwargs: dict[str, Any] | None = None) -> None:
         if self.disposed:
@@ -392,14 +415,24 @@ class TemplateInstance:
         write = self._writes[binding_id]
         name = write.target.code.strip()
         root, *attrs = [part.strip() for part in name.split(".")]
+        owner: Any = None
         try:
             target = self.resolve(root)
             if attrs:  # como al leer: el nombre se desenvuelve, los atributos no
                 target = _unwrap(target)
             for attr in attrs:
-                target = getattr(target, attr)
+                owner, target = target, getattr(target, attr)
         except (NameError, AttributeError):
             target = None
+        # Un atributo gestionado por un descriptor de su clase que define __jk_bind__ (un campo
+        # de un store): la escritura pasa por él, que puede negarse.
+        hook = getattr(getattr(type(owner), attrs[-1], None), "__jk_bind__", None) if attrs and owner is not None else None
+        if hook is not None:
+            try:
+                hook(owner, value)
+            except Exception as exc:  # noqa: BLE001 - el descriptor explica por qué no
+                self.report(f"bind: '{name}': {exc}", write.loc)
+            return
         if isinstance(target, State):
             target.value = value
         elif isinstance(target, Prop):
@@ -490,7 +523,7 @@ class _Row:
     bridge: QObject
     child: "ComponentInstance | None" = None  # si el fragmento es un único componente
     leave_ms: int = 0  # duración de su animación de salida (out:/transition:)
-    carried: "dict[int, ComponentInstance] | None" = None  # trasladados, esperando a que <List> cree la fila
+    carried: "dict[int, ComponentInstance] | None" = None  # trasladados, esperando a que <list> cree la fila
 
 
 class _Region:
@@ -755,7 +788,7 @@ class _EachRegion(_Region):
 
 
 class _LazyEachRegion(_EachRegion):
-    """`{#each}` dentro de `<List>`: la reconciliación por clave es la misma, pero
+    """`{#each}` dentro de `<list>`: la reconciliación por clave es la misma, pero
     cada fila se crea (script, bindings, puente) solo cuando el ListView la pide."""
 
     def new_model(self, model_id: str, fragment: Fragment | None) -> SlotModel:
@@ -865,7 +898,7 @@ class _LazyEachRegion(_EachRegion):
         _schedule_flush()
         return inst.bridge
 
-    LEAVE_MS = 220  # algo más que la animación de salida de <List animate> (JkList.jkAnimMs)
+    LEAVE_MS = 220  # algo más que la animación de salida de <list animate> (JkList.jkAnimMs)
 
     def unmount(self, model: SlotModel, position: int, row: _Row) -> None:
         if self.park(model, position, row):
@@ -947,7 +980,7 @@ class _KeyRegion(_Region):
 
 
 class _SlotRegion(_Region):
-    """`<Slot>`: muestra el contenido que pasó el componente padre, o la reserva."""
+    """`<slot>`: muestra el contenido que pasó el componente padre, o la reserva."""
 
     def __init__(self, owner: TemplateInstance, slot: SlotOutlet):
         super().__init__(owner)
@@ -1141,8 +1174,12 @@ class ComponentInstance:
         prop_locs: dict[str, SourceLocation] | None = None,
         hmr_key: Any = None,
         gate: Gate | None = None,
+        context: dict[Any, Any] | None = None,
     ):
         self.compiled = compiled
+        # Valores que da quien la monta (Container.mount): los leen con inject la propia
+        # instancia (también mientras se ejecuta su script) y sus descendientes.
+        self.context: dict[Any, Any] = context or {}
         self._prop_locs = prop_locs or {}
         # Identidad estable en el árbol (para conservar el estado al recargar en janel dev).
         own_key = hmr_key if hmr_key is not None else Path(compiled.file).name
@@ -1150,6 +1187,7 @@ class ComponentInstance:
         self.children: list[ComponentInstance] = []
         self.parent = parent
         self.scope = Scope()
+        self.gate = gate  # la usa is_visible()
         if parent is not None:
             parent.children.append(self)
             self.scope.add(_Release(lambda: self.parent.children.remove(self) if self in self.parent.children else None))
@@ -1162,7 +1200,6 @@ class ComponentInstance:
         self._refocus: list[int] | None = None
         self._on_mount: list[Any] = []
         self.leave_guards: list[Any] = []  # before_leave
-        self.page_stack: Any = None  # la pila de pages() si es una página
         self._incoming = props or {}
         self._event_handlers = events or {}
         self.props: dict[str, Prop] = {}
@@ -1224,10 +1261,14 @@ class ComponentInstance:
         self.provided[key] = value
 
     def inject(self, key: Any) -> Any:
+        if key in self.context:
+            return self.context[key]
         ancestor = self.parent
         while ancestor is not None:
             if key in ancestor.provided:
                 return ancestor.provided[key]
+            if key in ancestor.context:
+                return ancestor.context[key]
             ancestor = ancestor.parent
         raise LookupError(key)
 

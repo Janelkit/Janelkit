@@ -31,28 +31,28 @@ def choose_tag(name):
     tag.value = name
 </script>
 
-<Column class="editor">
-  <TextField class="title" bind:value={title} placeholder="Título" />
-  <Row class="tags">
+<column class="editor">
+  <textfield class="title" bind:value={title} placeholder="Título" />
+  <row class="tags">
     {#each TAGS as name (name)}
-      <Button variant={"primary" if name == tag else "default"} on:click={lambda: choose_tag(name)}>{name}</Button>
+      <button variant={"primary" if name == tag else "default"} on:click={lambda: choose_tag(name)}>{name}</button>
     {/each}
-    <Spacer />
-    <Text class="muted">Editada {when(note["updated"])}</Text>
-  </Row>
-  <Scroll class="body">
-    <TextArea bind:value={body} placeholder="Escribe aquí…" />
-  </Scroll>
-  <Row class="actions">
-    <Button variant="danger" on:click={lambda: deleted.emit(note["id"])}>Eliminar</Button>
-    <Spacer />
+    <spacer />
+    <text class="muted">Editada {when(note["updated"])}</text>
+  </row>
+  <scroll class="body">
+    <textarea bind:value={body} placeholder="Escribe aquí…" />
+  </scroll>
+  <row class="actions">
+    <button variant="danger" on:click={lambda: deleted.emit(note["id"])}>Eliminar</button>
+    <spacer />
     {#if dirty}
-      <Text class="muted">Cambios sin guardar</Text>
-      <Button variant="ghost" on:click={discard}>Descartar</Button>
+      <text class="muted">Cambios sin guardar</text>
+      <button variant="ghost" on:click={discard}>Descartar</button>
     {/if}
-    <Button variant="primary" on:click={save} enabled={dirty}>Guardar</Button>
-  </Row>
-</Column>
+    <button variant="primary" on:click={save} enabled={dirty}>Guardar</button>
+  </row>
+</column>
 
 <style>
 .editor { gap: 12px; flex: 1; }

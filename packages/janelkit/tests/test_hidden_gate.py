@@ -1,6 +1,6 @@
-"""Lo que no se ve espera: los bindings de {#hidden}, de las secciones que no se muestran
-y de las páginas de debajo no se recalculan; se ponen al día (una vez) al volver a verse.
-Los effect y temporizadores del script siguen funcionando."""
+"""Lo que no se ve espera: los bindings de {#hidden} (y de lo que oculta un anfitrión, como las
+páginas de debajo de janelkit-router; ver test_ext_hosts_qt.py) no se recalculan; se ponen al
+día (una vez) al volver a verse. Los effect y temporizadores del script siguen funcionando."""
 from pathlib import Path
 
 import pytest
@@ -35,8 +35,8 @@ n = state(0)
 </script>
 <flex direction="column">
   {{#hidden oculto}}
-    <Text>{{f"n={{visto(n)}}"}}</Text>
-    {{#each list(range(n)) as i (i)}}<Text>{{f"fila {{i}}"}}</Text>{{/each}}
+    <text>{{f"n={{visto(n)}}"}}</text>
+    {{#each list(range(n)) as i (i)}}<text>{{f"fila {{i}}"}}</text>{{/each}}
   {{/hidden}}
 </flex>
 """})
@@ -65,7 +65,7 @@ n = state(0)
 </script>
 <flex direction="column">
   {{#hidden fuera}}
-    {{#hidden dentro}}<Text>{{f"a{{visto(n)}}"}}</Text>{{:else}}<Text>{{f"b{{visto(-n)}}"}}</Text>{{/hidden}}
+    {{#hidden dentro}}<text>{{f"a{{visto(n)}}"}}</text>{{:else}}<text>{{f"b{{visto(-n)}}"}}</text>{{/hidden}}
   {{/hidden}}
 </flex>
 """})
@@ -98,7 +98,7 @@ vistos = inject("vistos")
 effect(lambda: vistos.append(n.value))
 interval(20, lambda: ticks.set(ticks.peek() + 1))
 </script>
-<Text>{n}</Text>
+<text>{n}</text>
 """,
         "App.janel": """<script>
 from janelkit import provide, state
@@ -123,45 +123,3 @@ provide("vistos", vistos)
         assert app.get("vistos") == [0, 7] and ns["ticks"].value > antes
 
 
-PAGINAS = {
-    "Inicio.janel": f"""<script>
-{CONTADOR}
-from janelkit import inject
-n = inject("n")
-</script>
-<flex><Text>{{f"inicio {{visto(n)}}"}}</Text></flex>
-""",
-    "Otra.janel": "<Text>otra</Text>\n",
-}
-
-
-def test_pages_below_and_other_sections_wait(project):
-    app_file = project({**PAGINAS, "App.janel": """<script>
-from janelkit import provide, sections, state
-from Inicio import Inicio
-from Otra import Otra
-n = state(0)
-provide("n", n)
-s = sections(a=Inicio, b=Otra)
-</script>
-<Window><Sections of={s} /></Window>
-"""})
-    with mount(app_file) as app:
-        s, n = app.get("s"), app.namespace["n"]
-        veces = s["a"].page.namespace["veces"]
-        assert veces == [0]
-        s["a"].push(app.namespace["Otra"])
-        app.process()
-        n.value = 1
-        n.value = 2
-        assert veces == [0]  # la página de debajo espera
-        s["a"].pop()
-        app.process()
-        assert veces == [0, 2] and "inicio 2" in app.texts()
-        s.show("b")
-        app.process()
-        n.value = 3
-        assert veces == [0, 2]  # su sección no se ve
-        s.show("a")
-        app.process()
-        assert veces == [0, 2, 3]

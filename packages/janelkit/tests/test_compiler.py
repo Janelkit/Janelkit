@@ -22,7 +22,7 @@ def write(root: Path, rel: str, text: str) -> Path:
 
 def test_static_window_generates_qml_literals():
     qml = compile_source(
-        '<Window title="Hola" width={800} height="600"><Column><Text>Uno</Text><Button>Dos</Button></Column></Window>'
+        '<window title="Hola" width={800} height="600"><column><text>Uno</text><button>Dos</button></column></window>'
     ).qml
     assert "import QtQuick\nimport QtQuick.Controls\nimport QtQuick.Layouts\nimport Janel" in qml
     assert "JkWindow {" in qml
@@ -33,27 +33,27 @@ def test_static_window_generates_qml_literals():
 
 
 def test_non_ascii_text_is_kept_readable():
-    assert 'text: "Ñandú ¿qué?"' in compile_source("<Text>Ñandú ¿qué?</Text>").qml
+    assert 'text: "Ñandú ¿qué?"' in compile_source("<text>Ñandú ¿qué?</text>").qml
 
 
 def test_root_that_is_not_a_window_gets_wrapped_and_fills_it():
-    qml = compile_source("<Column><Text>x</Text></Column>").qml
+    qml = compile_source("<column><text>x</text></column>").qml
     assert qml.index("JkWindow") < qml.index("JkColumn {")
     assert "anchors.fill: parent" in qml
 
 
 def test_window_with_several_children_gets_a_column():
-    qml = compile_source("<Window><Text>a</Text><Text>b</Text></Window>").qml
+    qml = compile_source("<window><text>a</text><text>b</text></window>").qml
     assert qml.index("JkColumn {") < qml.index('text: "a"')
 
 
 def test_window_only_as_root():
-    err = compile_error("<Column><Window /></Column>")
+    err = compile_error("<column><window /></column>")
     assert "solo puede usarse como raíz" in err.first.message
 
 
 def test_text_whitespace_is_collapsed():
-    qml = compile_source("<Text>\n   Hola\n   mundo   \n</Text>").qml
+    qml = compile_source("<text>\n   Hola\n   mundo   \n</text>").qml
     assert 'text: "Hola mundo"' in qml
 
 
@@ -65,12 +65,12 @@ n = state(0)
 name = state("")
 def inc(): pass
 </script>
-<Window>
-  <Column>
-    <Button on:click={inc} enabled={n < 3}>Clicks: {n}</Button>
-    <TextField bind:value={name} on:input={inc} placeholder="Nombre" />
-  </Column>
-</Window>""",
+<window>
+  <column>
+    <button on:click={inc} enabled={n < 3}>Clicks: {n}</button>
+    <textfield bind:value={name} on:input={inc} placeholder="Nombre" />
+  </column>
+</window>""",
         "App.janel",
     )
     kinds = [type(b) for b in c.ir.template.bindings]
@@ -84,13 +84,13 @@ def inc(): pass
 
 
 def test_literal_expression_attributes_are_inlined():
-    c = compile_source('<Window width={640} title={"Hola"}><Button flat={True} /></Window>')
+    c = compile_source('<window width={640} title={"Hola"}><button flat={True} /></window>')
     assert c.ir.template.bindings == []
     assert "width: 640" in c.qml and 'title: "Hola"' in c.qml and "flat: true" in c.qml
 
 
 def test_width_attribute_maps_to_layout_and_disables_fill():
-    qml = compile_source("<Column><TextField width={200} flex={1} /></Column>").qml
+    qml = compile_source("<column><textfield width={200} flex={1} /></column>").qml
     assert "Layout.preferredWidth: 200" in qml and "Layout.fillWidth: false" in qml
     assert "jkFlex: 1" in qml
 
@@ -108,7 +108,7 @@ def remove(x): pass
 
 
 def test_if_else_creates_one_repeater_per_branch():
-    c = compile_source(SCRIPT + "<Column>{#if a}<Text>A</Text>{:else if b}<Text>B</Text>{:else}texto {b}{/if}</Column>")
+    c = compile_source(SCRIPT + "<column>{#if a}<text>A</text>{:else if b}<text>B</text>{:else}texto {b}{/if}</column>")
     (slot,) = c.ir.template.slots
     assert isinstance(slot, IfSlot)
     assert [br.condition.code if br.condition else None for br in slot.branches] == ["a", "b", None]
@@ -120,7 +120,7 @@ def test_if_else_creates_one_repeater_per_branch():
 
 
 def test_empty_if_branch_has_no_repeater():
-    c = compile_source(SCRIPT + "<Column>{#if a}{:else}<Text>no</Text>{/if}</Column>")
+    c = compile_source(SCRIPT + "<column>{#if a}{:else}<text>no</text>{/if}</column>")
     slot = c.ir.template.slots[0]
     assert slot.branches[0].model_id is None
     assert c.qml.count("Repeater {") == 1
@@ -129,13 +129,13 @@ def test_empty_if_branch_has_no_repeater():
 def test_each_with_key_index_and_else():
     c = compile_source(
         SCRIPT
-        + """<Column>
+        + """<column>
   {#each items as item, i (item["id"])}
-    <Row><Text>{i}. {item["t"]}</Text><Button on:click={lambda: remove(item)}>x</Button></Row>
+    <row><text>{i}. {item["t"]}</text><button on:click={lambda: remove(item)}>x</button></row>
   {:else}
-    <Text>Vacío</Text>
+    <text>Vacío</text>
   {/each}
-</Column>"""
+</column>"""
     )
     (slot,) = c.ir.template.slots
     assert isinstance(slot, EachSlot)
@@ -148,7 +148,7 @@ def test_each_with_key_index_and_else():
 
 
 def test_each_with_several_nodes_gets_an_implicit_container_matching_the_parent():
-    c = compile_source(SCRIPT + "<Row>{#each items as x}<Text>{x}</Text><Text>-</Text>{/each}</Row>")
+    c = compile_source(SCRIPT + "<row>{#each items as x}<text>{x}</text><text>-</text>{/each}</row>")
     root = c.ir.template.slots[0].fragment.root
     assert root.qml_type == "JkFlexRow" and len(root.children) == 2  # caja implícita: motor de <flex>
     assert "Jk.mainGap(parent)" in root.props["gap"].qml
@@ -156,12 +156,12 @@ def test_each_with_several_nodes_gets_an_implicit_container_matching_the_parent(
 
 
 def test_loop_variables_are_scoped_to_the_block():
-    err = compile_error(SCRIPT + "<Column>{#each items as x}<Text>{x}</Text>{/each}<Text>{x}</Text></Column>")
+    err = compile_error(SCRIPT + "<column>{#each items as x}<text>{x}</text>{/each}<text>{x}</text></column>")
     assert "'x' no está definido" in err.first.message
 
 
 def test_bind_cannot_target_loop_variable():
-    err = compile_error(SCRIPT + "<Column>{#each items as x}<TextField bind:value={x} />{/each}</Column>")
+    err = compile_error(SCRIPT + "<column>{#each items as x}<textfield bind:value={x} />{/each}</column>")
     assert "variable de {#each}" in err.first.message
 
 
@@ -169,7 +169,7 @@ def test_bind_cannot_target_loop_variable():
 
 
 def test_undefined_name_suggests_closest_with_exact_location():
-    err = compile_error("<script>\ncount = 1\n</script>\n<Text>Total: {1 + cuont}</Text>")
+    err = compile_error("<script>\ncount = 1\n</script>\n<text>Total: {1 + cuont}</text>")
     d = err.first
     assert d.message == "'cuont' no está definido"
     assert (d.location.line, d.location.column) == (4, 19)
@@ -177,19 +177,19 @@ def test_undefined_name_suggests_closest_with_exact_location():
 
 
 def test_names_inside_lambdas_and_comprehensions_are_not_reported():
-    compile_source(SCRIPT + "<Text>{', '.join(str(v) for v in items)} {(lambda z: z)(b)}</Text>")
+    compile_source(SCRIPT + "<text>{', '.join(str(v) for v in items)} {(lambda z: z)(b)}</text>")
 
 
 def test_builtins_are_known():
-    compile_source(SCRIPT + "<Text>{len(items)} {max(b, 2)}</Text>")
+    compile_source(SCRIPT + "<text>{len(items)} {max(b, 2)}</text>")
 
 
 def test_star_import_disables_name_checks():
-    compile_source("<script>\nfrom math import *\n</script>\n<Text>{pi}</Text>")
+    compile_source("<script>\nfrom math import *\n</script>\n<text>{pi}</text>")
 
 
 def test_script_syntax_error_is_reported_at_compile_time():
-    err = compile_error("<script>\nx = (\n</script>\n<Text>a</Text>")
+    err = compile_error("<script>\nx = (\n</script>\n<text>a</text>")
     assert "error de sintaxis en el script" in err.first.message
     assert err.first.location.line >= 2
 
@@ -199,9 +199,9 @@ def test_script_syntax_error_is_reported_at_compile_time():
 
 def test_style_classes_and_element_selectors():
     c = compile_source(
-        """<Column class="page"><Text class="title big">Hola</Text></Column>
+        """<column class="page"><text class="title big">Hola</text></column>
 <style>
-Text { color: #333; }
+text { color: #333; }
 .page { padding: 24px; gap: 12px; }
 .title { font-size: 20px; font-weight: bold; }
 .big { font-size: 32px; }
@@ -216,7 +216,7 @@ Text { color: #333; }
 
 def test_box_styles_tokens_and_alignment():
     c = compile_source(
-        """<Column class="card"><Button class="b">x</Button></Column>
+        """<column class="card"><button class="b">x</button></column>
 <style>
 .card { padding: 8px 16px; background: var(--surface); border: 1px solid var(--border);
         border-radius: var(--radius-lg); align-items: center; justify-content: end; }
@@ -244,17 +244,17 @@ def test_box_styles_tokens_and_alignment():
 
 
 def test_row_align_items_is_passed_to_the_flex_engine():
-    qml = compile_source('<Row class="r" />\n<style>.r { align-items: end; }</style>').qml
+    qml = compile_source('<row class="r" />\n<style>.r { align-items: end; }</style>').qml
     assert 'alignItems: "end"' in qml
 
 
 def test_explicit_attribute_overrides_style():
-    c = compile_source('<Column class="p" gap={4}></Column>\n<style>.p { gap: 20px; }</style>')
+    c = compile_source('<column class="p" gap={4}></column>\n<style>.p { gap: 20px; }</style>')
     assert "gap: 4" in c.qml and "gap: 20" not in c.qml
 
 
 def test_unsupported_style_property_is_a_warning_with_location():
-    c = compile_source("<Text class=\"t\">x</Text>\n<style>\n.t { text-shadow: 1px; }\n</style>", "App.janel")
+    c = compile_source("<text class=\"t\">x</text>\n<style>\n.t { text-shadow: 1px; }\n</style>", "App.janel")
     assert len(c.warnings) == 1
     w = c.warnings[0]
     assert w.severity == "warning" and "text-shadow" in w.message
@@ -262,18 +262,18 @@ def test_unsupported_style_property_is_a_warning_with_location():
 
 
 def test_style_not_applicable_to_element_is_a_warning():
-    c = compile_source('<Scroll class="c" />\n<style>.c { font-size: 12px; }</style>')
-    assert "no tiene efecto en <Scroll>" in c.warnings[0].message
+    c = compile_source('<scroll class="c" />\n<style>.c { font-size: 12px; }</style>')
+    assert "no tiene efecto en <scroll>" in c.warnings[0].message
 
 
 def test_unsupported_style_values_are_warnings():
-    c = compile_source('<Column class="c" />\n<style>.c { justify-content: middle; width: 50pc; }</style>')
+    c = compile_source('<column class="c" />\n<style>.c { justify-content: middle; width: 50pc; }</style>')
     messages = " | ".join(w.message for w in c.warnings)
     assert "justify-content no soportado" in messages and "número" in messages
 
 
 def test_source_map_points_back_to_janel_lines():
-    c = compile_source("<Window>\n  <Column>\n    <Button>Ok</Button>\n  </Column>\n</Window>", "App.janel")
+    c = compile_source("<window>\n  <column>\n    <button>Ok</button>\n  </column>\n</window>", "App.janel")
     button_line = next(i for i, line in enumerate(c.qml.splitlines(), 1) if "JkButton {" in line)
     loc = c.janel_location(button_line + 1)
     assert (loc.line, loc.column) == (3, 5)
@@ -287,7 +287,7 @@ title = prop()
 compact = prop(False)
 closed = event()
 </script>
-<Column><Text>{title}</Text></Column>
+<column><text>{title}</text></column>
 """
 
 
@@ -302,12 +302,12 @@ from components.Card import Card
 name = state("x")
 def on_close(): pass
 </script>
-<Column>
+<column>
   <Card title={name} compact on:closed={on_close} />
   {#each [1, 2] as n (n)}
     <Card title={str(n)} />
   {/each}
-</Column>""",
+</column>""",
     )
     c = compile_file(app)
     slot = c.ir.template.slots[0]
@@ -338,9 +338,9 @@ def test_component_usage_errors(tmp_path):
         """<script>
 from components.Card import Card
 </script>
-<Column>
+<column>
   <Card titel="x" on:open={print} bind:title={x} />
-</Column>""",
+</column>""",
     )
     with pytest.raises(JanelError) as info:
         compile_file(app)
@@ -354,11 +354,11 @@ from components.Card import Card
 
 
 def test_child_component_cannot_be_a_window(tmp_path):
-    write(tmp_path, "W.janel", "<Window />")
+    write(tmp_path, "W.janel", "<window />")
     app = write(tmp_path, "App.janel", "<script>\nfrom W import W\n</script>\n<W />")
     with pytest.raises(JanelError) as info:
         compile_file(app)
-    assert "no puede tener <Window> como raíz" in info.value.first.message
+    assert "no puede tener <window> como raíz" in info.value.first.message
     assert info.value.first.location.file.endswith("W.janel")
 
 
@@ -371,10 +371,10 @@ from janelkit import prop
 from Tree import Tree
 node = prop()
 </script>
-<Column>
-  <Text>{node["name"]}</Text>
+<column>
+  <text>{node["name"]}</text>
   {#each node.get("children", []) as child (child["name"])}<Tree node={child} />{/each}
-</Column>""",
+</column>""",
     )
     app = write(tmp_path, "App.janel", '<script>\nfrom Tree import Tree\n</script>\n<Tree node={{"name": "r"}} />')
     c = compile_file(app)
@@ -382,18 +382,18 @@ node = prop()
 
 
 def test_unknown_uppercase_tag_suggests_import():
-    err = compile_error("<Column><TodoItem /></Column>")
+    err = compile_error("<column><TodoItem /></column>")
     assert "from components.TodoItem import TodoItem" in err.first.hint
 
 
 def test_prop_and_event_declarations_must_be_top_level():
-    err = compile_error("<script>\nfrom janelkit import prop\ndef f():\n    x = prop(1)\n</script>\n<Text>a</Text>")
+    err = compile_error("<script>\nfrom janelkit import prop\ndef f():\n    x = prop(1)\n</script>\n<text>a</text>")
     assert "nivel superior" in err.first.message
     assert err.first.location.line == 4
 
 
 def test_bind_cannot_target_a_prop():
-    err = compile_error("<script>\nfrom janelkit import prop\nv = prop('')\n</script>\n<TextField bind:value={v} />")
+    err = compile_error("<script>\nfrom janelkit import prop\nv = prop('')\n</script>\n<textfield bind:value={v} />")
     assert "solo lectura" in err.first.message
 
 
@@ -401,36 +401,36 @@ def test_bind_cannot_target_a_prop():
 
 
 def test_unknown_element():
-    err = compile_error("<Window>\n  <Carousel />\n</Window>")
+    err = compile_error("<window>\n  <Carousel />\n</window>")
     assert "elemento desconocido <Carousel>" in err.first.message
     assert err.first.location.line == 2
 
 
 def test_unknown_element_suggests_closest():
     err = compile_error("<Colum />")
-    assert "<Column>" in err.first.hint
+    assert "<column>" in err.first.hint
 
 
 def test_unknown_property_lists_available_ones():
-    err = compile_error('<Button colour="red" />')
+    err = compile_error('<button colour="red" />')
     assert "propiedad desconocida 'colour'" in err.first.message
     assert "enabled" in err.first.hint
 
 
 def test_unknown_event():
-    err = compile_error("<Button on:press={go} />")
+    err = compile_error("<button on:press={go} />")
     assert "on:click" in err.first.hint
 
 
 def test_event_needs_expression():
-    err = compile_error('<Button on:click="go" />')
+    err = compile_error('<button on:click="go" />')
     assert "espera una función" in err.first.message
 
 
 def test_bind_requires_state_name():
-    err = compile_error("<TextField bind:value={a + b} />")
+    err = compile_error("<textfield bind:value={a + b} />")
     assert "necesita el nombre de un state" in err.first.message
-    err = compile_error("<TextField bind:value={prefs['tema']} />")
+    err = compile_error("<textfield bind:value={prefs['tema']} />")
     assert "necesita el nombre de un state" in err.first.message
 
 
@@ -438,22 +438,22 @@ def test_bind_accepts_a_path_of_attributes():
     compiled = compile_source("""<script>
 from services import prefs
 </script>
-<TextField bind:value={prefs.ajustes.tema} />""")
+<textfield bind:value={prefs.ajustes.tema} />""")
     assert compiled.all_warnings == []
 
 
 def test_bind_not_available():
-    err = compile_error("<Button bind:text={x} />")
+    err = compile_error("<button bind:text={x} />")
     assert "no está disponible" in err.first.message
 
 
 def test_wrong_literal_type():
-    err = compile_error('<Window width="ancho" />')
+    err = compile_error('<window width="ancho" />')
     assert "espera un número" in err.first.message
 
 
 def test_multiple_roots():
-    err = compile_error("<Window />\n<Window />")
+    err = compile_error("<window />\n<window />")
     assert err.first.location.line == 2
 
 
@@ -463,12 +463,12 @@ def test_empty_template():
 
 
 def test_text_element_rejects_child_elements():
-    err = compile_error("<Button><Text>x</Text></Button>")
+    err = compile_error("<button><text>x</text></button>")
     assert "solo admite texto" in err.first.message
 
 
 def test_several_errors_are_reported_together():
-    err = compile_error("<Window>\n  <Foo />\n  <Bar />\n</Window>")
+    err = compile_error("<window>\n  <Foo />\n  <Bar />\n</window>")
     assert [d.location.line for d in err.diagnostics] == [2, 3]
 
 
@@ -478,7 +478,7 @@ def test_several_errors_are_reported_together():
 def test_conditional_classes_generate_bindings_and_last_wins():
     c = compile_source(
         SCRIPT
-        + """<Column class="card" class:sel={a} class:warn={b > 1}><Text>x</Text></Column>
+        + """<column class="card" class:sel={a} class:warn={b > 1}><text>x</text></column>
 <style>
 .card { background: var(--surface); }
 .sel { background: var(--primary); border-width: 2px; }
@@ -497,12 +497,12 @@ def test_conditional_classes_generate_bindings_and_last_wins():
 
 
 def test_conditional_class_shorthand_and_missing_rules():
-    c = compile_source(SCRIPT + '<Text class:a>x</Text>\n<style>.b { color: red; }</style>')
+    c = compile_source(SCRIPT + '<text class:a>x</text>\n<style>.b { color: red; }</style>')
     assert "no tiene reglas" in c.warnings[0].message
 
 
 def test_key_block():
-    c = compile_source(SCRIPT + "<Column>{#key b}<Text>{b}</Text>{/key}</Column>")
+    c = compile_source(SCRIPT + "<column>{#key b}<text>{b}</text>{/key}</column>")
     (slot,) = c.ir.template.slots
     assert type(slot).__name__ == "KeySlot" and slot.expression.code == "b"
     assert "model: jk.m0" in c.qml
@@ -515,32 +515,44 @@ INLINE_SCRIPT = "<script>\nfrom janelkit import state, prop\nn = state(0)\nitems
 def test_handlers_accept_calls_and_simple_statements():
     compiled = compile_source(
         INLINE_SCRIPT
-        + "<Column>"
-        + "<Button on:click={n += 1}>a</Button>"
-        + "<Button on:click={n = 0; items.append(n)}>b</Button>"
-        + "<Button on:click={print(n)}>c</Button>"
-        + "<Button on:click={lambda: print(n)}>d</Button>"
-        + "<TextField on:input={n = len(event)} />"
-        + "</Column>"
+        + "<column>"
+        + "<button on:click={n += 1}>a</button>"
+        + "<button on:click={n = 0; items.append(n)}>b</button>"
+        + "<button on:click={print(n)}>c</button>"
+        + "<button on:click={lambda: print(n)}>d</button>"
+        + "<textfield on:input={n = len(event)} />"
+        + "</column>"
     )
     handlers = compiled.ir.template.handlers
     assert [h.inline for h in handlers] == [True, True, True, False, True]
 
 
 def test_compound_statements_are_rejected_in_handlers():
-    err = compile_error(INLINE_SCRIPT + "<Button on:click={for x in items: n = x}>a</Button>")
+    err = compile_error(INLINE_SCRIPT + "<button on:click={for x in items: n = x}>a</button>")
     assert "'for' no está permitido en un manejador" in err.first.message
     assert "función en el <script>" in err.first.hint
 
 
 def test_statements_are_still_rejected_outside_handlers():
-    err = compile_error(INLINE_SCRIPT + "<Text>{n = 1}</Text>")
+    err = compile_error(INLINE_SCRIPT + "<text>{n = 1}</text>")
     assert "expresión Python no válida" in err.first.message
 
 
 def test_inline_handler_checks_assigned_names():
-    assert "'m' no está definido" in compile_error(INLINE_SCRIPT + "<Button on:click={m = 1}>a</Button>").first.message
-    err = compile_error(INLINE_SCRIPT + "<Button on:click={limit = 1}>a</Button>")
+    assert "'m' no está definido" in compile_error(INLINE_SCRIPT + "<button on:click={m = 1}>a</button>").first.message
+    err = compile_error(INLINE_SCRIPT + "<button on:click={limit = 1}>a</button>")
     assert "no puede asignar a la prop 'limit'" in err.first.message
-    err = compile_error(INLINE_SCRIPT + "<Column>{#each items as x}<Button on:click={x = 2}>a</Button>{/each}</Column>")
+    err = compile_error(INLINE_SCRIPT + "<column>{#each items as x}<button on:click={x = 2}>a</button>{/each}</column>")
     assert "variable de bloque 'x'" in err.first.message
+
+
+@pytest.mark.parametrize("tag", ["textfield", "textarea", "slider", "select", "progressbar", "image", "spacer"])
+def test_elements_without_content_are_self_closing(tag):
+    for source in (f"<window><{tag}>hola</{tag}></window>", f"<window><{tag}></{tag}></window>"):
+        message = str(compile_error(source))
+        assert f"<{tag}>" in message and f"<{tag} " in message  # la sugerencia: <Tag ... />
+    assert "cierre automático" in str(compile_error(f"<window><{tag}></{tag}></window>"))
+
+
+def test_a_field_hint_points_to_value():
+    assert "bind:value" in str(compile_error("<window><textfield>Pan</textfield></window>"))

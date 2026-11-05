@@ -1,7 +1,7 @@
 """El tablero: columnas con tarjetas, deshacer/rehacer y el archivo JSON.
 
-Cada acción es un paso del historial (`janelkit.History`): mueve las tarjetas en
-sitio dentro de las listas reactivas, y deshacer devuelve esas listas a como
+Cada acción es un paso del historial (`services/deshacer.py`): mueve las tarjetas
+en sitio dentro de las listas reactivas, y deshacer devuelve esas listas a como
 estaban. Como los objetos son los mismos, `{#each}` mueve una fila en vez de
 volver a crear la columna entera.
 """
@@ -14,7 +14,9 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-from janelkit import History, state, timeout
+from janelkit import state, timeout
+
+from services.deshacer import Historial
 
 ETIQUETAS = {
     "error": "#e03131", "mejora": "#2f9e44", "diseño": "#ae3ec9",
@@ -31,7 +33,7 @@ class Tablero:
         self.columnas = state(datos["columnas"])
         self._siguiente = 1 + max((int(t["id"][1:]) for c in datos["columnas"] for t in c["tarjetas"]), default=0)
         self._siguiente_col = 1 + max((int(c["id"][1:]) for c in datos["columnas"]), default=0)
-        self.historial = History()
+        self.historial = Historial()
         self._guardado = None
 
     # -- consultas -------------------------------------------------------------
@@ -53,7 +55,7 @@ class Tablero:
     # -- deshacer ----------------------------------------------------------------
     @contextmanager
     def _paso(self, que: str) -> Iterator[None]:
-        with self.historial.step(que):
+        with self.historial.step(que, self.columnas.peek()):
             yield
         self._cambio()
 

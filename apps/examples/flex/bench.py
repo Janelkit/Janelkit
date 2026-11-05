@@ -1,4 +1,4 @@
-"""Mediciones del motor de <flex> (docs/flex.md, criterios de rendimiento).
+"""Mediciones del motor de <flex> (docs/arquitectura.md, «Rendimiento»).
 
     python bench.py               # rejilla de 200 tarjetas
     python bench.py --cards 500

@@ -44,9 +44,13 @@ class ControlSpec:
     horizontal: bool = False  # contenedores: eje principal horizontal
     tag: str | None = None  # elementos propios (QML del proyecto): nombre en la plantilla
     fixed: dict[str, str] = field(default_factory=dict)  # propiedades QML que el compilador fija siempre
+    # Elementos propios: atributos que reciben un anfitrión de Python (`property JkHost stack`)
+    # y si el elemento es un mazo (su raíz es JkDeck: crece y admite transition:).
+    hosts: tuple[str, ...] = ()
+    deck: bool = False
 
 
-# Propiedades de disposición comunes a todos los elementos salvo Window.
+# Propiedades de disposición comunes a todos los elementos salvo <window>.
 COMMON_PROPS: dict[str, PropSpec] = {
     "width": PropSpec("Layout.preferredWidth", "number"),
     "height": PropSpec("Layout.preferredHeight", "number"),
@@ -62,7 +66,7 @@ _BOX_PROPS = {
     "padding": PropSpec("padding", "number"),
 }
 
-# Cajas (<flex>, Column, Row): las propiedades de comportamiento y accesibilidad de flex.md.
+# Cajas (<flex>, <column>, <row>): las propiedades de comportamiento y accesibilidad (docs/lenguaje.md).
 _BOX_PROPS.update({
     "as": PropSpec("jkRole", "string"),  # papel accesible y teclado (ver ROLES)
     "tabindex": PropSpec("jkTabIndex", "number"),  # 0: en el orden de Tab; -1: solo por código
@@ -79,10 +83,23 @@ ROUTED_EVENTS = (
     "pointerenter", "pointerleave", "wheel", "keydown", "keyup", "focus", "blur", "resize",
     "dragstart", "dragover", "drop", "dragend",
 )  # fmt: skip
+# Zonas con desplazamiento (<scroll>, <list>).
+_SCROLL_EVENTS = {
+    "top": EventSpec("onReachedTop"),
+    "bottom": EventSpec("onReachedBottom"),
+    "scroll": EventSpec("onScrolled", ("info",), enables="jkScrollHandled", params=("info",)),
+}
+
 _BOX_EVENTS = {
     name: EventSpec(ROUTE, enables="jkClickable" if name == "click" else None) for name in ROUTED_EVENTS
 }
-# Los campos (TextField, TextArea, Select) también reciben por events.py el teclado y el foco.
+# <video>: los eventos de puntero de las cajas, con la posición también en píxeles de la imagen
+# (PointerEvent.image_x/image_y).
+_VIDEO_EVENTS = {
+    name: _BOX_EVENTS[name]
+    for name in ("click", "dblclick", "contextmenu", "pointerdown", "pointerup", "pointermove", "pointerenter", "pointerleave")
+}
+# Los campos (<textfield>, <textarea>, <select>) también reciben por events.py el teclado y el foco.
 _FIELD_EVENTS = {name: EventSpec(ROUTE) for name in ("keydown", "keyup", "focus", "blur")}
 # Papeles de `as`: los interactivos entran en el orden de Tab y se activan con el teclado.
 ROLES = ("box", "button", "link", "checkbox", "switch", "tab", "menuitem", "option",
@@ -90,7 +107,7 @@ ROLES = ("box", "button", "link", "checkbox", "switch", "tab", "menuitem", "opti
 INTERACTIVE_ROLES = ("button", "link", "checkbox", "switch")
 
 CONTROLS: dict[str, ControlSpec] = {
-    "Window": ControlSpec(
+    "window": ControlSpec(
         "JkWindow",
         props={
             "title": PropSpec("title", "string"),
@@ -99,6 +116,8 @@ CONTROLS: dict[str, ControlSpec] = {
             "minWidth": PropSpec("minimumWidth", "number"),
             "minHeight": PropSpec("minimumHeight", "number"),
             "background": PropSpec("color", "color"),
+            "screen": PropSpec("jkScreen", "any"),  # índice en `screens` o nombre de la pantalla
+            "fullscreen": PropSpec("jkFullscreen", "bool"),
         },
         events={
             "activate": EventSpec("onActiveChanged", when="active"),
@@ -106,7 +125,7 @@ CONTROLS: dict[str, ControlSpec] = {
         },
         container=True,
     ),
-    # Elemento base (en minúscula): la caja con flexbox de la web. Column y Row son atajos suyos.
+    # Elemento base (en minúscula): la caja con flexbox de la web. <column> y <row> son atajos suyos.
     "flex": ControlSpec(
         "JkFlex",
         props={
@@ -124,14 +143,19 @@ CONTROLS: dict[str, ControlSpec] = {
         container=True,
         horizontal=True,
     ),
-    "Column": ControlSpec("JkColumn", props=dict(_BOX_PROPS), events=dict(_BOX_EVENTS), container=True),
-    "Row": ControlSpec("JkRow", props=dict(_BOX_PROPS), events=dict(_BOX_EVENTS), container=True, horizontal=True),
-    "Scroll": ControlSpec(
+    "column": ControlSpec("JkColumn", props=dict(_BOX_PROPS), events=dict(_BOX_EVENTS), container=True),
+    "row": ControlSpec("JkRow", props=dict(_BOX_PROPS), events=dict(_BOX_EVENTS), container=True, horizontal=True),
+    "scroll": ControlSpec(
         "JkScroll",
-        props={"gap": PropSpec("gap", "number"), "padding": PropSpec("innerPadding", "number")},
+        props={
+            "gap": PropSpec("gap", "number"),
+            "padding": PropSpec("innerPadding", "number"),
+            "follow": PropSpec("follow", "bool"),
+        },
+        events=dict(_SCROLL_EVENTS),
         container=True,
     ),
-    "List": ControlSpec(
+    "list": ControlSpec(
         "JkList",
         props={
             "gap": PropSpec("gap", "number"),
@@ -139,13 +163,9 @@ CONTROLS: dict[str, ControlSpec] = {
             "animate": PropSpec("animate", "bool"),
             "follow": PropSpec("follow", "bool"),
         },
-        events={
-            "top": EventSpec("onReachedTop"),
-            "bottom": EventSpec("onReachedBottom"),
-            "scroll": EventSpec("onScrolled", ("info",), enables="jkScrollHandled", params=("info",)),
-        },
+        events=dict(_SCROLL_EVENTS),
     ),
-    "Text": ControlSpec(
+    "text": ControlSpec(
         "JkText",
         props={
             "text": PropSpec("text", "string"),
@@ -157,7 +177,7 @@ CONTROLS: dict[str, ControlSpec] = {
         events={"link": EventSpec("onLinkActivated", ("link",), enables="jkLinkHandled", params=("link",))},
         text_prop="text",
     ),
-    "Button": ControlSpec(
+    "button": ControlSpec(
         "JkButton",
         props={
             "text": PropSpec("text", "string"),
@@ -167,7 +187,7 @@ CONTROLS: dict[str, ControlSpec] = {
         events={"click": EventSpec("onClicked")},
         text_prop="text",
     ),
-    "TextField": ControlSpec(
+    "textfield": ControlSpec(
         "JkTextField",
         props={
             "value": PropSpec("text", "string"),
@@ -181,7 +201,7 @@ CONTROLS: dict[str, ControlSpec] = {
         },
         two_way={"value": TwoWaySpec("text", "onTextEdited")},
     ),
-    "TextArea": ControlSpec(
+    "textarea": ControlSpec(
         "JkTextArea",
         props={
             "value": PropSpec("jkValue", "string"),
@@ -192,21 +212,21 @@ CONTROLS: dict[str, ControlSpec] = {
         events={"input": EventSpec("onUserEdited", ("text",), params=("text",)), **_FIELD_EVENTS},
         two_way={"value": TwoWaySpec("jkValue", "onUserEdited", "text", params=("text",))},
     ),
-    "Checkbox": ControlSpec(
+    "checkbox": ControlSpec(
         "JkCheckBox",
         props={"checked": PropSpec("checked", "bool"), "text": PropSpec("text", "string")},
         events={"change": EventSpec("onToggled", ("checked",))},
         two_way={"checked": TwoWaySpec("checked", "onToggled")},
         text_prop="text",
     ),
-    "Switch": ControlSpec(
+    "switch": ControlSpec(
         "JkSwitch",
         props={"checked": PropSpec("checked", "bool"), "text": PropSpec("text", "string")},
         events={"change": EventSpec("onToggled", ("checked",))},
         two_way={"checked": TwoWaySpec("checked", "onToggled")},
         text_prop="text",
     ),
-    "Slider": ControlSpec(
+    "slider": ControlSpec(
         "JkSlider",
         props={
             "value": PropSpec("value", "number"),
@@ -217,7 +237,7 @@ CONTROLS: dict[str, ControlSpec] = {
         events={"change": EventSpec("onMoved", ("value",))},
         two_way={"value": TwoWaySpec("value", "onMoved")},
     ),
-    "Select": ControlSpec(
+    "select": ControlSpec(
         "JkSelect",
         props={
             "options": PropSpec("options"),
@@ -227,7 +247,7 @@ CONTROLS: dict[str, ControlSpec] = {
         events={"change": EventSpec("onActivated", ("currentValue",)), **_FIELD_EVENTS},
         two_way={"value": TwoWaySpec("value", "onActivated", "currentValue")},
     ),
-    "RadioGroup": ControlSpec(
+    "radiogroup": ControlSpec(
         "JkRadioGroup",
         props={
             "options": PropSpec("options"),
@@ -237,24 +257,25 @@ CONTROLS: dict[str, ControlSpec] = {
         events={"change": EventSpec("onPicked", ("choice",), params=("choice",))},
         two_way={"value": TwoWaySpec("value", "onPicked", "choice", params=("choice",))},
     ),
-    "Tabs": ControlSpec(
+    "tabs": ControlSpec(
         "JkTabs",
         props={"options": PropSpec("options"), "value": PropSpec("value")},
         events={"change": EventSpec("onPicked", ("choice",), params=("choice",))},
         two_way={"value": TwoWaySpec("value", "onPicked", "choice", params=("choice",))},
     ),
-    "Image": ControlSpec(
+    "image": ControlSpec(
         "JkImage",
         props={"src": PropSpec("src", "string"), "fit": PropSpec("fit", "string"), "alt": PropSpec("alt", "string")},
         # Las rutas relativas se resuelven desde la carpeta del .janel (la del QML generado).
         fixed={"jkBase": 'Qt.resolvedUrl(".")'},
     ),
-    "Video": ControlSpec(
+    "video": ControlSpec(
         "JkVideo",
         props={"source": PropSpec("source"), "fit": PropSpec("fit", "string")},
+        events=dict(_VIDEO_EVENTS),
         container=True,  # los hijos van en una capa sobre la imagen
     ),
-    "ProgressBar": ControlSpec(
+    "progressbar": ControlSpec(
         "JkProgressBar",
         props={
             "value": PropSpec("value", "number"),
@@ -262,27 +283,26 @@ CONTROLS: dict[str, ControlSpec] = {
             "indeterminate": PropSpec("indeterminate", "bool"),
         },
     ),
-    "Shortcut": ControlSpec(
+    "shortcut": ControlSpec(
         "JkShortcut",
         props={"keys": PropSpec("keys", "string")},
         events={"activate": EventSpec("onActivated")},
     ),
-    "Pages": ControlSpec("JkPages"),  # stack={nav}: lo trata el compilador (como ref)
-    "Sections": ControlSpec("JkPages"),  # of={secciones}: una <Pages> por sección, dentro
-    "Spacer": ControlSpec("JkSpacer"),
+    "spacer": ControlSpec("JkSpacer"),
 }
 
 QML_IMPORTS = ("QtQuick", "QtQuick.Controls", "QtQuick.Layouts", "Janel")
 
-# Elementos base: se escriben en minúscula (los componentes y controles, en mayúscula).
+# Elementos del núcleo: se escriben en minúscula, como los de HTML. La mayúscula es para
+# los componentes importados.
 BASE_ELEMENTS = tuple(tag for tag in CONTROLS if tag[:1].islower())
 
-# Valores admitidos en los atributos de texto de los elementos base (se validan si son literales).
+# Valores admitidos en los atributos de texto de los elementos del núcleo (se validan si son literales).
 CHOICES: dict[tuple[str, str], tuple[str, ...]] = {
     ("flex", "direction"): ("row", "column", "row-reverse", "column-reverse"),
     ("flex", "align"): ("start", "center", "end", "stretch", "baseline"),
     ("flex", "justify"): ("start", "center", "end", "space-between", "space-around", "space-evenly"),
-    **{(tag, "as"): ROLES for tag in ("flex", "Column", "Row")},
+    **{(tag, "as"): ROLES for tag in ("flex", "column", "row")},
 }
 
 

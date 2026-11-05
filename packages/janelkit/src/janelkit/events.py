@@ -1,4 +1,4 @@
-"""Eventos de `<flex>` (on:pointerdown, on:keydown, on:wheel…): lo que recibe el manejador.
+"""Eventos de `<flex>` y `<video>` (on:pointerdown, on:keydown, on:wheel…): lo que recibe el manejador.
 
 Los nombres siguen a la web. Todos tienen `prevent()` (cancela lo que haría
 JanelKit o Qt con el evento: que Espacio active un botón, que la rueda desplace,
@@ -54,6 +54,11 @@ class PointerEvent(_Modifiers, _Event):
     buttons: tuple[str, ...] = ()  # pulsados ahora
     pointer: str = "mouse"  # "mouse", "touch", "pen" o "keyboard" (on:click con Espacio o Intro)
     clicks: int = 1
+    # Solo en los eventos de <video>: la posición en píxeles de la imagen (float; int() da el
+    # píxel). None si no hay fotograma o el puntero está fuera de la imagen (en las bandas de
+    # fit="contain"), y en los demás elementos.
+    image_x: float | None = None
+    image_y: float | None = None
 
 
 @dataclass

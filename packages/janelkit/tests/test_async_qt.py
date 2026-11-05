@@ -51,19 +51,19 @@ async def started():
     await asyncio.sleep(0)
     log.value.append("montado")
 </script>
-<Column>
-  <Button id="save" on:click={save}>{status}</Button>
-  <Button id="load" on:click={load.run("hola")}>cargar</Button>
-  <Button id="bad" on:click={load.run("mal")}>mal</Button>
-  <Button id="compute" on:click={compute()}>calcular</Button>
+<column>
+  <button id="save" on:click={save}>{status}</button>
+  <button id="load" on:click={load.run("hola")}>cargar</button>
+  <button id="bad" on:click={load.run("mal")}>mal</button>
+  <button id="compute" on:click={compute()}>calcular</button>
   {#if load.loading}
-    <Text>Cargando…</Text>
+    <text>Cargando…</text>
   {:else if load.error}
-    <Text>Error: {load.error}</Text>
+    <text>Error: {load.error}</text>
   {:else if load.value}
-    <Text>{", ".join(load.value)}</Text>
+    <text>{", ".join(load.value)}</text>
   {/if}
-</Column>
+</column>
 """
 
 
@@ -118,7 +118,7 @@ def test_unmount_cancels_pending_work(mount, janel_app):
 def test_errors_in_async_handlers_are_reported(mount, janel_app, caplog):
     m = mount(
         "<script>\nasync def boom():\n    raise RuntimeError('fallo async')\n</script>\n"
-        '<Button id="b" on:click={boom}>x</Button>'
+        '<button id="b" on:click={boom}>x</button>'
     )
     with caplog.at_level(logging.ERROR, logger="janelkit"):
         click(find(m, "b"))

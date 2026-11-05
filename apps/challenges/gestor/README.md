@@ -1,6 +1,6 @@
 # Reto 6: gestor de proyectos
 
-Gestor de proyectos para un equipo pequeño, todo local, hecho con la API pública de JanelKit a partir del tablero del reto 3 (Kanban). Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
+Gestor de proyectos para un equipo pequeño, todo local, hecho con la API pública de JanelKit a partir del tablero del reto 3 (Kanban). Es uno de los retos de `apps/challenges`, aplicaciones grandes que ponen a prueba el núcleo.
 
 ## Ejecutar
 
@@ -32,8 +32,6 @@ Tres **secciones** en la cabecera de la ventana (Ctrl+1, Ctrl+2, Ctrl+3), cada u
 - Las tarjetas guardan el **id** de su responsable: renombrar a una persona se ve al momento en todos los proyectos.
 - Un solo **historial de deshacer** para todo (Ctrl+Z, Ctrl+Y o los botones de la barra), que dice qué se desharía y en qué proyecto. Se guarda en JSON 300 ms después de cada ráfaga de cambios.
 
-Del plan del reto quedan sin hacer la pestaña Lista (tabla ordenable y editable), las etiquetas y columnas en Ajustes del proyecto, exportar, los ajustes generales y abrir un proyecto en otra ventana (ver [HALLAZGOS.md](HALLAZGOS.md#lo-que-queda-del-plan)).
-
 ## Archivos
 
 | Archivo | Contenido |
@@ -45,7 +43,7 @@ Del plan del reto quedan sin hacer la pestaña Lista (tabla ordenable y editable
 | `src/vistas/MiTrabajo.janel` | Las tarjetas de una persona en todos los proyectos. |
 | `src/components/Miembros.janel`, `AjustesProyecto.janel` | Las pestañas Miembros y Ajustes. |
 | `src/components/Columna.janel`, `Tarjeta.janel`, `Detalle.janel`, `MenuContextual.janel` | El tablero del reto 3, adaptado a etiquetas y miembros por proyecto. |
-| `src/services/datos.py` | Proyectos, personas, el historial común, el archivo, importar el reto 3 y los datos de ejemplo. |
+| `src/services/datos.py` | Proyectos, personas, el historial común, el archivo, importar el reto 3 y los datos de ejemplo. Es un store de `janelkit-store`: cada vista lo pide con `use(Datos)`. |
 | `src/services/tablero.py` | Las operaciones del tablero de un proyecto (con su inversa, sobre el historial común). |
 | `src/services/interfaz.py` | Estado de un proyecto abierto: detalle, menú, tarjeta que enfocar y filtro. |
 | `bench.py` | Mediciones. |

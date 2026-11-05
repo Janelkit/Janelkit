@@ -89,7 +89,7 @@ Rectangle {
     property int jkFlex: 0
     property string jkSelfAlign: ""
     property bool jkSelfStretch: false
-    // El tamaño viene de fuera aunque coincida con el natural (raíz de la ventana, fila de <List>).
+    // El tamaño viene de fuera aunque coincida con el natural (raíz de la ventana, fila de <list>).
     property bool jkSizedW: false
     property bool jkSizedH: false
     // Caja exterior de un componente (<Panel flex={1} />): su único hijo la ocupa entera.
@@ -160,7 +160,7 @@ Rectangle {
     }
     onClicked: if (jkOn && jkOn.click !== undefined) jkevents.click(box, jkClickX, jkClickY, jkClickButton)
 
-    // -- eventos y accesibilidad (fase 3 de docs/flex.md) ---------------------
+    // -- eventos y accesibilidad ---------------------
     // Eventos con propagación: {tipo: id del manejador} y el puente de la plantilla (events.py).
     property var jkOn: null
     property QtObject jkBridge: null

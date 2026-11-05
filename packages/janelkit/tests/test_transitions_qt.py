@@ -12,22 +12,22 @@ from janelkit import state
 show = state(True)
 label = state("hola")
 </script>
-<Column>
+<column>
   {#if show}
-    <Text id="t" transition:fade={100}>{label}</Text>
+    <text id="t" transition:fade={100}>{label}</text>
   {/if}
-</Column>
+</column>
 """
 
 EACH_APP = """<script>
 from janelkit import state
 items = state(["a", "b", "c"])
 </script>
-<Column>
+<column>
   {#each items as it (it)}
-    <Row id="row" out:slide={80}><Text>{it}</Text></Row>
+    <row id="row" out:slide={80}><text>{it}</text></row>
   {/each}
-</Column>
+</column>
 """
 
 
@@ -92,20 +92,20 @@ def test_unmounting_during_a_leave_is_safe(mount, janel_app):
 
 def test_transition_only_on_block_roots():
     with pytest.raises(JanelError, match="solo se aplican al elemento raíz"):
-        compile_source("<Column><Text transition:fade>x</Text></Column>")
+        compile_source("<column><text transition:fade>x</text></column>")
     with pytest.raises(JanelError, match="transición desconocida 'wobble'"):
-        compile_source("<script>\nx = True\n</script>\n<Column>{#if x}<Text transition:wobble>x</Text>{/if}</Column>")
+        compile_source("<script>\nx = True\n</script>\n<column>{#if x}<text transition:wobble>x</text>{/if}</column>")
     with pytest.raises(JanelError, match="duración en milisegundos"):
-        compile_source("<script>\nx = True\n</script>\n<Column>{#if x}<Text in:fade={'r'}>x</Text>{/if}</Column>")
+        compile_source("<script>\nx = True\n</script>\n<column>{#if x}<text in:fade={'r'}>x</text>{/if}</column>")
 
 
 def test_css_transition_generates_behaviors():
     qml = compile_source(
-        "<Column class=\"c\"><Text>x</Text></Column>\n<style>.c { background: #fff; transition: background 150ms, opacity .3s; }</style>"
+        "<column class=\"c\"><text>x</text></column>\n<style>.c { background: #fff; transition: background 150ms, opacity .3s; }</style>"
     ).qml
     assert "Behavior on jkBackground { ColorAnimation { duration: 150" in qml
     assert "Behavior on opacity { NumberAnimation { duration: 300" in qml
-    warnings = compile_source('<Text class="c">x</Text>\n<style>.c { transition: gap 1s; }</style>').warnings
+    warnings = compile_source('<text class="c">x</text>\n<style>.c { transition: gap 1s; }</style>').warnings
     assert any("transition no puede animar 'gap'" in w.message for w in warnings)  # aviso, no error
 
 
@@ -115,11 +115,11 @@ def test_animated_list_releases_rows_after_the_animation(mount, janel_app, caplo
 from janelkit import state
 items = state([{"id": i} for i in range(5)])
 </script>
-<Window width={300} height={300}>
-  <List id="list" animate>
-    {#each items as it (it["id"])}<Row><Text>fila {it["id"]}</Text></Row>{/each}
-  </List>
-</Window>"""
+<window width={300} height={300}>
+  <list id="list" animate>
+    {#each items as it (it["id"])}<row><text>fila {it["id"]}</text></row>{/each}
+  </list>
+</window>"""
     )
     region = m.instance.root.regions[0]
     assert region.slot.animated

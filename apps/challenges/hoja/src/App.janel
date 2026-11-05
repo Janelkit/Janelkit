@@ -1,5 +1,5 @@
 <script lang="python">
-# Reto 2: hoja de cálculo. Ver ../README.md y ../HALLAZGOS.md.
+# Reto 2: hoja de cálculo. Ver ../README.md.
 # HOJA_FILE: CSV que se abre al empezar. HOJA_DEMO=10000x26: datos generados (pruebas y
 # mediciones). Sin ninguno de los dos, una hoja vacía de 10 000 × 26.
 import os
@@ -147,21 +147,21 @@ def ordenar(descendente):
     hoja.ordenar(vista.cursor.peek()[1], descendente, desde=1 if congelar_fila.peek() else 0)
 </script>
 
-<Window title={titulo} width={1100} height={720} minWidth={560} minHeight={360}>
+<window title={titulo} width={1100} height={720} minWidth={560} minHeight={360}>
   <flex class="app">
     <flex class="barra">
-      <Button text="Abrir…" on:click={abrir} />
-      <Button text="Guardar" on:click={guardar} />
-      <Button text="Deshacer" enabled={historial.can_undo} label={f"Deshacer {historial.undo_label} (Ctrl+Z)"} on:click={hoja.deshacer()} />
-      <Button text="Rehacer" enabled={historial.can_redo} label={f"Rehacer {historial.redo_label} (Ctrl+Y)"} on:click={hoja.rehacer()} />
-      <Button text="Ordenar A→Z" on:click={ordenar(False)} />
-      <Button text="Ordenar Z→A" on:click={ordenar(True)} />
-      <Checkbox text="Congelar fila 1" bind:checked={congelar_fila} />
-      <Checkbox text="Congelar columna A" bind:checked={congelar_col} />
+      <button text="Abrir…" on:click={abrir} />
+      <button text="Guardar" on:click={guardar} />
+      <button text="Deshacer" enabled={historial.can_undo} label={f"Deshacer {historial.undo_label} (Ctrl+Z)"} on:click={hoja.deshacer()} />
+      <button text="Rehacer" enabled={historial.can_redo} label={f"Rehacer {historial.redo_label} (Ctrl+Y)"} on:click={hoja.rehacer()} />
+      <button text="Ordenar A→Z" on:click={ordenar(False)} />
+      <button text="Ordenar Z→A" on:click={ordenar(True)} />
+      <checkbox text="Congelar fila 1" bind:checked={congelar_fila} />
+      <checkbox text="Congelar columna A" bind:checked={congelar_col} />
     </flex>
     <flex class="formula">
-      <Text class="activa">{vista.nombre_activa()}</Text>
-      <TextField class="contenido" value={escrito_activa} on:submit={escribir_barra} label="Contenido de la celda" />
+      <text class="activa">{vista.nombre_activa()}</text>
+      <textfield class="contenido" value={escrito_activa} on:submit={escribir_barra} label="Contenido de la celda" />
     </flex>
     <flex class="rejilla" tabindex={0} ref={rejilla} label="Hoja" on:keydown={tecla} on:wheel={rueda} on:resize={medir}>
       <flex class="cabecera">
@@ -169,26 +169,26 @@ def ordenar(descendente):
         {#each cols as c (c)}
           <flex class="col" class:activa={vista.rango.value[1] <= c <= vista.rango.value[3]}
                 on:pointerdown={vista.seleccionar_columna(c, event.shift)}>
-            <Text>{nombre_col(c)}</Text>
+            <text>{nombre_col(c)}</text>
           </flex>
         {/each}
       </flex>
       {#if congelar_fila}
         <flex class="congelada"><Fila f={0} /></flex>
       {/if}
-      <List class="filas" ref={lista}>
+      <list class="filas" ref={lista}>
         {#each filas as f (f)}
           <Fila f={f} />
         {/each}
-      </List>
+      </list>
     </flex>
     <flex class="estado">
-      <Text>{resumen}</Text>
-      <Spacer />
-      <Text class="ayuda">Mayús+rueda: columnas · F2: editar · Ctrl+Z / Ctrl+Y</Text>
+      <text>{resumen}</text>
+      <spacer />
+      <text class="ayuda">Mayús+rueda: columnas · F2: editar · Ctrl+Z / Ctrl+Y</text>
     </flex>
   </flex>
-</Window>
+</window>
 
 <style>
 .app { direction: column; flex: 1; background: var(--bg); }

@@ -1,4 +1,4 @@
-"""Texto seleccionable (<Text selectable>, user-select: text): seleccionar con ratón y teclado y copiar."""
+"""Texto seleccionable (<text selectable>, user-select: text): seleccionar con ratón y teclado y copiar."""
 import tempfile
 from pathlib import Path
 
@@ -34,14 +34,14 @@ def test_selectable_text_selects_with_mouse_and_keyboard_and_copies(app_from):
 from janelkit import state
 sel = state(True)
 </script>
-<Column>
-  <Text id="a" selectable={sel}>Pedido 4815 enviado</Text>
-  <Text id="b" class="libre">Referencia ABC-123</Text>
-  <Text id="c">Texto normal</Text>
-  <Button text="fijo" on:click={sel = False} />
-</Column>
+<column>
+  <text id="a" selectable={sel}>Pedido 4815 enviado</text>
+  <text id="b" class="libre">Referencia ABC-123</text>
+  <text id="c">Texto normal</text>
+  <button text="fijo" on:click={sel = False} />
+</column>
 <style>.libre { user-select: text; }</style>""")
-    a, b, c = (app.find("Text", id=i).item for i in "abc")
+    a, b, c = (app.find("text", id=i).item for i in "abc")
     edit = a.property("jkSelect")
     assert edit is not None and b.property("jkSelect") is not None
     assert c.property("jkSelect") is None  # un texto normal no paga nada
@@ -67,7 +67,7 @@ sel = state(True)
     app.wait(0.02)
     assert QGuiApplication.clipboard().text() == "Referencia ABC-123"
 
-    app.find("Button").click()  # selectable pasa a False: vuelve a ser un texto normal
+    app.find("button").click()  # selectable pasa a False: vuelve a ser un texto normal
     assert edit.property("visible") is False and a.property("color").alpha() == 255
 
 
@@ -75,8 +75,8 @@ def test_selectable_markdown_keeps_links(app_from):
     app = app_from("""<script>
 links = []
 </script>
-<Column><Text selectable format="markdown" on:link={links.append}>Ver [el pedido](https://ejemplo.com/p/1)</Text></Column>""")
-    label = app.find("Text").item
+<column><text selectable format="markdown" on:link={links.append}>Ver [el pedido](https://ejemplo.com/p/1)</text></column>""")
+    label = app.find("text").item
     edit = label.property("jkSelect")
     assert "el pedido" in edit.property("text")
     edit.linkActivated.emit("https://ejemplo.com/p/1")
@@ -85,12 +85,12 @@ links = []
 
 
 def test_selectable_with_line_height_copies_plain_text(app_from):
-    app = app_from("""<Column><Text selectable class="lh">{"uno & <dos>" + chr(10) + "tres"}</Text></Column>
+    app = app_from("""<column><text selectable class="lh">{"uno & <dos>" + chr(10) + "tres"}</text></column>
 <style>.lh { line-height: 1.6; }</style>""")
-    label = app.find("Text").item
+    label = app.find("text").item
     edit = label.property("jkSelect")
     # El interlineado se aplica a la copia: la segunda línea empieza a 1,6 líneas. (Que cuadre
-    # al píxel con el <Text> se comprobó con fuentes reales; sin ventana, la fuente de reserva
+    # al píxel con el <text> se comprobó con fuentes reales; sin ventana, la fuente de reserva
     # mide distinto en Text y TextEdit también sin line-height.)
     from PySide6.QtCore import Q_ARG, Q_RETURN_ARG, QMetaObject, QRectF
 
@@ -107,8 +107,8 @@ def test_click_on_selectable_text_still_presses_its_row_but_dragging_selects(app
     app = app_from("""<script>
 log = []
 </script>
-<Column><flex as="button" label="fila" on:click={log.append("clic")}><Text selectable>Texto dentro de la fila</Text></flex></Column>""")
-    label = app.find("Text").item
+<column><flex as="button" label="fila" on:click={log.append("clic")}><text selectable>Texto dentro de la fila</text></flex></column>""")
+    label = app.find("text").item
     at = lambda x: label.mapToScene(QPointF(x, label.height() / 2)).toPoint()  # noqa: E731
     QTest.mouseClick(app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, at(20))
     app.wait(0.02)
@@ -122,7 +122,7 @@ log = []
 
 
 def test_selectable_with_ellipsis_is_clipped(app_from):
-    app = app_from("""<Column><Text selectable class="e">Un texto muy largo que no cabe en una sola línea de esta ventana estrecha</Text></Column>
+    app = app_from("""<column><text selectable class="e">Un texto muy largo que no cabe en una sola línea de esta ventana estrecha</text></column>
 <style>.e { white-space: nowrap; text-overflow: ellipsis; }</style>""")
-    edit = app.find("Text").item.property("jkSelect")
+    edit = app.find("text").item.property("jkSelect")
     assert edit.property("clip") is True

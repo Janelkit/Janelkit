@@ -1,4 +1,4 @@
-"""Fotogramas a tiempo real: `Frames` y el elemento `<Video>`.
+"""Fotogramas a tiempo real: `Frames` y el elemento `<video>`.
 
     frames = Frames(color="bgr")          # el orden de OpenCV; por defecto "rgb"
 
@@ -11,12 +11,14 @@
         async for img in frames:          # el más reciente; se saltan los que no dio tiempo
             detecciones.value = await background(modelo, img)
 
-    <Video source={frames} />
+    <video source={frames} />
 
 Los fotogramas no pasan por la reactividad: `push()` (desde cualquier hilo)
-convierte la imagen a un `QVideoFrame` en el hilo que llama y avisa al de la
-interfaz, que entrega a cada `<Video>` el más reciente. Si llegan más deprisa de
-lo que se entregan, se saltan: nunca se encolan. Lo reactivo es `size` y `fps`.
+copia y convierte la imagen a un `QImage` listo para subir a la GPU en el hilo que
+llama y avisa al de la interfaz, que entrega a cada `<video>` el más reciente
+(qt_backend/video_surface.py, sin QtMultimedia). Si llegan más deprisa de
+lo que se entregan, se saltan: nunca se encolan. Lo reactivo es `size`, `fps` y
+`stalled` (la fuente dejó de entregar).
 
 Sin numpy como dependencia: la imagen se lee con `memoryview` (alto × ancho de
 bytes en gris, × 3 o × 4 con color).
@@ -30,7 +32,6 @@ from typing import Any
 
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from PySide6.QtGui import QImage
-from PySide6.QtMultimedia import QVideoFrame
 
 from .reactivity import State, batch
 from .reactivity.effects import check_thread
@@ -44,8 +45,8 @@ _FORMATS = {
 _CHANNELS = {"rgb": 3, "bgr": 3, "rgba": 4, "bgra": 4}
 
 
-def _to_frame(image: Any, color: str) -> QVideoFrame:
-    """Copia `image` a un `QVideoFrame` en un formato que Qt muestra sin convertir."""
+def _to_frame(image: Any, color: str) -> tuple[QImage, bool]:
+    """Copia `image` a un `QImage` que Qt Quick sube a la GPU sin convertir; y si es opaca."""
     if isinstance(image, QImage):
         qimage = image
     else:
@@ -66,15 +67,17 @@ def _to_frame(image: Any, color: str) -> QVideoFrame:
         if not view.c_contiguous:  # p. ej. un recorte de un array de numpy
             view = memoryview(view.tobytes()).cast("B", view.shape)
         qimage = QImage(view, width, height, width * channels, fmt)
-    has_alpha = qimage.hasAlphaChannel()
+    opaque = not qimage.hasAlphaChannel()
+    # RGBA premultiplicado es el formato en que Qt Quick sube las texturas: convertir aquí, en el
+    # hilo que llama, evita que lo haga el de la interfaz (unos 3 ms por fotograma de 1080p).
     # convertToFormat copia (también cuando el formato ya es el bueno): el búfer se puede reutilizar.
-    target = QImage.Format.Format_RGBA8888 if has_alpha else QImage.Format.Format_RGBX8888
+    target = QImage.Format.Format_RGBA8888_Premultiplied
     qimage = qimage.convertToFormat(target) if qimage.format() != target else qimage.copy()
-    return QVideoFrame(qimage)
+    return qimage, opaque
 
 
 class _Hub(QObject):
-    """La parte Qt de un `Frames`: vive en el hilo de la interfaz y entrega a los `<Video>`."""
+    """La parte Qt de un `Frames`: vive en el hilo de la interfaz y entrega a los `<video>`."""
 
     _ready = Signal()
 
@@ -83,18 +86,19 @@ class _Hub(QObject):
         self._frames = frames
         self._sinks: list[QObject] = []
         self._ready.connect(self._deliver)  # desde otro hilo llega en cola; desde este, al momento
+        # Sin fotogramas durante `stall_after`: `stalled` y `fps` a 0 (se reinicia con cada uno).
         self._idle = QTimer(self)
         self._idle.setSingleShot(True)
-        self._idle.setInterval(1500)
-        self._idle.timeout.connect(frames._stalled)
+        self._idle.setInterval(max(1, round(frames._stall_after * 1000)))
+        self._idle.timeout.connect(frames._on_idle)
 
     @Slot(QObject)
     def attach(self, sink: QObject) -> None:
+        """Engancha una superficie de `<video>` (JkVideoSurface) y le da el último fotograma."""
         if sink is not None and sink not in self._sinks:
             self._sinks.append(sink)
-            frame = self._frames._shown
-            if frame is not None:
-                sink.setVideoFrame(frame)
+            if self._frames._shown is not None:
+                sink.setImage(*self._frames._shown)
 
     @Slot(QObject)
     def detach(self, sink: QObject) -> None:
@@ -105,44 +109,49 @@ class _Hub(QObject):
     def _deliver(self) -> None:
         self._frames._deliver()
 
-    def show(self, frame: QVideoFrame) -> None:
+    def show(self, frame: QImage, opaque: bool = True) -> None:
         for sink in list(self._sinks):
             try:
-                sink.setVideoFrame(frame)
+                sink.setImage(frame, opaque)
             except RuntimeError:  # la vista ya no existe
                 self._sinks.remove(sink)
 
 
 class Frames:
-    """Canal del último fotograma, para mostrarlo con `<Video source=…>` y procesarlo.
+    """Canal del último fotograma, para mostrarlo con `<video source=…>` y procesarlo.
 
     - `push(imagen)` desde cualquier hilo. Copia la imagen.
     - `async for imagen in frames` o `await frames.next()`: el más reciente que llegue
       (el objeto que se pasó a `push`).
-    - `size` (`(ancho, alto)` o `None`) y `fps` son reactivos.
+    - `size` (`(ancho, alto)` o `None`), `fps` y `stalled` son reactivos. `stalled` es
+      `True` si pasaron más de `stall_after` segundos sin fotogramas.
     """
 
-    def __init__(self, color: str = "rgb"):
+    def __init__(self, color: str = "rgb", stall_after: float = 1.5):
         if color not in _FORMATS:
             raise ValueError(f"Frames: color debe ser uno de {', '.join(_FORMATS)}, no {color!r}")
+        if isinstance(stall_after, bool) or not isinstance(stall_after, (int, float)) or not stall_after > 0:
+            raise ValueError(f"Frames: stall_after debe ser un número de segundos mayor que 0, no {stall_after!r}")
         check_thread()
+        self._stall_after = float(stall_after)
         self.color = color
         self._lock = threading.Lock()
-        self._pending: tuple[Any, QVideoFrame] | None = None
+        self._pending: tuple[Any, tuple[QImage, bool]] | None = None
         self._latest: Any = None
-        self._shown: QVideoFrame | None = None
+        self._shown: tuple[QImage, bool] | None = None  # (fotograma, opaco)
         self._shown_image: Any = None  # el objeto que se pasó a push() con el fotograma mostrado
         self._seq = 0
         self._waiters: list[asyncio.Future] = []
         self._size: State[tuple[int, int] | None] = State(None)
         self._fps: State[float] = State(0.0)
+        self._stalled: State[bool] = State(False)
         self._count = 0
         self._since = time.perf_counter()
         self._hub = _Hub(self)
 
     # -- desde cualquier hilo -------------------------------------------------------
     def push(self, image: Any) -> None:
-        """Muestra `image` en los `<Video>` y la entrega a quien espera. Desde cualquier hilo."""
+        """Muestra `image` en los `<video>` y la entrega a quien espera. Desde cualquier hilo."""
         frame = _to_frame(image, self.color)
         with self._lock:
             idle = self._pending is None
@@ -165,34 +174,43 @@ class Frames:
         image, frame = pending
         self._seq += 1
         self._shown, self._shown_image = frame, image
-        self._hub.show(frame)
+        self._hub.show(*frame)
         self._count += 1
         now = time.perf_counter()
         with batch():
-            size = frame.size()
+            size = frame[0].size()
             self._size.value = (size.width(), size.height())
             if now - self._since >= 1.0:
                 self._fps.value = round(self._count / (now - self._since), 1)
                 self._count, self._since = 0, now
+            self._stalled.value = False
         self._hub._idle.start()
         waiters, self._waiters = self._waiters, []
         for future in waiters:
             if not future.done():
                 future.set_result(image)
 
-    def _stalled(self) -> None:
-        self._fps.value = 0.0
+    def _on_idle(self) -> None:
+        """Pasó `stall_after` sin fotogramas."""
+        with batch():
+            self._fps.value = 0.0
+            self._stalled.value = True
         self._count, self._since = 0, time.perf_counter()
 
     def clear(self) -> None:
-        """Deja de mostrar el último fotograma."""
+        """Deja de mostrar el último fotograma: `size` vuelve a `None`, `fps` a 0 y `stalled` a `False`."""
         check_thread()
         with self._lock:
             self._pending = None
             self._latest = None
         self._shown = self._shown_image = None
-        self._hub.show(QVideoFrame())
-        self._size.value = None
+        self._hub._idle.stop()  # sin fotograma no hay fuente que vigilar hasta el próximo push
+        self._hub.show(QImage())
+        with batch():
+            self._size.value = None
+            self._fps.value = 0.0
+            self._stalled.value = False
+        self._count, self._since = 0, time.perf_counter()
 
     def next(self) -> "asyncio.Future[Any]":
         """`await frames.next()`: el próximo fotograma que llegue."""
@@ -210,14 +228,20 @@ class Frames:
 
     @property
     def fps(self) -> float:
-        """Fotogramas por segundo recibidos (se actualiza cada segundo; 0 si dejan de llegar). Reactivo."""
+        """Fotogramas por segundo recibidos (se actualiza cada segundo; 0 tras `stall_after` sin fotogramas). Reactivo."""
         return self._fps.value
+
+    @property
+    def stalled(self) -> bool:
+        """`True` si pasaron más de `stall_after` segundos sin fotogramas; vuelve a `False` con el
+        siguiente. Antes del primero es `False` (para saber si ya llegó alguno, `size is None`). Reactivo."""
+        return self._stalled.value
 
     def __jk_qml__(self) -> QObject:
         return self._hub
 
     def __repr__(self) -> str:
-        return f"Frames(color={self.color!r}, size={self._size.peek()})"
+        return f"Frames(color={self.color!r}, size={self._size.peek()}, stalled={self._stalled.peek()})"
 
 
 class _Iterator:

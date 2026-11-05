@@ -5,7 +5,7 @@
 [![CI](https://github.com/janelkit/janelkit/actions/workflows/ci.yml/badge.svg)](https://github.com/janelkit/janelkit/actions/workflows/ci.yml)
 [![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue)](LICENSE)
 
-> **Alfa (0.1).** Lo público está documentado y protegido por pruebas ([api.md](docs/api.md)); en la serie 0.x una versión menor puede romperlo, siempre con notas de migración ([cambios.md](docs/cambios.md)).
+> **Alfa (0.2).** Lo público está documentado y protegido por pruebas ([api.md](docs/api.md)). Cada serie (0.1, 0.2…) es un cambio de paradigma que puede romperlo, siempre con notas de migración ([cambios.md](docs/cambios.md)).
 
 Componentes de archivo único (`.janel`) para aplicaciones de escritorio: **Python** para la lógica, una plantilla declarativa reactiva y **Qt Quick** (PySide6) para el renderizado. Sin JavaScript ni QML escrito a mano.
 
@@ -29,20 +29,20 @@ def remove(todo_id):
     todos.value = [t for t in todos.value if t["id"] != todo_id]
 </script>
 
-<Window title="Tareas" width={480} height={400}>
-  <Column class="page">
-    <Text class="title">{pending} pendientes</Text>
-    <Row class="new">
-      <TextField bind:value={draft} on:submit={add} placeholder="Nueva tarea" flex={1} />
-      <Button variant="primary" on:click={add}>Añadir</Button>
-    </Row>
+<window title="Tareas" width={480} height={400}>
+  <column class="page">
+    <text class="title">{pending} pendientes</text>
+    <row class="new">
+      <textfield bind:value={draft} on:submit={add} placeholder="Nueva tarea" flex={1} />
+      <button variant="primary" on:click={add}>Añadir</button>
+    </row>
     {#each todos as todo (todo["id"])}
       <TodoItem todo={todo} on:removed={remove} />
     {:else}
-      <Text>No hay tareas.</Text>
+      <text>No hay tareas.</text>
     {/each}
-  </Column>
-</Window>
+  </column>
+</window>
 
 <style>
 .page { padding: 24px; gap: 12px; }
@@ -69,27 +69,52 @@ python main.py
 - **Diagnósticos:** errores con archivo, línea, columna y sugerencias («¿quisiste decir…?»), también para errores de Qt y de ejecución.
 - **Herramientas:** `janel new`, `janel dev` (recarga al guardar), `janel build`, `janel compile`, `janel parse`.
 
+## Qué instalar
+
+`pip install janelkit` es todo lo necesario para una aplicación de una pantalla. Lo demás se añade cuando hace falta:
+
+| Necesitas | Instala | Usa |
+|---|---|---|
+| Una aplicación: estado, plantilla, componentes, estilos, controles, ventanas, tareas | `janelkit` | `state`, `computed`, `<text>`, `<button>`, `open_window`… |
+| Varias pantallas: pilas de páginas, barra lateral con secciones | `janelkit-router` | `pages`, `<Pages>`, `sections`, `<Sections>` |
+| Datos que comparten varias vistas o ventanas; recordar entre sesiones | `janelkit-store` | `@store`, `use`, `persisted` |
+| Diálogos de archivos y del sistema, portapapeles | `janelkit-desktop` | `dialogs`, `clipboard` |
+| Traducciones | `janelkit-i18n` | `t`, `i18n` |
+
+## Por dónde empezar
+
+| Nivel | Qué | Dónde |
+|---|---|---|
+| 1 | Estado, plantilla, elementos (`<text>`, `<button>`…), componentes, estilos | [tutorial](docs/tutorial.md), [lenguaje.md](docs/lenguaje.md), [estilos.md](docs/estilos.md) |
+| 2 | Asincronía, temporizadores, ciclo de vida, varias ventanas, pruebas | [lenguaje.md](docs/lenguaje.md#trabajo-asíncrono), [desarrollo.md](docs/desarrollo.md) |
+| 3 | Paquetes: navegación, datos compartidos, sistema, traducciones | [router](packages/janelkit-router/README.md), [store](packages/janelkit-store/README.md), [desktop](packages/janelkit-desktop/README.md), [i18n](packages/janelkit-i18n/README.md) |
+| 4 | Extender JanelKit: elementos en QML, paquetes propios | [lenguaje.md](docs/lenguaje.md#elementos-propios-en-qml), [arquitectura.md](docs/arquitectura.md) |
+
+Una regla para leer cualquier plantilla: **en minúscula, lo que da JanelKit** (`<text>`, `<button>`, `<column>`, como en HTML); **en mayúscula, un componente importado** (`<TodoItem>`, `<Pages>`).
+
 ## Organización del repositorio
 
 Un solo repositorio con el núcleo y los paquetes del ecosistema, que se publican por separado:
 
 | Carpeta | Paquete | Qué es |
 |---|---|---|
-| [`packages/janelkit`](packages/janelkit/README.md) | `janelkit` | El núcleo: lenguaje `.janel`, compilador, reactividad, runtime, disposición, controles, ventanas, navegación, temas, tareas, `persisted`, `janelkit.inspect` y el comando `janel`. |
+| [`packages/janelkit`](packages/janelkit/README.md) | `janelkit` | El núcleo: lenguaje `.janel`, compilador, reactividad, runtime, disposición, controles, ventanas, temas, tareas, `janelkit.inspect` y el comando `janel`. |
+| [`packages/janelkit-router`](packages/janelkit-router/README.md) | `janelkit-router` | Navegación entre pantallas: pilas de páginas y secciones (`pages`, `sections`, `<Pages>`, `<Sections>`). |
+| [`packages/janelkit-store`](packages/janelkit-store/README.md) | `janelkit-store` | Datos compartidos: stores con acciones, escritura controlada y seguimiento de cambios, una instancia por aplicación; `persisted`. |
 | [`packages/janelkit-i18n`](packages/janelkit-i18n/README.md) | `janelkit-i18n` | Traducciones (`t`, `i18n`): catálogos, plurales y formatos según el idioma. |
-| [`packages/janelkit-desktop`](packages/janelkit-desktop/README.md) | `janelkit-desktop` | Diálogos nativos, portapapeles y notificaciones (`dialogs`, `clipboard`, `notify`). |
+| [`packages/janelkit-desktop`](packages/janelkit-desktop/README.md) | `janelkit-desktop` | Servicios del sistema: diálogos nativos (archivos, carpeta, mensaje, confirmación) y portapapeles (`dialogs`, `clipboard`). |
 | [`packages/janelkit-vscode`](packages/janelkit-vscode/README.md) | — | Resaltado de `.janel` para VS Code. |
 | `apps/examples` | — | Ejemplos pequeños, uno por tema. |
 | `apps/challenges` | — | Aplicaciones grandes que ponen a prueba el framework (chat, gestor, kanban, panel). |
 
-Las extensiones solo usan la API pública del núcleo (`tests/test_boundaries.py` lo comprueba), y el núcleo no las importa. Qué va en cada sitio: [docs/alcance.md](docs/alcance.md).
+Las extensiones solo usan la API pública del núcleo (`tests/test_boundaries.py` lo comprueba), y el núcleo no las importa. Qué va en cada sitio: [docs/arquitectura.md](docs/arquitectura.md#qué-va-en-el-núcleo).
 
 ## Desde el repositorio
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate          # Windows  (Linux/macOS: source .venv/bin/activate)
-python -m pip install -r requirements-dev.txt   # los tres paquetes editables y las herramientas, con versiones probadas
+python -m pip install -r requirements-dev.txt   # los paquetes editables y las herramientas, con versiones probadas
 python -m pytest                                # toda la suite; o un paquete: python -m pytest packages/janelkit
 
 janel new mi-app
@@ -108,13 +133,16 @@ Ejemplos incluidos (cada uno se ejecuta con `python apps/examples/<nombre>/main.
 | `books` | búsqueda en una API real sin bloquear la ventana: `@task`, `background`, cargando y errores |
 | `compra` | la aplicación del [tutorial](docs/tutorial.md): componentes, slot, guardado en segundo plano y pruebas |
 | `idiomas` | cambio de idioma en caliente, plurales, formatos según el idioma y árabe (derecha a izquierda), con `janelkit-i18n` |
-| `files` | explorador de archivos: `<List>` virtualizada, slots, `provide`/`inject`, `ref`, atajos, diálogos (`janelkit-desktop`) y vista previa en segundo plano |
+| `files` | explorador de archivos: `<list>` virtualizada, slots, `provide`/`inject`, `ref`, atajos, diálogos (`janelkit-desktop`) y vista previa en segundo plano |
+| `preferencias` | lo que se recuerda al cerrar: `persisted` (`janelkit-store`) |
+| `carrito` | datos compartidos por dos ventanas: un store estricto, `use()` y el registro de cambios (`janelkit-store`) |
 
 ## Comandos
 
 | Comando | Qué hace |
 |---|---|
 | `janel new <nombre> [--path DIR]` | Crea un proyecto con `main.py` y `src/App.janel`. No sobrescribe carpetas con contenido. |
+| `janel migrate [carpeta] [--write]` | Actualiza un proyecto a esta versión (ver [cambios.md](docs/cambios.md)). |
 | `python main.py` | Forma canónica de ejecutar una aplicación. |
 | `janel dev [carpeta]` | Ejecuta la app y la recarga al guardar (`.janel`) o la reinicia (`.py`). |
 | `janel build [carpeta]` | Valida todos los componentes y guarda el QML generado en `build/qml`. No crea ejecutables. |
@@ -139,14 +167,10 @@ Las expresiones de la plantilla se evalúan en **Python**; cuando cambia un `sta
 - [docs/lenguaje.md](docs/lenguaje.md) — formato `.janel`, expresiones, bloques, componentes y elementos.
 - [docs/estilos.md](docs/estilos.md) — CSS soportado, disposición (flex), tokens y temas.
 - [docs/patrones.md](docs/patrones.md) — patrones para aplicaciones en tiempo real (visión, adquisición de datos): el ciclo con `background`, el estado tras un `await`, qué avisa al modificarse.
-- [docs/desarrollo.md](docs/desarrollo.md) — `janel dev`, `janel build`, errores y editor.
+- [docs/desarrollo.md](docs/desarrollo.md) — `janel dev`, `janel build`, errores, pruebas y crear un ejecutable.
 - [docs/api.md](docs/api.md) — qué es API pública y política de versiones.
 - [docs/cambios.md](docs/cambios.md) — cambios entre versiones y cómo migrar.
-- [docs/empaquetado.md](docs/empaquetado.md) — crear un ejecutable con PyInstaller.
-- [docs/estado.md](docs/estado.md) — avance frente al plan, decisiones provisionales, rendimiento y limitaciones.
-- [docs/alcance.md](docs/alcance.md) — qué es del núcleo, qué es del ecosistema y con qué criterio.
-- [docs/lanzamiento.md](docs/lanzamiento.md) — pendientes priorizados antes de la primera versión pública.
-- [spikes/qt_bridge_counter/NOTES.md](spikes/qt_bridge_counter/NOTES.md) — validación técnica del puente Python ↔ Qt Quick.
+- [docs/arquitectura.md](docs/arquitectura.md) — para trabajar en JanelKit: qué va en el núcleo, capas, de un `.janel` a la pantalla, versiones y rendimiento.
 
 ## Desarrollo de JanelKit
 
@@ -157,7 +181,7 @@ git config core.hooksPath .githooks   # una vez: comprueba el prefijo de cada co
 python tools/versioning.py plan       # qué versión tocaría publicar y por qué
 ```
 
-Cada commit empieza por `mayor:`, `menor:`, `interno:` o `docs:`: de ahí sale la versión de cada paquete, que calcula y publica la CI ([política de versiones](docs/api.md#cómo-se-calcula-la-versión)).
+Cada commit empieza por `mayor:`, `menor:`, `interno:` o `docs:`: de ahí salen los dos últimos números de la versión de cada paquete (0.2.**#**.**#**), que calcula y publica la CI. La serie (0.**#**.0.0) es la misma para todos los paquetes y se cambia a mano con `python tools/versioning.py series` ([cómo se calcula](docs/arquitectura.md#versiones-y-publicación)).
 
 ## Licencia
 

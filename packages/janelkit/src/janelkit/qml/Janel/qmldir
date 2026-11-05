@@ -20,7 +20,8 @@ JkProgressBar 1.0 JkProgressBar.qml
 JkShortcut 1.0 JkShortcut.qml
 JkList 1.0 JkList.qml
 JkTransition 1.0 JkTransition.qml
-JkPages 1.0 JkPages.qml
+JkDeck 1.0 JkDeck.qml
+JkHost 1.0 JkHost.qml
 Jk 1.0 jk.js
 JkBox 1.0 JkBox.qml
 JkFlex 1.0 JkFlex.qml

@@ -1,32 +1,16 @@
 <script lang="python">
-# Reto 6: gestor de proyectos. Ver ../README.md y ../HALLAZGOS.md.
-# GESTOR_FILE: archivo JSON de los datos (por defecto, datos.json junto a la app; si no
-# existe, se crean datos de ejemplo y se importa el tablero.json del reto 3).
-# GESTOR_DEMO=10x4x50x300: proyectos × columnas × tarjetas por columna × personas, sin
-# archivo (pruebas y mediciones).
-import json
-import os
-from pathlib import Path
-
-from janelkit import provide, sections
+# Reto 6: gestor de proyectos. Ver ../README.md.
+# Los datos (GESTOR_FILE, GESTOR_DEMO) los carga el store: ver services/datos.py.
+from janelkit import provide
+from janelkit_router import sections, Sections
+from janelkit_store import use
 from vistas.MiTrabajo import MiTrabajo
 from vistas.Personas import Personas
 from vistas.Proyecto import Proyecto
 from vistas.Proyectos import Proyectos
-from services.datos import Datos, ejemplo, importar_kanban
+from services.datos import Datos
 
-if os.environ.get("GESTOR_DEMO"):
-    p, c, t, g = (int(n) for n in os.environ["GESTOR_DEMO"].split("x"))
-    datos = Datos(None, ejemplo(p, c, t, g))
-else:
-    archivo = Path(os.environ.get("GESTOR_FILE", Path(__file__).parent.parent / "datos.json"))
-    inicial = None
-    kanban = Path(__file__).parent.parent.parent / "kanban" / "tablero.json"
-    if not archivo.exists() and kanban.exists():
-        inicial = ejemplo()
-        inicial["proyectos"].insert(0, importar_kanban(json.loads(kanban.read_text(encoding="utf-8")),
-                                                        inicial["personas"], pid="p0", nombre="Tablero del reto 3"))
-    datos = Datos(archivo, inicial)
+datos = use(Datos)  # la misma instancia en todas las vistas: no hace falta provide
 
 secciones = sections(proyectos=Proyectos, personas=Personas, trabajo=MiTrabajo)
 historial = datos.historial
@@ -46,40 +30,39 @@ async def abrir_tarjeta(pid, tid):
         nav.push(Proyecto, ident=pid, enfocar=tid)
 
 
-provide("datos", datos)
 provide("secciones", secciones)
 provide("abrir_tarjeta", abrir_tarjeta)
 </script>
 
-<Window title="Gestor de proyectos" width={1280} height={800} minWidth={760} minHeight={480}>
-  <Shortcut keys="Ctrl+Z" on:activate={historial.deshacer()} />
-  <Shortcut keys="Ctrl+Y" on:activate={historial.rehacer()} />
-  <Shortcut keys="Ctrl+Shift+Z" on:activate={historial.rehacer()} />
-  <Shortcut keys="Ctrl+1" on:activate={secciones.show("proyectos")} />
-  <Shortcut keys="Ctrl+2" on:activate={secciones.show("personas")} />
-  <Shortcut keys="Ctrl+3" on:activate={secciones.show("trabajo")} />
+<window title="Gestor de proyectos" width={1280} height={800} minWidth={760} minHeight={480}>
+  <shortcut keys="Ctrl+Z" on:activate={historial.deshacer()} />
+  <shortcut keys="Ctrl+Y" on:activate={historial.rehacer()} />
+  <shortcut keys="Ctrl+Shift+Z" on:activate={historial.rehacer()} />
+  <shortcut keys="Ctrl+1" on:activate={secciones.show("proyectos")} />
+  <shortcut keys="Ctrl+2" on:activate={secciones.show("personas")} />
+  <shortcut keys="Ctrl+3" on:activate={secciones.show("trabajo")} />
   <flex class="app">
     <flex as="region" class="cabecera" label="Secciones">
       <flex class="marca">
-        <flex class="logo"><Text>G</Text></flex>
-        <Text class="nombre">Gestor</Text>
+        <flex class="logo"><text>G</text></flex>
+        <text class="nombre">Gestor</text>
       </flex>
       <flex class="secciones">
         {#each SECCIONES as s, i (s[0])}
           <flex as="button" class="seccion" class:activa={secciones.current == s[0]} label={s[1]}
                 title={f"{s[1]} (Ctrl+{i + 1})"} on:click={secciones.show(s[0])}>
-            <Text>{s[1]}</Text>
+            <text>{s[1]}</text>
           </flex>
         {/each}
       </flex>
-      <Spacer />
-      {#if deshacer}<Text class="ultimo">{f"Último cambio: {deshacer}"}</Text>{/if}
-      <Button text="Deshacer" variant="ghost" enabled={bool(deshacer)} label={f"Deshacer: {deshacer} (Ctrl+Z)"} on:click={historial.deshacer()} />
-      <Button text="Rehacer" variant="ghost" enabled={bool(rehacer)} label={f"Rehacer: {rehacer} (Ctrl+Y)"} on:click={historial.rehacer()} />
+      <spacer />
+      {#if deshacer}<text class="ultimo">{f"Último cambio: {deshacer}"}</text>{/if}
+      <button text="Deshacer" variant="ghost" enabled={bool(deshacer)} label={f"Deshacer: {deshacer} (Ctrl+Z)"} on:click={historial.deshacer()} />
+      <button text="Rehacer" variant="ghost" enabled={bool(rehacer)} label={f"Rehacer: {rehacer} (Ctrl+Y)"} on:click={historial.rehacer()} />
     </flex>
     <Sections of={secciones} transition:fade={120} />
   </flex>
-</Window>
+</window>
 
 <style>
 .app { flex: 1; direction: column; background: var(--bg); }

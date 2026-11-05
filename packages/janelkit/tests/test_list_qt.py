@@ -1,4 +1,4 @@
-"""<List>: lista virtualizada. Solo se crean (en Python y en Qt) las filas visibles."""
+"""<list>: lista virtualizada. Solo se crean (en Python y en Qt) las filas visibles."""
 import time
 
 import pytest
@@ -13,16 +13,16 @@ from janelkit import state
 items = state([{"id": i, "t": f"fila {i}", "done": False} for i in range(%d)])
 removed = state([])
 </script>
-<Window width={300} height={200}>
-  <List id="list" class="list">
+<window width={300} height={200}>
+  <list id="list" class="list">
     {#each items as it, i (it["id"])}
-      <Row>
-        <Text>{i}:{it["t"]}{"*" if it["done"] else ""}</Text>
-        <Button id="del" on:click={removed.append(it["id"]); items.remove(it)}>x</Button>
-      </Row>
+      <row>
+        <text>{i}:{it["t"]}{"*" if it["done"] else ""}</text>
+        <button id="del" on:click={removed.append(it["id"]); items.remove(it)}>x</button>
+      </row>
     {/each}
-  </List>
-</Window>
+  </list>
+</window>
 <style>
 .list { gap: 2px; padding: 4px; }
 </style>
@@ -105,9 +105,9 @@ def test_ten_thousand_rows_build_quickly(mount, janel_app):
 
 def test_list_requires_a_single_each():
     with pytest.raises(JanelError, match="exactamente un bloque"):
-        compile_source("<List><Text>x</Text></List>")
-    with pytest.raises(JanelError, match="no está disponible dentro de <List>"):
-        compile_source("<script>\nxs = []\n</script>\n<List>{#each xs as x}<Text>{x}</Text>{:else}<Text>-</Text>{/each}</List>")
+        compile_source("<list><text>x</text></list>")
+    with pytest.raises(JanelError, match="no está disponible dentro de <list>"):
+        compile_source("<script>\nxs = []\n</script>\n<list>{#each xs as x}<text>{x}</text>{:else}<text>-</text>{/each}</list>")
 
 
 def test_bulk_changes_reset_once_and_keep_row_instances(mount):
@@ -153,13 +153,13 @@ def mark(i):
     evaluated.append(i)
     return "*" if selected.value == i else ""
 </script>
-<Window width={300} height={200}>
-  <List>
+<window width={300} height={200}>
+  <list>
     {#each items as i (i)}
-      <Row><Text>{i}:{mark(i)}</Text></Row>
+      <row><text>{i}:{mark(i)}</text></row>
     {/each}
-  </List>
-</Window>
+  </list>
+</window>
 """
 
 

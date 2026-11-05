@@ -14,43 +14,43 @@ effect(lambda: theme.set(prefs.tema.value))
 carpeta = str(prefs.tema.file.parent)
 </script>
 
-<Window title="Preferencias" width={520} height={600}>
-  <Column class="pagina">
-    <Column class="cabecera">
-      <Text class="titulo">{f"Hola, {nombre}" if nombre.strip() else "Hola"}</Text>
-      <Text class="dato">{f"Has abierto esta aplicación {aperturas} {'vez' if aperturas == 1 else 'veces'}."}</Text>
-    </Column>
+<window title="Preferencias" width={520} height={600}>
+  <column class="pagina">
+    <column class="cabecera">
+      <text class="titulo">{f"Hola, {nombre}" if nombre.strip() else "Hola"}</text>
+      <text class="dato">{f"Has abierto esta aplicación {aperturas} {'vez' if aperturas == 1 else 'veces'}."}</text>
+    </column>
 
-    <Column class="bloque">
-      <Text class="subtitulo">Preferencias</Text>
-      <Row class="campo">
-        <Text class="etiqueta">Nombre</Text>
-        <TextField label="Nombre" bind:value={prefs.nombre} placeholder="¿Cómo te llamas?" flex={1} />
-      </Row>
-      <Row class="campo">
-        <Text class="etiqueta">Tema</Text>
-        <RadioGroup label="Tema" bind:value={prefs.tema} horizontal
+    <column class="bloque">
+      <text class="subtitulo">Preferencias</text>
+      <row class="campo">
+        <text class="etiqueta">Nombre</text>
+        <textfield label="Nombre" bind:value={prefs.nombre} placeholder="¿Cómo te llamas?" flex={1} />
+      </row>
+      <row class="campo">
+        <text class="etiqueta">Tema</text>
+        <radiogroup label="Tema" bind:value={prefs.tema} horizontal
                     options={[{"label": "Claro", "value": "light"}, {"label": "Oscuro", "value": "dark"}]} />
-      </Row>
-      <Row class="campo">
-        <Text class="etiqueta">Tamaño de las notas</Text>
-        <Slider label="Tamaño de las notas" bind:value={prefs.letra} min={11} max={22} step={1} flex={1} />
-        <Text class="dato">{f"{letra:.0f} px"}</Text>
-      </Row>
-    </Column>
+      </row>
+      <row class="campo">
+        <text class="etiqueta">Tamaño de las notas</text>
+        <slider label="Tamaño de las notas" bind:value={prefs.letra} min={11} max={22} step={1} flex={1} />
+        <text class="dato">{f"{letra:.0f} px"}</text>
+      </row>
+    </column>
 
-    <Column class="bloque" style={{"font-size": f"{letra:.0f}px"}}>
-      <Text class="subtitulo">Notas rápidas</Text>
+    <column class="bloque" style={{"font-size": f"{letra:.0f}px"}}>
+      <text class="subtitulo">Notas rápidas</text>
       <Notas />
-    </Column>
+    </column>
 
-    <Spacer />
-    <Row class="pie">
-      <Text class="ruta">{f"Guardado en {carpeta}"}</Text>
-      <Button variant="ghost" on:click={prefs.restablecer()}>Restablecer</Button>
-    </Row>
-  </Column>
-</Window>
+    <spacer />
+    <row class="pie">
+      <text class="ruta">{f"Guardado en {carpeta}"}</text>
+      <button variant="ghost" on:click={prefs.restablecer()}>Restablecer</button>
+    </row>
+  </column>
+</window>
 
 <style>
 .pagina { padding: 24px; gap: 18px; }

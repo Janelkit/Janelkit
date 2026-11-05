@@ -2,7 +2,9 @@
 #
 # Cuando la CI pasa en main:
 #   1. calcula, para cada paquete, la versión que toca desde su última etiqueta
-#      (mayor: → 0.#.0, menor: → 0.0.#; interno: y docs: no suben nada; la 1.0.0 es a mano);
+#      (mayor: → 0.0.#.0, menor: → 0.0.0.#; interno: y docs: no suben nada). La serie
+#      (0.#.0.0, o la 1.0.0.0) es la misma para todos los paquetes: se cambia a mano con
+#      `python tools/versioning.py series E.S` y aquí solo se publica;
 #   2. escribe pyproject.toml, __version__ y el registro de cambios;
 #   3. hace el commit «version: …» y las etiquetas <paquete>-vX.Y.Z, y las sube a main;
 #   4. lanza release.yml sobre cada etiqueta, que publica en PyPI.

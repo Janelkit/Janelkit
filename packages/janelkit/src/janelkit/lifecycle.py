@@ -5,7 +5,7 @@ ejecuta (su *preparación*):
 
     from janelkit import on_mount, on_destroy, provide, inject, ref
 
-    campo = ref()                      # <TextField ref={campo} />
+    campo = ref()                      # <textfield ref={campo} />
 
     @on_mount
     def enfocar():
@@ -25,7 +25,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator, Protocol, TypeVar
 
-from .reactivity import State
+from .reactivity import Computed, State
 
 F = TypeVar("F", bound=Callable[..., Any])
 _MISSING: Any = object()
@@ -37,6 +37,7 @@ class _Setup(Protocol):
     def add_leave(self, fn: Callable[[], Any]) -> None: ...
     def provide(self, key: Any, value: Any) -> None: ...
     def inject(self, key: Any) -> Any: ...
+    gate: Any  # compuerta de visibilidad del sitio donde se montó (reactivity.Gate) o None
 
 
 _stack: list[_Setup] = []
@@ -77,10 +78,10 @@ def on_destroy(fn: F) -> F:
 
 
 def before_leave(fn: F) -> F:
-    """Pregunta antes de salir: `fn()` se llama al descartar la página que contiene este
-    componente (`pop`, `back`, `replace`, `reset`) y al cerrar su ventana con la X.
-    Si devuelve False, no se sale. Puede ser `async` (p. ej. `await dialogs.confirm(...)`).
-    Se puede usar como decorador."""
+    """Pregunta antes de salir: `fn()` se llama al cerrar con la X la ventana que muestra este
+    componente y cuando un anfitrión lo va a descartar (`ask_to_leave`; p. ej. `pop` en una
+    pila de janelkit-router). Si devuelve False, no se sale. Puede ser `async`
+    (p. ej. `await dialogs.confirm(...)`). Se puede usar como decorador."""
     _current("before_leave").add_leave(fn)
     return fn
 
@@ -103,22 +104,46 @@ def inject(key: Any, default: Any = _MISSING) -> Any:
         return default
 
 
-class ElementHost:
-    """Objeto del script que gestiona un elemento de la plantilla al que se conecta.
+def leave_guards(instance: Any) -> list[Callable[[], Any]]:
+    """Las funciones de `before_leave` de `instance` y de todos sus descendientes."""
+    out = list(getattr(instance, "leave_guards", ()))
+    for child in getattr(instance, "children", ()):
+        out.extend(leave_guards(child))
+    return out
 
-    `<Pages stack={nav}>` y `<Sections of={secciones}>` conectan su contenedor con la pila o las
-    secciones del script. El runtime solo conoce esta interfaz, no la navegación.
-    """
 
-    def _attach(self, container: Any, template: Any) -> None:  # pragma: no cover - abstracto
-        raise NotImplementedError
+def ask_to_leave(guards: list[Callable[[], Any]], proceed: Callable[[], Any], refuse: Callable[[], Any] | None = None) -> bool:
+    """Consulta los `before_leave` en orden y llama a `proceed` si ninguno devuelve False
+    (si alguno lo hace, a `refuse`).
 
-    def _detach(self, container: Any) -> None:  # pragma: no cover - abstracto
-        raise NotImplementedError
+    Si uno es asíncrono, la respuesta llega más tarde: devuelve False (todavía no se
+    sale) y `proceed` se llama cuando todos han respondido que sí. Si todos responden
+    al momento, `proceed` se llama antes de volver y devuelve True."""
+    import inspect
+
+    for i, guard in enumerate(guards):
+        answer = guard()
+        if inspect.isawaitable(answer):
+            from .tasks import spawn
+
+            async def later(answer: Any = answer, rest: list = guards[i + 1:]) -> None:
+                if await answer is not False:
+                    ask_to_leave(rest, proceed, refuse)
+                elif refuse is not None:
+                    refuse()
+
+            spawn(later())
+            return False
+        if answer is False:
+            if refuse is not None:
+                refuse()
+            return False
+    proceed()
+    return True
 
 
 class Ref:
-    """Referencia a un elemento de la plantilla: `campo = ref()` y `<TextField ref={campo} />`.
+    """Referencia a un elemento de la plantilla: `campo = ref()` y `<textfield ref={campo} />`.
 
     `.value` es reactivo: vale `None` hasta que el elemento existe y vuelve a
     `None` cuando se destruye. Los métodos no hacen nada si el elemento no existe.
@@ -179,20 +204,35 @@ class Ref:
             item.setFocus(False)
 
     def select_all(self) -> None:
-        """Selecciona todo el texto (TextField, TextArea)."""
+        """Selecciona todo el texto (<textfield>, <textarea>)."""
         self._call("selectAll")
 
     def scroll_to_start(self) -> None:
-        """Lleva una `<List>` al principio."""
+        """Lleva una `<list>` o un `<scroll>` al principio."""
         self._call("scrollToStart")
 
     def scroll_to_end(self) -> None:
-        """Lleva una `<List>` al final (con `follow`, vuelve a seguir las filas nuevas)."""
+        """Lleva una `<list>` o un `<scroll>` al final (con `follow`, vuelve a seguir lo nuevo)."""
         self._call("scrollToEnd")
 
-    def scroll_to(self, index: int) -> None:
-        """Desplaza una `<List>` lo justo para que se vea la fila `index`."""
-        self._call("scrollTo", index)
+    def scroll_to(self, target: "int | Ref") -> None:
+        """Desplaza lo justo para que se vea: en una `<list>`, la fila `target` (un índice);
+        en un `<scroll>`, el elemento de dentro cuyo `ref` es `target`."""
+        item = self._live()
+        if item is None:
+            return
+        if isinstance(target, Ref):
+            if not item.inherits("QQuickScrollView"):
+                raise TypeError("scroll_to(ref) es para <scroll>; en una <list>, pasa el índice de la fila")
+            inner = target._live()
+            if inner is None:
+                return
+            if not item.isAncestorOf(inner):
+                raise ValueError("scroll_to(): el elemento no está dentro de este <scroll>")
+            target = inner
+        elif item.inherits("QQuickScrollView"):
+            raise TypeError("scroll_to() de un <scroll> recibe el ref de un elemento de dentro")
+        self._call("scrollTo", target)
 
     def _call(self, method: str, *args: Any) -> None:
         item = self._live()
@@ -206,6 +246,25 @@ class Ref:
     def __repr__(self) -> str:
         item = self._item.peek()
         return f"ref({type(item).__name__ if item is not None else 'sin elemento'})"
+
+
+def is_visible() -> Computed[bool]:
+    """Reactivo: si el componente se ve ahora mismo.
+
+    Es False mientras está en una página de debajo de la pila, en una sección que no es la
+    actual, dentro de un `{#hidden}` que lo oculta o en una fila de `<list>` fuera de la vista.
+    Lo que muestra la plantilla ya se aplaza solo; esto sirve para parar a propósito lo que
+    hace el script (un muestreo, una cámara):
+
+        visible = is_visible()
+
+        @interval(33, when=visible)
+        def refrescar(): ...
+    """
+    gate = _current("is_visible").gate
+    if gate is None:  # la raíz de una ventana
+        return Computed(lambda: True)
+    return Computed(lambda: gate.visible)
 
 
 def ref() -> Ref:

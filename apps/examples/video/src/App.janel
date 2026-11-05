@@ -1,6 +1,7 @@
 <script>
 # Vídeo a tiempo real sin cámara: un hilo genera fotogramas, un «modelo» lento los
 # procesa en otro (background) y sus resultados se dibujan como cajas sobre la imagen.
+# Un clic en la imagen marca un punto en sus píxeles (event.image_x, event.image_y).
 import threading
 import time
 
@@ -13,6 +14,7 @@ frames = Frames()
 retardo = state(80)        # lo que tarda el modelo, en ms
 objetos = state([])
 elegido = state("")
+punto = state(None)        # el último punto marcado, en píxeles de la imagen
 fps_modelo = state(0.0)
 parar = threading.Event()
 
@@ -52,32 +54,44 @@ def pct(valor, eje):
 
 def elegir(nombre):
     elegido.value = "" if elegido.value == nombre else nombre
+
+
+def marcar(event):
+    # Un clic en una caja se queda en ella (position: absolute): aquí solo llegan los de la imagen.
+    if event.image_x is not None:  # None en las bandas de los lados
+        punto.value = (int(event.image_x), int(event.image_y))
 </script>
 
-<Window title="Vídeo" width={960} height={640}>
+<window title="Vídeo" width={960} height={640}>
   <flex class="raiz">
-    <Video source={frames} flex={1} label="Vídeo">
+    <video source={frames} flex={1} label="Vídeo" on:click={marcar}>
+      {#if punto}
+        <flex class="punto" style={{"left": pct(punto[0], 0), "top": pct(punto[1], 1)}} />
+      {/if}
       {#each objetos as o (o[4])}
         <flex class="caja" class:elegida={o[4] == elegido} label={o[4]} on:click={elegir(o[4])}
               style={{"left": pct(o[0], 0), "top": pct(o[1], 1), "width": pct(o[2], 0), "height": pct(o[3], 1)}}>
-          <Text class="etiqueta">{o[4]}</Text>
+          <text class="etiqueta">{o[4]}</text>
         </flex>
       {/each}
-    </Video>
+    </video>
     <flex class="panel">
-      <Text>Vista: {frames.fps:.0f} fps · Modelo: {fps_modelo:.1f} fps · {len(objetos)} objetos</Text>
-      <Text>Retardo del modelo: {retardo} ms</Text>
-      <Slider bind:value={retardo} min={0} max={500} step={10} label="Retardo del modelo" flex={1} />
-      <Text>{f"Elegido: {elegido}" if elegido else "Haz clic en un cuadrado"}</Text>
+      <text>Vista: {frames.fps:.0f} fps · Modelo: {fps_modelo:.1f} fps · {len(objetos)} objetos</text>
+      <text>Retardo del modelo: {retardo} ms</text>
+      <slider bind:value={retardo} min={0} max={500} step={10} label="Retardo del modelo" flex={1} />
+      <text>{f"Elegido: {elegido}" if elegido else "Haz clic en un cuadrado"}</text>
+      <text>{f"Punto: {punto[0]}, {punto[1]}" if punto else "Haz clic en la imagen para marcar un punto"}</text>
     </flex>
   </flex>
-</Window>
+</window>
 
 <style>
 .raiz { flex-direction: column; flex: 1; background: #111 }
 .caja { position: absolute; border: 2px solid #ffd43b; border-radius: 4px; cursor: pointer }
 .caja:hover { background: rgba(255, 212, 59, 0.15) }
 .elegida { border: 4px solid #ff6b6b }
+.punto { position: absolute; width: 12px; height: 12px; border-radius: 6px; background: #ff6b6b;
+         transform: translate(-6px, -6px); pointer-events: none }
 .etiqueta { background: #ffd43b; color: #111; padding: 0 4px; font-size: 12px }
 .panel { flex-direction: row; align-items: center; gap: 16px; padding: 8px 12px; background: var(--surface) }
 </style>

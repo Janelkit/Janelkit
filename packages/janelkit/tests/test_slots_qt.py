@@ -12,13 +12,13 @@ from janelkit import prop, state
 title = prop("Tarjeta")
 opened = state(True)
 </script>
-<Column class="card">
-  <Text>[{title}]</Text>
+<column class="card">
+  <text>[{title}]</text>
   {#if opened}
-    <Slot />
+    <slot />
   {/if}
-  <Row><Slot name="footer"><Text>pie por defecto</Text></Slot></Row>
-</Column>
+  <row><slot name="footer"><text>pie por defecto</text></slot></row>
+</column>
 <style>
 .card { padding: 4px; }
 </style>
@@ -30,18 +30,18 @@ from components.Card import Card
 items = state(["a", "b"])
 n = state(0)
 </script>
-<Column>
+<column>
   {#each items as it (it)}
     <Card title={it}>
-      <Text>contenido {it} {n}</Text>
-      <Button id="inc" on:click={n += 1}>+</Button>
+      <text>contenido {it} {n}</text>
+      <button id="inc" on:click={n += 1}>+</button>
     </Card>
   {/each}
   <Card title="pie">
-    <Text>solo</Text>
-    <Button id="custom" slot="footer">otro pie</Button>
+    <text>solo</text>
+    <button id="custom" slot="footer">otro pie</button>
   </Card>
-</Column>
+</column>
 """
 
 
@@ -77,7 +77,7 @@ def test_slot_content_follows_the_child_lifecycle(mount, project):
     before = n.subscriber_count
     cards = [c for c in m.instance.root.regions[0].rows]
     child = cards[0].child
-    child.namespace["opened"].value = False  # el <Slot /> está dentro de un {#if} del hijo
+    child.namespace["opened"].value = False  # el <slot /> está dentro de un {#if} del hijo
     assert "contenido a 0" not in texts(m)
     assert n.subscriber_count == before - 1
     child.namespace["opened"].value = True
@@ -87,12 +87,12 @@ def test_slot_content_follows_the_child_lifecycle(mount, project):
 
 
 def test_content_without_a_slot_is_an_error(project):
-    child = "<script>\nfrom janelkit import prop\ntitle = prop()\n</script>\n<Column><Text>x</Text></Column>"
+    child = "<script>\nfrom janelkit import prop\ntitle = prop()\n</script>\n<column><text>x</text></column>"
     with pytest.raises(JanelError) as info:
         compile_file(project({"App.janel": APP, "components/Card.janel": child}))
     first = info.value.first
     assert "<Card> no admite contenido entre etiquetas" in first.message
-    assert "no declara ningún <Slot />" in first.hint
+    assert "no declara ningún <slot />" in first.hint
 
 
 def test_unknown_named_slot_is_an_error(project):
@@ -100,17 +100,17 @@ def test_unknown_named_slot_is_an_error(project):
     with pytest.raises(JanelError) as info:
         compile_file(project({"App.janel": app, "components/Card.janel": CARD}))
     assert "no admite el slot 'header'" in info.value.first.message
-    assert '<Slot name="footer" />' in info.value.first.hint
+    assert '<slot name="footer" />' in info.value.first.hint
 
 
 def test_class_and_flex_on_a_component_tag_style_an_outer_box(mount, project):
-    child = "<Text>hijo</Text>"
+    child = "<text>hijo</text>"
     app = """<script>
 from components.Child import Child
 </script>
-<Row>
+<row>
   <Child id="box" class="wide" flex={1} />
-</Row>
+</row>
 <style>
 .wide { padding: 10px; }
 </style>
@@ -122,7 +122,7 @@ from components.Child import Child
 
 
 def test_props_named_like_wrapper_attributes_stay_props(mount, project):
-    child = "<script>\nfrom janelkit import prop\nwidth = prop(0)\n</script>\n<Text>{width}</Text>"
-    app = "<script>\nfrom components.Child import Child\n</script>\n<Column><Child width={5} /></Column>"
+    child = "<script>\nfrom janelkit import prop\nwidth = prop(0)\n</script>\n<text>{width}</text>"
+    app = "<script>\nfrom components.Child import Child\n</script>\n<column><Child width={5} /></column>"
     m = mount(project({"App.janel": app, "components/Child.janel": child}))
     assert texts(m) == ["5"]

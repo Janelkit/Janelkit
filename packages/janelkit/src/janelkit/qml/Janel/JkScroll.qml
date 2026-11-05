@@ -54,4 +54,63 @@ ScrollView {
         width: sv.availableWidth
         jkSizedW: true
     }
+
+    // Desplazamiento desde el código y avisos, como en <list>.
+    // follow: empieza abajo y, si el usuario está abajo, se queda abajo aunque crezca el contenido.
+    property bool follow: false
+    signal reachedTop()
+    signal reachedBottom()
+    // on:scroll: como mucho una vez por fotograma, {"top", "bottom", "y", "height"}.
+    signal scrolled(var info)
+    property bool jkScrollHandled: false
+    readonly property Flickable jkFlick: contentItem
+    property bool jkStick: true
+    property bool jkPositioning: false
+
+    function jkEmitScroll() {
+        const f = jkFlick
+        scrolled({ top: f.atYBeginning, bottom: f.atYEnd, y: f.contentY - f.originY, height: f.contentHeight })
+    }
+    function jkSetY(y) {
+        const f = jkFlick
+        jkPositioning = true
+        f.contentY = Math.max(f.originY, Math.min(y, f.originY + f.contentHeight - f.height))
+        jkPositioning = false
+        jkPositioningLater.stop()
+        jkStick = f.atYEnd
+    }
+    // Para ref: zona.scroll_to_start(), scroll_to_end(), scroll_to(ref de un elemento de dentro).
+    function scrollToStart() { jkSetY(jkFlick.originY) }
+    function scrollToEnd() { jkSetY(jkFlick.originY + jkFlick.contentHeight); jkStick = true }
+    function scrollTo(target) {
+        const f = jkFlick
+        const top = target.mapToItem(f.contentItem, 0, 0).y
+        if (top < f.contentY) jkSetY(top)
+        else if (top + target.height > f.contentY + f.height) jkSetY(top + target.height - f.height)
+    }
+
+    Connections {
+        target: sv.jkFlick
+        function onContentYChanged() {
+            if (sv.follow && !sv.jkPositioning && (!jkPositioningLater.running || sv.jkFlick.moving))
+                sv.jkStick = sv.jkFlick.atYEnd
+            if (sv.jkScrollHandled) jkScrollLater.start()
+        }
+        function onContentHeightChanged() {
+            if (sv.follow && sv.jkStick && !sv.jkPositioning) jkPositioningLater.restart()
+            if (sv.jkScrollHandled) jkScrollLater.start()
+        }
+        function onHeightChanged() {
+            if (sv.follow && sv.jkStick && !sv.jkPositioning) jkPositioningLater.restart()
+        }
+        function onAtYBeginningChanged() {
+            if (sv.jkFlick.atYBeginning && sv.jkFlick.contentHeight > sv.jkFlick.height) sv.reachedTop()
+        }
+        function onAtYEndChanged() {
+            if (sv.jkFlick.atYEnd && sv.jkFlick.contentHeight > sv.jkFlick.height) sv.reachedBottom()
+        }
+    }
+    // Temporizadores (y no Qt.callLater): mueren con la zona si se destruye antes.
+    Timer { id: jkPositioningLater; interval: 0; onTriggered: sv.scrollToEnd() }
+    Timer { id: jkScrollLater; interval: 0; onTriggered: sv.jkEmitScroll() }
 }

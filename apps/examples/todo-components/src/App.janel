@@ -37,18 +37,18 @@ def on_removed(todo_id):
     todos.value = store.remove(todos.value, todo_id)
 </script>
 
-<Window title="Tareas en componentes" width={560} height={520} minWidth={420}>
-  <Column class="page">
-    <Row class="header">
-      <Text class="title">Tareas</Text>
-      <Spacer />
-      <Text class="muted">{summary}</Text>
-    </Row>
-    <Row class="new">
-      <TextField bind:value={draft} on:submit={add} placeholder="Nueva tarea" flex={1} />
-      <Button variant="primary" on:click={add}>Añadir</Button>
-    </Row>
-    <Checkbox bind:checked={show_done}>Mostrar las hechas</Checkbox>
+<window title="Tareas en componentes" width={560} height={520} minWidth={420}>
+  <column class="page">
+    <row class="header">
+      <text class="title">Tareas</text>
+      <spacer />
+      <text class="muted">{summary}</text>
+    </row>
+    <row class="new">
+      <textfield bind:value={draft} on:submit={add} placeholder="Nueva tarea" flex={1} />
+      <button variant="primary" on:click={add}>Añadir</button>
+    </row>
+    <checkbox bind:checked={show_done}>Mostrar las hechas</checkbox>
     <TodoList
       todos={visible}
       empty_text={"Todo hecho." if todos else "Añade tu primera tarea."}
@@ -56,8 +56,8 @@ def on_removed(todo_id):
       on:renamed={on_renamed}
       on:removed={on_removed}
     />
-  </Column>
-</Window>
+  </column>
+</window>
 
 <style>
 .page { padding: 24px; gap: 12px; }

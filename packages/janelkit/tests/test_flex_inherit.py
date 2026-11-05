@@ -1,4 +1,4 @@
-"""<flex> fase 4: texto heredado, variables propias (--x) y style=. Ver docs/flex.md."""
+"""<flex>: texto heredado, variables propias (--x) y style=."""
 import tempfile
 from pathlib import Path
 
@@ -12,7 +12,7 @@ from janelkit.inspect import mount
 
 FLEX = Path(__file__).resolve().parents[3] / "apps" / "examples" / "flex"
 
-CAJA = """<flex class="caja"><Text>hijo</Text><Slot /></flex>
+CAJA = """<flex class="caja"><text>hijo</text><slot /></flex>
 <style>.caja { padding: 4px; background: var(--fondo, #eeeeee); }</style>
 """
 
@@ -23,17 +23,17 @@ sel = state(False)
 pct = state(30)
 acento = state("#00ff00")
 </script>
-<Column>
+<column>
   <flex class="fila" class:sel={sel} label="fila">
-    <Text>a</Text>
-    <Text class="propio">b</Text>
-    <Caja><Text>slot</Text></Caja>
+    <text>a</text>
+    <text class="propio">b</text>
+    <Caja><text>slot</text></Caja>
   </flex>
-  <flex class="tarjeta" label="tarjeta"><Text class="titulo">t</Text></flex>
+  <flex class="tarjeta" label="tarjeta"><text class="titulo">t</text></flex>
   <flex label="inline" style={{"--fondo": acento, "width": f"{pct}%"}}><Caja /></flex>
   <flex label="fijo" class="gris" style="background: #123456; gap: 3px" />
-  <Button text="sel" on:click={sel = True} />
-</Column>
+  <button text="sel" on:click={sel = True} />
+</column>
 <style>
 .fila { color: #0000ff; font-size: 20px; font-weight: bold; }
 .fila.sel { color: #ff0000; }
@@ -66,11 +66,11 @@ def test_text_inherits_through_components_and_slots(app):
     a = app.find(text="a").item.property("font")
     assert a.pixelSize() == 20 and a.bold()
     assert color(app, "b") == "#00ff00"  # lo propio gana a lo heredado
-    hijos = [e.prop("color").name() for e in app.find_all("Text", text="hijo")]
+    hijos = [e.prop("color").name() for e in app.find_all("text", text="hijo")]
     assert hijos[0] == "#0000ff" and hijos[1] != "#0000ff"  # el de fuera de .fila, el del tema
-    app.find("Button").click()
+    app.find("button").click()
     assert color(app, "a") == "#ff0000" and color(app, "slot") == "#ff0000"
-    assert app.find_all("Text", text="hijo")[0].prop("color").name() == "#ff0000"
+    assert app.find_all("text", text="hijo")[0].prop("color").name() == "#ff0000"
 
 
 def test_variables_follow_states_and_cross_components(app):
@@ -98,21 +98,21 @@ def test_inline_style_wins_and_reacts(app):
 
 def test_style_errors_and_theme_tokens_stay_static():
     with pytest.raises(JanelError, match="style=\\{...\\} espera un diccionario"):
-        compile_source("<Column><flex style={estilo} /></Column>\n<script>\nestilo = {}\n</script>")
+        compile_source("<column><flex style={estilo} /></column>\n<script>\nestilo = {}\n</script>")
     with pytest.raises(JanelError, match="no admite 'transform'"):
-        compile_source('<Column><flex style={{"transform": "scale(2)"}} /></Column>')
-    qml = compile_source("""<Column><flex class="a"><Text>x</Text></flex></Column>
+        compile_source('<column><flex style={{"transform": "scale(2)"}} /></column>')
+    qml = compile_source("""<column><flex class="a"><text>x</text></flex></column>
 <style>.a { background: var(--surface); --propia: 4px; gap: var(--propia); }</style>""").qml
     assert "jkBackground: jktheme.surface" in qml  # token del tema: como siempre
     assert 'gap: Jk.cssVar(jkCtx, "propia", jktheme.propia, 0)' in qml
     assert "JkContext {" in qml and "property var jkV_propia: 4" in qml
     # Sin contexto, los textos no crean nada extra.
-    plain = compile_source("<Column><Text>hola</Text></Column>").qml
+    plain = compile_source("<column><text>hola</text></column>").qml
     assert "JkContext" not in plain and "jkOwn" not in plain
 
 
 def test_white_space_and_text_overflow():
-    qml = compile_source("""<Column><Text class="t">x</Text><flex class="f"><Text>y</Text></flex></Column>
+    qml = compile_source("""<column><text class="t">x</text><flex class="f"><text>y</text></flex></column>
 <style>.t { white-space: nowrap; text-overflow: ellipsis; } .f { white-space: nowrap; }</style>""").qml
     assert "wrapMode: Text.NoWrap" in qml and "elide: Text.ElideRight" in qml
     assert "property var jkT_wrap: Text.NoWrap" in qml
@@ -142,7 +142,7 @@ def test_catalog_table_and_tabs():
 
 
 def test_inherited_text_follows_a_row_moved_to_another_box():
-    # La fila (un componente) pasa de una columna roja a una grande: el <Text> deja el color
+    # La fila (un componente) pasa de una columna roja a una grande: el <text> deja el color
     # heredado (vuelve al del tema) y toma el tamaño. Solo hay un enlace por clave usada.
     d = Path(tempfile.mkdtemp())
     (d / "components").mkdir()
@@ -150,7 +150,7 @@ def test_inherited_text_follows_a_row_moved_to_another_box():
 from janelkit import prop
 texto = prop("")
 </script>
-<Text>{texto}</Text>""", encoding="utf-8")
+<text>{texto}</text>""", encoding="utf-8")
     (d / "App.janel").write_text("""<script>
 from janelkit import state
 from components.Item import Item
@@ -159,11 +159,11 @@ def mover():
     a, b = cols.value
     b["items"].append(a["items"].pop())
 </script>
-<Column>
-  <Row>{#each cols as c (c["id"])}<flex class="col" class:rojo={c["id"] == "a"} class:grande={c["id"] == "b"}>{#each c["items"] as it (it)}<Item texto={it} />{/each}</flex>{/each}</Row>
-  <Text id="suelto">fuera</Text>
-  <Button text="mover" on:click={mover()} />
-</Column>
+<column>
+  <row>{#each cols as c (c["id"])}<flex class="col" class:rojo={c["id"] == "a"} class:grande={c["id"] == "b"}>{#each c["items"] as it (it)}<Item texto={it} />{/each}</flex>{/each}</row>
+  <text id="suelto">fuera</text>
+  <button text="mover" on:click={mover()} />
+</column>
 <style>.col { padding: 2px; } .rojo { color: #ff0000; } .grande { font-size: 22px; }</style>""", encoding="utf-8")
     with mount(d / "App.janel") as app:
         app.wait(0.05)
@@ -172,7 +172,7 @@ def mover():
         assert x.property("color").name() == "#ff0000" and x.property("font").pixelSize() == theme_size
         assert sorted(x.property("jkInherit").toVariant()) == ["color", "size"]
         assert app.find(text="fuera").item.property("jkInherit") is None  # sin caja con texto: nada
-        app.find("Button").click()
+        app.find("button").click()
         app.wait(0.05)
         x = app.find(text="x").item
         assert x.property("color").name() == app.find(text="fuera").item.property("color").name()

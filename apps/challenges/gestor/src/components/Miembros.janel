@@ -3,10 +3,11 @@
 # tarjetas en el proyecto pregunta antes; sus tarjetas se quedan sin responsable.
 from janelkit import inject, prop, state
 from janelkit_desktop import dialogs
-from services.datos import ROLES, cuenta
+from janelkit_store import use
+from services.datos import ROLES, cuenta, Datos
 
 pid = prop("")
-datos = inject("datos")
+datos = use(Datos)
 tablero = datos.tablero(pid.value)
 proyecto = tablero.proyecto
 nueva = state("")
@@ -16,7 +17,7 @@ ROLES_OPC = [{"label": r, "value": r} for r in ROLES]
 def candidatas():
     dentro = {m["persona"] for m in proyecto["miembros"]}
     return [{"label": "Añadir a…", "value": ""}] + [
-        {"label": p["nombre"], "value": p["id"]} for p in datos.personas.value if p["id"] not in dentro]
+        {"label": p["nombre"], "value": p["id"]} for p in datos.personas if p["id"] not in dentro]
 
 
 def tarjetas_de(ident):
@@ -47,52 +48,52 @@ async def quitar(ident):
   <flex class="principal">
     <flex class="tabla" label="Miembros del proyecto">
       <flex class="encabezado">
-        <Text class="c-persona">Persona</Text>
-        <Text class="c-tarjetas">Tarjetas</Text>
-        <Text class="c-rol">Rol</Text>
+        <text class="c-persona">Persona</text>
+        <text class="c-tarjetas">Tarjetas</text>
+        <text class="c-rol">Rol</text>
         <flex class="c-accion" />
       </flex>
       {#each proyecto["miembros"] as m (m["persona"])}
         <flex as="listitem" class="fila" label={datos.nombre(m["persona"])}>
           <flex class="c-persona">
             <flex class="avatar" style={{"background": (datos.persona(m["persona"]) or {}).get("color", "#868e96")}}>
-              <Text>{datos.iniciales(m["persona"])}</Text>
+              <text>{datos.iniciales(m["persona"])}</text>
             </flex>
             <flex class="quien">
-              <Text class="nombre">{datos.nombre(m["persona"])}</Text>
-              <Text class="correo">{(datos.persona(m["persona"]) or {}).get("correo", "")}</Text>
+              <text class="nombre">{datos.nombre(m["persona"])}</text>
+              <text class="correo">{(datos.persona(m["persona"]) or {}).get("correo", "")}</text>
             </flex>
           </flex>
-          <Text class="c-tarjetas">{cuenta(len(tarjetas_de(m["persona"])), "tarjeta")}</Text>
+          <text class="c-tarjetas">{cuenta(len(tarjetas_de(m["persona"])), "tarjeta")}</text>
           <flex class="c-rol">
-            <Select options={ROLES_OPC} value={m["rol"]} label={f"Rol de {datos.nombre(m['persona'])}"}
+            <select options={ROLES_OPC} value={m["rol"]} label={f"Rol de {datos.nombre(m['persona'])}"}
                     on:change={datos.poner_miembro(pid, m["persona"], event)} flex={1} />
           </flex>
           <flex class="c-accion">
-            <Button text="Quitar" variant="ghost" on:click={quitar(m["persona"])} />
+            <button text="Quitar" variant="ghost" on:click={quitar(m["persona"])} />
           </flex>
         </flex>
       {:else}
         <flex class="vacio">
-          <Text class="vacio-titulo">Nadie participa todavía</Text>
-          <Text class="dato">Añade personas desde el panel de la derecha.</Text>
+          <text class="vacio-titulo">Nadie participa todavía</text>
+          <text class="dato">Añade personas desde el panel de la derecha.</text>
         </flex>
       {/each}
     </flex>
   </flex>
   <flex class="lateral">
     <flex class="panel">
-      <Text class="panel-titulo">Añadir al proyecto</Text>
-      <Select options={candidatas()} bind:value={nueva} label="Persona que añadir" />
-      <Button text="Añadir" variant="primary" enabled={bool(nueva)} on:click={añadir()} />
+      <text class="panel-titulo">Añadir al proyecto</text>
+      <select options={candidatas()} bind:value={nueva} label="Persona que añadir" />
+      <button text="Añadir" variant="primary" enabled={bool(nueva)} on:click={añadir()} />
     </flex>
     <flex class="panel">
-      <Text class="panel-titulo">{f"Equipo · {cuenta(len(proyecto['miembros']), 'persona')}"}</Text>
+      <text class="panel-titulo">{f"Equipo · {cuenta(len(proyecto['miembros']), 'persona')}"}</text>
       {#each por_rol() as r (r[0])}
         <flex class="rol-fila">
-          <Text>{r[0]}</Text>
-          <Spacer />
-          <Text class="cifra">{r[1]}</Text>
+          <text>{r[0]}</text>
+          <spacer />
+          <text class="cifra">{r[1]}</text>
         </flex>
       {/each}
     </flex>

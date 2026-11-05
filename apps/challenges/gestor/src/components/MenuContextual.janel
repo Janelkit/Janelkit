@@ -36,8 +36,8 @@ def tecla(event):
     {#each opciones as o, i (o["valor"])}
       <flex as="menuitem" class="opcion" selected={i == activa} label={o["label"]}
             on:pointerenter={activa = i} on:click={elegir.emit(o["valor"])}>
-        <Text class="texto">{o["label"]}</Text>
-        <Text class="tecla">{o["tecla"]}</Text>
+        <text class="texto">{o["label"]}</text>
+        <text class="tecla">{o["tecla"]}</text>
       </flex>
     {/each}
   </flex>

@@ -1,6 +1,6 @@
-# Formato `.janel` — especificación v0 (provisional)
+# Formato `.janel`
 
-Esta especificación describe **lo que el compilador acepta hoy**. Es provisional y puede cambiar antes de declarar estable el lenguaje (ver «Registro de decisiones pendientes» en el plan).
+Esta especificación describe **lo que el compilador acepta hoy**. Los cambios entre versiones y cómo migrar están en [cambios.md](cambios.md); la política de versiones del formato (`FORMAT_VERSION`), en [api.md](api.md).
 
 ## Secciones
 
@@ -14,7 +14,7 @@ Un archivo `.janel` tiene hasta tres partes, en cualquier orden:
 
 Los comentarios `<!-- … -->` se ignoran en la plantilla.
 
-El componente raíz de la aplicación (`src/App.janel`) puede tener `<Window>` como raíz; si no la tiene, el compilador lo envuelve en una ventana de 640×480 y su contenido ocupa toda la ventana. Los componentes usados dentro de otros **no** pueden tener `<Window>` como raíz.
+El componente raíz de la aplicación (`src/App.janel`) puede tener `<window>` como raíz; si no la tiene, el compilador lo envuelve en una ventana de 640×480 y su contenido ocupa toda la ventana. Los componentes usados dentro de otros **no** pueden tener `<window>` como raíz.
 
 ## El script
 
@@ -45,6 +45,20 @@ def reset():
 ```
 
 Otras utilidades: `count.set(v)`, `count.update(fn)`, `count.peek()` (lee sin registrar dependencia). Asignar un valor igual (mismo tipo y `==`) no notifica.
+
+En una clase (un servicio con estado propio), `@computed` sobre un método da un `computed` por instancia, que vive lo que vive la instancia:
+
+```python
+class Camara:
+    def __init__(self):
+        self.fps = state(0.0)
+
+    @computed
+    def estado(self):
+        return "en marcha" if self.fps.value > 0 else "parada"
+```
+
+En Python se lee `camara.estado.value`; en la plantilla, `{camara.estado}`.
 
 ### Colecciones reactivas
 
@@ -118,7 +132,9 @@ ocultar.restart()                     # vuelve a contar los 3 s (p. ej. con cada
 - Se detienen solos al desmontar el componente que los creó, también si se crearon tras un `await`. Fuera de un componente (en un servicio), viven hasta `.stop()`; JanelKit los mantiene vivos aunque no guardes la referencia.
 - Cada ejecución agrupa sus cambios de estado en un solo `batch`: actualizar 50 métricas en un tic recalcula la interfaz una vez.
 - `.active` es reactivo (`{#if muestrear.active}`); `.stop()`, `.start()` y `.restart()` lo controlan. Para cambiar el periodo: `muestrear.ms = 500` y `muestrear.restart()`.
+- `when=` lo condiciona a algo reactivo: `@interval(33, when=visible)` con `visible = is_visible()` solo muestrea mientras el componente se ve (no en otra sección, en una página de debajo ni en un `{#hidden}`). Mientras la condición es falsa no cuenta; al volver a cumplirse, cuenta desde cero. `.stop()` le gana: parado a mano, no vuelve a arrancar solo.
 - Un error en la función se registra con su nombre en el logger `janelkit` y el temporizador sigue.
+- Para medir: `muestrear.runs`, `muestrear.skipped` (tics saltados) y `muestrear.last_duration` (segundos de la última ejecución, también la parte async). No son reactivos; `repr(muestrear)` los resume.
 
 ## Expresiones en la plantilla
 
@@ -166,31 +182,29 @@ Las llaves pueden contener cadenas y diccionarios con llaves: `{ {"a": "}"}["a"]
 
 ## Texto
 
-El contenido de `<Text>`, `<Button>` y `<Checkbox>` es su texto: `<Button>Clicks: {count}</Button>`. Los espacios se colapsan como en HTML. Texto suelto dentro de un contenedor se convierte en un `<Text>`.
+El contenido de `<text>`, `<button>` y `<checkbox>` es su texto: `<button>Clicks: {count}</button>`. Los espacios se colapsan como en HTML. Texto suelto dentro de un contenedor se convierte en un `<text>`.
 
-`<Text format="markdown">` interpreta Markdown (negrita, cursiva, enlaces, código, listas); `format="html"`, el subconjunto de HTML de Qt. Los enlaces muestran la mano al pasar por encima y, al pulsarlos, emiten `on:link` con la URL; si nadie escucha `on:link`, se abren en el navegador:
-
-```html
-<Text format="markdown" on:link={abrir}>{mensaje["texto"]}</Text>
-```
-
-El Markdown de Qt también acepta HTML. Si el texto viene de otras personas (un chat, una web), escapa `<` y `&` antes de mostrarlo (`texto.replace("&", "&amp;").replace("<", "&lt;")`).
-
-### Texto seleccionable y portapapeles
-
-Por defecto, un `<Text>` no se puede seleccionar, como una etiqueta de escritorio. Con `selectable` (o `user-select: text` en el estilo) se selecciona arrastrando el ratón y se copia con Ctrl+C; con el foco en él, Ctrl+A lo selecciona todo. Sirve para números de pedido, mensajes de error o el texto de un chat. Los enlaces siguen funcionando, y un clic sin arrastrar sigue pulsando la caja con `on:click` que lo contenga:
+`<text format="markdown">` interpreta Markdown (negrita, cursiva, enlaces, código, listas); `format="html"`, el subconjunto de HTML de Qt. Los enlaces muestran la mano al pasar por encima y, al pulsarlos, emiten `on:link` con la URL; si nadie escucha `on:link`, se abren en el navegador:
 
 ```html
-<script>
-from janelkit_desktop import clipboard
-</script>
-
-<Text selectable>Pedido {pedido["id"]}</Text>
-<Button on:click={clipboard.copy(pedido["id"])}>Copiar</Button>
-<Text>En el portapapeles: {clipboard.paste() or "nada"}</Text>
+<text format="markdown" on:link={abrir}>{mensaje["texto"]}</text>
 ```
 
-El portapapeles es del paquete [`janelkit-desktop`](../packages/janelkit-desktop/README.md). `janelkit_desktop.clipboard` copia (`copy`), lee (`paste`) y vacía (`clear`) el portapapeles del sistema. `paste()` es reactivo: lo que dependa de él se actualiza cuando el portapapeles cambia, también si se copia en otra aplicación.
+`format="markdown"` **no interpreta HTML**: `<b>`, `<img>` o `<span style=…>` se muestran tal cual. Así, el texto de otras personas (un chat, una web) se puede mostrar directamente, sin escaparlo. Si quieres HTML, usa `format="html"`.
+
+- Dentro de código (`` `list<int>` `` o un bloque con ```` ``` ````) el texto se ve exactamente como se escribió.
+- Los enlaces automáticos con `<…>` tampoco se interpretan; las direcciones sueltas (`https://…`) y `[texto](url)` sí son enlaces.
+- En casos raros en los que el código de un mensaje se lee de forma ambigua, puede verse una `\` antes de un `<` dentro del código; nunca pasa HTML.
+
+### Texto seleccionable
+
+Por defecto, un `<text>` no se puede seleccionar, como una etiqueta de escritorio. Con `selectable` (o `user-select: text` en el estilo) se selecciona arrastrando el ratón y se copia con Ctrl+C; con el foco en él, Ctrl+A lo selecciona todo. Sirve para números de pedido, mensajes de error o el texto de un chat. Los enlaces siguen funcionando, y un clic sin arrastrar sigue pulsando la caja con `on:click` que lo contenga:
+
+```html
+<text selectable>Pedido {pedido["id"]}</text>
+```
+
+Para copiar desde el código, `clipboard` de [`janelkit-desktop`](../packages/janelkit-desktop/README.md).
 
 Límites de `selectable`: con `text-overflow: ellipsis` corta el texto en el borde, sin puntos suspensivos, y no tiene menú contextual. Además, crear un texto seleccionable cuesta unas 2,8 veces lo que uno normal (unos 0,35 ms frente a 0,12 ms), así que en listas de miles de filas conviene usarlo solo donde haga falta. Un texto sin `selectable` no paga nada.
 
@@ -200,11 +214,11 @@ Límites de `selectable`: con `text-overflow: ellipsis` corta el texto en el bor
 
 ```html
 {#if count >= 5}
-  <Text>Cinco o más</Text>
+  <text>Cinco o más</text>
 {:else if count > 0}
-  <Text>Algunos</Text>
+  <text>Algunos</text>
 {:else}
-  <Text>Ninguno</Text>
+  <text>Ninguno</text>
 {/if}
 ```
 
@@ -214,12 +228,12 @@ Solo existe la rama activa: al cambiar de rama, los elementos de la anterior se 
 
 ```html
 {#each todos as todo, i (todo["id"])}
-  <Row>
-    <Text>{i + 1}. {todo["title"]}</Text>
-    <Button on:click={lambda: remove(todo["id"])}>Eliminar</Button>
-  </Row>
+  <row>
+    <text>{i + 1}. {todo["title"]}</text>
+    <button on:click={lambda: remove(todo["id"])}>Eliminar</button>
+  </row>
 {:else}
-  <Text>No hay tareas.</Text>
+  <text>No hay tareas.</text>
 {/each}
 ```
 
@@ -252,7 +266,7 @@ def mover(tarjeta, desde, hacia):           # un manejador: todo es un mismo cam
 
 - Los componentes de la fila (`<Tarjeta>`) **conservan su estado**, sus `ref`, temporizadores y tareas; `on_mount` no se repite ni llega `on_destroy`. Si tenían el foco, lo recuperan en su nuevo sitio.
 - Sus props y sus `on:` pasan a evaluarse en la fila nueva (con las variables de la columna destino). Lo obtenido con `inject` se conserva.
-- La vista (QML) sí se crea de nuevo en la otra lista. Los elementos de la fila que no son componentes (`<flex>`, `<Text>`) no tienen estado propio y también se recrean.
+- La vista (QML) sí se crea de nuevo en la otra lista. Los elementos de la fila que no son componentes (`<flex>`, `<text>`) no tienen estado propio y también se recrean.
 - *El mismo cambio* es un manejador (`on:click`, `on:drop`…), un `batch()` o un único cambio de una colección. Quitar en un manejador y añadir más tarde, tras un `await`, son dos cambios: la fila se destruye y se crea otra.
 - No se traslada: entre declaraciones distintas (aunque usen el mismo componente y la misma clave), en `{#each}` sin clave, ni un componente que recibe contenido de slot. Si la misma clave aparece a la vez en las dos listas, son dos filas.
 
@@ -262,17 +276,17 @@ En el elemento raíz de un bloque `{#if}`, `{#each}` o `{#key}`:
 
 ```html
 {#if aviso}
-  <Text class="aviso" transition:fade>{aviso}</Text>
+  <text class="aviso" transition:fade>{aviso}</text>
 {/if}
 
 {#each tareas as t (t["id"])}
-  <Row in:slide out:fade={120}>…</Row>
+  <row in:slide out:fade={120}>…</row>
 {/each}
 ```
 
 - `transition:x` anima la entrada y la salida; `in:x` y `out:x`, solo una. Tipos: `fade` (opacidad), `scale` (opacidad y escala), `slide` (opacidad y un pequeño desplazamiento). Duración opcional en milisegundos: `transition:fade={300}` (por defecto, 200).
 - Al salir, la fila **deja de contar enseguida** (para las posiciones, el `{:else}`, etc.), pero su vista y sus bindings siguen vivos hasta que termina la animación; entonces se libera.
-- En `<List>`, usa `<List animate>`: anima las filas que entran, salen y cambian de sitio.
+- En `<list>`, usa `<list animate>`: anima las filas que entran, salen y cambian de sitio.
 - Para animar cambios de color, opacidad o tamaño, usa `transition` en `<style>` (ver [estilos.md](estilos.md)).
 
 ### `{#key}`
@@ -298,7 +312,7 @@ Oculta el contenido mientras la condición es verdadera, **sin destruirlo**: al 
 - El contenido se crea la primera vez que la condición es falsa. Si empieza oculto, no cuesta nada hasta que se muestra.
 - Después, ocultar y mostrar solo cambia su visibilidad: `on_mount` no se repite y `on_destroy` no llega hasta que se desmonta lo que contiene el bloque.
 - Mientras está oculto no ocupa sitio y **lo que muestra espera**: sus textos, estilos, props, `{#if}` y `{#each}` no se recalculan aunque cambien los datos, ni se recoloca. Al volver a verse se ponen al día una sola vez, con los valores de ese momento.
-- Lo que escribes en el script **sigue funcionando**: `effect`, `interval`, `timeout`, tareas y `on_destroy`. Un `effect` que guarda o sincroniza datos no se detiene por ocultar su componente.
+- Lo que escribes en el script **sigue funcionando**: `effect`, `interval`, `timeout`, tareas y `on_destroy`. Un `effect` que guarda o sincroniza datos no se detiene por ocultar su componente. Para parar algo a propósito, `is_visible()` dice si el componente se ve, y `interval(ms, when=…)` lo usa directamente (ver [Temporizadores](#temporizadores)).
 - Úsalo para lo que se alterna a menudo y es caro de crear o tiene estado que importa. Para lo demás, `{#if}` libera memoria.
 - `{:else}` es lo contrario: se muestra mientras la condición es verdadera, y también se crea la primera vez que se muestra y después solo se oculta.
 - Las transiciones (`transition:fade`, `in:`, `out:`) en la raíz del bloque se reproducen al mostrar y al ocultar; el contenido desaparece al terminar la salida.
@@ -313,7 +327,7 @@ Oculta el contenido mientras la condición es verdadera, **sin destruirlo**: al 
 
 ### Varios elementos en un bloque
 
-Si una rama o una fila tiene varios elementos, se agrupan en un contenedor implícito con la orientación del contenedor padre, que hereda su dirección, separación y alineación. Normalmente no se nota; si necesitas controlar la disposición, envuélvelos tú en un `<Column>` o `<Row>`.
+Si una rama o una fila tiene varios elementos, se agrupan en un contenedor implícito con la orientación del contenedor padre, que hereda su dirección, separación y alineación. Normalmente no se nota; si necesitas controlar la disposición, envuélvelos tú en un `<column>` o `<row>`.
 
 ## Componentes
 
@@ -330,6 +344,7 @@ from .TodoItem import TodoItem                # relativo al archivo actual
 ```
 
 - Los imports absolutos se resuelven desde la carpeta del componente raíz (`src/`); los relativos, desde el archivo que importa.
+- **Desde un paquete instalado:** si no está en `src/`, se busca en el paquete de Python con ese nombre (sin importarlo): `from janelkit_router import Pages` usa `Pages.qml` o `Pages.janel` de la carpeta del paquete, y `from mi_ui.formularios import Campo`, el de su subcarpeta. Así un paquete de `pip` reparte componentes. Dentro del paquete, sus componentes se importan entre sí con imports relativos (`from .Campo import Campo`) o con el nombre del paquete.
 - El compilador compila los componentes importados (una vez cada uno) y valida su uso: props y eventos desconocidos, props obligatorias que faltan, etc. Los componentes pueden ser recursivos.
 
 ### Props y eventos (en el hijo)
@@ -355,34 +370,34 @@ def remove():
 
 ### Slots: contenido entre etiquetas
 
-Un componente puede recibir contenido del padre. En el hijo, `<Slot />` marca dónde va; `<Slot name="x" />` es un slot con nombre, y lo que haya dentro de `<Slot>` es el contenido de reserva si el padre no pasa nada:
+Un componente puede recibir contenido del padre. En el hijo, `<slot />` marca dónde va; `<slot name="x" />` es un slot con nombre, y lo que haya dentro de `<slot>` es el contenido de reserva si el padre no pasa nada:
 
 ```html
 <!-- components/Card.janel -->
-<Column class="card">
-  <Text class="title">{title}</Text>
-  <Slot />
-  <Row class="footer"><Slot name="footer"><Text>Sin acciones</Text></Slot></Row>
-</Column>
+<column class="card">
+  <text class="title">{title}</text>
+  <slot />
+  <row class="footer"><slot name="footer"><text>Sin acciones</text></slot></row>
+</column>
 ```
 
 ```html
 <!-- el padre -->
 <Card title="Tarea">
-  <Text>{todo["title"]}</Text>
-  <Checkbox bind:checked={done}>Hecha</Checkbox>
-  <Button slot="footer" on:click={borrar(todo)}>Eliminar</Button>
+  <text>{todo["title"]}</text>
+  <checkbox bind:checked={done}>Hecha</checkbox>
+  <button slot="footer" on:click={borrar(todo)}>Eliminar</button>
 </Card>
 ```
 
 - El contenido se evalúa en el ámbito del **padre**: ve su estado, sus funciones y las variables de los `{#each}` que lo rodean, y es reactivo como el resto de su plantilla.
-- Lo que no lleva `slot="..."` va al slot por defecto; varios elementos se apilan en columna. Un elemento con `slot="nombre"` va a ese slot (para varios, agrúpalos en un `<Row>` o `<Column>`).
-- El contenido vive mientras viva el `<Slot>` que lo muestra: si el hijo lo pone dentro de un `{#if}`, se crea y se libera con esa rama.
+- Lo que no lleva `slot="..."` va al slot por defecto; varios elementos se apilan en columna. Un elemento con `slot="nombre"` va a ese slot (para varios, agrúpalos en un `<row>` o `<column>`).
+- El contenido vive mientras viva el `<slot>` que lo muestra: si el hijo lo pone dentro de un `{#if}`, se crea y se libera con esa rama.
 - Pasar contenido a un slot que el hijo no declara es un error de compilación que lista los slots disponibles.
 
 ### Estilos en la etiqueta del componente
 
-Lo que la etiqueta lleva y el componente no declara como prop o evento se aplica a su **raíz**, si esta es una caja (`<flex>`, `Column` o `Row`): así un componente se usa como un elemento más.
+Lo que la etiqueta lleva y el componente no declara como prop o evento se aplica a su **raíz**, si esta es una caja (`<flex>`, `column` o `row`): así un componente se usa como un elemento más.
 
 ```html
 <Boton text="Guardar" class="primary" on:click={guardar} disabled={ocupado} ref={boton} />
@@ -395,8 +410,7 @@ Lo que la etiqueta lleva y el componente no declara como prop o evento se aplica
 - `ref` en la etiqueta apunta a la raíz (`boton.focus()` enfoca el `<flex>` del botón); `disabled` activa `:disabled` en la raíz.
 - Si el componente declara una prop o un evento con ese nombre, gana lo declarado.
 - `inherit_attrs = False` en el script del componente lo desactiva: la etiqueta solo admite sus props y eventos, y `class`, `id`, `flex`, `width`, `height` y `visible` van a una caja exterior que lo envuelve, como cuando la raíz no es una caja.
-- Si la raíz no es una caja (un `<Button>`, varios elementos, un `{#if}`), esos seis atributos van a una **caja exterior** que lo envuelve, y un evento sin declarar es un error de compilación.
-- Algunas cosas no se pueden fijar desde fuera en la raíz: una `transition` o el texto heredado (`color`, la fuente) y las variables (`--x`) puestos desde el padre. Con ellas el componente lleva también una caja exterior, que se encarga de eso; el resultado se ve igual.
+- Si la raíz no es una caja (un `<button>`, varios elementos, un `{#if}`), esos seis atributos van a una **caja exterior** que lo envuelve, y un evento sin declarar es un error de compilación.
 
 ### Ciclo de vida
 
@@ -406,7 +420,7 @@ Lo que la etiqueta lleva y el componente no declara como prop o evento se aplica
 ```python
 from janelkit import on_mount, on_destroy, effect, ref
 
-campo = ref()                 # <TextField ref={campo} />
+campo = ref()                 # <textfield ref={campo} />
 
 @on_mount                     # la vista ya existe (también la de los hijos)
 def preparar():
@@ -435,7 +449,7 @@ effect(sincronizar)
 | Método | Qué hace |
 |---|---|
 | `focus()` / `blur()` | Da o quita el foco del teclado. |
-| `select_all()` | Selecciona todo el texto (`TextField`, `TextArea`). |
+| `select_all()` | Selecciona todo el texto (`textfield`, `textarea`). |
 | `exists` | `True` si el elemento existe. |
 | `value` | El objeto Qt Quick (`QQuickItem`). Es interfaz de Qt, no de JanelKit: úsalo como último recurso. |
 
@@ -459,65 +473,30 @@ tema = inject("tema", "claro")       # con valor por defecto
 - Lo que se comparte es el objeto tal cual: para que sea reactivo, comparte un `state` (o un objeto que los contenga).
 - Para estado global de toda la aplicación sigue valiendo un módulo Python (`services/store.py`). El contexto es para valores que dependen de dónde está el componente en el árbol.
 
-## Estado que se recuerda: `persisted`
+## Datos compartidos y estado que se recuerda
 
-Lo que la aplicación debe recordar al volver a abrirse (el tema, la última sección, el tamaño de un panel, los archivos recientes) es un `persisted`: un `state` que se guarda solo.
-
-```python
-from janelkit import persisted
-
-tema = persisted("tema", "claro")
-recientes = persisted("recientes", [])
-
-def abrir(ruta):
-    recientes.value.insert(0, ruta)   # los cambios en el sitio también se guardan
-```
-
-- Se usa igual que un `state` (`.value`, `bind:`, en la plantilla sin `.value`). Al crearse lee el valor guardado; si no hay ninguno, toma el inicial.
-- Los cambios se escriben agrupados (como mucho cada 300 ms) y al cerrar la aplicación. La escritura es atómica: un corte no deja el archivo a medias.
-- La clave es de toda la aplicación: `persisted("tema", ...)` en dos módulos es el mismo objeto. Letras, cifras, `.`, `_` y `-`; para agrupar, `prefs.tema`.
-- Solo valores JSON: textos, números, booleanos, `None`, listas y diccionarios con claves de texto. Otro valor da `TypeError` al crearlo o al asignarlo.
-- Cada clave es un archivo `<clave>.json` en la carpeta de datos del usuario más el nombre del proyecto (`%APPDATA%\gestor` en Windows, `~/Library/Application Support/gestor` en macOS, `~/.config/gestor` en Linux). `JANELKIT_DATA_DIR` la cambia.
-- En las pruebas con `janelkit.inspect.mount`, cada montaje usa una carpeta temporal vacía: no se tocan los datos reales. Para probar que algo se recuerda entre dos montajes, fija `JANELKIT_DATA_DIR`.
-- Es para preferencias y datos pequeños: cada cambio reescribe el archivo de esa clave. Los datos grandes de la aplicación (documentos, bases de datos) siguen en sus propios archivos.
-- Lo habitual es reunirlos en un módulo (`services/prefs.py`). `bind:value={prefs.tema}` enlaza con el del módulo; para leerlo en la plantilla sin `.value`, impórtalo por su nombre (`from services.prefs import tema`): la plantilla desenvuelve nombres, no atributos (`{prefs.tema}` es el `state`, `{prefs.tema.value}` su valor).
-
-Ejemplo: `apps/examples/preferencias` (nombre, tema, tamaño de letra, notas y un contador de aperturas; `python apps/examples/preferencias/main.py`, ciérrala y vuelve a abrirla).
-
-## Deshacer y rehacer: `History`
-
-Un `History` anota los cambios en pasos con nombre que se deshacen y rehacen. Lo que cambia dentro de `step` se anota solo: cada `state` asignado y cada lista, diccionario o conjunto reactivo modificado.
+Lo que comparten varias vistas o ventanas va en un **store**, y lo que la aplicación debe recordar al volver a abrirse, en un `persisted` o un store con `persist=`. Los dos son del paquete [`janelkit-store`](../packages/janelkit-store/README.md):
 
 ```python
-from janelkit import History, state
+from janelkit_store import persisted, store, use
 
-historial = History()
-columnas = state([{"nombre": "Pendiente", "tarjetas": []}, {"nombre": "Hecho", "tarjetas": []}])
+tema = persisted("tema", "claro")      # un state que se guarda solo
 
-def mover(tarjeta, origen, destino):
-    with historial.step(f"mover «{tarjeta['titulo']}»"):
-        origen["tarjetas"].remove(tarjeta)
-        destino["tarjetas"].insert(0, tarjeta)
+@store(persist="carrito")
+class Carrito:
+    items: list[dict] = []
+
+    def agregar(self, item):
+        self.items.append(item)
+
+carrito = use(Carrito)                 # la misma instancia en todas las vistas y ventanas
 ```
 
-```html
-<Button text="Deshacer" enabled={historial.can_undo} label={f"Deshacer {historial.undo_label}"} on:click={historial.undo()} />
-<Shortcut keys="Ctrl+Z" on:activate={historial.undo()} />
-<Shortcut keys="Ctrl+Y" on:activate={historial.redo()} />
-```
+Ejemplos: `apps/examples/carrito` (dos ventanas con el mismo store) y `apps/examples/preferencias` (`persisted`).
 
-- Deshacer devuelve cada `state` y cada colección que el paso tocó a como estaba antes del paso, en un solo `batch`; rehacer, a como quedó. Los objetos son los mismos (no copias), así que `{#each}` con clave mueve las filas y conserva su estado.
-- Un paso guarda una copia superficial de cada colección que toca (la lista de tarjetas, no cada tarjeta). Una tarjeta modificada es otra colección y se anota aparte, solo si cambia. Un paso que acaba como empezó no se anota.
-- Un `step` dentro de otro se suma a él; un paso nuevo vacía lo que había para rehacer. `History(limit=100)` olvida los más antiguos.
-- Lo que cambia **fuera** de un `step` no se anota: el cursor, la selección o lo que se escribe en un campo no se deshacen. No pongas en el paso lo que no quieras deshacer.
-- Para lo que el historial no ve (un diccionario normal, un archivo, un objeto propio), `historial.add(nombre, undo=…, redo=…)` anota algo que ya hiciste con dos funciones. Dentro de un `step`, se suman a ese paso. Lo que hagan esas funciones al deshacer o rehacer no se anota.
-- `can_undo`, `can_redo`, `undo_label`, `redo_label` y `modified` son reactivos. `mark_saved()` marca lo actual como guardado: `modified` es `False` mientras se vuelva a ese punto (también deshaciendo). `clear()` olvida los pasos (al abrir otro documento).
+## Vídeo: `<video>` y `Frames`
 
-Ejemplos: `apps/challenges/kanban` (todo con `step`) y `apps/challenges/hoja` (con `add`, porque lo escrito vive en un diccionario normal por rendimiento).
-
-## Vídeo: `<Video>` y `Frames`
-
-Para mostrar vídeo a tiempo real (una cámara, un vídeo procesado, una simulación) los fotogramas no pasan por la reactividad: van por un `Frames`, que se puede alimentar desde cualquier hilo, y `<Video>` muestra siempre el más reciente. El plan completo, con cámaras y el paquete `janelkit-vision`, está en [vision.md](vision.md).
+Para mostrar vídeo a tiempo real (una cámara, un vídeo procesado, una simulación) los fotogramas no pasan por la reactividad: van por un `Frames`, que se puede alimentar desde cualquier hilo, y `<video>` muestra siempre el más reciente. El patrón completo, con cámara y modelo, está en [patrones.md](patrones.md#fotogramas-y-resultados-van-por-caminos-distintos).
 
 ```python
 import threading
@@ -543,33 +522,50 @@ def pct(valor, eje):               # de píxeles de la imagen a % de la capa (ej
 ```
 
 ```html
-<Video source={frames} flex={1} label="Cámara">
+<video source={frames} flex={1} label="Cámara">
   {#each caras as c}
     <flex class="cara" style={{"left": pct(c[0], 0), "top": pct(c[1], 1), "width": pct(c[2], 0), "height": pct(c[3], 1)}} />
   {/each}
-</Video>
-<Text>{frames.fps:.0f} fps</Text>
+</video>
+<text>{frames.fps:.0f} fps</text>
 ```
 
 - `frames.push(img)` acepta un array de numpy o cualquier objeto con el protocolo de búfer, de bytes y forma alto × ancho (gris), alto × ancho × 3 (`color="rgb"` o `"bgr"`) o × 4 (`"rgba"`, `"bgra"`); también un `QImage`. Copia la imagen (el búfer se puede reutilizar) y la convierte en el hilo que llama, no en el de la interfaz.
-- Si llegan fotogramas más deprisa de lo que la interfaz los entrega, se saltan: nunca se encolan. `<Video>` y `async for` reciben siempre el último.
+- Si llegan fotogramas más deprisa de lo que la interfaz los entrega, se saltan: nunca se encolan. `<video>` y `async for` reciben siempre el último.
 - `async for img in frames` da el objeto que se pasó a `push`. Con `background()`, el modelo corre en otro hilo y la vista previa no espera por él. `await frames.next()` espera al próximo.
-- `frames.size` (`(ancho, alto)` o `None`) y `frames.fps` son reactivos. `frames.latest()` es el último fotograma; `frames.clear()` deja la vista en blanco.
-- Los hijos de `<Video>` van en una caja con `position: relative` del tamaño exacto de la imagen que se ve, así que los porcentajes son de la imagen, también con `fit="contain"` (bandas) o `"cover"` (recortada). Para un espejo (cámara frontal), voltea la imagen antes de `push` (`cv2.flip(img, 1)`): así las coordenadas siguen coincidiendo.
-- Abrir cámaras no es del núcleo: con OpenCV (`cv2.VideoCapture`) o QtMultimedia, en un hilo propio. Lo hará `janelkit-vision` ([vision.md](vision.md#janelkit-vision-planeado-sin-implementar)).
+- `frames.size` (`(ancho, alto)` o `None`) y `frames.fps` son reactivos. `frames.latest()` es el último fotograma; `frames.clear()` deja la vista en blanco (`size` vuelve a `None` y `fps` a 0).
+- `frames.stalled` (reactivo) es `True` cuando pasan más de `stall_after` segundos sin fotogramas (`Frames(stall_after=1.5)`, el valor por defecto) y vuelve a `False` con el siguiente; en ese momento `fps` también baja a 0. Antes del primer fotograma y tras `clear()` es `False`: para saber si ya llegó alguno, `frames.size is None`. `{#if frames.stalled}<text>Sin señal</text>{/if}`.
+  `Frames` solo ve los `push`: una fuente que sigue empujando la misma imagen congelada (una cámara desconectada cuyo último fotograma se procesa en cada ciclo) no se detecta así; eso lo tiene que saber quien lee la cámara.
+- Los hijos de `<video>` van en una caja con `position: relative` del tamaño exacto de la imagen que se ve, así que los porcentajes son de la imagen, también con `fit="contain"` (bandas) o `"cover"` (recortada). Para un espejo (cámara frontal), voltea la imagen antes de `push` (`cv2.flip(img, 1)`): así las coordenadas siguen coincidiendo.
+- **Qué píxel se pulsó:** `<video>` recibe `on:click`, `on:dblclick`, `on:contextmenu` y `on:pointerdown`/`up`/`move`/`enter`/`leave`. Su `PointerEvent` trae, además de `x` e `y` (respecto al elemento), `image_x` e `image_y`: la posición en píxeles de la imagen (`float`; `int(event.image_x)` es la columna). Son `None` sin fotograma, en las bandas de `fit="contain"` y en un clic desde el teclado. Con `"cover"` la parte visible siempre está dentro de la imagen; con `"fill"` cada eje se escala por separado.
 
-## Listas grandes: `<List>`
+  ```python
+  puntos = state([])
 
-`<Scroll>` crea todas sus filas. Para cientos o miles de elementos, `<List>` solo crea las que se ven (más un margen):
+  def marcar(event):
+      if event.image_x is not None:
+          puntos.value.append((event.image_x, event.image_y))
+  ```
+
+  ```html
+  <video source={frames} on:click={marcar} />
+  ```
+
+  Como en las cajas, un evento en un hijo sube al `<video>` (el hijo lo recibe antes y puede pararlo con `event.stop()`). Un hijo con `position: absolute` (una caja de detección) no deja pasar el puntero: su `on:click` no llega al del `<video>`, igual que en `<flex>`; `on:pointerdown` y los demás sí suben. En las pruebas, `app.find(label="Cámara").click(x=100, y=50)` pulsa en ese punto del elemento.
+- Abrir cámaras no es del núcleo: con OpenCV (`cv2.VideoCapture`) o QtMultimedia, en un hilo propio. QtMultimedia está en PySide6-Addons, que JanelKit no instala: `pip install PySide6-Addons`.
+
+## Listas grandes: `<list>`
+
+`<scroll>` crea todas sus filas. Para cientos o miles de elementos, `<list>` solo crea las que se ven (más un margen):
 
 ```html
-<List class="lista">
+<list class="lista">
   {#each tareas as tarea (tarea["id"])}
-    <Row class="fila">
-      <Checkbox bind:checked={...}>{tarea["titulo"]}</Checkbox>
-    </Row>
+    <row class="fila">
+      <checkbox bind:checked={...}>{tarea["titulo"]}</checkbox>
+    </row>
   {/each}
-</List>
+</list>
 ```
 
 - Debe contener exactamente un `{#each}` (con clave, como siempre). El resto funciona igual: claves, índice, manejadores, componentes dentro de la fila y colecciones reactivas.
@@ -584,18 +580,18 @@ def pct(valor, eje):               # de píxeles de la imagen a % de la capa (ej
   ```
 - Las filas ocupan el ancho de la lista. Admite `gap`, `padding`, fondo, borde y radio desde `<style>`; por defecto ocupa el espacio libre (`flex: 1`).
 - Añadir filas (al final, al principio o en medio, en cualquier cantidad) se aplica por bloques y la vista conserva su posición. Borrar o mover pocas filas se aplica una a una (con `animate`, animado). A partir de 64 borrados o movimientos a la vez (ordenar, invertir, sustituir la lista) se aplican de golpe: las filas visibles se vuelven a crear y la vista conserva su posición (la fila que estaba arriba, por su número, sigue arriba), como al reordenar una tabla.
-- `{:else}` no está disponible dentro de `<List>`: muestra el estado vacío con un `{#if}` fuera.
+- `{:else}` no está disponible dentro de `<list>`: muestra el estado vacío con un `{#if}` fuera.
 
 ### Desplazamiento
 
 Para chats, registros y cualquier lista que crece:
 
 ```html
-<List follow ref={lista} on:top={cargar_anteriores} on:scroll={al_desplazar}>
+<list follow ref={lista} on:top={cargar_anteriores} on:scroll={al_desplazar}>
   {#each mensajes as m (m["id"])}
     <Mensaje msg={m} />
   {/each}
-</List>
+</list>
 ```
 
 - **`follow`**: la lista empieza abajo; si el usuario está abajo, sigue a las filas nuevas (también cuando una fila crece, p. ej. al cargar una imagen); si subió a leer, no se mueve. Al insertar filas por arriba (historial), lo que se estaba viendo se queda en el mismo sitio de la pantalla.
@@ -603,144 +599,54 @@ Para chats, registros y cualquier lista que crece:
 - **`on:scroll`**: como mucho una vez por fotograma, con `event = {"top": bool, "bottom": bool, "y": píxeles desde arriba, "height": alto del contenido}`. Sirve para saber si el usuario está abajo (`on:scroll={abajo = event["bottom"]}`).
 - Con `lista = ref()`: `lista.scroll_to_end()` (y con `follow` vuelve a seguir las nuevas), `lista.scroll_to_start()` y `lista.scroll_to(índice)` (lo justo para que se vea esa fila).
 
+`<scroll>` admite lo mismo, para contenido que no es una lista de filas iguales (un registro corto, un formulario largo, un documento):
+
+```html
+<scroll follow ref={zona} on:bottom={leido = True}>
+  ...
+  <text ref={aviso}>Condiciones</text>
+</scroll>
+```
+
+- `follow`, `on:top`, `on:bottom` y `on:scroll` funcionan como en `<list>`.
+- `zona.scroll_to_start()`, `zona.scroll_to_end()` y `zona.scroll_to(aviso)`: con el `ref` de un elemento de dentro, desplaza lo justo para que se vea entero (si ya se ve, no se mueve).
+
 Con 10 000 filas, crear la lista tarda unos 40 ms (ver `python tools/bench.py`).
 
 ## Accesibilidad
 
-- **Teclado:** Tab y Mayús+Tab recorren los controles en el orden de la plantilla. Un `Column`/`Row` con `on:click` también entra en ese recorrido y se activa con Espacio o Intro, como un botón. El foco se ve siempre (borde del color `--primary`).
-- **Lectores de pantalla:** los controles anuncian su texto (botones, casillas, opciones, pestañas) o su `placeholder` (campos). `label="..."` en cualquier elemento fija o sustituye ese nombre; úsalo en campos sin texto visible y en tarjetas pulsables. `Image` usa `alt`.
-- **Atajos:** `<Shortcut>` para las acciones frecuentes.
+- **Teclado:** Tab y Mayús+Tab recorren los controles en el orden de la plantilla. Un `column`/`row` con `on:click` también entra en ese recorrido y se activa con Espacio o Intro, como un botón. El foco se ve siempre (borde del color `--primary`).
+- **Lectores de pantalla:** los controles anuncian su texto (botones, casillas, opciones, pestañas) o su `placeholder` (campos). `label="..."` en cualquier elemento fija o sustituye ese nombre; úsalo en campos sin texto visible y en tarjetas pulsables. `image` usa `alt`.
+- **Atajos:** `<shortcut>` para las acciones frecuentes.
 
 ```html
-<TextField bind:value={busqueda} placeholder="Buscar…" label="Buscar en las notas" />
-<Row class="tarjeta" on:click={abrir(nota)} label={f"Abrir {nota['titulo']}"}>…</Row>
-<Image src="logo.png" alt="Logotipo de la empresa" />
+<textfield bind:value={busqueda} placeholder="Buscar…" label="Buscar en las notas" />
+<row class="tarjeta" on:click={abrir(nota)} label={f"Abrir {nota['titulo']}"}>…</row>
+<image src="logo.png" alt="Logotipo de la empresa" />
 ```
 
-## Idiomas
+## Idioma y dirección de escritura
 
-Las traducciones son del paquete [`janelkit-i18n`](../packages/janelkit-i18n/README.md) (`pip install janelkit-i18n`).
+`janelkit.locale` es el idioma de la interfaz: `locale.set("ar")` refleja toda la interfaz (filas, alineación del texto, indicadores de los controles) en los idiomas de derecha a izquierda y hace que Qt use ese idioma en sus controles. `locale.rtl` dice si el activo se escribe de derecha a izquierda. Es reactivo.
 
-```python
-from pathlib import Path
-from janelkit_i18n import i18n, t
-
-i18n.load(Path(__file__).parent / "locales")   # locales/es.json, en.json, ar.json…
-i18n.set("es")
-```
-
-```json
-{ "saludo": "Hola, {nombre}", "archivos": {"zero": "Ningún archivo", "one": "{n} archivo", "other": "{n} archivos"} }
-```
-
-```html
-<Text>{t("saludo", nombre=nombre)}</Text>
-<Text>{t("archivos", n=len(archivos))}</Text>
-<Text>{i18n.number(total, 2)} · {i18n.date(hoy, "long")}</Text>
-```
-
-- `t` lee el idioma activo: al llamar a `i18n.set("en")` se actualiza todo lo que traduce, sin reiniciar.
-- Plurales: un diccionario con `zero` (opcional), `one` y `other`, elegido con el parámetro `n`.
-- Si falta una clave en el idioma activo, se usa la de `i18n.default` (por defecto `"es"`) y, si tampoco está, la propia clave, con un aviso en el logger `janelkit`.
-- `i18n.number(x, decimales)`, `i18n.currency(x, "€")` e `i18n.date(fecha, "short" | "long")` dan formato según el idioma activo (separadores, nombres de meses, cifras árabes…).
-- En idiomas de **derecha a izquierda** (`ar`, `he`, `fa`, `ur`…) toda la interfaz se refleja: filas, alineación del texto e indicadores de los controles. `i18n.rtl` dice si el idioma activo lo es.
-- El idioma de la interfaz es del núcleo: `janelkit.locale`. `i18n.set()` lo cambia, y sin traducciones basta `locale.set("ar")` para reflejar la interfaz y que Qt use ese idioma.
-
-Ejemplo: `apps/examples/idiomas` (español, inglés y árabe).
+Las traducciones (catálogos, plurales, formatos de número y fecha) son del paquete [`janelkit-i18n`](../packages/janelkit-i18n/README.md), cuyo `i18n.set()` cambia también este idioma. Ejemplo: `apps/examples/idiomas`.
 
 ## Navegación entre pantallas
 
+Las pilas de páginas (`pages`, `<Pages>`), las secciones (`sections`, `<Sections>`), `navigation()` y los resultados con `await nav.push(...)` son del paquete [`janelkit-router`](../packages/janelkit-router/README.md):
+
 ```python
-from janelkit import pages
+from janelkit_router import pages, Pages
 from pages.Inicio import Inicio
-from pages.Detalle import Detalle
 
 nav = pages(Inicio)
-
-def abrir(item):
-    nav.push(Detalle, item=item, on_borrado=borrar)
 ```
 
 ```html
-<Row class="barra">
-  <Button on:click={nav.pop()} enabled={nav.can_go_back}>← Volver</Button>
-  <Text>{nav.current}</Text>
-</Row>
-<Pages stack={nav} />
+<Pages stack={nav} transition:slide />
 ```
 
-- `<Pages stack={nav} />` muestra la página de arriba de la pila y ocupa el espacio libre (`flex: 1`).
-- `push` muestra una página nueva encima; la de debajo **sigue viva** y, al volver con `pop()`, conserva su estado. Mientras está debajo, lo que muestra espera, como en [`{#hidden}`](#hidden): se pone al día al volver a verse. `replace` sustituye la actual; `reset` vacía la pila y empieza de nuevo. Las páginas descartadas se liberan (sus `on_destroy` se ejecutan).
-- Cada página ocupa todo su `<Pages>` (y cada sección, su `<Sections>`) y se estrecha con la ventana hasta el mínimo de su contenido; lo que deba desplazarse, con `overflow: auto`. La raíz de la página puede cambiarlo con CSS, como un bloque en una columna:
-
-  ```css
-  .pagina { max-width: 720px; margin: 0 auto; }   /* una columna centrada */
-  .pagina { width: 400px; height: 300px; }         /* tamaño fijo, arriba a la izquierda */
-  .pagina { align-self: center; }                  /* su ancho natural, centrada */
-  .pagina { margin: 24px; }                        /* llena, con margen alrededor */
-  ```
-- Las palabras clave son props y eventos (`on_...`) de la página, como en `open_window`. Las páginas heredan el contexto (`inject`) del componente que declara la pila.
-- `nav.current` (nombre de la página visible), `nav.depth` y `nav.can_go_back` son reactivos; `nav.page` da la instancia visible.
-- **Transiciones:** `<Pages stack={nav} transition:slide />` anima la página que entra: al avanzar llega desde la derecha y al volver desde la izquierda. También `fade` y `scale`, y la duración: `transition:fade={150}`. En `<Sections>`, la transición se aplica al cambiar de sección y a las páginas de cada una.
-- **Atrás con el teclado y el ratón:** Alt+← y el botón «atrás» del ratón vuelven a la página anterior, en la pila visible más interna. Alt+← actúa cuando el foco está dentro de la pila (si está, por ejemplo, en un botón de la barra lateral, no hace nada); el ratón, al pulsar sobre ella. Si un elemento de la página ya usa Alt+← (por ejemplo, para mover una tarjeta), gana el elemento.
-
-### Navegar desde una página
-
-Dentro de una página (o de cualquier componente que contenga), `navigation()` da su pila, sin pasarla como prop:
-
-```python
-from janelkit import navigation
-from pages.Detalle import Detalle
-
-nav = navigation()
-
-def abrir(item):
-    nav.push(Detalle, item=item)
-```
-
-### Devolver un resultado
-
-`push` se puede esperar: `await` devuelve el valor con el que la página vuelve con `nav.back(valor)` (o `None` si se descarta de otra forma, con `pop`, `replace` o `reset`).
-
-```python
-async def elegir_responsable():                  # en la página que pregunta
-    persona = await nav.push(ElegirPersona)
-    if persona is not None:
-        tarjeta["responsable"] = persona["id"]
-```
-
-```html
-<!-- en ElegirPersona.janel -->
-<Button on:click={nav.back(p)}>{p["nombre"]}</Button>
-```
-
-### Secciones
-
-Una aplicación con barra lateral o pestañas tiene varias secciones, y cada una necesita su pila. `sections()` las crea; `<Sections of={...} />` muestra la actual:
-
-```python
-from janelkit import sections
-from pages.Proyectos import Proyectos
-from pages.Personas import Personas
-
-secciones = sections(proyectos=Proyectos, personas=Personas)
-```
-
-```html
-<flex>
-  <flex direction="column" class="barra">
-    <Button on:click={secciones.show("proyectos")} class:activa={secciones.current == "proyectos"}>Proyectos</Button>
-    <Button on:click={secciones.show("personas")} class:activa={secciones.current == "personas"}>Personas</Button>
-  </flex>
-  <Sections of={secciones} />
-</flex>
-```
-
-- Cada sección es una pila (`secciones["personas"]`, o `secciones.stack` para la visible) y empieza en el componente indicado. Dentro, `navigation()` da la pila de su sección.
-- Una sección se crea la primera vez que se muestra. Al cambiar a otra **se conserva entera**, con todas sus páginas y su estado; volver a ella cuesta lo mismo que mostrarla. Mientras no se ve, lo que muestra espera (como en [`{#hidden}`](#hidden)): un cambio de datos en otra sección no la recalcula.
-- `secciones.current` (el nombre de la visible) es reactivo; `secciones.names` lista los nombres.
-
-### Preguntar antes de salir
+## Preguntar antes de salir
 
 `before_leave(fn)` en el script de un componente registra una pregunta: si `fn()` devuelve `False`, no se sale. Puede ser `async`, para preguntar con un diálogo:
 
@@ -753,16 +659,8 @@ async def salir():
     return not cambios.value or await dialogs.confirm("Hay cambios sin guardar. ¿Salir igualmente?")
 ```
 
-- Se consulta al descartar la página que contiene el componente (`pop`, `back`, `replace`, `reset`, Alt+←) y al cerrar con la X la ventana que lo muestra. Cerrar la ventana principal consulta también las ventanas que abrió.
-- Cambiar de sección no pregunta: la sección se conserva y no se pierde nada.
-- Para encadenar navegaciones, espera la salida: `pop`, `back`, `replace` y `reset` devuelven `True` si se salió y `False` si un `before_leave` lo impidió (la respuesta puede llegar después de un diálogo):
-
-```python
-async def ir_a_tarjeta(pid, tid):
-    if await nav.reset(Proyectos):      # un detalle con cambios puede pedir quedarse
-        nav.push(Proyecto, ident=pid, enfocar=tid)
-```
-- Cerrar desde el código (`ventana.close()`) no pregunta.
+- Se consulta al cerrar con la X la ventana que muestra el componente; cerrar la ventana principal consulta también las ventanas que abrió. Cerrar desde el código (`ventana.close()`) no pregunta.
+- También lo consulta un anfitrión que va a descartar el componente: en `janelkit-router`, `pop`, `back`, `replace`, `reset` y Alt+← sobre la página que lo contiene.
 
 ## Varias ventanas
 
@@ -770,7 +668,7 @@ Cualquier componente importado se puede abrir en una ventana propia:
 
 ```python
 from janelkit import open_window
-from components.Ajustes import Ajustes      # un .janel (con <Window> como raíz, o sin ella)
+from components.Ajustes import Ajustes      # un .janel (con <window> como raíz, o sin ella)
 
 def abrir_ajustes():
     ventana = open_window(Ajustes, usuario=usuario, on_guardado=guardar, modal=True)
@@ -780,34 +678,11 @@ def abrir_ajustes():
 - La ventana hereda el **contexto** (`inject`) del componente que la abre, queda por delante de su ventana y se **cierra sola** cuando ese componente se desmonta. Al cerrar la ventana principal se cierran las que abrió.
 - `modal=True` bloquea la ventana que la abrió mientras está abierta. `theme="dark"` le da un tema propio (también a los componentes que contiene), sin cambiar el de la aplicación.
 - Devuelve un objeto con `is_open` (reactivo: úsalo en la plantilla o en un `computed`), `close()`, `focus()` e `instance`.
+- `single=True`: si ya hay una ventana abierta de ese componente, la trae al frente y la devuelve en vez de abrir otra (las props nuevas no se aplican). Sirve para «Ajustes» o «Acerca de», que se abren desde un menú o un atajo.
 
-## Diálogos del sistema
+## Diálogos y portapapeles
 
-Son del paquete [`janelkit-desktop`](../packages/janelkit-desktop/README.md) (`pip install janelkit-desktop`), como el portapapeles y las notificaciones.
-
-```python
-from janelkit_desktop import dialogs
-
-async def abrir():                                # on:click={abrir}
-    ruta = await dialogs.open_file("Abrir nota", filters=["Notas (*.md *.txt)", "Todos (*)"])
-    if ruta is not None:                          # None: el usuario canceló
-        texto.value = ruta.read_text(encoding="utf-8")
-
-async def borrar():
-    if await dialogs.confirm("¿Borrar la nota?", details="No se puede deshacer."):
-        ...
-```
-
-| Función | Devuelve |
-|---|---|
-| `open_file(title, filters, folder)` | `Path` o `None` |
-| `open_files(title, filters, folder)` | `list[Path]` (vacía si se cancela) |
-| `save_file(title, filters, folder, name)` | `Path` o `None` |
-| `choose_folder(title, folder)` | `Path` o `None` |
-| `message(text, title, details)` | `None` al cerrarse |
-| `confirm(text, title, details)` | `True` si se acepta |
-
-Son nativos cuando la plataforma los ofrece y se muestran sobre la ventana de la aplicación. Al ser `async`, se usan desde un manejador `async def`, y se cierran solos si el componente que los abrió se desmonta.
+Son del paquete [`janelkit-desktop`](../packages/janelkit-desktop/README.md): diálogos nativos que se esperan con `await` (`await dialogs.open_file(...)`, `await dialogs.confirm(...)`) y el portapapeles reactivo.
 
 ## Elementos propios en QML
 
@@ -842,7 +717,9 @@ from widgets.Meter import Meter
 - Eventos: cada `signal`. El manejador recibe sus parámetros (`def elegido(step):`; en línea, `event`).
 - `bind:prop={estado}` funciona con cualquier propiedad escribible: los cambios que haga el QML (también por asignación, `root.value = 3`) vuelven al `state`. Los números de QML (`real`) llegan como `float`.
 - `janel dev` reinicia la aplicación al guardar el `.qml` (Qt no siempre vuelve a leer en el mismo proceso un `.qml` ya cargado).
-- El QML es **interfaz de Qt, no de JanelKit**: su contenido no está cubierto por la política de versiones, y sus errores se muestran tal como los da Qt.
+- Las `property` y `signal` cuyo nombre empieza por `jk` son internas: no se pueden pasar ni escuchar desde la plantilla.
+- **Montar componentes desde Python.** Un elemento cuya raíz es `JkDeck` (`import Janel`) es un mazo: muestra uno de sus hijos, que ocupa todo el sitio; crece solo (`flex: 1`) y admite `transition:`. Si además declara `property JkHost nombre`, `<Elemento nombre={objeto} />` le pasa el elemento a `objeto`, un `janelkit.ext.Host`, que monta componentes dentro con `container.mount(...)`. Así están hechos `<Pages>` y `<Sections>` de `janelkit-router` ([api.md](api.md#janelkitext-extensiones)).
+- El QML es **interfaz de Qt, no de JanelKit**: su contenido no está cubierto por la política de versiones, y sus errores se muestran tal como los da Qt. Son de JanelKit `jktheme`, `JkDeck` (su `currentIndex` y las propiedades de `transition:`) y `JkHost`.
 
 **Tipos escritos en Python.** Un `QQuickItem` (o `QQuickPaintedItem`) registrado con `@QmlElement` se usa desde un `.qml` como cualquier tipo QML (`import dials` → `PyDial { ... }`). El módulo que lo registra debe importarse **antes** de `run()`, en `main.py`, porque Qt resuelve los imports al cargar la vista.
 
@@ -850,17 +727,21 @@ Ejemplo: `apps/examples/counter` (`src/widgets/Meter.qml`).
 
 ## Elementos disponibles
 
-**Elementos base, en minúscula; componentes y controles, en mayúscula.** Las etiquetas en minúscula están reservadas para los elementos base de JanelKit, a partir de los que se construyen otros elementos sin escribir QML (como `<div>` frente a `<Boton>` en la web). Hoy hay uno, [`<flex>`](flex.md); el de la entrada de datos llegará después. Una etiqueta en minúscula desconocida es un error que lista los elementos base.
+**Elementos del núcleo en minúscula; componentes en mayúscula.** Como en HTML, las etiquetas en minúscula son lo que da la plataforma: los elementos de JanelKit, todos en las tablas de esta sección (`<window>`, `<flex>`, `<text>`, `<button>`, `<checkbox>`…). Una etiqueta en mayúscula es un componente que el script importa: un `.janel` (`<TodoItem>`) o un `.qml` ([Elementos propios en QML](#elementos-propios-en-qml)). Así un componente propio puede llamarse `Button` sin chocar con `<button>`. Una etiqueta en minúscula desconocida es un error que lista los elementos del núcleo.
 
-| Elemento base | Qt Quick | Propiedades | Eventos |
+Los nombres de 0.1 en mayúscula (`<Text>`, `Text { … }` en `<style>`) aún compilan, con un aviso, si el script no importa un componente con ese nombre; dejan de valer en 0.3. `janel migrate` actualiza el proyecto ([desarrollo.md](desarrollo.md#comandos)).
+
+`<flex>` es la caja con la que se construyen otros elementos sin escribir QML (como `<div>` en la web):
+
+| Caja | Qt Quick | Propiedades | Eventos |
 |---|---|---|---|
-| `flex` | caja propia con el motor flexbox (`JkFlex`) | `direction` (`row` por defecto, `column`, `row-reverse`, `column-reverse`), `wrap`, `gap`, `padding`, `align` (`align-items`), `justify` (`justify-content`), `as`, `tabindex`, `disabled`, `title`, `checked`, `selected`, `expanded`, `style` | `on:click`, `on:dblclick`, `on:contextmenu`, `on:pointerdown`, `on:pointerup`, `on:pointermove`, `on:pointerenter`, `on:pointerleave`, `on:wheel`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur`, `on:resize` |
+| `flex` | caja propia con el motor flexbox (`JkFlex`) | `direction` (`row` por defecto, `column`, `row-reverse`, `column-reverse`), `wrap`, `gap`, `padding`, `align` (`align-items`), `justify` (`justify-content`), `as`, `tabindex`, `disabled`, `title`, `checked`, `selected`, `expanded`, `draggable`, `style` | `on:click`, `on:dblclick`, `on:contextmenu`, `on:pointerdown`, `on:pointerup`, `on:pointermove`, `on:pointerenter`, `on:pointerleave`, `on:wheel`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur`, `on:resize`, `on:dragstart`, `on:dragover`, `on:drop`, `on:dragend` |
 
-`<flex>` es la caja de la web: fila por defecto, `align-items: stretch` y el resto del flexbox de CSS en `<style>` (`flex-wrap`, márgenes y `margin: auto`, `space-between`, `order`, `%`, bordes por lado, radio por esquina, `overflow`), con estados (`:hover`, `:pressed`, `:focus-visible`…), selectores de descendiente (`.tarjeta:hover .acciones`), sombra, `outline`, `transform` y `cursor`. Ver [estilos.md](estilos.md) y el diseño completo, con lo que llegará en las fases siguientes, en [flex.md](flex.md). Los atributos de texto se comprueban al compilar: `<flex direction="diagonal">` es un error.
+`<flex>` es la caja de la web: fila por defecto, `align-items: stretch` y el resto del flexbox de CSS en `<style>` (`flex-wrap`, márgenes y `margin: auto`, `space-between`, `order`, `%`, bordes por lado, radio por esquina, `overflow`), con estados (`:hover`, `:pressed`, `:focus-visible`…), selectores de descendiente (`.tarjeta:hover .acciones`), sombra, `outline`, `transform` y `cursor`. Ver [estilos.md](estilos.md); hay botones, tarjetas, menús y diálogos hechos con `<flex>` en `apps/examples/flex`. Los atributos de texto se comprueban al compilar: `<flex direction="diagonal">` es un error.
 
 ### Eventos de las cajas
 
-`<flex>`, `Column` y `Row` reciben los eventos de la tabla. Como en la web, un evento **sube** desde el elemento más profundo bajo el puntero (o desde el que tiene el foco, para las teclas) hacia sus contenedores. El manejador recibe un objeto con lo ocurrido (`PointerEvent`, `KeyEvent`, `WheelEvent`, `FocusEvent`, `ResizeEvent`; ver [api.md](api.md)) y dos métodos:
+`<flex>`, `column` y `row` reciben los eventos de la tabla (`video`, los de puntero: ver [Vídeo](#vídeo-video-y-frames)). Como en la web, un evento **sube** desde el elemento más profundo bajo el puntero (o desde el que tiene el foco, para las teclas) hacia sus contenedores. El manejador recibe un objeto con lo ocurrido (`PointerEvent`, `KeyEvent`, `WheelEvent`, `FocusEvent`, `ResizeEvent`; ver [api.md](api.md)) y dos métodos:
 
 - `event.stop()`: los contenedores de fuera no lo reciben (el ✕ de un chip no elige el chip).
 - `event.prevent()`: Qt no hace lo que haría (escribir la tecla en un campo, desplazar con la rueda, pulsar con Espacio).
@@ -873,9 +754,38 @@ def tecla(event):
 ```
 
 - `on:pointerenter` y `on:pointerleave` no suben (como en la web). `on:focus`/`on:blur` tampoco; `event.reason` dice si llegó con Tab, con un clic o por código.
-- `on:click` sigue siendo el de siempre: si un control de Qt (un `<Button>`) se queda el clic, la caja que lo contiene no lo recibe. Entre cajas, sí sube (y se corta con `stop()`). Desde el teclado (Espacio o Intro) llega con `event.pointer == "keyboard"`.
-- `on:contextmenu`: clic derecho o tecla de menú.
-- `prevent()` y `stop()` solo cuentan antes del primer `await` de un manejador `async def`. `prevent()` no impide que se dispare un `<Shortcut>`.
+- `on:click` sigue siendo el de siempre: si un control de Qt (un `<button>`) se queda el clic, la caja que lo contiene no lo recibe. Entre cajas, sí sube (y se corta con `stop()`). Desde el teclado (Espacio o Intro) llega con `event.pointer == "keyboard"`.
+- `on:contextmenu`: clic derecho o tecla de menú (sin pulsación larga).
+- `on:resize` llega una vez por vuelta del bucle de eventos, aunque el tamaño cambie varias veces.
+- `on:pointermove` solo se envía si hay manejador: es frecuente.
+- `prevent()` y `stop()` solo cuentan antes del primer `await` de un manejador `async def`. `prevent()` no impide que se dispare un `<shortcut>`.
+
+### Arrastrar y soltar
+
+Una caja con `draggable` se arrastra al pulsarla y mover el puntero más que la distancia de arrastre del sistema (una pulsación corta sigue siendo un clic). Lo que se arrastra es un valor de Python:
+
+```html
+<flex class="tarjeta" draggable on:dragstart={event.data = tarjeta["id"]}>…</flex>
+
+<flex class="columna" on:drop={mover(event.data, columna)}>…</flex>
+
+<style>
+.tarjeta:dragging { opacity: 0.4; }      /* la original, mientras su imagen sigue al puntero */
+.columna:drag-over { background: var(--surface-alt); }
+</style>
+```
+
+| Evento | Dónde | Cuándo |
+|---|---|---|
+| `on:dragstart` | la caja `draggable` y sus antecesores | Empieza el arrastre. Pon `event.data`; `event.prevent()` lo cancela. |
+| `on:dragover` | las cajas bajo el puntero | El puntero se mueve; `event.x`/`event.y` dicen dónde se soltaría. |
+| `on:drop` | la caja con `on:drop` más profunda bajo el puntero (y las de fuera si no hace `stop()`) | Se suelta. Solo las cajas con `on:drop` son destino y se marcan con `:drag-over`. |
+| `on:dragend` | la caja `draggable` y sus antecesores | Termina, con `event.dropped` (`False` si se soltó fuera o con Escape). Si `on:drop` quitó la caja, no llega. |
+
+- Todos reciben un `DragEvent`: lo de `PointerEvent` más `.data` y `.dropped`.
+- Mientras se arrastra, Escape cancela y no hay clic al soltar. Cerca del borde (40 px) de una zona con desplazamiento (`<list>`, `<scroll>`, `overflow: auto`), esta avanza sola.
+- Funciona dentro de una ventana; no entre ventanas ni desde otras aplicaciones (archivos).
+- En pruebas: `Element.drag_to(destino)` de `janelkit.inspect`.
 
 ### Papel, teclado y accesibilidad: `as`
 
@@ -897,48 +807,58 @@ def tecla(event):
 - Una caja con papel de botón (o con `on:click`) sin texto ni `label` produce una advertencia: el lector de pantalla no sabría qué es.
 - El anillo de foco por defecto (un borde del color `--primary`) se sustituye con una regla `outline` (`.boton:focus-visible { outline: 2px solid var(--primary) }`) o se quita con `outline: none`.
 
-Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`, `enabled`, `opacity` y `label` (nombre para lectores de pantalla; ver [Accesibilidad](#accesibilidad)).
+Propiedades comunes a todos salvo `window`: `width`, `height`, `flex`, `visible`, `enabled`, `opacity` y `label` (nombre para lectores de pantalla; ver [Accesibilidad](#accesibilidad)).
 
 | Elemento | Qt Quick | Propiedades | Eventos | `bind:` |
 |---|---|---|---|---|
-| `Window` | `ApplicationWindow` | `title`, `width`, `height`, `minWidth`, `minHeight`, `background` | `on:activate`, `on:deactivate` | — |
-| `Column` | `<flex direction="column">` | `gap`, `padding` | `on:click` | — |
-| `Row` | `<flex direction="row">` | `gap`, `padding` | `on:click` | — |
-| `Scroll` | `ScrollView` + columna | `gap`, `padding` | — | — |
-| `List` | `ListView` | `gap`, `padding`, `animate`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
-| `Text` | `Label` | `text`, `color`, `format` (`plain`, `markdown`, `html`), `selectable` | `on:link(url)` | — |
-| `Button` | `Button` | `text`, `variant` (`default`, `primary`, `danger`, `ghost`), `flat` | `on:click` | — |
-| `TextField` | `TextField` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:submit(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
-| `TextArea` | `TextArea` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
-| `Checkbox` | `CheckBox` | `checked`, `text` | `on:change(marcado)` | `bind:checked` |
-| `Switch` | `Switch` | `checked`, `text` | `on:change(activado)` | `bind:checked` |
-| `Slider` | `Slider` | `value`, `min` (0), `max` (100), `step` | `on:change(valor)` | `bind:value` |
-| `Select` | `ComboBox` | `options`, `value`, `placeholder` | `on:change(valor)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
-| `RadioGroup` | `RadioButton`s | `options`, `value`, `horizontal` | `on:change(valor)` | `bind:value` |
-| `Tabs` | `TabBar` | `options`, `value` | `on:change(valor)` | `bind:value` |
-| `ProgressBar` | `ProgressBar` | `value`, `max` (1), `indeterminate` | — | — |
-| `Image` | `Image` | `src`, `fit` (`contain`, `cover`, `fill`, `none`), `alt` | — | — |
-| `Video` | `VideoOutput` | `source` (un `Frames`), `fit` (`contain`, `cover`, `fill`) | — | — |
-| `Shortcut` | `Shortcut` | `keys` | `on:activate` | — |
-| `Spacer` | `Item` | — | — | — |
+| `window` | `ApplicationWindow` | `title`, `width`, `height`, `minWidth`, `minHeight`, `background`, `screen`, `fullscreen` | `on:activate`, `on:deactivate` | — |
+| `column` | `<flex direction="column">` | `gap`, `padding` | `on:click` | — |
+| `row` | `<flex direction="row">` | `gap`, `padding` | `on:click` | — |
+| `scroll` | `ScrollView` + columna | `gap`, `padding`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
+| `list` | `ListView` | `gap`, `padding`, `animate`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
+| `text` | `Label` | `text`, `color`, `format` (`plain`, `markdown`, `html`), `selectable` | `on:link(url)` | — |
+| `button` | `Button` | `text`, `variant` (`default`, `primary`, `danger`, `ghost`), `flat` | `on:click` | — |
+| `textfield` | `TextField` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:submit(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
+| `textarea` | `TextArea` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
+| `checkbox` | `CheckBox` | `checked`, `text` | `on:change(marcado)` | `bind:checked` |
+| `switch` | `Switch` | `checked`, `text` | `on:change(activado)` | `bind:checked` |
+| `slider` | `Slider` | `value`, `min` (0), `max` (100), `step` | `on:change(valor)` | `bind:value` |
+| `select` | `ComboBox` | `options`, `value`, `placeholder` | `on:change(valor)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
+| `radiogroup` | `RadioButton`s | `options`, `value`, `horizontal` | `on:change(valor)` | `bind:value` |
+| `tabs` | `TabBar` | `options`, `value` | `on:change(valor)` | `bind:value` |
+| `progressbar` | `ProgressBar` | `value`, `max` (1), `indeterminate` | — | — |
+| `image` | `Image` | `src`, `fit` (`contain`, `cover`, `fill`, `none`), `alt` | — | — |
+| `video` | `JkVideoSurface` (una textura de Qt Quick) | `source` (un `Frames`), `fit` (`contain`, `cover`, `fill`) | `on:click`, `on:dblclick`, `on:contextmenu`, `on:pointerdown`, `on:pointerup`, `on:pointermove`, `on:pointerenter`, `on:pointerleave` (con `image_x`, `image_y`) | — |
+| `shortcut` | `Shortcut` | `keys` | `on:activate` | — |
+| `spacer` | `Item` | — | — | — |
 
-- **`List`** es una lista virtualizada para colecciones grandes; ver [Listas grandes](#listas-grandes-list) y [Desplazamiento](#desplazamiento).
-- **`Window`**: `on:activate` y `on:deactivate` avisan cuando la ventana pasa a primer plano o deja de estarlo (para marcar como leído o decidir si mostrar una notificación con `notify`).
-- **Opciones** (`Select`, `RadioGroup`, `Tabs`): `options` es una lista de textos (`["rojo", "verde"]`) o de diccionarios `{"label": "Mediano", "value": 2}`; `value` es el valor elegido. La elección del usuario se ve al momento; si Python cambia `value`, manda Python.
-- `Tabs` es solo la barra: el contenido de cada pestaña se elige con `{#if pestaña == "general"}`.
-- `Image`: `src` puede ser una ruta relativa a la carpeta del `.janel`, una ruta absoluta o una URL (`https:`, `qrc:`, `data:`). Sin `width`/`height`, toma el tamaño de la imagen.
-- `Video` muestra los fotogramas de un `Frames` ([Vídeo](#vídeo-video-y-frames)). Sus hijos van en una capa sobre la imagen.
-- `Shortcut` no ocupa espacio: escucha el teclado de su ventana mientras existe (`<Shortcut keys="Ctrl+S" on:activate={guardar} />`; teclas como en Qt: `Ctrl+Shift+N`, `F5`, `Esc`). Dentro de un `{#if}`, solo está activo con la rama.
-- `TextArea` emite `on:input` solo con los cambios del usuario, no con los que llegan de Python.
-- **Teclado y foco en los campos** (`TextField`, `TextArea`, `Select`): `on:keydown`, `on:keyup`, `on:focus` y `on:blur` funcionan como en `<flex>` ([eventos](flex.md)): suben a los contenedores, `event.stop()` corta la subida y `event.prevent()` hace que la tecla no llegue al campo (no se escribe). Por ejemplo, Escape para cancelar una edición y guardar al salir del campo:
+- **`list`** es una lista virtualizada para colecciones grandes; ver [Listas grandes](#listas-grandes-list) y [Desplazamiento](#desplazamiento).
+- **`window`**: `on:activate` y `on:deactivate` avisan cuando la ventana pasa a primer plano o deja de estarlo (para marcar como leído, o pausar lo que solo importa mientras se mira).
+- **`window` en otra pantalla:** `screen={i}` la abre en la pantalla `i` de `screens` (o `screen={"nombre"}`, por su nombre), centrada; `fullscreen={bool}` la pone a pantalla completa o la saca. Los dos son reactivos: cambiar `screen` estando a pantalla completa mueve la ventana a la otra pantalla y la deja a pantalla completa allí. Si la pantalla no existe (un proyector desconectado), la ventana se queda donde está y vuelve a colocarse cuando se conecta. `screens` es la lista reactiva de pantallas (`Screen`: `index`, `name`, `width`, `height`, `x`, `y`, `primary`, `scale`):
 
   ```html
-  <TextField bind:value={nombre} on:keydown={event.key == "Escape" and cancelar()} on:blur={guardar()} />
+  <script>
+  from janelkit import screens, computed
+  proyector = computed(lambda: 1 if len(screens.value) > 1 else 0)
+  </script>
+  <window title="Proyección" screen={proyector} fullscreen={True}>…</window>
   ```
-- `Column` y `Row` son atajos de `<flex>` con sus valores por defecto de siempre: en una columna, texto y cajas ocupan el ancho y los controles se quedan a la izquierda; en una fila, los hijos se centran en vertical; solo encoge lo que tiene `flex`. Admiten todo el flexbox de `<flex>` en `<style>` (también `flex-wrap`). Si solo usan lo básico (`gap`, `padding`, alineación, márgenes fijos, un hijo con `flex`), se colocan con un layout de Qt, más rápido; no hay que hacer nada para ello ([Vía rápida](flex.md#vía-rápida-layouts-de-qt)).
-- `<flex>`, `Column` y `Row` con `on:click` se pueden pulsar en toda su superficie (tarjetas, filas): muestran cursor de mano y un resaltado al pasar el ratón. Un botón dentro sigue funcionando por separado.
-- `Scroll` es una columna con desplazamiento vertical; por defecto ocupa el espacio libre (`flex: 1`).
-- `Spacer` ocupa el espacio libre y empuja a sus hermanos hacia los extremos.
+- **Opciones** (`select`, `radiogroup`, `tabs`): `options` es una lista de textos (`["rojo", "verde"]`) o de diccionarios `{"label": "Mediano", "value": 2}`; `value` es el valor elegido. La elección del usuario se ve al momento; si Python cambia `value`, manda Python.
+- `tabs` es solo la barra: el contenido de cada pestaña se elige con `{#if pestaña == "general"}`.
+- `image`: `src` puede ser una ruta relativa a la carpeta del `.janel`, una ruta absoluta o una URL (`https:`, `qrc:`, `data:`). Sin `width`/`height`, toma el tamaño de la imagen.
+- `video` muestra los fotogramas de un `Frames` ([Vídeo](#vídeo-video-y-frames)). Sus hijos van en una capa sobre la imagen. Recibe los eventos de puntero de las cajas, con la posición también en píxeles de la imagen.
+- `shortcut` no ocupa espacio: escucha el teclado de su ventana mientras existe (`<shortcut keys="Ctrl+S" on:activate={guardar} />`; teclas como en Qt: `Ctrl+Shift+N`, `F5`, `Esc`). Dentro de un `{#if}`, solo está activo con la rama.
+- `textarea` emite `on:input` solo con los cambios del usuario, no con los que llegan de Python.
+- **Teclado y foco en los campos** (`textfield`, `textarea`, `select`): `on:keydown`, `on:keyup`, `on:focus` y `on:blur` funcionan como en `<flex>` ([eventos](#eventos-de-las-cajas)): suben a los contenedores, `event.stop()` corta la subida y `event.prevent()` hace que la tecla no llegue al campo (no se escribe). Por ejemplo, Escape para cancelar una edición y guardar al salir del campo:
+
+  ```html
+  <textfield bind:value={nombre} on:keydown={event.key == "Escape" and cancelar()} on:blur={guardar()} />
+  ```
+- `column` y `row` son atajos de `<flex>` con sus valores por defecto de siempre: en una columna, texto y cajas ocupan el ancho y los controles se quedan a la izquierda; en una fila, los hijos se centran en vertical; solo encoge lo que tiene `flex`. Admiten todo el flexbox de `<flex>` en `<style>` (también `flex-wrap`). Si solo usan lo básico (`gap`, `padding`, alineación, márgenes fijos, un hijo con `flex`), se colocan con un layout de Qt, más rápido; no hay que hacer nada para ello.
+- `<flex>`, `column` y `row` con `on:click` se pueden pulsar en toda su superficie (tarjetas, filas): muestran cursor de mano y un resaltado al pasar el ratón. Un botón dentro sigue funcionando por separado.
+- `scroll` es una columna con desplazamiento vertical; por defecto ocupa el espacio libre (`flex: 1`). Para moverlo desde el código, ver [Desplazamiento](#desplazamiento).
+- `spacer` ocupa el espacio libre y empuja a sus hermanos hacia los extremos.
+- Los campos (`textfield`, `textarea`, `slider`, `select`, `radiogroup`, `tabs`) y los demás elementos sin contenido (`image`, `progressbar`, `spacer`, `shortcut`, `Pages`, `Sections`) se escriben con cierre automático: `<textfield bind:value={nombre} />`. Un campo no tiene texto dentro: lo escrito o elegido es su `value`. `<textfield>Pan</textfield>` y `<textfield></textfield>` son errores de compilación.
 - `width`/`height` fijan el tamaño preferido dentro del contenedor; `flex={1}` hace crecer el elemento en el eje del contenedor. Ver [estilos.md](estilos.md#disposición).
 
 Un elemento, propiedad, evento o directiva desconocidos producen un error con las opciones válidas y, si hay uno parecido, «¿quisiste decir…?».

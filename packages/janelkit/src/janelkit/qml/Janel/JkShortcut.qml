@@ -1,4 +1,4 @@
-// Atajo de teclado de JanelKit: <Shortcut keys="Ctrl+S" on:activate={guardar} />.
+// Atajo de teclado de JanelKit: <shortcut keys="Ctrl+S" on:activate={guardar} />.
 // No ocupa espacio: es un elemento invisible que solo escucha el teclado de su ventana.
 import QtQuick
 

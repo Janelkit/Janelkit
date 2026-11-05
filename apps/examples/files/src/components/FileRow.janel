@@ -10,12 +10,12 @@ opened = event()
 exact = inject("exact_sizes", False)
 </script>
 
-<Row class="row" class:selected={selected} on:click={opened.emit(file)}>
-  <Text class="icon">{"📁" if file["is_dir"] else "📄"}</Text>
-  <Text class="name" flex={1}>{file["name"]}</Text>
-  <Text class="meta">{"" if file["is_dir"] else format_size(file["size"], exact)}</Text>
-  <Text class="meta date">{format_date(file["modified"])}</Text>
-</Row>
+<row class="row" class:selected={selected} on:click={opened.emit(file)}>
+  <text class="icon">{"📁" if file["is_dir"] else "📄"}</text>
+  <text class="name" flex={1}>{file["name"]}</text>
+  <text class="meta">{"" if file["is_dir"] else format_size(file["size"], exact)}</text>
+  <text class="meta date">{format_date(file["modified"])}</text>
+</row>
 
 <style>
 .row { padding: 6px 8px; gap: 10px; border-radius: var(--radius-sm); align-items: center; }

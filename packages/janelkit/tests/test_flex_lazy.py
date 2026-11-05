@@ -1,5 +1,5 @@
 """Cajas y textos ligeros: cada pieza se crea solo si se usa (JkHover, JkTap, JkRole,
-JkTranslate, JkTextBox, JkTextLinks). Ver "Vía rápida" en docs/flex.md."""
+JkTranslate, JkTextBox, JkTextLinks). Ver «Disposición» en docs/arquitectura.md."""
 from janelkit.testing import find
 from janelkit.compiler import compile_source
 from PySide6.QtCore import QCoreApplication, QEvent, Qt
@@ -10,16 +10,16 @@ from janelkit import state
 papel = state("")
 x = state(0)
 </script>
-<Column>
-  <flex id="quieta"><Text id="plano">hola</Text></flex>
-  <flex id="pulsable" on:click={print}><Text>clic</Text></flex>
-  <flex id="encima" class="encima"><Text>hover</Text></flex>
-  <flex id="etiqueta" label="Solo una etiqueta"><Text>x</Text></flex>
-  <flex id="dinamica" as={papel}><Text>papel</Text></flex>
-  <flex id="movida" style={{"padding": x}} class="movida"><Text>t</Text></flex>
-  <Text id="fondo" class="fondo">con fondo</Text>
-  <Text id="enlaces" format="markdown">[web](https://example.com)</Text>
-</Column>
+<column>
+  <flex id="quieta"><text id="plano">hola</text></flex>
+  <flex id="pulsable" on:click={print}><text>clic</text></flex>
+  <flex id="encima" class="encima"><text>hover</text></flex>
+  <flex id="etiqueta" label="Solo una etiqueta"><text>x</text></flex>
+  <flex id="dinamica" as={papel}><text>papel</text></flex>
+  <flex id="movida" style={{"padding": x}} class="movida"><text>t</text></flex>
+  <text id="fondo" class="fondo">con fondo</text>
+  <text id="enlaces" format="markdown">[web](https://example.com)</text>
+</column>
 <style>
 .encima:hover { background: #eeeeee; }
 .movida { transform: translate(4px, 0); }
@@ -76,7 +76,7 @@ def test_label_on_a_box_without_role_stays_hidden_from_screen_readers(mount):
 
 
 def test_unset_side_padding_and_gap_follow_the_general_ones(mount):
-    m = mount("""<Column><flex id="c" class="c"><flex id="a" class="cuadro" /><flex id="b" class="cuadro" /></flex></Column>
+    m = mount("""<column><flex id="c" class="c"><flex id="a" class="cuadro" /><flex id="b" class="cuadro" /></flex></column>
 <style>
 .c { padding: 6px; padding-left: 20px; gap: 5px; border: 1px solid #000000; }
 .cuadro { width: 10px; height: 10px; }

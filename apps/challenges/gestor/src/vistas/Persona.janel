@@ -1,12 +1,14 @@
 <script lang="python">
 # Ficha de una persona: editar sus datos (un borrador), ver sus tarjetas en todos los
 # proyectos (abrir una lleva a su tablero) y darla de baja, con aviso de cuántas tiene.
-from janelkit import before_leave, inject, navigation, prop, state
+from janelkit import before_leave, inject, prop, state
+from janelkit_router import navigation
 from janelkit_desktop import dialogs
-from services.datos import ROLES, cuenta
+from janelkit_store import use
+from services.datos import ROLES, cuenta, Datos
 
 ident = prop("")
-datos = inject("datos")
+datos = use(Datos)
 abrir_tarjeta = inject("abrir_tarjeta")
 nav = navigation()
 p = datos.persona(ident.value)
@@ -38,46 +40,46 @@ async def borrar():
 
 <flex class="pagina">
   <flex class="cabecera">
-    <Button text="← Personas" variant="ghost" enabled={nav.can_go_back} label="Volver a Personas (Alt+←)" on:click={nav.pop()} />
-    <flex class="avatar grande" style={{"background": p["color"]}}><Text>{datos.iniciales(ident)}</Text></flex>
+    <button text="← Personas" variant="ghost" enabled={nav.can_go_back} label="Volver a Personas (Alt+←)" on:click={nav.pop()} />
+    <flex class="avatar grande" style={{"background": p["color"]}}><text>{datos.iniciales(ident)}</text></flex>
     <flex class="titulos">
-      <Text class="titulo">{p["nombre"]}</Text>
-      <Text class="subtitulo">{" · ".join(x for x in (p["rol"], p["correo"]) if x) or "Sin rol ni correo"}</Text>
+      <text class="titulo">{p["nombre"]}</text>
+      <text class="subtitulo">{" · ".join(x for x in (p["rol"], p["correo"]) if x) or "Sin rol ni correo"}</text>
     </flex>
-    <Spacer />
-    <Button text="Dar de baja" on:click={borrar()} />
+    <spacer />
+    <button text="Dar de baja" on:click={borrar()} />
   </flex>
   <flex class="cuerpo">
     <flex class="panel ficha">
-      <Text class="panel-titulo">Datos</Text>
-      <Text class="rotulo">Nombre</Text>
-      <TextField bind:value={nombre} label="Nombre" />
-      <Text class="rotulo">Correo</Text>
-      <TextField bind:value={correo} placeholder="nombre@ejemplo.org" label="Correo" />
-      <Text class="rotulo">Rol</Text>
-      <Select options={ROLES_OPC} bind:value={rol} label="Rol" />
+      <text class="panel-titulo">Datos</text>
+      <text class="rotulo">Nombre</text>
+      <textfield bind:value={nombre} label="Nombre" />
+      <text class="rotulo">Correo</text>
+      <textfield bind:value={correo} placeholder="nombre@ejemplo.org" label="Correo" />
+      <text class="rotulo">Rol</text>
+      <select options={ROLES_OPC} bind:value={rol} label="Rol" />
       <flex class="botones">
-        {#if cambios()}<Text class="aviso">Cambios sin guardar</Text>{/if}
-        <Spacer />
-        <Button text="Guardar" variant="primary" enabled={bool(cambios())} on:click={datos.editar_persona(ident, **cambios())} />
+        {#if cambios()}<text class="aviso">Cambios sin guardar</text>{/if}
+        <spacer />
+        <button text="Guardar" variant="primary" enabled={bool(cambios())} on:click={datos.editar_persona(ident, **cambios())} />
       </flex>
     </flex>
     <flex class="panel tarjetas">
       <flex class="panel-cabecera">
-        <Text class="panel-titulo">Tarjetas</Text>
-        <Text class="contador">{datos.cuantas_de(ident)}</Text>
+        <text class="panel-titulo">Tarjetas</text>
+        <text class="contador">{datos.cuantas_de(ident)}</text>
       </flex>
       <flex class="lista">
         {#each datos.tarjetas_de(ident) as fila (fila[2]["id"])}
           <flex as="button" class="tarjeta" label={fila[2]["titulo"]} on:click={abrir_tarjeta(fila[0]["id"], fila[2]["id"])}>
             <flex class="color" style={{"background": fila[0]["color"]}} />
-            <Text class="t">{fila[2]["titulo"]}</Text>
-            <Spacer />
-            <Text class="dato">{f"{fila[0]['nombre']} · {fila[1]['nombre']}"}</Text>
-            <Text class="fecha">{fila[2]["fecha"] or "sin fecha"}</Text>
+            <text class="t">{fila[2]["titulo"]}</text>
+            <spacer />
+            <text class="dato">{f"{fila[0]['nombre']} · {fila[1]['nombre']}"}</text>
+            <text class="fecha">{fila[2]["fecha"] or "sin fecha"}</text>
           </flex>
         {:else}
-          <Text class="dato">No es responsable de ninguna tarjeta.</Text>
+          <text class="dato">No es responsable de ninguna tarjeta.</text>
         {/each}
       </flex>
     </flex>

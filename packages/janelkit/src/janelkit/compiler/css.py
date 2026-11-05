@@ -17,17 +17,17 @@ from .css_parser import Declaration
 
 THEME_OBJECT = "jktheme"  # propiedad de contexto QML con los tokens del tema activo
 
-FLEXES = {"flex", "Column", "Row"}  # cajas con el motor de <flex> (JkFlex)
-BOXES = FLEXES | {"Scroll", "List"}
-TEXTUAL = {"Text", "Button", "TextField", "TextArea", "Checkbox", "Switch", "Select", "RadioGroup", "Tabs"}
-FIELDS = {"Button", "TextField", "TextArea", "Select"}
-ITEMS = set(CONTROLS) - {"Window"}
+FLEXES = {"flex", "column", "row"}  # cajas con el motor de <flex> (JkFlex)
+BOXES = FLEXES | {"scroll", "list"}
+TEXTUAL = {"text", "button", "textfield", "textarea", "checkbox", "switch", "select", "radiogroup", "tabs"}
+FIELDS = {"button", "textfield", "textarea", "select"}
+ITEMS = set(CONTROLS) - {"window"}
 ALL = set(CONTROLS)
 
 _NUM_RE = re.compile(r"^(-?\d+(?:\.\d+)?)(px)?$")
 _VAR_RE = re.compile(r"^var\(\s*--([A-Za-z][\w-]*)\s*(?:,\s*(.+))?\)$")
 
-# Texto que heredan los <Text> de dentro de una caja (fase 4 de docs/flex.md):
+# Texto que heredan los <text> de dentro de una caja:
 # propiedad QML del texto -> nombre en el contexto de estilo (JkContext.qml).
 INHERITED = {
     "jkColor": "color", "font.family": "family", "font.pixelSize": "size", "font.weight": "weight",
@@ -132,7 +132,7 @@ _ANIMATABLE = {
     "outline": [("jkOutlineColor", _COLOR_ANIM), ("jkOutlineWidth", _NUMBER_ANIM), ("jkOutlineOffset", _NUMBER_ANIM)],
     "outline-color": [("jkOutlineColor", _COLOR_ANIM)],
 }  # fmt: skip
-# Solo existen en las cajas (<flex>, Column, Row).
+# Solo existen en las cajas (<flex>, <column>, <row>).
 _FLEX_ONLY_ANIM = {"box-shadow", "outline", "outline-color"}
 _DURATION_RE = re.compile(r"^(\d+(?:\.\d+)?)(ms|s)$")
 
@@ -160,7 +160,7 @@ def _transition(value: str, ctx: _Context) -> dict[str, str]:
                     f"transition no puede animar {name!r}; se admiten: {', '.join(_ANIMATABLE)} y all"
                 )
             if name in _FLEX_ONLY_ANIM and not flex:
-                raise StyleValueError(f"{name} solo existe en <flex>, Column y Row")
+                raise StyleValueError(f"{name} solo existe en <flex>, <column> y <row>")
             for qml_prop, animation in _ANIMATABLE[name]:
                 out[BEHAVIOR + qml_prop] = f"{animation} {{ duration: {ms:.0f}; easing.type: Easing.OutCubic }}"
     return out
@@ -174,7 +174,7 @@ def _single(qml_prop: str, kind: str) -> Converter:
 
 
 def _padding_names(tag: str) -> tuple[str, list[str]]:
-    if tag in ("Scroll", "List"):
+    if tag in ("scroll", "list"):
         return "innerPadding", [f"inner{s.capitalize()}Padding" for s in _SIDES]
     return "padding", [f"{s}Padding" for s in _SIDES]
 
@@ -629,7 +629,7 @@ def _radius(value: str, ctx: _Context) -> dict[str, str]:
     if len(parts) == 1:
         return {"jkRadius": ctx.number(parts[0])}
     if ctx.tag not in FLEXES:
-        raise StyleValueError("un radio distinto por esquina solo se admite en <flex>, Column y Row")
+        raise StyleValueError("un radio distinto por esquina solo se admite en <flex>, <column> y <row>")
     nums = [ctx.number(p) for p in parts]
     tl, tr, br, bl = {2: (0, 1, 0, 1), 3: (0, 1, 2, 1), 4: (0, 1, 2, 3)}[len(nums)]
     return dict(zip(_CORNERS, (nums[tl], nums[tr], nums[br], nums[bl])))
@@ -638,7 +638,7 @@ def _radius(value: str, ctx: _Context) -> dict[str, str]:
 def _size(axis: str) -> Converter:
     def convert(value: str, ctx: _Context) -> dict[str, str]:
         v = value.strip()
-        if ctx.tag == "Window":
+        if ctx.tag == "window":
             return {axis: ctx.number(v)}
         name = "Width" if axis == "width" else "Height"
         if v in ("auto", "fit-content"):
@@ -646,7 +646,7 @@ def _size(axis: str) -> Converter:
         if v == "100%":
             return {f"Layout.fill{name}": "true"}
         if v.endswith("%"):
-            # Porcentaje del contenedor: lo resuelve el motor de <flex> (también Column y Row).
+            # Porcentaje del contenedor: lo resuelve el motor de <flex> (también <column> y <row>).
             return {f"jk{name}Pct": _percent(v), f"Layout.fill{name}": "false"}
         return {f"Layout.preferred{name}": ctx.number(v), f"Layout.fill{name}": "false"}
 
@@ -656,7 +656,7 @@ def _size(axis: str) -> Converter:
 def _limit(kind: str, axis: str) -> Converter:
     def convert(value: str, ctx: _Context) -> dict[str, str]:
         name = "Width" if axis == "width" else "Height"
-        if ctx.tag == "Window":
+        if ctx.tag == "window":
             return {f"{kind}imum{name}": ctx.number(value)}
         return {f"Layout.{kind}imum{name}": ctx.number(value)}
 
@@ -666,12 +666,12 @@ def _limit(kind: str, axis: str) -> Converter:
 # propiedad CSS -> (elementos donde aplica, conversor)
 SUPPORTED: dict[str, tuple[set[str], Converter]] = {
     "color": (TEXTUAL | FLEXES, _single("jkColor", "color")),
-    "background": (BOXES | FIELDS | {"Text"}, _single("jkBackground", "color")),
-    "background-color": (BOXES | FIELDS | {"Text"}, _single("jkBackground", "color")),
-    "border": (BOXES | FIELDS | {"Text"}, _border),
-    "border-color": (BOXES | FIELDS | {"Text"}, _single("jkBorderColor", "color")),
-    "border-width": (BOXES | FIELDS | {"Text"}, _single("jkBorderWidth", "number")),
-    "border-radius": (BOXES | FIELDS | {"Text"}, _radius),
+    "background": (BOXES | FIELDS | {"text"}, _single("jkBackground", "color")),
+    "background-color": (BOXES | FIELDS | {"text"}, _single("jkBackground", "color")),
+    "border": (BOXES | FIELDS | {"text"}, _border),
+    "border-color": (BOXES | FIELDS | {"text"}, _single("jkBorderColor", "color")),
+    "border-width": (BOXES | FIELDS | {"text"}, _single("jkBorderWidth", "number")),
+    "border-radius": (BOXES | FIELDS | {"text"}, _radius),
     **{f"border-{side}": (FLEXES, _border_side(side)) for side in _SIDES},
     **{f"border-{side}-width": (FLEXES, _border_side_part(side, "width")) for side in _SIDES},
     **{f"border-{side}-color": (FLEXES, _border_side_part(side, "color")) for side in _SIDES},
@@ -684,20 +684,20 @@ SUPPORTED: dict[str, tuple[set[str], Converter]] = {
     "flex-direction": ({"flex"}, _direction),
     "direction": ({"flex"}, _direction),
     "flex-wrap": (FLEXES, _wrap),
-    "align-items": (FLEXES | {"Scroll"}, _align_items),
-    "justify-content": (FLEXES | {"Scroll"}, _justify),
+    "align-items": (FLEXES | {"scroll"}, _align_items),
+    "justify-content": (FLEXES | {"scroll"}, _justify),
     "align-content": (FLEXES, _align_content),
-    "font-size": (TEXTUAL | FLEXES | {"Window"}, _single("font.pixelSize", "number")),
-    "font-weight": (TEXTUAL | FLEXES | {"Window"}, _weight),
-    "font-family": (TEXTUAL | FLEXES | {"Window"}, _family),
-    "font-style": (TEXTUAL | FLEXES | {"Window"}, _italic),
+    "font-size": (TEXTUAL | FLEXES | {"window"}, _single("font.pixelSize", "number")),
+    "font-weight": (TEXTUAL | FLEXES | {"window"}, _weight),
+    "font-family": (TEXTUAL | FLEXES | {"window"}, _family),
+    "font-style": (TEXTUAL | FLEXES | {"window"}, _italic),
     "letter-spacing": (TEXTUAL | FLEXES, _single("font.letterSpacing", "number")),
     "text-transform": (TEXTUAL | FLEXES, _transform),
-    "text-align": ({"Text", "TextField", "TextArea"} | FLEXES, _text_align),
-    "line-height": ({"Text"} | FLEXES, _line_height),
-    "white-space": ({"Text"} | FLEXES, _white_space),
-    "text-overflow": ({"Text"} | FLEXES, _text_overflow),
-    "user-select": ({"Text"}, _user_select),
+    "text-align": ({"text", "textfield", "textarea"} | FLEXES, _text_align),
+    "line-height": ({"text"} | FLEXES, _line_height),
+    "white-space": ({"text"} | FLEXES, _white_space),
+    "text-overflow": ({"text"} | FLEXES, _text_overflow),
+    "user-select": ({"text"}, _user_select),
     "flex": (ITEMS, _flex),
     "flex-grow": (ITEMS, _flex_grow),
     "flex-shrink": (ITEMS, _flex_shrink),
@@ -732,7 +732,7 @@ SUPPORTED: dict[str, tuple[set[str], Converter]] = {
     "visibility": (FLEXES, lambda v, ctx: {"jkHidden": _keyword(v, {"visible": "false", "hidden": "true"}, "visibility")}),
 }
 
-# Window usa su propia propiedad de color de fondo.
+# <window> usa su propia propiedad de color de fondo.
 _WINDOW_OVERRIDES = {"background": "color", "background-color": "color"}
 
 
@@ -756,11 +756,11 @@ def compile_declarations(
         if decl.prop.startswith("--"):
             # Variable propia: la ven la caja y todo lo que contiene (también otros componentes).
             if tag not in FLEXES:
-                warn(f"las variables propias ({decl.prop}) se definen en <flex>, Column o Row", decl)
+                warn(f"las variables propias ({decl.prop}) se definen en <flex>, <column> o <row>", decl)
                 continue
             props[VAR_PREFIX + token_key(decl.prop[2:])] = _variable(decl.value, ctx)
             continue
-        if tag == "Window" and decl.prop in _WINDOW_OVERRIDES:
+        if tag == "window" and decl.prop in _WINDOW_OVERRIDES:
             try:
                 props[_WINDOW_OVERRIDES[decl.prop]] = ctx.color(decl.value)
             except StyleValueError as exc:
@@ -787,7 +787,7 @@ def compile_declarations(
         for note in ctx.notes:
             warn(note, decl)
     if tag in FLEXES:
-        # En una caja, el texto no es suyo: lo heredan los <Text> de dentro.
+        # En una caja, el texto no es suyo: lo heredan los <text> de dentro.
         props = {(TEXT_PREFIX + INHERITED[k] if k in INHERITED else k): v for k, v in props.items()}
         props.pop(BEHAVIOR + "jkColor", None)  # el color heredado no se anima en la caja
     autos = [k for k in props if k.startswith(AUTO_MARGIN)]

@@ -20,7 +20,7 @@ class Point:
 
 hints = typing.get_type_hints(Point)
 </script>
-<Column><Text>{Point(3).x}</Text></Column>
+<column><text>{Point(3).x}</text></column>
 """
 
 

@@ -27,18 +27,21 @@ import shutil
 import sys
 import tempfile
 import time
+import warnings
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
+from .compiler.legacy import LEGACY_TAGS
+
 # Tipos QML de JanelKit -> nombre del elemento en la plantilla.
 _TAGS = {
-    "JkWindow": "Window", "JkColumn": "Column", "JkRow": "Row", "JkScroll": "Scroll", "JkList": "List",
-    "JkText": "Text", "JkButton": "Button", "JkTextField": "TextField", "JkTextArea": "TextArea",
-    "JkCheckBox": "Checkbox", "JkSwitch": "Switch", "JkSlider": "Slider", "JkSelect": "Select",
-    "JkRadioGroup": "RadioGroup", "JkTabs": "Tabs", "JkImage": "Image", "JkProgressBar": "ProgressBar",
-    "JkShortcut": "Shortcut", "JkSpacer": "Spacer", "JkFlex": "flex",
-    "JkFlexColumn": "Column", "JkFlexRow": "Row", "JkQtBox": "flex",
+    "JkWindow": "window", "JkColumn": "column", "JkRow": "row", "JkScroll": "scroll", "JkList": "list",
+    "JkText": "text", "JkButton": "button", "JkTextField": "textfield", "JkTextArea": "textarea",
+    "JkCheckBox": "checkbox", "JkSwitch": "switch", "JkSlider": "slider", "JkSelect": "select",
+    "JkRadioGroup": "radiogroup", "JkTabs": "tabs", "JkImage": "image", "JkProgressBar": "progressbar",
+    "JkShortcut": "shortcut", "JkSpacer": "spacer", "JkFlex": "flex",
+    "JkFlexColumn": "column", "JkFlexRow": "row", "JkQtBox": "flex",
 }  # fmt: skip
 # Piezas internas de JanelKit que no son elementos de la plantilla.
 _INTERNAL = (
@@ -61,7 +64,7 @@ _KEY_NAMES = {
 
 
 def _send_keys(window: Any, keys: str) -> None:
-    """Pulsa y suelta una combinación como en <Shortcut>: "Ctrl+D", "Alt+Right", "Delete".
+    """Pulsa y suelta una combinación como en <shortcut>: "Ctrl+D", "Alt+Right", "Delete".
     También acepta los nombres de `event.key` ("ArrowRight", "PageDown")."""
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QKeySequence
@@ -90,6 +93,19 @@ def _tag(item: Any) -> str:
     return name.split(".janel")[0]
 
 
+def _kind(item: Any) -> str:
+    """El elemento integrado que es `item`, aunque sea la raíz de un componente
+    (un `Otra.janel` cuya raíz es `<text>` es un <text>); si no lo es, su `_tag`."""
+    meta = item.metaObject()
+    while meta is not None:
+        name = meta.className()
+        for qml_type, tag in _TAGS.items():
+            if name == qml_type or name.startswith(qml_type + "_"):
+                return tag
+        meta = meta.superClass()
+    return _tag(item)
+
+
 class Element:
     """Un elemento de la vista. `item` es el objeto Qt Quick (interfaz de Qt, no de JanelKit)."""
 
@@ -104,8 +120,12 @@ class Element:
     # -- lectura ------------------------------------------------------------
     @property
     def tag(self) -> str:
-        """Nombre del elemento en la plantilla (`Button`, `Text`…) o del tipo QML propio."""
+        """Nombre del elemento en la plantilla (`button`, `text`…) o del tipo QML propio."""
         return _tag(self.item)
+
+    @property
+    def _kind(self) -> str:
+        return _kind(self.item)
 
     @property
     def id(self) -> str:
@@ -113,6 +133,10 @@ class Element:
 
     @property
     def text(self) -> str | None:
+        """Texto que muestra el elemento (un `<text>`, un botón, una casilla). Los campos no tienen:
+        lo escrito en un `<textfield>` o `<textarea>` es su `value`."""
+        if self._kind in ("textfield", "textarea"):
+            return None
         value = self.item.property("text")
         return value if isinstance(value, str) else None
 
@@ -130,16 +154,16 @@ class Element:
     @property
     def value(self) -> Any:
         """Valor actual de un control (texto, marcado, número u opción elegida)."""
-        tag = self.tag
-        if tag in ("TextField", "TextArea"):
+        tag = self._kind
+        if tag in ("textfield", "textarea"):
             return self.item.property("text")
-        if tag in ("Checkbox", "Switch"):
+        if tag in ("checkbox", "switch"):
             return self.item.property("checked")
-        if tag == "Select":
+        if tag == "select":
             return self.item.property("currentValue")
-        if tag == "RadioGroup":
+        if tag == "radiogroup":
             return self.item.property("jkCurrent")
-        if tag == "Tabs":
+        if tag == "tabs":
             return self._tab_value()
         return self.item.property("value")
 
@@ -156,15 +180,25 @@ class Element:
         return self.item.property(name)
 
     # -- acciones -----------------------------------------------------------
-    def click(self) -> "Element":
-        """Pulsa un botón, una casilla/interruptor (la alterna) o una caja con on:click."""
-        tag = self.tag
+    def click(self, x: float | None = None, y: float | None = None) -> "Element":
+        """Pulsa un botón, una casilla/interruptor (la alterna) o una caja con on:click.
+
+        Con `x` o `y` (respecto al elemento; el que falte, en el centro) es un clic real del
+        ratón en ese punto: lo recibe lo que haya allí, y on:click llega con esa posición (en
+        un `<video>`, también con `image_x`/`image_y`)."""
+        tag = self._kind
         self._require_enabled("click")
-        if tag in ("Checkbox", "Switch"):
+        if x is not None or y is not None:
+            from PySide6.QtCore import Qt
+            from PySide6.QtTest import QTest
+
+            QTest.mouseClick(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
+            return self._settle()
+        if tag in ("checkbox", "switch"):
             return self.check(not self.item.property("checked"))
-        if tag == "Button":
+        if tag == "button":
             press(self.item)
-        elif tag == "Shortcut":
+        elif tag == "shortcut":
             self._invoke("activated")
         else:
             # Como un clic real: lo recibe el contenedor más cercano con on:click (una fila, una tarjeta).
@@ -177,23 +211,23 @@ class Element:
         return self._settle()
 
     def type(self, text: str) -> "Element":
-        """Sustituye el texto de un TextField o TextArea como si lo escribiera el usuario."""
-        self._require(("TextField", "TextArea"), "type")
+        """Sustituye el texto de un <textfield> o <textarea> como si lo escribiera el usuario."""
+        self._require(("textfield", "textarea"), "type")
         self._require_enabled("type")
         self.item.setProperty("text", text)
-        if self.tag == "TextField":
+        if self._kind == "textfield":
             self._invoke("textEdited")
         return self._settle()
 
     def submit(self) -> "Element":
-        """Pulsa Intro en un TextField (on:submit)."""
-        self._require(("TextField",), "submit")
+        """Pulsa Intro en un <textfield> (on:submit)."""
+        self._require(("textfield",), "submit")
         self._invoke("accepted")
         return self._settle()
 
     def check(self, checked: bool = True) -> "Element":
         """Marca o desmarca una casilla o interruptor."""
-        self._require(("Checkbox", "Switch"), "check")
+        self._require(("checkbox", "switch"), "check")
         self._require_enabled("check")
         if bool(self.item.property("checked")) != checked:
             self._invoke("toggle")
@@ -201,17 +235,17 @@ class Element:
         return self._settle()
 
     def slide(self, value: float) -> "Element":
-        """Mueve un Slider a `value`."""
-        self._require(("Slider",), "slide")
+        """Mueve un <slider> a `value`."""
+        self._require(("slider",), "slide")
         self.item.setProperty("value", value)
         self._invoke("moved")
         return self._settle()
 
     def choose(self, option: Any) -> "Element":
-        """Elige una opción (por valor o por texto) en Select, RadioGroup o Tabs."""
-        tag = self._require(("Select", "RadioGroup", "Tabs"), "choose")
+        """Elige una opción (por valor o por texto) en <select>, <radiogroup> o <tabs>."""
+        tag = self._require(("select", "radiogroup", "tabs"), "choose")
         self._require_enabled("choose")
-        if tag == "Select":
+        if tag == "select":
             from PySide6.QtCore import Q_ARG
 
             for i, (label, value) in enumerate(_options(self.item.property("options"))):
@@ -220,7 +254,7 @@ class Element:
                     self._invoke("activated", Q_ARG(int, i))
                     return self._settle()
         else:
-            kind = "QQuickRadioButton" if tag == "RadioGroup" else "QQuickTabButton"
+            kind = "QQuickRadioButton" if tag == "radiogroup" else "QQuickTabButton"
             for button in self._app._walk(self.item):
                 data = button.property("modelData") if button.inherits(kind) else None
                 if hasattr(data, "toVariant"):  # QJSValue (según la versión de PySide6)
@@ -252,31 +286,32 @@ class Element:
         image = image.copy(*(round(v * ratio) for v in (box.x(), box.y(), box.width(), box.height())))
         return _save(image, path)
 
-    def double_click(self) -> "Element":
-        """Doble clic real en el centro del elemento (on:dblclick)."""
+    def double_click(self, x: float | None = None, y: float | None = None) -> "Element":
+        """Doble clic real en el centro del elemento, o en (`x`, `y`) respecto a él (on:dblclick)."""
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
 
         self._require_enabled("double_click")
-        QTest.mouseDClick(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center())
+        QTest.mouseDClick(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
-    def right_click(self) -> "Element":
-        """Clic con el botón derecho en el centro del elemento (on:contextmenu)."""
+    def right_click(self, x: float | None = None, y: float | None = None) -> "Element":
+        """Clic con el botón derecho en el centro del elemento, o en (`x`, `y`) respecto a él (on:contextmenu)."""
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
 
         self._require_enabled("right_click")
-        QTest.mouseClick(self._app.window, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, self._center())
+        QTest.mouseClick(self._app.window, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
-    def hover(self) -> "Element":
-        """Pone el puntero del ratón sobre el centro del elemento (activa sus estilos :hover)."""
+    def hover(self, x: float | None = None, y: float | None = None) -> "Element":
+        """Pone el puntero del ratón sobre el centro del elemento, o en (`x`, `y`) respecto a él
+        (activa sus estilos :hover; on:pointerenter y on:pointermove)."""
         from PySide6.QtCore import QPoint
 
-        center = self._center()
-        _move_pointer(self._app.window, center + QPoint(1, 1))  # ver unhover()
-        _move_pointer(self._app.window, center)
+        point = self._point(x, y)
+        _move_pointer(self._app.window, point + QPoint(1, 1))  # ver unhover()
+        _move_pointer(self._app.window, point)
         return self._settle()
 
     def unhover(self) -> "Element":
@@ -288,19 +323,21 @@ class Element:
         _move_pointer(self._app.window, QPoint(-60, -60))
         return self._settle()
 
-    def press(self) -> "Element":
-        """Mantiene pulsado el botón del ratón sobre el elemento (estilos :pressed) hasta release()."""
+    def press(self, x: float | None = None, y: float | None = None) -> "Element":
+        """Mantiene pulsado el botón del ratón sobre el elemento, en su centro o en (`x`, `y`)
+        respecto a él (estilos :pressed, on:pointerdown) hasta release()."""
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
 
-        QTest.mousePress(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center())
+        QTest.mousePress(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
-    def release(self) -> "Element":
+    def release(self, x: float | None = None, y: float | None = None) -> "Element":
+        """Suelta el botón del ratón en el centro del elemento o en (`x`, `y`) respecto a él (on:pointerup)."""
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
 
-        QTest.mouseRelease(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center())
+        QTest.mouseRelease(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
     def drag_to(self, target: "Element", *, x: float | None = None, y: float | None = None,
@@ -316,7 +353,7 @@ class Element:
             local = QPointF(target.item.width() / 2 if x is None else x, target.item.height() / 2 if y is None else y)
             return target.item.mapToScene(local).toPoint()
 
-        start = self._center()
+        start = self._point()
         QTest.mousePress(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
         self._settle()
         for i in range(1, 6):  # varios pasos: pasa la distancia de arrastre y recorre el camino
@@ -328,10 +365,15 @@ class Element:
         QTest.mouseRelease(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, end())
         return self._settle()
 
-    def _center(self) -> Any:
+    def _point(self, x: float | None = None, y: float | None = None) -> Any:
+        """El punto (`x`, `y`) del elemento en la ventana; el que falte, en el centro."""
         from PySide6.QtCore import QPointF
 
-        return self.item.mapToScene(QPointF(self.item.width() / 2, self.item.height() / 2)).toPoint()
+        local = QPointF(self.item.width() / 2 if x is None else x, self.item.height() / 2 if y is None else y)
+        return self.item.mapToScene(local).toPoint()
+
+    def _center(self) -> Any:
+        return self._point()
 
     # -- utilidades -----------------------------------------------------------
     def _tab_value(self) -> Any:
@@ -340,9 +382,9 @@ class Element:
         return options[index][1] if 0 <= index < len(options) else None
 
     def _require(self, tags: tuple[str, ...], action: str) -> str:
-        if self.tag not in tags:
+        if self._kind not in tags:
             raise InspectError(f"{self!r} no admite {action}() (solo {', '.join(tags)})")
-        return self.tag
+        return self._kind
 
     def _require_enabled(self, action: str) -> None:
         if not self.enabled:
@@ -465,12 +507,25 @@ class MountedApp:
         label: str | None = None,
         visible_only: bool = True,
     ) -> list[Element]:
-        """Elementos que cumplen todos los criterios dados."""
+        """Elementos que cumplen todos los criterios dados.
+
+        `tag` acepta el nombre de un componente o el elemento integrado que es su raíz:
+        la raíz `<text>` de `Otra.janel` aparece con `find("Otra")` y con `find("text")`.
+        Los nombres de 0.1 (`find("Text")`) aún valen, con un `DeprecationWarning`.
+        """
+        tags = (tag,)
+        if tag in LEGACY_TAGS:
+            warnings.warn(
+                f'find("{tag}"): los elementos del núcleo se escriben en minúscula desde 0.2: find("{LEGACY_TAGS[tag]}")',
+                DeprecationWarning,
+                stacklevel=3 if sys._getframe(1).f_code.co_name == "find" else 2,
+            )
+            tags = (tag, LEGACY_TAGS[tag])
         out = []
         for el in self.elements():
             if visible_only and not el.visible:
                 continue
-            if tag is not None and el.tag != tag:
+            if tag is not None and el.tag not in tags and el._kind not in tags:
                 continue
             if text is not None and el.text != text:
                 continue
@@ -492,16 +547,16 @@ class MountedApp:
         return found[0]
 
     def texts(self) -> list[str]:
-        """Textos visibles de los elementos <Text>, en orden de lectura (de arriba abajo)."""
+        """Textos visibles de los elementos <text>, en orden de lectura (de arriba abajo)."""
         from PySide6.QtCore import QPointF
 
-        labels = [el.item for el in self.find_all("Text")]
+        labels = [el.item for el in self.find_all("text")]
         labels.sort(key=lambda i: (round(i.mapToScene(QPointF(0, 0)).y()), i.mapToScene(QPointF(0, 0)).x()))
         return [i.property("text") for i in labels]
 
     def key(self, keys: str) -> None:
         """Pulsa una combinación de teclas en la ventana, sobre lo que tenga el foco
-        (atajos de <Shortcut>: "Ctrl+Z", "Ctrl+Shift+Z", "F5")."""
+        (atajos de <shortcut>: "Ctrl+Z", "Ctrl+Shift+Z", "F5")."""
         _send_keys(self.window, keys)
         self.process()
 
@@ -548,7 +603,7 @@ class MountedApp:
         # Métodos que añaden otros paquetes con `janelkit.ext.inspector` (p. ej. `dialogs()`).
         method = _extensions.get(name)
         if method is None:
-            hint = "" if name.startswith("_") else "; si lo añade una extensión (como dialogs() o notifications()), impórtala"
+            hint = "" if name.startswith("_") else "; si lo añade una extensión (como dialogs() de janelkit-desktop o store() de janelkit-store), impórtala"
             raise AttributeError(f"MountedApp no tiene {name!r}{hint}")
         return functools.partial(method, self)
 
@@ -564,7 +619,7 @@ class MountedApp:
             children = item.childItems()
             parent = item.parentItem()
             if parent is not None and parent.inherits("QQuickListView") and item is parent.property("contentItem"):
-                # Filas de <List animate> que salen: ya no cuentan (índice -1), aunque se vean un momento.
+                # Filas de <list animate> que salen: ya no cuentan (índice -1), aunque se vean un momento.
                 children = [c for c in children if (ctx := qmlContext(c)) is None or ctx.contextProperty("index") != -1]
             stack.extend(reversed(children))
         return out
@@ -583,7 +638,7 @@ def mount(entry: str | os.PathLike[str], headless: bool = True) -> Iterator[Moun
 
     if headless and QGuiApplication.instance() is None:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    from . import storage
+    from . import session
     from .compiler import compile_file
     from .qt_backend.application import Application
 
@@ -593,9 +648,10 @@ def mount(entry: str | os.PathLike[str], headless: bool = True) -> Iterator[Moun
         sys.path.insert(0, str(path.parent))
     before = set(sys.modules)
     application = Application.current or Application([])
-    # persisted() no toca los datos reales del usuario: una carpeta temporal por montaje.
+    # Una sesión por montaje, con una carpeta de datos temporal: los paquetes (persisted, stores)
+    # no tocan los datos reales del usuario, y una prueba no ve lo que dejó la anterior.
     data = Path(tempfile.mkdtemp(prefix="janelkit-data-"))
-    storage.use_app(path, data)
+    session.start(path, data)
     try:
         mounted = application.mount(compile_file(path))
         app = MountedApp(application, mounted)
@@ -607,7 +663,7 @@ def mount(entry: str | os.PathLike[str], headless: bool = True) -> Iterator[Moun
                 application.unmount(mounted)
             application.process_events()
     finally:
-        storage.flush_all()
+        session.end()
         shutil.rmtree(data, ignore_errors=True)
         if added and str(path.parent) in sys.path:
             sys.path.remove(str(path.parent))

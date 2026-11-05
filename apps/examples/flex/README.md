@@ -1,6 +1,6 @@
 # Catálogo de `<flex>`
 
-Elementos construidos solo con `.janel` sobre `<flex>`, el elemento base de las cajas ([docs/flex.md](../../../docs/flex.md)). Cada fase del diseño añade aquí los elementos que la validan; hoy, las fases 1 (caja y disposición), 2 (estados y selectores), 3 (eventos y accesibilidad), 4 (herencia y variables), 5 (componentes como elementos) y 6 (posición):
+Elementos construidos solo con `.janel` sobre `<flex>`, el elemento base de las cajas ([referencia](../../../docs/lenguaje.md#elementos-disponibles), [estilos](../../../docs/estilos.md)):
 
 | Elemento | Archivo | Qué demuestra |
 |---|---|---|

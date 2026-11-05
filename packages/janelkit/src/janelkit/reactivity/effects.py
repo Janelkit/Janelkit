@@ -80,6 +80,7 @@ class Source:
 
     @property
     def subscriber_count(self) -> int:
+        """Cuántos efectos y computed la leen ahora mismo (para depurar fugas: debe bajar al desmontar)."""
         return len(self._subscribers)
 
 
@@ -166,6 +167,13 @@ class Effect(Observer):
                 return True
         return False
 
+    def __repr__(self) -> str:
+        name = getattr(self._fn, "__qualname__", None) or type(self._fn).__name__
+        if self.disposed:
+            return f"effect {name} (liberado)"
+        held = " (en espera: no se ve)" if self.gate is not None and self in _gate_held(self.gate) else ""
+        return f"effect {name}: lee {len(self._dependencies)} fuente{'s' if len(self._dependencies) != 1 else ''}{held}"
+
     def _run_cleanup(self) -> None:
         cleanup, self._cleanup = self._cleanup, None
         if cleanup is not None:
@@ -205,35 +213,70 @@ class Effect(Observer):
         return False
 
 
+def _gate_held(gate: "Gate | None") -> set["Effect"]:
+    """Efectos en espera en `gate` o en una de fuera."""
+    held: set[Effect] = set()
+    while gate is not None:
+        held.update(gate._held)
+        gate = gate.parent
+    return held
+
+
 class Gate:
     """Compuerta de visibilidad. Mientras ella o una de fuera (`parent`) está cerrada, los
     efectos que la llevan no se ejecutan al cambiar sus fuentes: esperan aquí y se
     ejecutan una sola vez al abrirse, con los valores de ese momento.
 
     La llevan solo los efectos de la plantilla (lo que se muestra). Los `effect`,
-    temporizadores y tareas del script siguen funcionando aunque no se vea."""
+    temporizadores y tareas del script siguen funcionando aunque no se vea; para pararlos
+    a propósito, `visible` es reactivo (lo usa `is_visible()`)."""
 
-    __slots__ = ("parent", "closed", "_held")
+    __slots__ = ("_parent", "closed", "_held", "_changes")
 
     def __init__(self, parent: "Gate | None" = None):
-        self.parent = parent
+        self._parent = parent
         self.closed = False
         self._held: dict[Effect, None] = {}
+        self._changes = Source()  # avisa al abrirse, al cerrarse o al cambiar de `parent`
+
+    @property
+    def parent(self) -> "Gate | None":
+        return self._parent
+
+    @parent.setter
+    def parent(self, value: "Gate | None") -> None:
+        if value is not self._parent:
+            self._parent = value
+            self._changes._notify()
+
+    @property
+    def visible(self) -> bool:
+        """Reactivo: True si ni ella ni ninguna de fuera está cerrada."""
+        gate: Gate | None = self
+        while gate is not None:
+            gate._changes._track()
+            if gate.closed:
+                return False
+            gate = gate._parent
+        return True
 
     def close(self) -> None:
+        if self.closed:
+            return
         self.closed = True
+        self._changes._notify()
 
     def open(self) -> None:
         if not self.closed:
             return
         self.closed = False
         held, self._held = self._held, {}
-        if held:
+        with batch():
+            self._changes._notify()
             # En el orden en que se crearon: una región ({#hidden}, {#each}) antes que lo que
             # contiene, que así ya sabe si se ve. Cada uno vuelve a mirar sus compuertas.
-            with batch():
-                for effect in sorted(held, key=lambda e: e._order):
-                    effect._mark_stale()
+            for effect in sorted(held, key=lambda e: e._order):
+                effect._mark_stale()
 
     def set_open(self, value: bool) -> None:
         self.open() if value else self.close()
@@ -257,6 +300,16 @@ class Scope:
 
     def __len__(self) -> int:
         return len(self._observers)
+
+    def __repr__(self) -> str:
+        if self.disposed:
+            return "Scope (liberado)"
+        kinds: dict[str, int] = {}
+        for observer in self._observers:
+            kind = type(observer).__name__
+            kinds[kind] = kinds.get(kind, 0) + 1
+        detail = ", ".join(f"{n} {k}" for k, n in sorted(kinds.items()))
+        return f"Scope({detail or 'vacío'})"
 
     @contextmanager
     def active(self) -> Iterator["Scope"]:

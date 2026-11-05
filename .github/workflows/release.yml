@@ -1,8 +1,8 @@
 # Publicación en PyPI, un paquete cada vez, con Trusted Publishing (sin tokens guardados).
 #
 # - Una etiqueta publica ese paquete en PyPI:
-#     git tag janelkit-v0.1.0 && git push origin janelkit-v0.1.0
-#   (también janelkit-i18n-v0.1.0, janelkit-desktop-v0.1.0). La versión de la etiqueta
+#     git tag janelkit-v0.2.0.0 && git push origin janelkit-v0.2.0.0
+#   (también janelkit-i18n-v0.2.0.0, janelkit-desktop-v0.2.0.0, janelkit-router-v0.2.0.0, janelkit-store-v0.2.0.0). La versión de la etiqueta
 #   tiene que coincidir con la del pyproject.toml.
 # - A mano (Actions → Publicar → Run workflow): elegir paquete y destino; sirve para
 #   probar primero en TestPyPI.
@@ -16,13 +16,13 @@ name: Publicar
 
 on:
   push:
-    tags: ["janelkit-v*", "janelkit-i18n-v*", "janelkit-desktop-v*"]
+    tags: ["janelkit-v*", "janelkit-i18n-v*", "janelkit-desktop-v*", "janelkit-router-v*", "janelkit-store-v*"]
   workflow_dispatch:
     inputs:
       package:
         description: Paquete
         type: choice
-        options: [janelkit, janelkit-i18n, janelkit-desktop]
+        options: [janelkit, janelkit-i18n, janelkit-desktop, janelkit-router, janelkit-store]
       target:
         description: Destino
         type: choice

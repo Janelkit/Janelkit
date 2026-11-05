@@ -1,4 +1,4 @@
-"""Reto 6 (docs/challenges_to_test.md): gestor de proyectos, probado como un usuario.
+"""Reto 6 (apps/challenges/gestor): gestor de proyectos, probado como un usuario.
 
 Dos proyectos y tres personas en un JSON temporal (GESTOR_FILE). Cubre la navegación del
 núcleo (secciones que conservan su estado, páginas apiladas, enlaces entre secciones,
@@ -92,22 +92,22 @@ def test_inicio_muestra_los_proyectos_con_su_resumen(app):
 
 
 def test_abrir_un_proyecto_y_volver_conserva_la_busqueda(app):
-    app.find("TextField", label="Buscar proyectos").type("we")
+    app.find("textfield", label="Buscar proyectos").type("we")
     app.wait(0.05)
     assert "App" not in app.texts()
     abrir_proyecto(app, "Web")
     nav = app.get("secciones")["proyectos"]
     assert nav.current == "Proyecto" and tarjetas(app) == ["Alfa", "Beta", "Gamma"]
     assert "Ana" in app.texts()  # el responsable (un id) se muestra por su nombre
-    app.find("Button", text="← Proyectos").click()
+    app.find("button", text="← Proyectos").click()
     app.wait(0.2)
-    assert nav.depth == 1 and app.find("TextField", label="Buscar proyectos").text == "we"
+    assert nav.depth == 1 and app.find("textfield", label="Buscar proyectos").value == "we"
 
 
 def test_las_secciones_conservan_su_estado(app):
     abrir_proyecto(app, "Web")
     seccion(app, "Personas")
-    app.find("TextField", label="Buscar personas").type("mar")
+    app.find("textfield", label="Buscar personas").type("mar")
     app.wait(0.05)
     assert "1 de 3" in app.texts()
     seccion(app, "Proyectos")
@@ -118,7 +118,7 @@ def test_las_secciones_conservan_su_estado(app):
 
 def test_las_pestañas_se_conservan_con_hidden(app):
     pagina = abrir_proyecto(app, "Web")
-    app.find("TextField", label="Buscar").type("alf")
+    app.find("textfield", label="Buscar").type("alf")
     app.wait(0.2)  # transición de opacidad
     assert resaltadas(app) == ["Alfa"]
     pestaña(app, "Miembros")
@@ -132,9 +132,9 @@ def test_miembros_cambiar_el_rol_y_quitar_con_aviso(app):
     datos = app.get("datos")
     abrir_proyecto(app, "Web")
     pestaña(app, "Miembros")
-    app.find("Select", label="Rol de Luis Pérez").choose("Observador")
+    app.find("select", label="Rol de Luis Pérez").choose("Observador")
     assert datos.proyecto("p1")["miembros"][1] == {"persona": "u2", "rol": "Observador"}
-    app.find_all("Button", text="Quitar")[1].click()  # la fila de Luis (la segunda)
+    app.find_all("button", text="Quitar")[1].click()  # la fila de Luis (la segunda)
     app.wait(0.05)
     assert "1 tarjeta en este proyecto" in app.dialogs()[-1].property("text")
     app.answer_dialog(True)
@@ -150,10 +150,10 @@ def test_renombrar_a_una_persona_se_ve_en_los_tableros(app):
     seccion(app, "Personas")
     app.find("flex", label="Ana García").click()
     app.wait(0.2)
-    campo = app.find("TextField", label="Nombre")
+    campo = app.find("textfield", label="Nombre")
     campo.type("Anabel Gómez")
     app.wait(0.05)
-    app.find("Button", text="Guardar").click()
+    app.find("button", text="Guardar").click()
     app.wait(0.05)
     assert app.get("datos").nombre("u1") == "Anabel Gómez"
     assert "Alfa" in app.texts() and "Delta" in app.texts()  # sus tarjetas, en los dos proyectos
@@ -167,7 +167,7 @@ def test_dar_de_baja_avisa_y_se_puede_deshacer(app):
     seccion(app, "Personas")
     app.find("flex", label="Ana García").click()
     app.wait(0.2)
-    app.find("Button", text="Dar de baja").click()
+    app.find("button", text="Dar de baja").click()
     app.wait(0.05)
     assert "2 tarjetas" in app.dialogs()[-1].property("text")
     app.answer_dialog(True)
@@ -189,7 +189,7 @@ def test_deshacer_es_comun_a_todas_las_secciones(app):
     app.wait(0.05)
     assert datos.resumen(datos.proyecto("p1"))["progreso"] == 2 / 3
     seccion(app, "Personas")
-    app.find("Button", text="Deshacer").click()
+    app.find("button", text="Deshacer").click()
     app.wait(0.05)
     assert [t["titulo"] for t in datos.proyecto("p1")["columnas"][1]["tarjetas"]] == ["Gamma"]
     app.key("Ctrl+Y")
@@ -218,16 +218,16 @@ def test_salir_con_un_detalle_sin_guardar_pregunta(app):
     abrir_proyecto(app, "Web")
     app.find("Tarjeta", label="Alfa").key("Return")
     app.wait(0.1)
-    app.find("TextField", label="Título").type(" editado")
+    app.find("textfield", label="Título").type(" editado")
     app.wait(0.05)
     nav = app.get("secciones")["proyectos"]
-    app.find("Button", text="← Proyectos").click()
+    app.find("button", text="← Proyectos").click()
     app.wait(0.1)
     assert app.dialogs(), "debía preguntar"
     app.answer_dialog(False)
     app.wait(0.1)
     assert nav.depth == 2
-    app.find("Button", text="← Proyectos").click()
+    app.find("button", text="← Proyectos").click()
     app.wait(0.1)
     app.answer_dialog(True)
     app.wait(0.2)
@@ -236,14 +236,14 @@ def test_salir_con_un_detalle_sin_guardar_pregunta(app):
 
 def test_proyecto_nuevo_archivar_y_guardar_en_el_archivo(app, archivo):
     datos = app.get("datos")
-    app.find("Button", text="+ Proyecto").click()
+    app.find("button", text="+ Proyecto").click()
     app.wait(0.2)
     nav = app.get("secciones")["proyectos"]
     assert nav.current == "Proyecto" and [c["nombre"] for c in nav.page.namespace["columnas"].value] == ["Pendiente", "En curso", "Hecho"]
     pestaña(app, "Ajustes")
-    app.find("Button", text="Archivar").click()
+    app.find("button", text="Archivar").click()
     app.wait(0.05)
-    nuevo = datos.proyectos.peek()[-1]
+    nuevo = datos.proyectos[-1]
     assert nuevo["archivado"] and "Archivado" in app.texts()
     app.wait(0.5)  # el guardado espera a que acabe la ráfaga de cambios
     guardado = json.loads(archivo.read_text(encoding="utf-8"))
@@ -268,13 +268,13 @@ def test_crear_una_columna_desde_el_tablero_y_nombrarla(app):
     abrir_proyecto(app, "Web")
     app.find("flex", label="Añadir columna").click()  # el hueco al final de las columnas
     app.wait(0.1)
-    campo = app.find("TextField", label="Nombre de la columna")  # empieza con el nombre en edición
+    campo = app.find("textfield", label="Nombre de la columna")  # empieza con el nombre en edición
     assert app.window.activeFocusItem() is not None and campo.item.property("activeFocus")
     campo.type("Bloqueadas").submit()
     app.wait(0.05)
     assert [c["nombre"] for c in datos.proyecto("p1")["columnas"]] == ["Pendiente", "Hecho", "Bloqueadas"]
-    app.find("Button", text="+ Columna").click()  # el botón de la barra hace lo mismo
+    app.find("button", text="+ Columna").click()  # el botón de la barra hace lo mismo
     app.wait(0.1)
-    app.find("TextField", label="Nombre de la columna").type("Revisión").submit()
+    app.find("textfield", label="Nombre de la columna").type("Revisión").submit()
     app.wait(0.05)
     assert datos.proyecto("p1")["columnas"][-1]["nombre"] == "Revisión"

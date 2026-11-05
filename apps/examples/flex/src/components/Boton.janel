@@ -3,7 +3,7 @@
 # Espacio o Intro para pulsar, y el nombre para los lectores de pantalla. Los estados
 # (:hover, :pressed, :focus-visible, :disabled) los cambia la vista: pasar el ratón
 # por encima no llama a Python.
-# Se usa como un elemento más (fase 5): on:click, disabled, ref y class van a la raíz
+# Se usa como un elemento más: on:click, disabled, ref y class van a la raíz
 # sin declararlos aquí, y las variantes son clases: <Boton class="primary" on:click=...>.
 from janelkit import prop
 
@@ -11,7 +11,7 @@ text = prop("")
 </script>
 
 <flex as="button" class="boton" label={text}>
-  <Text>{text}</Text>
+  <text>{text}</text>
 </flex>
 
 <style>
@@ -27,7 +27,7 @@ text = prop("")
 .boton:disabled { opacity: 0.45; }
 .boton { font-weight: 500; }
 
-/* El texto hereda el color de la caja (fase 4): no hace falta estilar .texto. */
+/* El texto hereda el color de la caja: no hace falta estilar .texto. */
 .boton.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
 .boton.primary:hover { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); }
 

@@ -1,5 +1,5 @@
-"""<flex> fase 3: eventos con propagación, prevent()/stop(), as, tabindex, disabled, title,
-pointer-events y visibility. Ver docs/flex.md."""
+"""<flex>: eventos con propagación, prevent()/stop(), as, tabindex, disabled, title,
+pointer-events y visibility."""
 import tempfile
 from pathlib import Path
 
@@ -55,14 +55,14 @@ def keys(event):
 
 
 def test_click_bubbles_and_stop_cuts_it(app_from):
-    app = app_from(LOG + """<Column>
+    app = app_from(LOG + """<column>
 <flex label="fuera" padding={20} on:click={log.append(("fuera", event.type))} on:pointerdown={log.append(("fuera", event.type))}>
-  <flex label="dentro" padding={10} on:click={log.append(("dentro", event.type))}><Text>d</Text>
-    <flex label="cerrar" on:click={stopper}><Text>x</Text></flex>
+  <flex label="dentro" padding={10} on:click={log.append(("dentro", event.type))}><text>d</text>
+    <flex label="cerrar" on:click={stopper}><text>x</text></flex>
   </flex>
-  <Button text="btn" />
+  <button text="btn" />
 </flex>
-</Column>""")
+</column>""")
     log = app.get("log")
     real_click(app, app.find("flex", label="dentro"), at=(3, 3))  # en su relleno, fuera del ✕
     assert log == [("fuera", "pointerdown"), ("dentro", "click"), ("fuera", "click")]
@@ -71,7 +71,7 @@ def test_click_bubbles_and_stop_cuts_it(app_from):
     assert log == [("fuera", "pointerdown"), ("x", "click")]
     log.clear()
     # Un control de Qt se queda el clic (como antes); pointerdown sí llega, como en la web.
-    real_click(app, app.find("Button"))
+    real_click(app, app.find("button"))
     assert log == [("fuera", "pointerdown")]
     log.clear()
     app.find("flex", label="dentro").click()  # inspect: como desde el teclado, también sube
@@ -82,7 +82,7 @@ def test_click_event_has_position_and_pointer(app_from):
     app = app_from("""<script>
 got = []
 </script>
-<Column><flex label="caja" padding={30} on:click={got.append(event)}><Text>c</Text></flex></Column>""")
+<column><flex label="caja" padding={30} on:click={got.append(event)}><text>c</text></flex></column>""")
     caja = app.find("flex", label="caja")
     real_click(app, caja)
     ev = app.get("got")[0]
@@ -91,8 +91,8 @@ got = []
 
 
 def test_keydown_bubbles_from_focus_and_prevent_blocks_typing(app_from):
-    app = app_from(LOG + """<Column><flex on:keydown={keys}><TextField label="campo" /></flex></Column>""")
-    campo = app.find("TextField")
+    app = app_from(LOG + """<column><flex on:keydown={keys}><textfield label="campo" /></flex></column>""")
+    campo = app.find("textfield")
     campo.focus()
     QTest.keyClick(app.window, Qt.Key.Key_A)
     QTest.keyClick(app.window, Qt.Key.Key_B)
@@ -115,15 +115,15 @@ def tecla(event):
     if event.key == "x":
         event.prevent()
 </script>
-<Column>
+<column>
   <flex on:keydown={log.append(("fila", event.key))}>
-    <TextField label="campo" bind:value={texto} on:keydown={tecla} on:blur={log.append(("blur", event.reason))} />
+    <textfield label="campo" bind:value={texto} on:keydown={tecla} on:blur={log.append(("blur", event.reason))} />
   </flex>
-  <TextArea label="area" on:focus={log.append(("focus", event.reason))} on:keyup={log.append(("up", event.key))} />
-  <Select label="sel" options={["a", "b"]} on:keydown={log.append(("sel", event.key))} />
-</Column>""")
+  <textarea label="area" on:focus={log.append(("focus", event.reason))} on:keyup={log.append(("up", event.key))} />
+  <select label="sel" options={["a", "b"]} on:keydown={log.append(("sel", event.key))} />
+</column>""")
     log = app.get("log")
-    campo = app.find("TextField")
+    campo = app.find("textfield")
     campo.focus()
     for key in (Qt.Key.Key_A, Qt.Key.Key_X, Qt.Key.Key_Escape):
         QTest.keyClick(app.window, key)
@@ -134,7 +134,7 @@ def tecla(event):
     log.clear()
     QTest.keyClick(app.window, Qt.Key.Key_Tab)  # al área de texto
     QTest.keyClick(app.window, Qt.Key.Key_B)
-    app.find("Select").key("Down")
+    app.find("select").key("Down")
     app.wait(0.02)
     # Como en la web: Tab baja en el campo que lo tenía y sube en el que lo recibe.
     assert log == [("campo", "Tab"), ("fila", "Tab"), ("blur", "tab"), ("focus", "tab"), ("up", "Tab"), ("up", "b"),
@@ -148,7 +148,7 @@ def rueda(event):
     seen.append(event.dy)
     event.prevent()
 </script>
-<Column><flex class="zona" on:wheel={rueda}><Text>{"\\n".join(str(i) for i in range(80))}</Text></flex></Column>
+<column><flex class="zona" on:wheel={rueda}><text>{"\\n".join(str(i) for i in range(80))}</text></flex></column>
 <style>.zona { height: 100px; overflow: auto; }</style>""")
     zona = [e for e in app.elements() if e.tag == "flex"][0]
     flick = zona.item.property("jkScroller")
@@ -167,12 +167,12 @@ from janelkit import state
 log = []
 wide = state(True)
 </script>
-<Column>
+<column>
   <flex as="button" label="b" on:focus={log.append(("focus", event.reason))} on:blur={log.append(("blur", event.reason))}
-        on:pointerenter={log.append(("enter", event.type))} on:pointerleave={log.append(("leave", event.type))}><Text>b</Text></flex>
-  <flex class="medida" on:resize={log.append(("resize", event.width, event.height))} width={200 if wide else 100}><Text>m</Text></flex>
-  <Button text="estrechar" on:click={wide = False} />
-</Column>""")
+        on:pointerenter={log.append(("enter", event.type))} on:pointerleave={log.append(("leave", event.type))}><text>b</text></flex>
+  <flex class="medida" on:resize={log.append(("resize", event.width, event.height))} width={200 if wide else 100}><text>m</text></flex>
+  <button text="estrechar" on:click={wide = False} />
+</column>""")
     log = app.get("log")
     log.clear()
     b = app.find("flex", label="b")
@@ -182,7 +182,7 @@ wide = state(True)
     assert log == [("focus", "code"), ("blur", "tab")]
     b.hover()
     b.unhover()
-    app.find("Button").click()
+    app.find("button").click()
     app.wait(0.05)
     assert ("enter", "pointerenter") in log and ("leave", "pointerleave") in log
     resizes = [e for e in log if e[0] == "resize"]
@@ -190,7 +190,7 @@ wide = state(True)
 
 
 def test_contextmenu_with_right_click_and_menu_key(app_from):
-    app = app_from(LOG + """<Column><flex as="button" label="z" padding={20} on:contextmenu={log.append(("z", event.type))}><Text>z</Text></flex></Column>""")
+    app = app_from(LOG + """<column><flex as="button" label="z" padding={20} on:contextmenu={log.append(("z", event.type))}><text>z</text></flex></column>""")
     z = app.find("flex", label="z")
     real_click(app, z, Qt.MouseButton.RightButton)
     z.focus()
@@ -200,13 +200,13 @@ def test_contextmenu_with_right_click_and_menu_key(app_from):
 
 
 def test_roles_keyboard_tabindex_and_disabled(app_from):
-    app = app_from(LOG + """<Column>
-  <flex as="switch" label="s" on:click={log.append(("s", event.type))}><Text>s</Text></flex>
-  <flex as="link" label="l" on:click={log.append(("l", event.type))}><Text>l</Text></flex>
-  <flex label="t" tabindex={0}><Text>t</Text></flex>
-  <flex label="nada"><Text>n</Text></flex>
-  <flex as="button" label="off" disabled on:click={log.append(("off", event.type))} on:pointerdown={log.append(("off", event.type))}><Text>o</Text></flex>
-</Column>""")
+    app = app_from(LOG + """<column>
+  <flex as="switch" label="s" on:click={log.append(("s", event.type))}><text>s</text></flex>
+  <flex as="link" label="l" on:click={log.append(("l", event.type))}><text>l</text></flex>
+  <flex label="t" tabindex={0}><text>t</text></flex>
+  <flex label="nada"><text>n</text></flex>
+  <flex as="button" label="off" disabled on:click={log.append(("off", event.type))} on:pointerdown={log.append(("off", event.type))}><text>o</text></flex>
+</column>""")
     s, link, t, nada, off = (app.find("flex", label=n) for n in ("s", "l", "t", "nada", "off"))
     assert s.prop("activeFocusOnTab") and link.prop("activeFocusOnTab") and t.prop("activeFocusOnTab")
     assert not nada.prop("activeFocusOnTab") and not off.prop("enabled")
@@ -222,13 +222,13 @@ def test_roles_keyboard_tabindex_and_disabled(app_from):
 
 
 def test_pointer_events_none_and_visibility_hidden(app_from):
-    app = app_from(LOG + """<Column>
+    app = app_from(LOG + """<column>
   <flex label="fuera" on:pointerdown={log.append(("fuera", event.type))}>
-    <flex class="velo" label="velo" on:pointerdown={log.append(("velo", event.type))}><Text>v</Text></flex>
+    <flex class="velo" label="velo" on:pointerdown={log.append(("velo", event.type))}><text>v</text></flex>
   </flex>
-  <flex class="oculta" label="oculta"><Text>texto oculto</Text></flex>
-  <Text>debajo</Text>
-</Column>
+  <flex class="oculta" label="oculta"><text>texto oculto</text></flex>
+  <text>debajo</text>
+</column>
 <style>.velo { pointer-events: none; } .oculta { visibility: hidden; height: 40px; }</style>""")
     real_click(app, app.find("flex", label="velo"))
     assert app.get("log") == [("fuera", "pointerdown")]
@@ -238,11 +238,11 @@ def test_pointer_events_none_and_visibility_hidden(app_from):
 
 
 def test_title_and_accessibility_warning_compile():
-    c = compile_source("""<Column>
-  <flex as="button" title="Guarda el archivo" on:click={print}><Text>Guardar</Text></flex>
-  <flex as="button" on:click={print}><Image src="x.png" /></flex>
-  <flex as="button" label="Cerrar" on:click={print}><Image src="x.png" /></flex>
-</Column>""")
+    c = compile_source("""<column>
+  <flex as="button" title="Guarda el archivo" on:click={print}><text>Guardar</text></flex>
+  <flex as="button" on:click={print}><image src="x.png" /></flex>
+  <flex as="button" label="Cerrar" on:click={print}><image src="x.png" /></flex>
+</column>""")
     assert 'ToolTip.text: "Guarda el archivo"' in c.qml and "ToolTip.visible: hovered" in c.qml
     warns = [w.message for w in c.warnings if "lector de pantalla" in w.message]
     assert len(warns) == 1 and 'as="button"' in warns[0]
@@ -252,7 +252,7 @@ def test_invalid_role_is_an_error():
     from janelkit.diagnostics import JanelError
 
     with pytest.raises(JanelError, match="valor no válido para 'as'"):
-        compile_source('<Column><flex as="botón" /></Column>')
+        compile_source('<column><flex as="botón" /></column>')
 
 
 def test_catalog_controls():
@@ -287,22 +287,22 @@ def test_catalog_controls():
 
 def test_routed_events_reach_list_rows_also_while_they_slide(app_from):
     # ListView deja un elemento vacío de z 0 debajo de las filas (z 1): childAt lo elegía
-    # y on:contextmenu/on:dblclick no llegaban a las filas de <List>. Y con animate, una
+    # y on:contextmenu/on:dblclick no llegaban a las filas de <list>. Y con animate, una
     # fila que aún se desliza queda fuera del alto nuevo de la lista, y sigue recibiendo.
     app = app_from("""<script>
 from janelkit import state
 filas = state(["a", "b", "c", "d"])
 log = state([])
 </script>
-<Window>
-  <List animate>
+<window>
+  <list animate>
     {#each filas as f (f)}
       <flex class="fila" label={f} on:contextmenu={log.append(f"menu {f}")} on:dblclick={log.append(f"doble {f}")}>
-        <Text>{f}</Text>
+        <text>{f}</text>
       </flex>
     {/each}
-  </List>
-</Window>
+  </list>
+</window>
 <style>.fila { height: 40px; }</style>""")
     app.find("flex", label="a").right_click()
     app.find("flex", label="b").double_click()
@@ -315,7 +315,7 @@ log = state([])
 
 
 def test_inspect_key_accepts_the_names_of_event_key(app_from):
-    app = app_from(LOG + """<Column><flex tabindex={0} label="caja" on:keydown={keys} /></Column>""")
+    app = app_from(LOG + """<column><flex tabindex={0} label="caja" on:keydown={keys} /></column>""")
     caja = app.find(label="caja")
     for name in ("PageDown", "PgUp", "ArrowRight", "Shift+ArrowUp", "Home"):
         caja.key(name)

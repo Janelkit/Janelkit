@@ -11,7 +11,7 @@ renamed = event()
 removed = event()
 </script>
 
-<Scroll class="list">
+<scroll class="list">
   {#each todos as todo (todo["id"])}
     <TodoItem
       todo={todo}
@@ -20,9 +20,9 @@ removed = event()
       on:removed={removed.emit}
     />
   {:else}
-    <Text class="empty">{empty_text}</Text>
+    <text class="empty">{empty_text}</text>
   {/each}
-</Scroll>
+</scroll>
 
 <style>
 .list { padding: 6px; gap: 4px; background: var(--surface-alt); border-radius: var(--radius); }

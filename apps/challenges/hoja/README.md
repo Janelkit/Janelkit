@@ -1,6 +1,6 @@
 # Reto 2: hoja de cálculo
 
-Hoja de cálculo de 10 000 × 26 hecha con la API pública de JanelKit. Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
+Hoja de cálculo de 10 000 × 26 hecha con la API pública de JanelKit. Es uno de los retos de `apps/challenges`, aplicaciones grandes que ponen a prueba el núcleo.
 
 ## Ejecutar
 
@@ -33,10 +33,11 @@ Limitaciones de la aplicación (no del framework): al copiar o mover fórmulas s
 
 | Archivo | Contenido |
 |---|---|
-| `src/App.janel` | La ventana: barra, barra de fórmulas, cabecera de columnas, filas (`<List>`), resumen; teclado y portapapeles. |
-| `src/components/Fila.janel` | Una fila: número y celdas visibles (un `<Text>` cada una), puntero y editor. |
+| `src/App.janel` | La ventana: barra, barra de fórmulas, cabecera de columnas, filas (`<list>`), resumen; teclado y portapapeles. |
+| `src/components/Fila.janel` | Una fila: número y celdas visibles (un `<text>` cada una), puntero y editor. |
 | `src/components/Editor.janel` | El campo que edita una celda en el sitio. |
 | `src/services/hoja.py` | Lo escrito, celdas reactivas perezosas, deshacer/rehacer, portapapeles, ordenar y CSV. |
+| `src/services/deshacer.py` | El historial de pasos (pares deshacer/rehacer), con la API pública de JanelKit. |
 | `src/services/formulas.py` | Analizador y evaluador de fórmulas. |
 | `src/services/vista.py` | Celda activa, selección, columnas visibles, celdas congeladas, edición y teclado. |
 | `bench.py` | Mediciones. |

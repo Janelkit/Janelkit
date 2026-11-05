@@ -1,4 +1,4 @@
-"""Controles añadidos para el lanzamiento: Switch, Slider, Select, RadioGroup, Tabs, Image, ProgressBar,
+"""Controles: Switch, Slider, Select, RadioGroup, Tabs, Image, ProgressBar,
 Shortcut y on:input en TextArea (los diálogos nativos están en janelkit-desktop)."""
 
 from janelkit.testing import find, texts, visual_items
@@ -18,23 +18,23 @@ saved = state(0)
 progress = state(0.25)
 SIZES = [{"label": "Pequeño", "value": 1}, {"label": "Mediano", "value": 2}, {"label": "Grande", "value": 3}]
 </script>
-<Column>
-  <Switch id="sw" bind:checked={on}>Activado</Switch>
-  <Slider id="sl" bind:value={volume} min={0} max={100} step={10} />
-  <Select id="sel" bind:value={color} options={["rojo", "verde", "azul"]} />
-  <Select id="empty" options={["a"]} placeholder="Elige…" />
-  <RadioGroup id="rg" bind:value={size} options={SIZES} horizontal />
-  <Tabs id="tabs" bind:value={tab} options={["general", "avanzado"]} />
+<column>
+  <switch id="sw" bind:checked={on}>Activado</switch>
+  <slider id="sl" bind:value={volume} min={0} max={100} step={10} />
+  <select id="sel" bind:value={color} options={["rojo", "verde", "azul"]} />
+  <select id="empty" options={["a"]} placeholder="Elige…" />
+  <radiogroup id="rg" bind:value={size} options={SIZES} horizontal />
+  <tabs id="tabs" bind:value={tab} options={["general", "avanzado"]} />
   {#if tab == "general"}
-    <Text>Panel general</Text>
+    <text>Panel general</text>
   {:else}
-    <Text>Panel avanzado</Text>
+    <text>Panel avanzado</text>
   {/if}
-  <TextArea id="ta" bind:value={notes} on:input={typed.append(event)} />
-  <ProgressBar id="pb" value={progress} />
-  <Shortcut id="sc" keys="Ctrl+S" on:activate={saved += 1} />
-  <Image id="img" src="logo.png" width={32} height={32} />
-</Column>
+  <textarea id="ta" bind:value={notes} on:input={typed.append(event)} />
+  <progressbar id="pb" value={progress} />
+  <shortcut id="sc" keys="Ctrl+S" on:activate={saved += 1} />
+  <image id="img" src="logo.png" width={32} height={32} />
+</column>
 """
 
 
@@ -147,7 +147,7 @@ def test_image_resolves_relative_paths_from_the_janel_folder(mount, tmp_path):
 def test_image_url_forms(mount):
     m = mount(
         "<script>\nfrom janelkit import state\nsrc = state('C:\\\\fotos\\\\a.png')\n</script>\n"
-        '<Image id="img" src={src} fit="cover" />'
+        '<image id="img" src={src} fit="cover" />'
     )
     img = find(m, "img")
     assert img.property("source").toString() == "file:///C:/fotos/a.png"

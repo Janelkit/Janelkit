@@ -1,0 +1,45 @@
+<script lang="python">
+# Ejemplo de janelkit-store: dos ventanas con el mismo store, modo estricto y registro de cambios.
+from janelkit import on_destroy, open_window, state
+from janelkit_store import subscribe, use
+from components.VentanaCarrito import VentanaCarrito
+from stores.carrito import PRODUCTOS, Carrito
+
+carrito = use(Carrito)
+registro = state([])  # las últimas acciones, como las ve subscribe()
+on_destroy(subscribe(carrito, lambda m: registro.value.insert(0, str(m))))
+
+
+def abrir_carrito():
+    open_window(VentanaCarrito, single=True)
+</script>
+
+<window title="Tienda" width={480} height={420}>
+  <column class="pagina">
+    <row class="barra">
+      <text class="titulo" flex={1}>Tienda</text>
+      <button variant="primary" on:click={abrir_carrito}>Carrito ({carrito.unidades}) · {carrito.total:.2f} €</button>
+    </row>
+    {#each PRODUCTOS as p (p["id"])}
+      <row class="producto">
+        <text flex={1}>{p["nombre"]}</text>
+        <text class="suave">{p["precio"]:.2f} €</text>
+        <button on:click={carrito.agregar(p)} label={f"Añadir {p['nombre']}"}>Añadir</button>
+      </row>
+    {/each}
+    <text class="subtitulo">Registro</text>
+    {#each registro[:5] as linea}
+      <text class="suave">{linea}</text>
+    {:else}
+      <text class="suave">Sin cambios todavía.</text>
+    {/each}
+  </column>
+</window>
+
+<style>
+.pagina { padding: 20px; gap: 10px; }
+.barra, .producto { gap: 8px; align-items: center; }
+.titulo { font-size: var(--font-size-xl); font-weight: 600; }
+.subtitulo { font-weight: 600; margin-top: 8px; }
+.suave { color: var(--text-muted); }
+</style>

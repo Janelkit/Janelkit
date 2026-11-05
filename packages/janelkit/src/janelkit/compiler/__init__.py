@@ -11,6 +11,7 @@ resto de este paquete es interno.
 """
 from __future__ import annotations
 
+import importlib.util
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from ..diagnostics import Diagnostic, JanelError, SourceLocation
 from .ast_nodes import SFC, EachBlock, Element, IfBlock, KeyBlock, Node
 from .ir import IRComponent
 from .layout_choice import root_features
+from .legacy import normalize as normalize_legacy
 from .lowering import ComponentInterface, lower
 from .qml_generator import SourceMap, generate_qml, lookup
 from .script_analysis import ScriptInfo, analyze_script
@@ -25,7 +27,7 @@ from .sfc_parser import parse_file, parse_sfc
 
 # Versión del formato .janel que entiende este compilador. Cambia solo cuando
 # un archivo válido deja de compilar o cambia de significado (ver docs/api.md).
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 
 
 @dataclass
@@ -97,6 +99,7 @@ class CompileSession:
         # Componentes cuya raíz va dentro de una caja con el motor de <flex>: su raíz usa
         # también el motor (layout_choice.py). Los anota el padre, que se compila antes.
         self._engine_roots: set[str] = set()
+        self._packages: dict[str, list[Path]] = {}  # paquete instalado -> sus carpetas
 
     def compile(self, path: Path, as_window: bool) -> CompiledComponent:
         key = _key(path)
@@ -108,6 +111,7 @@ class CompileSession:
     def compile_source(self, source: str, file: str, as_window: bool = True) -> CompiledComponent:
         sfc = parse_sfc(source, file)
         info = analyze_script(sfc.script, file, sfc.source, self._resolver(Path(file)))
+        sfc.notices = normalize_legacy(sfc, info.components)
         return self._compile_loaded(file, sfc, info, as_window)
 
     def _compile_loaded(self, key: str, sfc: SFC, info: ScriptInfo, as_window: bool) -> CompiledComponent:
@@ -129,6 +133,7 @@ class CompileSession:
         if key not in self._loaded:
             sfc = parse_file(path)
             info = analyze_script(sfc.script, sfc.file, sfc.source, self._resolver(Path(path)))
+            sfc.notices = normalize_legacy(sfc, info.components)
             self._loaded[key] = (sfc, info)
         return self._loaded[key]
 
@@ -141,7 +146,7 @@ class CompileSession:
             self._roots[key] = root_features(sfc)
         return ComponentInterface(
             dict(info.props), dict(info.events), frozenset(_slot_names(sfc.template)),
-            root_box=root in ("flex", "Column", "Row") and info.inherit_attrs, inherit_attrs=info.inherit_attrs,
+            root_box=root in ("flex", "column", "row") and info.inherit_attrs, inherit_attrs=info.inherit_attrs,
             root_items=self._roots[key],
         )  # fmt: skip
 
@@ -158,29 +163,58 @@ class CompileSession:
                 bases = self.roots
             parts = module.split(".") if module else []
             for base in bases:
-                folder = base.joinpath(*parts)
-                for suffix in (".janel", ".qml"):
-                    # from components import TodoItem  -> components/TodoItem.janel
-                    candidate = folder / f"{name}{suffix}"
-                    if candidate.is_file():
-                        return candidate.resolve()
-                    # from components.TodoItem import TodoItem  -> components/TodoItem.janel
-                    if parts and folder.name == name:
-                        candidate = folder.with_suffix(suffix)
-                        if candidate.is_file():
-                            return candidate.resolve()
+                found = _find_in(base.joinpath(*parts), name, bool(parts))
+                if found is not None:
+                    return found
+            # Un paquete instalado: from janelkit_router import Pages -> <paquete>/Pages.qml
+            if not level and parts:
+                for folder in self._package_dirs(parts[0]):
+                    found = _find_in(folder.joinpath(*parts[1:]), name, True)
+                    if found is not None:
+                        return found
             return None
 
         return resolve
 
+    def _package_dirs(self, top: str) -> list[Path]:
+        """Carpetas del paquete `top` instalado (o en sys.path), sin importarlo."""
+        if top not in self._packages:
+            try:
+                spec = importlib.util.find_spec(top)
+            except (ImportError, ValueError):
+                spec = None
+            locations = spec.submodule_search_locations if spec is not None else None
+            self._packages[top] = [Path(p) for p in locations or ()]
+        return self._packages[top]
+
+
+def _find_in(folder: Path, name: str, nested: bool) -> Path | None:
+    for suffix in (".janel", ".qml"):
+        # from components import TodoItem  -> components/TodoItem.janel
+        found = _exact(folder / f"{name}{suffix}")
+        # from components.TodoItem import TodoItem  -> components/TodoItem.janel
+        if found is None and nested and folder.name == name:
+            found = _exact(folder.with_suffix(suffix))
+        if found is not None:
+            return found
+    return None
+
+
+def _exact(candidate: Path) -> Path | None:
+    """El archivo, si existe con esas mayúsculas (en Windows, `sections` no es `Sections.qml`)."""
+    if not candidate.is_file():
+        return None
+    real = candidate.resolve()
+    return real if real.name == candidate.name else None
+
 
 def _slot_names(nodes: list[Node]) -> set[str]:
-    """Nombres de los <Slot> de una plantilla ("default" para el que no tiene nombre)."""
+    """Nombres de los <slot> de una plantilla ("default" para el que no tiene nombre)."""
     names: set[str] = set()
     for node in nodes:
         children: list[Node] = []
         if isinstance(node, Element):
-            if node.tag == "Slot":
+            if node.tag == "slot":
                 attr = node.attribute("name")
                 names.add(attr.value if attr is not None and isinstance(attr.value, str) else "default")
             children = node.children

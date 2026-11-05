@@ -1,6 +1,6 @@
-// Texto seleccionable de un <Text selectable>: una copia de solo lectura encima del texto
+// Texto seleccionable de un <text selectable>: una copia de solo lectura encima del texto
 // (que se vuelve transparente), con la que se selecciona con el ratón o el teclado y se
-// copia con Ctrl+C. La crea Jk.textDecorations solo para esos textos; el <Text> sigue
+// copia con Ctrl+C. La crea Jk.textDecorations solo para esos textos; el <text> sigue
 // midiendo y colocándose como siempre.
 import QtQuick
 
@@ -35,7 +35,7 @@ TextEdit {
     bottomPadding: label ? label.bottomPadding : 0
     selectionColor: jktheme.primary
     selectedTextColor: jktheme.on_primary
-    // Los enlaces siguen funcionando: on:link del <Text> o el navegador.
+    // Los enlaces siguen funcionando: on:link del <text> o el navegador.
     onLinkActivated: (link) => label.linkActivated(link)
     HoverHandler { cursorShape: edit.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.IBeamCursor }
     // Como en la web, un clic sin arrastrar (no selecciona nada) sigue pulsando la caja con

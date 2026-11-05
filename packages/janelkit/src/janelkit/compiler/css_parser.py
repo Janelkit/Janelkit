@@ -1,6 +1,6 @@
 """Parser del subconjunto CSS de `<style>`.
 
-Selectores admitidos: de elemento (`Button`, `flex`), de clase (`.titulo`),
+Selectores admitidos: de elemento (`button`, `flex`), de clase (`.titulo`),
 compuestos (`.boton.primary`, `flex.tarjeta`), con pseudo-clases (`.fila:hover`),
 de descendiente (`.tarjeta .titulo`) y de hijo directo (`.menu > .item`), y
 varios separados por comas.

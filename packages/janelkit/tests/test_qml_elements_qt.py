@@ -38,11 +38,11 @@ level = state(10)
 picked = state([])
 g = ref()
 </script>
-<Column>
+<column>
   <Gauge id="g" ref={g} bind:value={level} label="Nivel" tint="tomato" width={200}
          on:picked={picked.append((event[0], event[1]))} />
-  <Text>{level}</Text>
-</Column>
+  <text>{level}</text>
+</column>
 """
 
 
@@ -118,12 +118,12 @@ def test_flex_on_a_qml_element_follows_the_janel_layout_rules(mount, project):
     app = """<script>
 from widgets.Gauge import Gauge
 </script>
-<Window width={400} height={300}>
-  <Column>
-    <Text>arriba</Text>
+<window width={400} height={300}>
+  <column>
+    <text>arriba</text>
     <Gauge id="g" flex={1} />
-  </Column>
-</Window>
+  </column>
+</window>
 """
     m = mount(project({"App.janel": app, "widgets/Gauge.qml": GAUGE}))
     gauge = find(m, "g")
@@ -141,10 +141,10 @@ from widgets.Chart import Chart
 serie = state([1.0])
 nested = state({"pts": [1, 2]})
 </script>
-<Column>
+<column>
   <Chart id="a" values={serie} />
   <Chart id="b" values={nested["pts"]} />
-</Column>
+</column>
 """
     m = mount(project({"App.janel": app, "widgets/Chart.qml": chart}))
     ns = m.instance.namespace

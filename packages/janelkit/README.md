@@ -38,20 +38,20 @@ def add():
     draft.value = ""
 </script>
 
-<Window title="Tareas" width={480} height={400}>
-  <Column class="page">
-    <Text class="title">{pending} pendientes</Text>
-    <Row class="new">
-      <TextField bind:value={draft} on:submit={add} placeholder="Nueva tarea" flex={1} />
-      <Button variant="primary" on:click={add}>Añadir</Button>
-    </Row>
+<window title="Tareas" width={480} height={400}>
+  <column class="page">
+    <text class="title">{pending} pendientes</text>
+    <row class="new">
+      <textfield bind:value={draft} on:submit={add} placeholder="Nueva tarea" flex={1} />
+      <button variant="primary" on:click={add}>Añadir</button>
+    </row>
     {#each todos as todo (todo["id"])}
-      <Checkbox checked={todo["done"]} on:change={todo["done"] = event}>{todo["title"]}</Checkbox>
+      <checkbox checked={todo["done"]} on:change={todo["done"] = event}>{todo["title"]}</checkbox>
     {:else}
-      <Text>No hay tareas.</Text>
+      <text>No hay tareas.</text>
     {/each}
-  </Column>
-</Window>
+  </column>
+</window>
 
 <style>
 .page { padding: 24px; gap: 12px; }
@@ -65,7 +65,7 @@ Cuando cambia un `state`, solo se recalcula lo que lo leyó, y solo se actualiza
 ## Por qué JanelKit
 
 - **Python de principio a fin.** La lógica, los manejadores y las expresiones de la plantilla son Python: tus módulos, tus bibliotecas y tus pruebas de siempre.
-- **Rendimiento nativo.** Qt Quick dibuja; JanelKit solo avisa de lo que cambió. Una aplicación mediana arranca en menos de 300 ms y responde en menos de 70 ms. Una `<List>` virtualizada crea 10 000 filas en unos 40 ms.
+- **Rendimiento nativo.** Qt Quick dibuja; JanelKit solo avisa de lo que cambió. Una aplicación mediana arranca en menos de 300 ms y responde en menos de 70 ms. Una `<list>` virtualizada crea 10 000 filas en unos 40 ms.
 - **Errores que ayudan.** Cada error indica archivo, línea y columna, con sugerencias («¿quisiste decir `on:click`?»), también los que vienen de Qt o de la ejecución.
 - **Recarga al guardar.** `janel dev` recarga la vista y conserva el estado de los componentes cuyo script no cambió.
 - **Probado a fondo.** Una suite extensa de pruebas que la CI ejecuta en Windows, Linux y macOS, y cinco aplicaciones grandes de validación (chat, panel en tiempo real, Kanban, hoja de cálculo y gestor de proyectos) construidas sin tocar el framework.
@@ -75,13 +75,13 @@ Cuando cambia un `state`, solo se recalcula lo que lo leyó, y solo se actualiza
 
 | Área | Contenido |
 |---|---|
-| **Reactividad** | `state`, `@computed`, `effect`, `batch`, colecciones reactivas, `persisted` (estado que se recuerda entre sesiones), deshacer y rehacer (`History`) |
+| **Reactividad** | `state`, `@computed` (también en métodos), `effect`, `batch`, colecciones reactivas. Los stores y `persisted` están en [`janelkit-store`](https://pypi.org/project/janelkit-store/) |
 | **Plantilla** | `{expr}` con formato (`{cpu:.1f}`), `on:evento`, `bind:value`, `class:x={cond}`, `{#if}`, `{#each}` con claves, `{#key}`, `{#hidden}`, transiciones |
 | **Componentes** | Importados como módulos Python, `prop()` con tipos, `event()`, slots, `on_mount`/`on_destroy`, `ref`, `provide`/`inject` |
 | **Asincronía** | Manejadores `async def`, `@task` con estados de carga y error, `background()` para trabajo bloqueante, temporizadores; todo se cancela al desmontar |
-| **Disposición y estilos** | Flexbox de CSS (`<flex>`, `Column`, `Row`), posición, pseudo-clases y selectores, tokens `var(--primary)`, temas claro y oscuro intercambiables en caliente |
-| **Controles** | Texto (también Markdown), botones, campos, casillas, `Select`, `Switch`, `Slider`, `RadioGroup`, `Tabs`, `Image`, `ProgressBar`, `<List>` virtualizada, `<Video>`, arrastrar y soltar |
-| **Ventanas y navegación** | Varias ventanas, pilas de páginas, secciones que conservan su estado, `before_leave` para cambios sin guardar, Alt+← |
+| **Disposición y estilos** | Flexbox de CSS (`<flex>`, `column`, `row`), posición, pseudo-clases y selectores, tokens `var(--primary)`, temas claro y oscuro intercambiables en caliente |
+| **Controles** | Texto (también Markdown), botones, campos, casillas, `select`, `switch`, `slider`, `radiogroup`, `tabs`, `image`, `progressbar`, `<list>` virtualizada, `<video>`, arrastrar y soltar |
+| **Ventanas** | Varias ventanas, en otra pantalla y a pantalla completa, `before_leave` para cambios sin guardar. La navegación entre pantallas está en [`janelkit-router`](https://pypi.org/project/janelkit-router/) |
 | **Accesibilidad** | Navegación con teclado, foco visible, nombres accesibles, derecha a izquierda |
 | **Interoperabilidad** | Importa un `.qml` propio como si fuera un componente |
 | **Pruebas** | `janelkit.inspect`: monta sin ventana, busca elementos, simula clics y teclas, lee el estado |
@@ -112,19 +112,21 @@ def test_add(tmp_path):
 
 | Paquete | Qué añade |
 |---|---|
+| [`janelkit-router`](https://pypi.org/project/janelkit-router/) | Navegación entre pantallas: pilas de páginas y secciones. |
+| [`janelkit-store`](https://pypi.org/project/janelkit-store/) | Datos compartidos: stores con acciones, escritura controlada y seguimiento de cambios; `persisted`. |
 | [`janelkit-i18n`](https://pypi.org/project/janelkit-i18n/) | Traducciones, plurales, formatos según el idioma y cambio de idioma en caliente. |
-| [`janelkit-desktop`](https://pypi.org/project/janelkit-desktop/) | Diálogos nativos, portapapeles y notificaciones del sistema. |
+| [`janelkit-desktop`](https://pypi.org/project/janelkit-desktop/) | Diálogos nativos (archivos, carpeta, mensaje, confirmación) y portapapeles. |
 | [Resaltado para VS Code](https://github.com/janelkit/janelkit/tree/main/packages/janelkit-vscode) | Sintaxis de `.janel`: Python, plantilla y CSS. |
 
 ## Requisitos
 
 - Python 3.10 o posterior.
-- PySide6 6.8 o posterior, salvo la 6.12.0 (se instala solo).
+- PySide6-Essentials 6.8 o posterior, salvo la 6.12.0: los módulos básicos de Qt, sin los Addons (se instala solo).
 - Windows, macOS o Linux.
 
 ## Estado
 
-JanelKit está en **alfa** (serie 0.x). Lo público está [documentado](https://github.com/janelkit/janelkit/blob/main/docs/api.md). Una versión de parche nunca lo rompe; una versión menor puede hacerlo, pero cada cambio se anuncia en las [notas de la versión](https://github.com/janelkit/janelkit/blob/main/docs/cambios.md) con cómo migrar.
+JanelKit está en **alfa** (serie 0.x). Lo público está [documentado](https://github.com/janelkit/janelkit/blob/main/docs/api.md). Cada serie (0.1, 0.2…) es un cambio de paradigma que puede romperlo; dentro de una serie (0.2.0.0, 0.2.1.0…), lo que se rompa o se retire sigue funcionando con un aviso cuando es viable. Todo cambio se anuncia en las [notas de la versión](https://github.com/janelkit/janelkit/blob/main/docs/cambios.md) con cómo migrar.
 
 ## Documentación
 
@@ -133,7 +135,7 @@ JanelKit está en **alfa** (serie 0.x). Lo público está [documentado](https://
 - [Estilos y disposición](https://github.com/janelkit/janelkit/blob/main/docs/estilos.md): CSS soportado, flexbox, tokens y temas.
 - [Desarrollo](https://github.com/janelkit/janelkit/blob/main/docs/desarrollo.md): `janel dev`, `janel build`, errores y editor.
 - [API pública](https://github.com/janelkit/janelkit/blob/main/docs/api.md) y [cambios entre versiones](https://github.com/janelkit/janelkit/blob/main/docs/cambios.md).
-- [Crear un ejecutable](https://github.com/janelkit/janelkit/blob/main/docs/empaquetado.md) con PyInstaller.
+- [Crear un ejecutable](https://github.com/janelkit/janelkit/blob/main/docs/desarrollo.md#distribuir-un-ejecutable-con-pyinstaller) con PyInstaller.
 - [Ejemplos](https://github.com/janelkit/janelkit/tree/main/apps/examples): contador, tareas, notas, explorador de archivos, cliente de una API, idiomas, vídeo…
 
 ## Licencia

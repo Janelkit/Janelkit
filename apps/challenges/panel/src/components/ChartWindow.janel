@@ -7,15 +7,15 @@ series = prop()
 color = prop("#3b5bdb")
 </script>
 
-<Window title={series.label} width={640} height={320} minWidth={320} minHeight={200}>
-  <Column class="page">
-    <Row class="head">
-      <Text class="label" flex={1}>{series.label} · últimos 60 s</Text>
-      <Text class="value">{series.text()}</Text>
-    </Row>
+<window title={series.label} width={640} height={320} minWidth={320} minHeight={200}>
+  <column class="page">
+    <row class="head">
+      <text class="label" flex={1}>{series.label} · últimos 60 s</text>
+      <text class="value">{series.text()}</text>
+    </row>
     <LineChart values={series.history.value} max={series.max} color={color} unit={series.unit} capacity={series.capacity} flex={1} class="chart" />
-  </Column>
-</Window>
+  </column>
+</window>
 
 <style>
 .chart { width: 100%; }

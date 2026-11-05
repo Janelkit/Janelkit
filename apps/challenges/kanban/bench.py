@@ -8,7 +8,7 @@ Mide, en el hilo de la interfaz (procesando eventos hasta que no queda nada):
 - montar el tablero (compilar, crear y primer fotograma);
 - cada movimiento del puntero mientras se arrastra una tarjeta entre columnas
   (encontrar la zona bajo el puntero, mover la copia, :drag-over, on:dragover);
-- soltar en otra columna (mover la fila entre dos <List>) y dentro de la misma;
+- soltar en otra columna (mover la fila entre dos <list>) y dentro de la misma;
 - deshacer, filtrar (escribir en la búsqueda) y la memoria del proceso.
 
 Usa janelkit.inspect con la plataforma offscreen: los tiempos incluyen el trabajo de

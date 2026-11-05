@@ -16,9 +16,10 @@ function inLayout(p) {
 // contenedor fije una alineación (como un bloque en CSS). `self` (align-self) gana:
 // con start, center o end no se estira en el eje transversal.
 function fillWidth(p, flex, selfStretch, block, self) {
-    // La raíz de una página llena su <Pages> salvo que fije su tamaño (width, height: el
-    // compilador pone entonces Layout.fill* a false); align-self la decide arrangePages.
-    if (p && p.jkPages === true) return true
+    // La raíz de un hijo de un mazo (JkDeck, p. ej. una página) lo llena salvo que fije su
+    // tamaño (width, height: el compilador pone entonces Layout.fill* a false); align-self
+    // la decide arrangeDeck.
+    if (p && p.jkDeck === true) return true
     if (!inLayout(p)) return false
     if (p.jkBox.jkFill) return true
     if (p.jkHorizontal) return flex > 0
@@ -28,7 +29,7 @@ function fillWidth(p, flex, selfStretch, block, self) {
 }
 
 function fillHeight(p, flex, selfStretch, self) {
-    if (p && p.jkPages === true) return true
+    if (p && p.jkDeck === true) return true
     if (!inLayout(p)) return false
     if (p.jkBox.jkFill) return true
     if (!p.jkHorizontal) return flex > 0
@@ -233,7 +234,7 @@ function cssVar(ctx, name, fallback, dflt) {
     return fallback === undefined ? dflt : fallback
 }
 
-// Fondo y borde de un <Text>, y la mano sobre sus enlaces: solo los que los usan (JkText.jkDecor).
+// Fondo y borde de un <text>, y la mano sobre sus enlaces: solo los que los usan (JkText.jkDecor).
 let textBoxComponent = null
 let textLinksComponent = null
 let textSelectComponent = null
@@ -254,7 +255,7 @@ function textDecorations(label) {
     }
 }
 
-// Texto heredable: clave de jkT_<clave> en las cajas -> propiedad del <Text>.
+// Texto heredable: clave de jkT_<clave> en las cajas -> propiedad del <text>.
 const TEXT_PROPS = {
     color: "jkColor", family: "font.family", size: "font.pixelSize", weight: "font.weight",
     italic: "font.italic", letterSpacing: "font.letterSpacing", capitalization: "font.capitalization",
@@ -283,7 +284,7 @@ function inherited(ctx, key) {
 }
 
 let inheritComponent = null
-// Un <Text> con contexto recibe un JkTextInherit (un Binding) por cada clave que alguna caja
+// Un <text> con contexto recibe un JkTextInherit (un Binding) por cada clave que alguna caja
 // de fuera fija y él no (jkOwn): los demás textos y las demás claves no pagan nada. Si el
 // texto cambia de sitio se añaden las que falten; las que ya no hay no aplican nada.
 function textInherit(label) {

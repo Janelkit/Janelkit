@@ -1,4 +1,4 @@
-"""apps/examples/flex: elementos construidos solo con <flex> (docs/flex.md, catálogo de validación)."""
+"""apps/examples/flex: elementos construidos solo con <flex>."""
 from pathlib import Path
 
 import pytest
@@ -39,11 +39,11 @@ def test_cards_in_a_row_share_the_width(catalog):
 def test_toolbar_groups_wrap_and_buttons_work(catalog):
     catalog.window.setWidth(1400)  # cabe todo en una línea
     catalog.wait(0.05)
-    title = catalog.find("Text", text="Catálogo de flex")
-    copiar = catalog.find("Button", text="Copiar")
+    title = catalog.find("text", text="Catálogo de flex")
+    copiar = catalog.find("button", text="Copiar")
     assert title.item.mapToItem(None, 0, 0).x() < copiar.item.mapToItem(None, 0, 0).x()
     # space-between: el último grupo llega al borde derecho de la barra (menos su relleno)
-    share = catalog.find("Button", text="Compartir")
+    share = catalog.find("button", text="Compartir")
     right = share.item.mapToItem(None, share.item.width(), 0).x()
     assert right == pytest.approx(1400 - 12 - 8, abs=1)
     # al estrechar, los grupos saltan de línea en lugar de salirse de la ventana

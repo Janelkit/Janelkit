@@ -1,4 +1,4 @@
-"""Reto 3 (docs/challenges_to_test.md): tablero Kanban, probado como un usuario.
+"""Reto 3 (apps/challenges/kanban): tablero Kanban, probado como un usuario.
 
 Un tablero pequeño en un JSON temporal (KANBAN_FILE): títulos únicos para encontrar
 las tarjetas por su nombre, y así también se prueba que se carga y se guarda.
@@ -78,7 +78,7 @@ def test_drag_between_columns_and_within_one(app):
 
 
 def test_drag_a_column_header_reorders_columns(app):
-    app.find("Text", text="Hecho").drag_to(columna(app, "Pendiente"))
+    app.find("text", text="Hecho").drag_to(columna(app, "Pendiente"))
     assert list(tablero(app)) == ["Hecho", "Pendiente", "En curso"]
     app.key("Ctrl+Z")
     assert list(tablero(app)) == ["Pendiente", "En curso", "Hecho"]
@@ -127,19 +127,19 @@ def test_every_action_undoes_and_redoes(app):
         app.key("Ctrl+Z")
     assert tablero(app) == INICIAL
     assert app.get("tablero").tarjeta("t5")["etiquetas"] == []
-    assert not app.find("Button", text="Deshacer").enabled
+    assert not app.find("button", text="Deshacer").enabled
     for _ in range(7):
         app.key("Ctrl+Y")
     assert tablero(app) == final
-    assert not app.find("Button", text="Rehacer").enabled
+    assert not app.find("button", text="Rehacer").enabled
 
 
 def test_detail_panel_edits_as_one_undoable_change(app):
     card(app, "Beta").double_click()
-    app.find("TextField", label="Título").type("Beta revisada")
-    app.find("Select", label="Responsable").choose("Marta")
-    app.find("Checkbox", text="urgente").check()
-    app.find("Button", text="Guardar").click()
+    app.find("textfield", label="Título").type("Beta revisada")
+    app.find("select", label="Responsable").choose("Marta")
+    app.find("checkbox", text="urgente").check()
+    app.find("button", text="Guardar").click()
     assert not app.find_all("Detalle")
     t = app.get("tablero").tarjeta("t2")
     assert (t["titulo"], t["responsable"], list(t["etiquetas"])) == ("Beta revisada", "Marta", ["urgente"])
@@ -154,22 +154,22 @@ def test_search_and_filters_dim_the_rest(app):
         return sorted(c.label for c in app.find_all("Tarjeta") if c.item.property("opacity") < 0.5)
 
     assert atenuadas() == []
-    app.find("TextField", label="Buscar").type("ta")  # Beta, Delta, Zeta
+    app.find("textfield", label="Buscar").type("ta")  # Beta, Delta, Zeta
     app.wait(0.2)  # transición de opacidad
     assert atenuadas() == ["Alfa", "Gamma", "Épsilon"]
-    app.find("Select", label="Filtrar por persona").choose("Luis")
+    app.find("select", label="Filtrar por persona").choose("Luis")
     app.wait(0.2)
     assert atenuadas() == ["Alfa", "Beta", "Gamma", "Zeta", "Épsilon"]
-    app.find("Button", text="Quitar filtros").click()
+    app.find("button", text="Quitar filtros").click()
     app.wait(0.2)
     assert atenuadas() == []
 
 
 def test_rename_and_add_columns(app):
-    app.find("Text", text="En curso").double_click()
-    app.find("TextField", label="Nombre de la columna").type("Haciendo").submit()
+    app.find("text", text="En curso").double_click()
+    app.find("textfield", label="Nombre de la columna").type("Haciendo").submit()
     assert list(tablero(app)) == ["Pendiente", "Haciendo", "Hecho"]
-    app.find("Button", text="+ Columna").click()
+    app.find("button", text="+ Columna").click()
     assert list(tablero(app))[-1] == "Nueva columna"
     app.find_all("flex", label="Añadir tarjeta")[0].click()  # la de la primera columna
     assert tablero(app)["Pendiente"][-1] == "Nueva tarjeta"
@@ -186,14 +186,14 @@ def test_changes_are_saved_to_the_json(app, archivo):
 
 def test_card_local_state_survives_moves_in_and_between_columns(app):
     app.find("flex", label="Ver descripción de Beta").click()
-    assert app.find("Text", text="Con texto").visible
-    card(app, "Beta").drag_to(card(app, "Alfa"))  # misma <List>: la fila se mueve
+    assert app.find("text", text="Con texto").visible
+    card(app, "Beta").drag_to(card(app, "Alfa"))  # misma <list>: la fila se mueve
     assert tablero(app)["Pendiente"][:2] == ["Beta", "Alfa"]
-    assert app.find_all("Text", text="Con texto")
-    card(app, "Beta").drag_to(columna(app, "Hecho"))  # otra <List>: la tarjeta se traslada
+    assert app.find_all("text", text="Con texto")
+    card(app, "Beta").drag_to(columna(app, "Hecho"))  # otra <list>: la tarjeta se traslada
     assert tablero(app)["Hecho"] == ["Beta"]
     app.wait(0.5)
-    assert app.find("Text", text="Con texto").visible
+    assert app.find("text", text="Con texto").visible
     app.key("Ctrl+Z")  # deshacer también la traslada de vuelta
     app.wait(0.5)
     assert tablero(app)["Pendiente"][:2] == ["Beta", "Alfa"]

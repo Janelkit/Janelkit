@@ -20,19 +20,19 @@ class Hub:
 hub = Hub()
 status = hub.status
 </script>
-<Column>
-  <Text id="attr">{f"atributo: {hub.status}"}</Text>
-  <Text id="name">{f"nombre: {status}"}</Text>
-  <Text id="plain">{hub.status}</Text>
-  <Text id="value">{hub.status.value.upper()}</Text>
-  <Text id="count">{hub.count:03d}</Text>
+<column>
+  <text id="attr">{f"atributo: {hub.status}"}</text>
+  <text id="name">{f"nombre: {status}"}</text>
+  <text id="plain">{hub.status}</text>
+  <text id="value">{hub.status.value.upper()}</text>
+  <text id="count">{hub.count:03d}</text>
   {#if hub.ready}
-    <Text>lista</Text>
+    <text>lista</text>
   {/if}
   {#each hub.items as item}
-    <Text>item {item}</Text>
+    <text>item {item}</text>
   {/each}
-</Column>
+</column>
 """
 
 

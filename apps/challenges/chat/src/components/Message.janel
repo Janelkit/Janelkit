@@ -13,37 +13,32 @@ EMOJIS = ["👍", "❤️", "😂"]
 
 def hour(ts):
     return datetime.fromtimestamp(ts).strftime("%H:%M")
-
-
-def safe(text):
-    # format="markdown" también interpreta HTML: se escapa lo que llega de otros usuarios.
-    return text.replace("&", "&amp;").replace("<", "&lt;")
 </script>
 
-<Row class="line">
+<row class="line">
   {#if mine}
-    <Spacer />
+    <spacer />
   {/if}
-  <Column class={"bubble mine" if mine else "bubble"}>
+  <column class={"bubble mine" if mine else "bubble"}>
     {#if not mine}
-      <Text class="author">{msg["author"]}</Text>
+      <text class="author">{msg["author"]}</text>
     {/if}
-    <Text format="markdown" class="body">{safe(msg["text"])}</Text>
+    <text format="markdown" class="body">{msg["text"]}</text>
     {#if msg.get("image")}
-      <Image src={base + msg["image"]} width={240} height={140} fit="cover" alt={msg["author"]} />
+      <image src={base + msg["image"]} width={240} height={140} fit="cover" alt={msg["author"]} />
     {/if}
-    <Row class="meta">
+    <row class="meta">
       {#each list(msg["reactions"].items()) as r (r[0])}
-        <Text class="reaction">{r[0]} {r[1]}</Text>
+        <text class="reaction">{r[0]} {r[1]}</text>
       {/each}
-      <Spacer />
+      <spacer />
       {#each EMOJIS as e (e)}
-        <Button variant="ghost" class="add" on:click={react.emit(msg["id"], e)} label={e}>{e}</Button>
+        <button variant="ghost" class="add" on:click={react.emit(msg["id"], e)} label={e}>{e}</button>
       {/each}
-      <Text class="time">{hour(msg["ts"])}</Text>
-    </Row>
-  </Column>
-</Row>
+      <text class="time">{hour(msg["ts"])}</text>
+    </row>
+  </column>
+</row>
 
 <style>
 .line { padding: 3px 12px; }

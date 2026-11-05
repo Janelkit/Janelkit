@@ -29,7 +29,11 @@ class JkPolisher(QQuickItem):
 
 
 def register_types() -> None:
+    """Los tipos QML escritos en Python, en el módulo `JanelEngine`: JkPolisher y JkVideoSurface."""
     global _registered
     if not _registered:
+        from .video_surface import JkVideoSurface
+
         qmlRegisterType(JkPolisher, URI, 1, 0, "JkPolisher")
+        qmlRegisterType(JkVideoSurface, URI, 1, 0, "JkVideoSurface")
         _registered = True

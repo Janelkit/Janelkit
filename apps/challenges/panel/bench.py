@@ -78,10 +78,7 @@ def main() -> None:
 
     previous = qInstallMessageHandler(on_qt_message)
 
-    from janelkit import notifications
     from janelkit.inspect import mount
-
-    notifications._tray_icon = lambda: None  # sin avisos reales del sistema durante la medición
 
     proc = psutil.Process()
     main_id = threading.main_thread().native_id
@@ -107,7 +104,7 @@ def main() -> None:
         app.wait(until=lambda: len(monitor.processes.value) > 0)
         series = len(monitor.series)
         for label in ("CPU", "Red ↓"):
-            app.find("Button", label=f"Abrir {label}").click()
+            app.find("button", label=f"Abrir {label}").click()
         windows = [app.window] + [w.window for w in app.windows()]
 
         def on_frame() -> None:
@@ -139,8 +136,8 @@ def main() -> None:
             app.wait(10)
             tick += 1
             if tick % 3 == 0:  # el usuario reordena y filtra de vez en cuando
-                app.find("Button", text=sorts[tick // 3 % len(sorts)]).click()
-                app.find("TextField", id="query").type("" if tick % 2 else "svc")
+                app.find("button", text=sorts[tick // 3 % len(sorts)]).click()
+                app.find("textfield", id="query").type("" if tick % 2 else "svc")
             now, ui, cpu = time.perf_counter(), ui_thread_cpu(), time.process_time()
             dt = now - last_t
             mem.append(proc.memory_info().rss / 2**20)

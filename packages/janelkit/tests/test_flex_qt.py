@@ -1,4 +1,4 @@
-"""<flex>: el elemento base con flexbox (fase 1: caja y disposición). Ver docs/flex.md."""
+"""<flex>: el elemento base con flexbox."""
 import pytest
 from janelkit.testing import find, visual_items
 from PySide6.QtCore import QCoreApplication
@@ -18,9 +18,9 @@ def geo(item):
 
 
 def page(body, style="", width=400, height=300):
-    return f"""<Window width={{{width}}} height={{{height}}}>
+    return f"""<window width={{{width}}} height={{{height}}}>
 {body}
-</Window>
+</window>
 <style>
 .a {{ width: 50px; height: 20px; }}
 .b {{ width: 50px; height: 40px; }}
@@ -29,7 +29,7 @@ def page(body, style="", width=400, height=300):
 
 
 def test_flex_is_a_row_and_stretches_by_default(mount):
-    m = mount(page('<flex><flex id="x" class="a" /><Text id="t">hola</Text></flex>'))
+    m = mount(page('<flex><flex id="x" class="a" /><text id="t">hola</text></flex>'))
     settle(m)
     x, t = find(m, "x"), find(m, "t")
     assert geo(x)[:2] == (0, 0) and geo(x)[2] == 50
@@ -111,7 +111,7 @@ def test_wrap_makes_a_grid_that_reflows_on_resize(mount):
 def test_text_wraps_in_a_narrow_row_and_the_row_grows(mount):
     long = "palabra " * 30
     m = mount(page(
-        f'<flex direction="column" align="start"><flex id="fila" class="estrecha"><Text id="t">{long}</Text></flex></flex>',
+        f'<flex direction="column" align="start"><flex id="fila" class="estrecha"><text id="t">{long}</text></flex></flex>',
         ".estrecha { width: 120px; }",
     ))
     settle(m)
@@ -149,7 +149,7 @@ def test_per_side_borders_and_corner_radii(mount):
 def test_lowercase_tags_are_base_elements():
     with pytest.raises(JanelError) as exc:
         compile_source("<flx />")
-    assert "elemento base desconocido <flx>" in str(exc.value) and "<flex>" in str(exc.value)
+    assert "elemento desconocido <flx>" in str(exc.value) and "<flex>" in str(exc.value)
 
 
 def test_flex_attribute_values_are_checked():
@@ -160,7 +160,7 @@ def test_flex_attribute_values_are_checked():
 
 def test_new_style_properties_compile_without_warnings():
     c = compile_source(
-        '<flex class="f"><Text class="t">x</Text></flex>\n<style>'
+        '<flex class="f"><text class="t">x</text></flex>\n<style>'
         ".f { flex-direction: column; flex-wrap: wrap; row-gap: 4px; column-gap: 8px;"
         " justify-content: space-around; align-content: center; overflow: hidden; }"
         " .t { flex: 1 0 120px; order: 2; margin: 4px auto; align-self: baseline; }</style>"
@@ -174,13 +174,13 @@ def test_new_style_properties_compile_without_warnings():
 
 
 def test_element_selector_for_flex():
-    c = compile_source('<flex><Text>x</Text></flex>\n<style>flex { gap: 6px; }</style>')
+    c = compile_source('<flex><text>x</text></flex>\n<style>flex { gap: 6px; }</style>')
     assert "gap: 6" in c.qml and c.warnings == []
 
 
 def test_implicit_block_container_follows_the_parent_direction(mount):
     m = mount('<script>\nver = True\n</script>\n' + page(
-        '<flex direction="column"><Text id="a">arriba</Text>{#if ver}<Text id="b">uno</Text><Text id="c">dos</Text>{/if}</flex>'
+        '<flex direction="column"><text id="a">arriba</text>{#if ver}<text id="b">uno</text><text id="c">dos</text>{/if}</flex>'
     ))
     settle(m)
     b, c = geo(find(m, "b")), geo(find(m, "c"))
@@ -191,7 +191,7 @@ def test_late_content_of_unstretched_child_in_sized_column(mount):
     # La fila se llena después (las filas de {#each} las crea Python): la columna, con ancho
     # propio y align-items: start, debe darle su ancho natural, no el de antes (0).
     m = mount('<script>\nitems = ["uno", "dos", "tres"]\n</script>\n' + page(
-        '<flex direction="column" class="col"><flex id="fila">{#each items as i}<Text>{i}</Text>{/each}</flex></flex>',
+        '<flex direction="column" class="col"><flex id="fila">{#each items as i}<text>{i}</text>{/each}</flex></flex>',
         ".col { align-items: start; justify-content: end; }",
     ))
     settle(m)
@@ -205,7 +205,7 @@ def test_reordered_element_rows_are_placed_again(mount):
 from janelkit import state
 items = state([1, 2, 3])
 </script>
-<flex>{#each items as i (i)}<flex class="c"><Text>{i}</Text></flex>{/each}</flex>
+<flex>{#each items as i (i)}<flex class="c"><text>{i}</text></flex>{/each}</flex>
 <style>.c { width: 30px; }</style>""")
     QCoreApplication.processEvents()
 
@@ -231,7 +231,7 @@ ancho = state(60)
 <flex direction="column">
   {#hidden oculto}
     <flex id="col" direction="column" style={{"width": f"{ancho}px"}}>
-      {#each items as i (i)}<flex class="fila"><Text>{i}</Text></flex>{/each}
+      {#each items as i (i)}<flex class="fila"><text>{i}</text></flex>{/each}
     </flex>
   {/hidden}
 </flex>

@@ -32,7 +32,7 @@ code --install-extension janelkit-janel-0.1.0.vsix
 
 ## Errores y diagnósticos
 
-La extensión solo colorea: todavía no tiene autocompletado ni marca errores. Para ver los errores usa `janel dev` o `janel build`. Los muestran con archivo, línea, columna y sugerencias, y la terminal integrada de VS Code permite hacer clic en la ubicación para ir a ella.
+La extensión solo colorea: no tiene autocompletado ni marca errores. Para ver los errores usa `janel dev` o `janel build`. Los muestran con archivo, línea, columna y sugerencias, y la terminal integrada de VS Code permite hacer clic en la ubicación para ir a ella.
 
 ## Requisitos
 

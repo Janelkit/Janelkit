@@ -1,5 +1,5 @@
-"""<flex> fase 2: estados (pseudo-clases), selectores compuestos y de descendiente, transform,
-box-shadow, outline y cursor. Ver docs/flex.md."""
+"""<flex>: estados (pseudo-clases), selectores compuestos y de descendiente, transform,
+box-shadow, outline y cursor."""
 import tempfile
 from pathlib import Path
 
@@ -39,17 +39,17 @@ ROWS = """<script>
 from janelkit import state
 items = state(["a", "b", "c"])
 </script>
-<Column>
-<Column class="lista" gap={4}>
+<column>
+<column class="lista" gap={4}>
   {#each items as i}
   <flex class="fila" label={i}>
-    <Text>{i}</Text>
-    <flex class="acciones" label={"acc-" + i}><Text>x</Text></flex>
+    <text>{i}</text>
+    <flex class="acciones" label={"acc-" + i}><text>x</text></flex>
   </flex>
   {/each}
-</Column>
-<Button text="quitar" on:click={items.pop(0)} />
-</Column>
+</column>
+<button text="quitar" on:click={items.pop(0)} />
+</column>
 <style>
 .fila { padding: 8px; background: #ffffff; }
 .fila:hover { background: #ff0000; box-shadow: 0 2px 8px rgba(0, 0, 0, .15); }
@@ -96,15 +96,15 @@ def test_conditional_class_on_ancestor_reaches_descendants(app_from):
 from janelkit import state
 sel = state(False)
 </script>
-<Column>
-  <flex class="fila" class:sel={sel}><Text id="t">hola</Text></flex>
-  <Button text="elegir" on:click={sel = True} />
-</Column>
+<column>
+  <flex class="fila" class:sel={sel}><text id="t">hola</text></flex>
+  <button text="elegir" on:click={sel = True} />
+</column>
 <style>
 .fila .t-none { color: #000000; }
-.fila.sel Text { color: #ff0000; }
+.fila.sel text { color: #ff0000; }
 </style>""")
-    t = app.find("Text", text="hola")
+    t = app.find("text", text="hola")
     assert color(t, "jkColor") != "#ff0000"
     app.find(text="elegir").click()
     assert color(t, "jkColor") == "#ff0000"
@@ -115,9 +115,9 @@ def test_dynamic_classes_compound_with_states(app_from):
 from janelkit import state
 v = state("primary")
 </script>
-<Column>
-  <flex class={["boton", v]} label="boton" on:click={v = "ghost"}><Text>b</Text></flex>
-</Column>
+<column>
+  <flex class={["boton", v]} label="boton" on:click={v = "ghost"}><text>b</text></flex>
+</column>
 <style>
 .boton { background: #ffffff; }
 .boton.primary { background: #0000ff; }
@@ -133,9 +133,9 @@ v = state("primary")
 
 
 def test_focus_visible_outline_replaces_the_default_ring(app_from):
-    app = app_from("""<Column>
-  <flex class="boton" label="boton" on:click={print}><Text>b</Text></flex>
-</Column>
+    app = app_from("""<column>
+  <flex class="boton" label="boton" on:click={print}><text>b</text></flex>
+</column>
 <style>.boton:focus-visible { outline: 2px solid #ff0000; outline-offset: 2px; }</style>""")
     b = app.find(label="boton")
     assert b.prop("jkOutlineWidth") == 0
@@ -146,10 +146,10 @@ def test_focus_visible_outline_replaces_the_default_ring(app_from):
 
 
 def test_disabled_and_checked_states(app_from):
-    app = app_from("""<Column>
-  <flex class="x" label="caja" enabled={False} checked><Text>x</Text></flex>
-  <Checkbox class="c" text="c" checked />
-</Column>
+    app = app_from("""<column>
+  <flex class="x" label="caja" enabled={False} checked><text>x</text></flex>
+  <checkbox class="c" text="c" checked />
+</column>
 <style>
 .x:disabled { opacity: 0.5; }
 .x:checked { background: #00ff00; }
@@ -157,11 +157,11 @@ def test_disabled_and_checked_states(app_from):
 </style>""")
     x = app.find(label="caja")
     assert x.prop("opacity") == 0.5 and color(x) == "#00ff00"
-    assert app.find("Checkbox").prop("opacity") == 0.25
+    assert app.find("checkbox").prop("opacity") == 0.25
 
 
 def test_cursor_and_transform_on_controls_compile():
-    qml = compile_source("""<Column><Text class="t">hola</Text><flex class="f" /></Column>
+    qml = compile_source("""<column><text class="t">hola</text><flex class="f" /></column>
 <style>
 .t { cursor: text; transform: rotate(5deg) translateX(2px); transition: transform 100ms; }
 .f { cursor: pointer; transform: scale(1.1); }
@@ -175,19 +175,19 @@ def test_cursor_and_transform_on_controls_compile():
 
 def test_selector_errors_and_warnings():
     with pytest.raises(JanelError, match="pseudo-clase no soportada: ':visited'"):
-        compile_source("<Column />\n<style>.a:visited { color: red; }</style>")
+        compile_source("<column />\n<style>.a:visited { color: red; }</style>")
     with pytest.raises(JanelError, match="selector incompleto"):
-        compile_source("<Column />\n<style>.a > { color: red; }</style>")
-    c = compile_source("""<Column><flex class="f" /></Column>
+        compile_source("<column />\n<style>.a > { color: red; }</style>")
+    c = compile_source("""<column><flex class="f" /></column>
 <style>.f { box-shadow: 0 1px 2px #000, 0 4px 8px #000; }</style>""")
     assert any("solo se dibuja la primera sombra" in w.message for w in c.ir.warnings)
 
 
 def test_child_combinator_only_matches_direct_children():
-    qml = compile_source("""<Column class="menu">
-  <Text class="item">a</Text>
-  <flex><Text class="item">b</Text></flex>
-</Column>
+    qml = compile_source("""<column class="menu">
+  <text class="item">a</text>
+  <flex><text class="item">b</text></flex>
+</column>
 <style>.menu > .item { opacity: 0.5; }</style>""").qml
     assert qml.count("opacity: 0.5") == 1
 

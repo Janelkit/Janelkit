@@ -8,14 +8,14 @@ color = prop("#3b5bdb")
 expand = event()  # abrir la gráfica en una ventana aparte
 </script>
 
-<Column class="card" class:alert={series.alert.value} label={series.label}>
-  <Row class="head">
-    <Text class="label" flex={1}>{series.label}</Text>
-    <Text class="value">{series.text()}</Text>
-    <Button variant="ghost" on:click={expand.emit(series)} label={"Abrir " + series.label}>↗</Button>
-  </Row>
+<column class="card" class:alert={series.alert.value} label={series.label}>
+  <row class="head">
+    <text class="label" flex={1}>{series.label}</text>
+    <text class="value">{series.text()}</text>
+    <button variant="ghost" on:click={expand.emit(series)} label={"Abrir " + series.label}>↗</button>
+  </row>
   <LineChart values={series.history.value} max={series.max} color={color} unit={series.unit} capacity={series.capacity} height={70} class="chart" />
-</Column>
+</column>
 
 <style>
 .chart { width: 100%; }

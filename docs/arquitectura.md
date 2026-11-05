@@ -37,6 +37,7 @@ Cada paquete tiene versión propia y se prueba por separado. Las extensiones dec
 | Compilador para herramientas | `check_source`/`check_file`: diagnósticos sin ejecutar el script. La estructura (props, eventos, nombres) no es pública |
 | Elementos propios | Un `.qml` importado como componente; el compilador lee sus `property` y `signal` |
 | Anfitriones | `janelkit.ext.Host`: un objeto del script monta componentes dentro de un elemento `.qml` (raíz `JkDeck`, propiedad `JkHost`) con `Container.mount`, con su compuerta de visibilidad y su contexto. Es lo que usa `janelkit-router` |
+| Sesión | `janelkit.ext.session()`: lo que dura una aplicación (una por `run()` y por cada `inspect.mount()`), con su carpeta de datos y un aviso al terminar |
 | Componentes en paquetes | Un paquete instalado reparte `.janel` y `.qml` en su carpeta; se importan por el nombre del paquete (`from janelkit_router import Pages`) |
 | Versión del formato | `FORMAT_VERSION`, con política de cambios |
 

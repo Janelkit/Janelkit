@@ -5,17 +5,16 @@ from pathlib import Path
 
 import pytest
 
-from janelkit import Persisted, computed, persisted, storage
+from janelkit import Persisted, computed, persisted, session, storage
 from janelkit.inspect import mount
 
 
 @pytest.fixture
 def data(tmp_path, monkeypatch):
     monkeypatch.setenv(storage.DATA_ENV, str(tmp_path))
-    storage.use_app(tmp_path / "App.janel")
+    session.start(tmp_path / "App.janel")
     yield tmp_path
-    storage.flush_all()
-    storage._registry.clear()
+    session.end()
 
 
 def saved(folder: Path, key: str):
@@ -31,7 +30,7 @@ def test_reads_the_initial_value_saves_changes_and_reads_them_back(data):
     assert seen.value == "OSCURO"  # sigue siendo un state reactivo
     tema.flush()
     assert saved(data, "prefs.tema") == "oscuro"
-    storage.use_app(data / "App.janel")  # otra sesión
+    session.start(data / "App.janel")  # otra sesión: guarda lo pendiente y empieza de cero
     assert persisted("prefs.tema", "claro").value == "oscuro"
 
 
@@ -86,7 +85,8 @@ n = persisted("n", 0)
 
 def test_app_name_comes_from_the_project_folder(monkeypatch):
     monkeypatch.delenv(storage.DATA_ENV, raising=False)
-    storage.use_app(Path("/x/gestor/src/App.janel"))
+    session.start(Path("/x/gestor/src/App.janel"))
     assert storage.data_folder().name == "gestor"
-    storage.use_app(Path("/x/contador/App.janel"))
+    session.start(Path("/x/contador/App.janel"))
     assert storage.data_folder().name == "contador"
+    session.end()

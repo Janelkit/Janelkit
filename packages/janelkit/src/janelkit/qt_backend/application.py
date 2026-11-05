@@ -21,7 +21,7 @@ from PySide6.QtQml import QQmlComponent, QQmlContext, QQmlEngine, QQmlError, QQm
 from PySide6.QtQuickControls2 import QQuickStyle
 from shiboken6 import Shiboken
 
-from .. import storage
+from .. import session
 from ..compiler import CompiledComponent, compile_file
 from ..compiler.qml_generator import BRIDGE_NAME
 from ..diagnostics import Diagnostic, JanelError
@@ -505,7 +505,7 @@ def run(entry: str | os.PathLike[str], argv: list[str] | None = None) -> int:
     if str(path.parent) not in sys.path:
         sys.path.insert(0, str(path.parent))
     dev = os.environ.get(DEV_ENV) == "1"
-    storage.use_app(path)  # persisted() guarda en la carpeta de datos de esta aplicación
+    session.start(path)  # la sesión de esta aplicación (sus datos, janelkit.ext.session())
 
     compiled: CompiledComponent | None = None
     try:
@@ -536,4 +536,7 @@ def run(entry: str | os.PathLike[str], argv: list[str] | None = None) -> int:
             reloader.show_error([Diagnostic("la aplicación no pudo arrancar; corrige el error y guarda el archivo")])
         print(f"[janel dev] observando cambios en {path.parent}", file=sys.stderr, flush=True)
         app.dev_reloader = reloader  # mantener vivo
-    return app.exec()
+    try:
+        return app.exec()
+    finally:
+        session.end()  # guarda lo pendiente (persisted, stores) antes de salir

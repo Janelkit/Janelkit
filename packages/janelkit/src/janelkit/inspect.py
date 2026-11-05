@@ -620,7 +620,7 @@ def mount(entry: str | os.PathLike[str], headless: bool = True) -> Iterator[Moun
 
     if headless and QGuiApplication.instance() is None:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    from . import storage
+    from . import session
     from .compiler import compile_file
     from .qt_backend.application import Application
 
@@ -630,9 +630,10 @@ def mount(entry: str | os.PathLike[str], headless: bool = True) -> Iterator[Moun
         sys.path.insert(0, str(path.parent))
     before = set(sys.modules)
     application = Application.current or Application([])
-    # persisted() no toca los datos reales del usuario: una carpeta temporal por montaje.
+    # Una sesión por montaje, con una carpeta de datos temporal: persisted() y los paquetes
+    # no tocan los datos reales del usuario, y una prueba no ve lo que dejó la anterior.
     data = Path(tempfile.mkdtemp(prefix="janelkit-data-"))
-    storage.use_app(path, data)
+    session.start(path, data)
     try:
         mounted = application.mount(compile_file(path))
         app = MountedApp(application, mounted)
@@ -644,7 +645,7 @@ def mount(entry: str | os.PathLike[str], headless: bool = True) -> Iterator[Moun
                 application.unmount(mounted)
             application.process_events()
     finally:
-        storage.flush_all()
+        session.end()
         shutil.rmtree(data, ignore_errors=True)
         if added and str(path.parent) in sys.path:
             sys.path.remove(str(path.parent))

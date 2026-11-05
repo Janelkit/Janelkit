@@ -15,25 +15,23 @@
   mismo objeto (el segundo valor inicial se ignora). Letras, cifras, `.`, `_` y `-`.
 - El valor debe poder guardarse en JSON: textos, números, booleanos, None, listas
   y diccionarios con claves de texto. Las tuplas vuelven como listas.
-- Se guarda un archivo `<clave>.json` en la carpeta de datos de la aplicación:
-  `JANELKIT_DATA_DIR` si existe; si no, la carpeta de datos del usuario del sistema
-  (`%APPDATA%`, `~/Library/Application Support`, `~/.config`) más el nombre de la
-  aplicación, que es el de la carpeta del proyecto (la de `src/App.janel`). Con
-  `janelkit.inspect.mount` se usa una carpeta temporal, salvo que `JANELKIT_DATA_DIR` diga otra.
+- Se guarda un archivo `<clave>.json` en la carpeta de datos de la sesión de la
+  aplicación (`session.py`): `JANELKIT_DATA_DIR` si existe; si no, la carpeta de datos
+  del usuario más el nombre del proyecto. Con `janelkit.inspect.mount`, una carpeta
+  temporal. Las claves son de la sesión: otra aplicación montada empieza de cero.
 
 Es para preferencias y datos pequeños: cada cambio reescribe el archivo entero.
 """
 from __future__ import annotations
 
-import atexit
 import json
 import logging
 import os
 import re
-import sys
 from pathlib import Path
 from typing import Any, TypeVar
 
+from . import session as _session
 from .reactivity import Effect, State
 from .reactivity.collections import to_plain
 from .reactivity.effects import current_scope
@@ -41,13 +39,12 @@ from .reactivity.effects import current_scope
 T = TypeVar("T")
 log = logging.getLogger("janelkit")
 
-DATA_ENV = "JANELKIT_DATA_DIR"
+DATA_ENV = _session.DATA_ENV
 DELAY_MS = 300
 _KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
-_app_name = ""
-_folder_override: Path | None = None  # la de mount(): una carpeta temporal por prueba
-_registry: dict[str, "Persisted[Any]"] = {}
+_REGISTRY = object()  # clave en session.data: {clave: Persisted}
+_loose: dict[str, "Persisted[Any]"] = {}  # sin aplicación en marcha (un script)
 
 
 class Persisted(State[T]):
@@ -110,43 +107,37 @@ def persisted(key: str, initial: T) -> Persisted[T]:
     """Un `state` que se recuerda entre sesiones (ver el módulo)."""
     if not isinstance(key, str) or not _KEY.fullmatch(key):
         raise ValueError(f"clave no válida para persisted: {key!r} (usa letras, cifras, '.', '_' y '-')")
-    found = _registry.get(key)
+    registry = _registry()
+    found = registry.get(key)
     if found is not None:
         return found
     _dump(to_plain(initial))  # un valor inicial que no se puede guardar falla aquí, no al guardar
     created = Persisted(key, initial, data_folder() / f"{key}.json")
-    _registry[key] = created
+    registry[key] = created
     return created
 
 
 def data_folder() -> Path:
-    """Carpeta donde `persisted` guarda los valores."""
-    env = os.environ.get(DATA_ENV)
-    if env:
-        return Path(env)
-    if _folder_override is not None:
-        return _folder_override
-    if sys.platform == "win32":
-        base = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
-    elif sys.platform == "darwin":
-        base = Path.home() / "Library" / "Application Support"
-    else:
-        base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
-    return base / (_app_name or "janelkit")
+    """Carpeta donde `persisted` guarda los valores: la de la sesión de la aplicación."""
+    current = _session.current()
+    return (current or _session.Session("")).data_dir
 
 
-def use_app(entry: Path, folder: Path | None = None) -> None:
-    """La aplicación que arranca (run, mount): fija su nombre y empieza con las claves de cero."""
-    global _app_name, _folder_override
-    flush_all()
-    root = entry.parent.parent if entry.parent.name == "src" else entry.parent
-    _app_name = root.name
-    _folder_override = folder
-    _registry.clear()
+def _registry() -> dict[str, "Persisted[Any]"]:
+    """Los `persisted` de la sesión en curso; al terminar la sesión, se escribe lo pendiente."""
+    current = _session.current()
+    if current is None:
+        return _loose
+    registry = current.data.get(_REGISTRY)
+    if registry is None:
+        registry = current.data[_REGISTRY] = {}
+        current.on_end(lambda: [item.flush() for item in list(registry.values())])
+    return registry
 
 
 def flush_all() -> None:
-    for item in list(_registry.values()):
+    """Escribe ya lo pendiente de todos los `persisted` de la sesión."""
+    for item in list(_registry().values()):
         item.flush()
 
 
@@ -171,5 +162,3 @@ def _dump(value: Any) -> str:
     except (TypeError, ValueError) as exc:
         raise TypeError(f"persisted solo guarda valores JSON (texto, números, listas, diccionarios…): {exc}") from None
 
-
-atexit.register(flush_all)

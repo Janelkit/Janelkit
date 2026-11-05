@@ -14,9 +14,10 @@ from typing import Any, Callable
 
 from .runtime.hosts import Child, Container, Host, is_component
 from .lifecycle import ask_to_leave
+from .session import Session
 from .reactivity.effects import Gate
 
-__all__ = ["Child", "Container", "Gate", "Host", "app", "ask_to_leave", "inspector", "is_component"]
+__all__ = ["Child", "Container", "Gate", "Host", "Session", "app", "ask_to_leave", "inspector", "is_component", "session"]
 
 
 def app() -> Any:
@@ -28,6 +29,17 @@ def app() -> Any:
     from .qt_backend.application import Application
 
     return Application.current
+
+
+def session() -> Session | None:
+    """La sesión de la aplicación en marcha (una por `run()` y por cada `inspect.mount()`), o None.
+
+    `.data_dir` (carpeta de datos), `.data` (un diccionario para los paquetes: usa una
+    clave propia), `.on_end(fn)` (al cerrar la aplicación o desmontarla), `.name`.
+    """
+    from . import session as _session
+
+    return _session.current()
 
 
 def inspector(name: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:

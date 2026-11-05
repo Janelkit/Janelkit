@@ -766,6 +766,7 @@ def abrir_ajustes():
 - La ventana hereda el **contexto** (`inject`) del componente que la abre, queda por delante de su ventana y se **cierra sola** cuando ese componente se desmonta. Al cerrar la ventana principal se cierran las que abrió.
 - `modal=True` bloquea la ventana que la abrió mientras está abierta. `theme="dark"` le da un tema propio (también a los componentes que contiene), sin cambiar el de la aplicación.
 - Devuelve un objeto con `is_open` (reactivo: úsalo en la plantilla o en un `computed`), `close()`, `focus()` e `instance`.
+- `single=True`: si ya hay una ventana abierta de ese componente, la trae al frente y la devuelve en vez de abrir otra (las props nuevas no se aplican). Sirve para «Ajustes» o «Acerca de», que se abren desde un menú o un atajo.
 
 ## Diálogos, portapapeles y notificaciones
 

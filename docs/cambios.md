@@ -11,6 +11,7 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 - **Ventanas en otra pantalla y a pantalla completa:** `<Window screen={i} fullscreen={bool}>` (por índice o por nombre de pantalla) y `screens`, la lista reactiva de pantallas (`Screen`), que cambia al conectar o desconectar una. Cambiar de pantalla estando a pantalla completa sale de ella, mueve la ventana y vuelve a entrar. Si la pantalla no existe, la ventana se queda donde está.
 - **Parar lo que no se ve:** `is_visible()` devuelve un `computed` que dice si el componente se ve (otra sección, una página de debajo, un `{#hidden}` o una fila de `<List>` fuera de la vista no se ven). `interval(ms, fn, when=…)` y `timeout(..., when=…)` solo cuentan mientras se cumple una condición reactiva: `@interval(33, when=is_visible())` sustituye a la comprobación a mano al empezar cada tic.
 - **Mover un `<Scroll>` desde el código:** `follow`, `on:top`, `on:bottom` y `on:scroll`, como en `<List>`; con un `ref`, `scroll_to_start()`, `scroll_to_end()` y `scroll_to(ref)`, que lleva a la vista un elemento de dentro.
+- **Una sola ventana de cada:** `open_window(Ajustes, single=True)` trae al frente la ventana de `Ajustes` si ya está abierta (y la devuelve) en vez de abrir otra.
 - **Métricas para depurar:** `Timer.runs`, `.skipped` y `.last_duration`; `subscriber_count` de `state` y `computed`, ahora documentado; `repr` de `Effect` (función, fuentes, liberado o en espera) y de `Scope` (qué contiene).
 
 ### Corregido

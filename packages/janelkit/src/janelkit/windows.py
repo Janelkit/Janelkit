@@ -12,21 +12,33 @@
 - La ventana hereda el contexto (`inject`) del componente que la abre y se
   cierra sola cuando ese componente se desmonta.
 - `theme="dark"` le da un tema propio, independiente del de la aplicación.
+- `single=True`: si ya hay una ventana abierta de ese componente, la trae al
+  frente y la devuelve en vez de abrir otra (las props nuevas no se aplican).
 """
 from __future__ import annotations
 
+import weakref
 from typing import Any
 
 from .reactivity import State
+
+# Ventanas abiertas con open_window, por aplicación (para single=True).
+_opened: "weakref.WeakKeyDictionary[Any, list[Window]]" = weakref.WeakKeyDictionary()
 
 
 class Window:
     """Una ventana abierta con `open_window`."""
 
-    def __init__(self, app: Any, mounted: Any):
+    def __init__(self, app: Any, mounted: Any, path: Any = None):
         self._app = app
         self._mounted = mounted
         self._open = State(True)
+        self.path = path  # el .janel del componente
+
+    @property
+    def is_open_now(self) -> bool:
+        """Como `is_open`, sin crear dependencia."""
+        return self._open.peek()
 
     @property
     def is_open(self) -> bool:
@@ -67,8 +79,14 @@ class _CloseOnDispose:
         self.window.close()
 
 
-def open_window(component: Any, *, modal: bool = False, theme: str | None = None, **kwargs: Any) -> Window:
-    """Abre `component` (importado de un `.janel`) en una ventana nueva."""
+def open_window(
+    component: Any, *, modal: bool = False, theme: str | None = None, single: bool = False, **kwargs: Any
+) -> Window:
+    """Abre `component` (importado de un `.janel`) en una ventana nueva.
+
+    Con `single=True`, si ya hay una ventana abierta de ese componente, la trae al frente
+    y la devuelve (sin aplicar las props nuevas).
+    """
     from PySide6.QtCore import QTimer, Qt
 
     from .compiler import compile_file
@@ -82,6 +100,13 @@ def open_window(component: Any, *, modal: bool = False, theme: str | None = None
         )
     owner = component.owner
     app = owner.require_host()
+    opened = _opened.setdefault(app, [])
+    opened[:] = [w for w in opened if w.is_open_now]
+    if single:
+        for existing in opened:
+            if existing.path == component.path:
+                existing.focus()
+                return existing
     compiled = owner.compiled.cache.get(("window", component.path))
     if compiled is None:
         compiled = owner.compiled.cache[("window", component.path)] = compile_file(
@@ -91,7 +116,8 @@ def open_window(component: Any, *, modal: bool = False, theme: str | None = None
     props, events = split_component_kwargs(component.name, compiled, kwargs)
 
     mounted = app.mount(compiled, props=props, events=events, parent=owner, theme_name=theme)
-    window = Window(app, mounted)
+    window = Window(app, mounted, component.path)
+    opened.append(window)
     root = mounted.root
     opener = owner_window(app, owner)
     if root.isWindowType():

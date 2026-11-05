@@ -116,3 +116,20 @@ def test_child_components_inside_a_themed_window_use_its_theme(mount, project, j
     window, mounted = open_settings(m, theme="dark")
     label = find(mounted, "badge")
     assert label.property("jkColor") == QColor(theme.tokens_of("dark")["primary"])
+
+
+def test_single_brings_the_open_window_to_the_front(mount, project, janel_app):
+    m = mount(project({"App.janel": APP, "components/Settings.janel": SETTINGS}))
+    first, mounted = open_settings(m, single=True)
+    again, _ = open_settings(m, single=True)
+    assert again is first
+    assert [x for x in janel_app.mounted if x.compiled is mounted.compiled] == [mounted]
+
+    mounted.root.close()  # el usuario la cierra: la siguiente es nueva
+    janel_app.process_events()
+    third, third_mounted = open_settings(m, single=True)
+    assert third is not first and third.is_open and third_mounted in janel_app.mounted
+
+    fourth, _ = open_settings(m)  # sin single, otra ventana más
+    assert fourth is not third
+    assert len([x for x in janel_app.mounted if x.compiled is third_mounted.compiled]) == 2

@@ -105,7 +105,7 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 
 | Nombre | Descripción |
 |---|---|
-| `open_window` | `open_window(Componente, modal=False, theme=None, **props_y_on_eventos)` abre un componente importado en otra ventana. Devuelve una ventana con `.is_open` (reactivo), `.close()`, `.focus()` e `.instance`. |
+| `open_window` | `open_window(Componente, modal=False, theme=None, single=False, **props_y_on_eventos)` abre un componente importado en otra ventana. Con `single=True`, si ya hay una abierta de ese componente, la trae al frente y la devuelve. Devuelve una ventana con `.is_open` (reactivo), `.close()`, `.focus()` e `.instance`. |
 | `screens` | Pantallas conectadas, reactivo y de solo lectura: `screens.value` es una lista de `Screen`. Cambia sola al conectar o desconectar una pantalla, al cambiar la principal o la resolución. Vacía hasta que la aplicación arranca. Con `<Window screen={i} fullscreen={bool}>` se elige dónde se abre la ventana. |
 | `Screen` | Una pantalla de `screens`: `index`, `name`, `width`, `height`, `x`, `y` (píxeles lógicos del escritorio virtual), `primary`, `scale` (píxeles físicos por píxel lógico). |
 

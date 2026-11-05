@@ -508,7 +508,35 @@ class _Lowerer:
             self.content(el, spec, ir)
         finally:
             self.style_stack.pop()
+        if spec.qml_type == "JkText":
+            self.markdown_without_html(ir)
         return ir
+
+    def markdown_without_html(self, ir: IRElement) -> None:
+        """<Text format="markdown">: el texto pasa por el runtime, que escapa el HTML."""
+        fmt, text = ir.props.get("format"), ir.props.get("text")
+        if fmt is None or text is None:
+            return
+        if isinstance(fmt, Literal):
+            if fmt.qml != qml_string("markdown"):
+                return
+            when: bool | str = True
+        else:
+            when = fmt.binding_id
+        if isinstance(text, Literal):  # texto fijo: también, para que valga lo mismo
+            try:
+                raw = json.loads(text.qml)
+            except ValueError:
+                return
+            if not isinstance(raw, str):
+                return
+            bid = self.next_id("b")
+            self.tpl.bindings.append(TextBinding(bid, [raw], ir.loc, markdown=when))
+            ir.props["text"] = Bound(bid)
+            return
+        for binding in self.tpl.bindings:
+            if binding.id == text.binding_id:
+                binding.markdown = when
 
     def transition(self, attr: Attribute, ir: IRElement) -> None:
         """`transition:fade`, `in:scale={300}`, `out:slide`: animación al montar/desmontar el bloque."""

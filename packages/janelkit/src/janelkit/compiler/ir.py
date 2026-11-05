@@ -46,6 +46,7 @@ class ExprBinding:
     expression: Expression
     loc: SourceLocation
     classes: bool = False  # class={expr}: el runtime lo convierte en " a b " (nombres de clase)
+    markdown: "bool | str" = False  # texto de <Text format="markdown"> (ver TextBinding)
 
 
 @dataclass
@@ -55,6 +56,9 @@ class TextBinding:
     id: str
     parts: list[Union[str, Expression]]
     loc: SourceLocation
+    # Texto de <Text format="markdown">: el runtime escapa el HTML (runtime/markdown.py).
+    # True si el formato es fijo; el id del binding de `format` si cambia.
+    markdown: "bool | str" = False
 
 
 Binding = Union[ExprBinding, TextBinding]

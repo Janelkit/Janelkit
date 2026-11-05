@@ -29,7 +29,7 @@ Gravedad: **Bloquea** (no se podía hacer), **Molesta** (había que dar un rodeo
 |---|---|---|---|---|
 | 15 | Indicador «escribiendo…» que se borra a los 3 s | No hay temporizadores: una corrutina con `asyncio.sleep` y cancelación a mano | Molesta | ✅ Resuelto en el reto 1: `timeout(3000, fn)` y `.restart()` en cada aviso |
 | 16 | Copiar el texto de un mensaje | `<Text>` no se puede seleccionar | Molesta | `<Text selectable>` (un `TextEdit` de solo lectura con el mismo formato) |
-| 17 | Mostrar Markdown de otras personas | El Markdown de Qt acepta HTML; hay que escaparlo a mano, y el escape se ve literal dentro de `código` (`a &lt; b`) | Molesta (seguridad) | Que `format="markdown"` no interprete HTML (`MarkdownNoHTML`) y dejar `"html"` para quien lo quiera |
+| 17 | Mostrar Markdown de otras personas | El Markdown de Qt acepta HTML; hay que escaparlo a mano, y el escape se ve literal dentro de `código` (`a &lt; b`) | Molesta (seguridad) | Que `format="markdown"` no interprete HTML (`MarkdownNoHTML`) y dejar `"html"` para quien lo quiera. **Hecho en 0.2.0:** ya no se escapa a mano |
 | 18 | Icono propio en la notificación y en la bandeja | Se usa el icono de JanelKit; no hay forma de dar el de la aplicación | Molesta | `<Window icon="...">` o `run(..., icon=)`, usado también por `notify` |
 | 19 | Contador de no leídos en el icono de la bandeja, menú de la bandeja | No existe | Detalle | Ampliar `janelkit.notify` con un `tray` (icono, menú, insignia) |
 | 20 | `room.messages` en la plantilla | Solo se desenvuelven los `state` de nivel superior: dentro de un objeto hay que escribir `.value` | Detalle | Decisión de diseño (como Vue). Documentarlo en el lenguaje |

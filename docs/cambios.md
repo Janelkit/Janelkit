@@ -12,6 +12,12 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 - **Parar lo que no se ve:** `is_visible()` devuelve un `computed` que dice si el componente se ve (otra sección, una página de debajo, un `{#hidden}` o una fila de `<List>` fuera de la vista no se ven). `interval(ms, fn, when=…)` y `timeout(..., when=…)` solo cuentan mientras se cumple una condición reactiva: `@interval(33, when=is_visible())` sustituye a la comprobación a mano al empezar cada tic. Pedido por el primer usuario externo. Pruebas: `test_visibility_qt.py`.
 - **Métricas para depurar:** `Timer.runs`, `.skipped` y `.last_duration`; `subscriber_count` de `state` y `computed`, ahora documentado; `repr` de `Effect` (función, fuentes, liberado o en espera) y de `Scope` (qué contiene). Pruebas: `test_metrics_qt.py`.
 
+### Cambia (puede requerir ajustes)
+
+| Antes | Ahora | Cómo migrar |
+|---|---|---|
+| `<Text format="markdown">` aplicaba el HTML del texto (`<b>`, `<img>`, `<span style=…>`): el texto de otras personas había que escaparlo a mano, y el escape se veía dentro del código (`a &lt; b`). | No interpreta HTML: se muestra tal cual, y el código se ve como se escribió. Se comprueba con el propio Markdown de Qt (md4c): el texto que recibe se ve igual con HTML que sin él. Pruebas: `test_safe_markdown_qt.py`. | Para usar HTML, `format="html"`. El escape a mano con `&lt;` sigue funcionando; se puede quitar. |
+
 ## 0.1.1 (2026-11-04)
 
 Correcciones a partir del primer proyecto real con JanelKit (una app de visión con varias cámaras). No rompe código de 0.1.0.

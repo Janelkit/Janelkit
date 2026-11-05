@@ -13,11 +13,6 @@ EMOJIS = ["👍", "❤️", "😂"]
 
 def hour(ts):
     return datetime.fromtimestamp(ts).strftime("%H:%M")
-
-
-def safe(text):
-    # format="markdown" también interpreta HTML: se escapa lo que llega de otros usuarios.
-    return text.replace("&", "&amp;").replace("<", "&lt;")
 </script>
 
 <Row class="line">
@@ -28,7 +23,7 @@ def safe(text):
     {#if not mine}
       <Text class="author">{msg["author"]}</Text>
     {/if}
-    <Text format="markdown" class="body">{safe(msg["text"])}</Text>
+    <Text format="markdown" class="body">{msg["text"]}</Text>
     {#if msg.get("image")}
       <Image src={base + msg["image"]} width={240} height={140} fit="cover" alt={msg["author"]} />
     {/if}

@@ -59,6 +59,7 @@ from ..reactivity.collections import to_plain
 from ..reactivity.effects import Gate, when_settled
 from ..reactivity.state import _same
 from .list_model import LazySlotModel, SlotModel
+from .markdown import safe_markdown
 from .qt_bridge import make_bridge_class
 
 log = logging.getLogger("janelkit")
@@ -255,11 +256,22 @@ class TemplateInstance:
             # {hub.ready}: solo los nombres se desenvuelven al leerlos; un state que es atributo
             # se desenvuelve aquí, al final. Con bind:value={prefs.tema} el atributo es el state.
             value = _unwrap(self.eval(binding.expression))
-            return self._class_string(value, binding) if binding.classes else value
-        return "".join(
-            p if isinstance(p, str) else _formatted(self.eval(p), p) if isinstance(p, FormattedExpression) else _display(self.eval(p))
-            for p in binding.parts
-        )
+            value = self._class_string(value, binding) if binding.classes else value
+        else:
+            value = "".join(
+                p if isinstance(p, str) else _formatted(self.eval(p), p) if isinstance(p, FormattedExpression) else _display(self.eval(p))
+                for p in binding.parts
+            )
+        if binding.markdown and self._is_markdown(binding.markdown):
+            value = safe_markdown(_display(value))
+        return value
+
+    def _is_markdown(self, when: "bool | str") -> bool:
+        """format="markdown" fijo (True) o el valor actual del binding de `format`."""
+        if when is True:
+            return True
+        fmt = next(b for b in self.template.bindings if b.id == when)
+        return self._evaluate(fmt) == "markdown"
 
     def _class_string(self, value: Any, binding: ExprBinding) -> str:
         """class={expr}: texto, lista/tupla/conjunto (se ignoran los vacíos) o dict {clase: condición}."""

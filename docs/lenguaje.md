@@ -176,7 +176,11 @@ El contenido de `<Text>`, `<Button>` y `<Checkbox>` es su texto: `<Button>Clicks
 <Text format="markdown" on:link={abrir}>{mensaje["texto"]}</Text>
 ```
 
-El Markdown de Qt también acepta HTML. Si el texto viene de otras personas (un chat, una web), escapa `<` y `&` antes de mostrarlo (`texto.replace("&", "&amp;").replace("<", "&lt;")`).
+`format="markdown"` **no interpreta HTML**: `<b>`, `<img>` o `<span style=…>` se muestran tal cual. Así, el texto de otras personas (un chat, una web) se puede mostrar directamente, sin escaparlo. Si quieres HTML, usa `format="html"`.
+
+- Dentro de código (`` `List<int>` `` o un bloque con ```` ``` ````) el texto se ve exactamente como se escribió.
+- Los enlaces automáticos con `<…>` tampoco se interpretan; las direcciones sueltas (`https://…`) y `[texto](url)` sí son enlaces.
+- En casos raros en los que el código de un mensaje se lee de forma ambigua, puede verse una `\` antes de un `<` dentro del código; nunca pasa HTML.
 
 ### Texto seleccionable y portapapeles
 

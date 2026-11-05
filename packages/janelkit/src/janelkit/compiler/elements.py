@@ -93,6 +93,12 @@ _SCROLL_EVENTS = {
 _BOX_EVENTS = {
     name: EventSpec(ROUTE, enables="jkClickable" if name == "click" else None) for name in ROUTED_EVENTS
 }
+# <video>: los eventos de puntero de las cajas, con la posición también en píxeles de la imagen
+# (PointerEvent.image_x/image_y).
+_VIDEO_EVENTS = {
+    name: _BOX_EVENTS[name]
+    for name in ("click", "dblclick", "contextmenu", "pointerdown", "pointerup", "pointermove", "pointerenter", "pointerleave")
+}
 # Los campos (<textfield>, <textarea>, <select>) también reciben por events.py el teclado y el foco.
 _FIELD_EVENTS = {name: EventSpec(ROUTE) for name in ("keydown", "keyup", "focus", "blur")}
 # Papeles de `as`: los interactivos entran en el orden de Tab y se activan con el teclado.
@@ -266,6 +272,7 @@ CONTROLS: dict[str, ControlSpec] = {
     "video": ControlSpec(
         "JkVideo",
         props={"source": PropSpec("source"), "fit": PropSpec("fit", "string")},
+        events=dict(_VIDEO_EVENTS),
         container=True,  # los hijos van en una capa sobre la imagen
     ),
     "progressbar": ControlSpec(

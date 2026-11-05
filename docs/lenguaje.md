@@ -537,6 +537,21 @@ def pct(valor, eje):               # de píxeles de la imagen a % de la capa (ej
 - `frames.stalled` (reactivo) es `True` cuando pasan más de `stall_after` segundos sin fotogramas (`Frames(stall_after=1.5)`, el valor por defecto) y vuelve a `False` con el siguiente; en ese momento `fps` también baja a 0. Antes del primer fotograma y tras `clear()` es `False`: para saber si ya llegó alguno, `frames.size is None`. `{#if frames.stalled}<text>Sin señal</text>{/if}`.
   `Frames` solo ve los `push`: una fuente que sigue empujando la misma imagen congelada (una cámara desconectada cuyo último fotograma se procesa en cada ciclo) no se detecta así; eso lo tiene que saber quien lee la cámara.
 - Los hijos de `<video>` van en una caja con `position: relative` del tamaño exacto de la imagen que se ve, así que los porcentajes son de la imagen, también con `fit="contain"` (bandas) o `"cover"` (recortada). Para un espejo (cámara frontal), voltea la imagen antes de `push` (`cv2.flip(img, 1)`): así las coordenadas siguen coincidiendo.
+- **Qué píxel se pulsó:** `<video>` recibe `on:click`, `on:dblclick`, `on:contextmenu` y `on:pointerdown`/`up`/`move`/`enter`/`leave`. Su `PointerEvent` trae, además de `x` e `y` (respecto al elemento), `image_x` e `image_y`: la posición en píxeles de la imagen (`float`; `int(event.image_x)` es la columna). Son `None` sin fotograma, en las bandas de `fit="contain"` y en un clic desde el teclado. Con `"cover"` la parte visible siempre está dentro de la imagen; con `"fill"` cada eje se escala por separado.
+
+  ```python
+  puntos = state([])
+
+  def marcar(event):
+      if event.image_x is not None:
+          puntos.value.append((event.image_x, event.image_y))
+  ```
+
+  ```html
+  <video source={frames} on:click={marcar} />
+  ```
+
+  Como en las cajas, un evento en un hijo sube al `<video>` (el hijo lo recibe antes y puede pararlo con `event.stop()`). Un hijo con `position: absolute` (una caja de detección) no deja pasar el puntero: su `on:click` no llega al del `<video>`, igual que en `<flex>`; `on:pointerdown` y los demás sí suben. En las pruebas, `app.find(label="Cámara").click(x=100, y=50)` pulsa en ese punto del elemento.
 - Abrir cámaras no es del núcleo: con OpenCV (`cv2.VideoCapture`) o QtMultimedia, en un hilo propio. QtMultimedia está en PySide6-Addons, que JanelKit no instala: `pip install PySide6-Addons`.
 
 ## Listas grandes: `<list>`
@@ -726,7 +741,7 @@ Los nombres de 0.1 en mayúscula (`<Text>`, `Text { … }` en `<style>`) aún co
 
 ### Eventos de las cajas
 
-`<flex>`, `column` y `row` reciben los eventos de la tabla. Como en la web, un evento **sube** desde el elemento más profundo bajo el puntero (o desde el que tiene el foco, para las teclas) hacia sus contenedores. El manejador recibe un objeto con lo ocurrido (`PointerEvent`, `KeyEvent`, `WheelEvent`, `FocusEvent`, `ResizeEvent`; ver [api.md](api.md)) y dos métodos:
+`<flex>`, `column` y `row` reciben los eventos de la tabla (`video`, los de puntero: ver [Vídeo](#vídeo-video-y-frames)). Como en la web, un evento **sube** desde el elemento más profundo bajo el puntero (o desde el que tiene el foco, para las teclas) hacia sus contenedores. El manejador recibe un objeto con lo ocurrido (`PointerEvent`, `KeyEvent`, `WheelEvent`, `FocusEvent`, `ResizeEvent`; ver [api.md](api.md)) y dos métodos:
 
 - `event.stop()`: los contenedores de fuera no lo reciben (el ✕ de un chip no elige el chip).
 - `event.prevent()`: Qt no hace lo que haría (escribir la tecla en un campo, desplazar con la rueda, pulsar con Espacio).
@@ -813,7 +828,7 @@ Propiedades comunes a todos salvo `window`: `width`, `height`, `flex`, `visible`
 | `tabs` | `TabBar` | `options`, `value` | `on:change(valor)` | `bind:value` |
 | `progressbar` | `ProgressBar` | `value`, `max` (1), `indeterminate` | — | — |
 | `image` | `Image` | `src`, `fit` (`contain`, `cover`, `fill`, `none`), `alt` | — | — |
-| `video` | `JkVideoSurface` (una textura de Qt Quick) | `source` (un `Frames`), `fit` (`contain`, `cover`, `fill`) | — | — |
+| `video` | `JkVideoSurface` (una textura de Qt Quick) | `source` (un `Frames`), `fit` (`contain`, `cover`, `fill`) | `on:click`, `on:dblclick`, `on:contextmenu`, `on:pointerdown`, `on:pointerup`, `on:pointermove`, `on:pointerenter`, `on:pointerleave` (con `image_x`, `image_y`) | — |
 | `shortcut` | `Shortcut` | `keys` | `on:activate` | — |
 | `spacer` | `Item` | — | — | — |
 
@@ -831,7 +846,7 @@ Propiedades comunes a todos salvo `window`: `width`, `height`, `flex`, `visible`
 - **Opciones** (`select`, `radiogroup`, `tabs`): `options` es una lista de textos (`["rojo", "verde"]`) o de diccionarios `{"label": "Mediano", "value": 2}`; `value` es el valor elegido. La elección del usuario se ve al momento; si Python cambia `value`, manda Python.
 - `tabs` es solo la barra: el contenido de cada pestaña se elige con `{#if pestaña == "general"}`.
 - `image`: `src` puede ser una ruta relativa a la carpeta del `.janel`, una ruta absoluta o una URL (`https:`, `qrc:`, `data:`). Sin `width`/`height`, toma el tamaño de la imagen.
-- `video` muestra los fotogramas de un `Frames` ([Vídeo](#vídeo-video-y-frames)). Sus hijos van en una capa sobre la imagen.
+- `video` muestra los fotogramas de un `Frames` ([Vídeo](#vídeo-video-y-frames)). Sus hijos van en una capa sobre la imagen. Recibe los eventos de puntero de las cajas, con la posición también en píxeles de la imagen.
 - `shortcut` no ocupa espacio: escucha el teclado de su ventana mientras existe (`<shortcut keys="Ctrl+S" on:activate={guardar} />`; teclas como en Qt: `Ctrl+Shift+N`, `F5`, `Esc`). Dentro de un `{#if}`, solo está activo con la rama.
 - `textarea` emite `on:input` solo con los cambios del usuario, no con los que llegan de Python.
 - **Teclado y foco en los campos** (`textfield`, `textarea`, `select`): `on:keydown`, `on:keyup`, `on:focus` y `on:blur` funcionan como en `<flex>` ([eventos](#eventos-de-las-cajas)): suben a los contenedores, `event.stop()` corta la subida y `event.prevent()` hace que la tecla no llegue al campo (no se escribe). Por ejemplo, Escape para cancelar una edición y guardar al salir del campo:

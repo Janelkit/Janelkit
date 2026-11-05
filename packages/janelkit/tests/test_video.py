@@ -253,6 +253,125 @@ def test_stall_after_must_be_positive():
             Frames(stall_after=wrong)
 
 
+CLICKS = """<script>
+from janelkit import Frames, state
+frames = Frames()
+eventos = []
+parar = state(True)
+
+def anotar(e):
+    eventos.append((e.type, e.image_x, e.image_y))
+
+def caja(e):
+    eventos.append(("caja", e.image_x, e.image_y))
+    if parar.value:
+        e.stop()
+</script>
+<column>
+  <video source={frames} width={400} height={400} label="Cámara" on:click={anotar} on:dblclick={anotar}
+         on:contextmenu={anotar} on:pointerdown={anotar} on:pointerup={anotar} on:pointermove={anotar}
+         on:pointerenter={anotar}>
+    <flex class="caja" label="caja" on:click={caja} />
+  </video>
+</column>
+<style>
+.caja { width: 100px; height: 100px }
+</style>
+"""
+
+
+def last(app, kind: str) -> tuple:
+    return [e for e in app.namespace["eventos"] if e[0] == kind][-1]
+
+
+def test_click_on_a_video_gives_the_pixel_of_the_image_and_none_in_the_bands(app_from):
+    app = app_from(CLICKS)
+    video = app.find(label="Cámara")
+    video.click(x=100, y=200)
+    assert last(app, "click") == ("click", None, None)  # sin fotograma
+    app.namespace["frames"].push(image(640, 360))  # 16:9 en 400 × 400: la imagen va de y=87,5 a 312,5
+    app.wait(0.05)
+    video.click(x=100, y=200)
+    assert last(app, "click") == ("click", pytest.approx(160), pytest.approx(180))
+    assert last(app, "pointerdown") == ("pointerdown", pytest.approx(160), pytest.approx(180))
+    video.click(x=100, y=40)  # en la banda de arriba: el evento llega, sin píxel
+    assert last(app, "click") == ("click", None, None)
+
+
+def test_image_pixels_with_fit_cover_and_fill(app_from):
+    app = app_from(CLICKS.replace("<video source={frames}", '<video source={frames} fit="cover"'))
+    app.namespace["frames"].push(image(800, 400))  # recortada: se ve x de 200 a 600 de la imagen
+    app.wait(0.05)
+    app.find(label="Cámara").click(x=100, y=200)
+    assert last(app, "click") == ("click", pytest.approx(300), pytest.approx(200))
+
+    app = app_from(CLICKS.replace("<video source={frames}", '<video source={frames} fit="fill"'))
+    app.namespace["frames"].push(image(800, 200))  # estirada: cada eje con su escala
+    app.wait(0.05)
+    app.find(label="Cámara").click(x=100, y=200)
+    assert last(app, "click") == ("click", pytest.approx(200), pytest.approx(100))
+
+
+def test_pointer_move_double_and_right_click_on_a_video(app_from):
+    app = app_from(CLICKS)
+    app.namespace["frames"].push(image(800, 800))  # escala 2
+    app.wait(0.05)
+    video = app.find(label="Cámara")
+    video.hover(x=150, y=160)  # entra por (151, 161) y se mueve a (150, 160)
+    assert last(app, "pointerenter") == ("pointerenter", pytest.approx(302), pytest.approx(322))
+    assert last(app, "pointermove") == ("pointermove", pytest.approx(300), pytest.approx(320))
+    video.double_click(x=110, y=220)
+    assert last(app, "dblclick") == ("dblclick", pytest.approx(220), pytest.approx(440))
+    video.right_click(x=130, y=240)
+    assert last(app, "contextmenu") == ("contextmenu", pytest.approx(260), pytest.approx(480))
+
+
+def test_a_child_gets_the_click_first_and_can_stop_it(app_from):
+    app = app_from(CLICKS)
+    app.namespace["frames"].push(image(400, 400))
+    app.wait(0.05)
+    video = app.find(label="Cámara")
+    eventos = app.namespace["eventos"]
+    video.click(x=50, y=50)  # sobre la caja, que para el clic
+    clicks = [e for e in eventos if e[0] in ("caja", "click")]
+    assert clicks == [("caja", None, None)]  # los demás elementos no tienen píxel de la imagen
+    app.namespace["parar"].value = False
+    eventos.clear()
+    video.click(x=50, y=50)
+    assert [e for e in eventos if e[0] in ("caja", "click")] == [("caja", None, None), ("click", pytest.approx(50), pytest.approx(50))]
+
+
+def test_the_click_of_an_absolute_child_stays_in_it_like_in_flex(app_from):
+    # Una caja absolute no deja pasar el puntero (estilos.md): su on:click no sube, como en <flex>;
+    # on:pointerdown sí llega al <video>, con el píxel de la imagen.
+    app = app_from(CLICKS.replace("width: 100px; height: 100px", "position: absolute; left: 50%; top: 0; width: 25%; height: 100%"))
+    app.namespace["frames"].push(image(400, 400))
+    app.wait(0.05)
+    app.namespace["parar"].value = False
+    app.find(label="Cámara").click(x=250, y=200)
+    eventos = app.namespace["eventos"]
+    assert [e for e in eventos if e[0] in ("caja", "click")] == [("caja", None, None)]
+    assert last(app, "pointerdown") == ("pointerdown", pytest.approx(250), pytest.approx(200))
+
+
+def test_a_click_without_position_is_like_the_keyboard(app_from):
+    app = app_from(CLICKS)
+    app.namespace["frames"].push(image(400, 400))
+    app.wait(0.05)
+    app.find(label="Cámara").click()
+    assert last(app, "click") == ("click", None, None)
+
+
+def test_video_only_has_pointer_events():
+    from janelkit.compiler import compile_source
+    from janelkit.diagnostics import JanelError
+
+    head = "<script>\nfrom janelkit import Frames\nframes = Frames()\ndef f(e): pass\n</script>\n"
+    compile_source(head + "<video source={frames} on:pointerenter={f} on:pointerleave={f} />", "App.janel")
+    with pytest.raises(JanelError, match="evento desconocido 'on:keydown' en <video>"):
+        compile_source(head + "<video source={frames} on:keydown={f} />", "App.janel")
+
+
 def test_a_video_that_goes_away_lets_go_of_its_surface(app_from):
     app = app_from("""<script>
 from janelkit import Frames, state

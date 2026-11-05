@@ -180,10 +180,20 @@ class Element:
         return self.item.property(name)
 
     # -- acciones -----------------------------------------------------------
-    def click(self) -> "Element":
-        """Pulsa un botón, una casilla/interruptor (la alterna) o una caja con on:click."""
+    def click(self, x: float | None = None, y: float | None = None) -> "Element":
+        """Pulsa un botón, una casilla/interruptor (la alterna) o una caja con on:click.
+
+        Con `x` o `y` (respecto al elemento; el que falte, en el centro) es un clic real del
+        ratón en ese punto: lo recibe lo que haya allí, y on:click llega con esa posición (en
+        un `<video>`, también con `image_x`/`image_y`)."""
         tag = self._kind
         self._require_enabled("click")
+        if x is not None or y is not None:
+            from PySide6.QtCore import Qt
+            from PySide6.QtTest import QTest
+
+            QTest.mouseClick(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
+            return self._settle()
         if tag in ("checkbox", "switch"):
             return self.check(not self.item.property("checked"))
         if tag == "button":
@@ -276,31 +286,32 @@ class Element:
         image = image.copy(*(round(v * ratio) for v in (box.x(), box.y(), box.width(), box.height())))
         return _save(image, path)
 
-    def double_click(self) -> "Element":
-        """Doble clic real en el centro del elemento (on:dblclick)."""
+    def double_click(self, x: float | None = None, y: float | None = None) -> "Element":
+        """Doble clic real en el centro del elemento, o en (`x`, `y`) respecto a él (on:dblclick)."""
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
 
         self._require_enabled("double_click")
-        QTest.mouseDClick(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center())
+        QTest.mouseDClick(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
-    def right_click(self) -> "Element":
-        """Clic con el botón derecho en el centro del elemento (on:contextmenu)."""
+    def right_click(self, x: float | None = None, y: float | None = None) -> "Element":
+        """Clic con el botón derecho en el centro del elemento, o en (`x`, `y`) respecto a él (on:contextmenu)."""
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
 
         self._require_enabled("right_click")
-        QTest.mouseClick(self._app.window, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, self._center())
+        QTest.mouseClick(self._app.window, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
-    def hover(self) -> "Element":
-        """Pone el puntero del ratón sobre el centro del elemento (activa sus estilos :hover)."""
+    def hover(self, x: float | None = None, y: float | None = None) -> "Element":
+        """Pone el puntero del ratón sobre el centro del elemento, o en (`x`, `y`) respecto a él
+        (activa sus estilos :hover; on:pointerenter y on:pointermove)."""
         from PySide6.QtCore import QPoint
 
-        center = self._center()
-        _move_pointer(self._app.window, center + QPoint(1, 1))  # ver unhover()
-        _move_pointer(self._app.window, center)
+        point = self._point(x, y)
+        _move_pointer(self._app.window, point + QPoint(1, 1))  # ver unhover()
+        _move_pointer(self._app.window, point)
         return self._settle()
 
     def unhover(self) -> "Element":
@@ -312,19 +323,21 @@ class Element:
         _move_pointer(self._app.window, QPoint(-60, -60))
         return self._settle()
 
-    def press(self) -> "Element":
-        """Mantiene pulsado el botón del ratón sobre el elemento (estilos :pressed) hasta release()."""
+    def press(self, x: float | None = None, y: float | None = None) -> "Element":
+        """Mantiene pulsado el botón del ratón sobre el elemento, en su centro o en (`x`, `y`)
+        respecto a él (estilos :pressed, on:pointerdown) hasta release()."""
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
 
-        QTest.mousePress(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center())
+        QTest.mousePress(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
-    def release(self) -> "Element":
+    def release(self, x: float | None = None, y: float | None = None) -> "Element":
+        """Suelta el botón del ratón en el centro del elemento o en (`x`, `y`) respecto a él (on:pointerup)."""
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
 
-        QTest.mouseRelease(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center())
+        QTest.mouseRelease(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
     def drag_to(self, target: "Element", *, x: float | None = None, y: float | None = None,
@@ -340,7 +353,7 @@ class Element:
             local = QPointF(target.item.width() / 2 if x is None else x, target.item.height() / 2 if y is None else y)
             return target.item.mapToScene(local).toPoint()
 
-        start = self._center()
+        start = self._point()
         QTest.mousePress(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
         self._settle()
         for i in range(1, 6):  # varios pasos: pasa la distancia de arrastre y recorre el camino
@@ -352,10 +365,15 @@ class Element:
         QTest.mouseRelease(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, end())
         return self._settle()
 
-    def _center(self) -> Any:
+    def _point(self, x: float | None = None, y: float | None = None) -> Any:
+        """El punto (`x`, `y`) del elemento en la ventana; el que falte, en el centro."""
         from PySide6.QtCore import QPointF
 
-        return self.item.mapToScene(QPointF(self.item.width() / 2, self.item.height() / 2)).toPoint()
+        local = QPointF(self.item.width() / 2 if x is None else x, self.item.height() / 2 if y is None else y)
+        return self.item.mapToScene(local).toPoint()
+
+    def _center(self) -> Any:
+        return self._point()
 
     # -- utilidades -----------------------------------------------------------
     def _tab_value(self) -> Any:

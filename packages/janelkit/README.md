@@ -126,7 +126,7 @@ def test_add(tmp_path):
 
 ## Estado
 
-JanelKit está en **alfa** (serie 0.x). Lo público está [documentado](https://github.com/janelkit/janelkit/blob/main/docs/api.md). Una versión de parche nunca lo rompe; una versión menor puede hacerlo, pero cada cambio se anuncia en las [notas de la versión](https://github.com/janelkit/janelkit/blob/main/docs/cambios.md) con cómo migrar.
+JanelKit está en **alfa** (serie 0.x). Lo público está [documentado](https://github.com/janelkit/janelkit/blob/main/docs/api.md). Cada serie (0.1, 0.2…) es un cambio de paradigma que puede romperlo; dentro de una serie (0.2.0.0, 0.2.1.0…), lo que se rompa o se retire sigue funcionando con un aviso cuando es viable. Todo cambio se anuncia en las [notas de la versión](https://github.com/janelkit/janelkit/blob/main/docs/cambios.md) con cómo migrar.
 
 ## Documentación
 

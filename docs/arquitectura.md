@@ -38,7 +38,7 @@ Se quedan en el núcleo los controles con los que se escribe un formulario (`<ch
 | `apps/examples` | Ejemplos pequeños, uno por tema, con pruebas | `janelkit` y extensiones |
 | `apps/challenges` | Aplicaciones grandes que ponen a prueba el núcleo, con pruebas | `janelkit` y extensiones |
 
-Cada paquete tiene versión propia y se prueba por separado. Las extensiones declaran el rango del núcleo que admiten (`janelkit>=0.1,<0.3`). `tests/test_boundaries.py` comprueba que el núcleo no importa el ecosistema y que las extensiones no usan nada interno; `tests/test_packages.py`, que versiones y rangos son compatibles.
+Cada paquete tiene versión propia y se prueba por separado. Los paquetes de Python comparten la serie (los dos primeros números de la versión) y cada extensión pide la suya del núcleo (`janelkit>=0.2,<0.3`). `janelkit-vscode` es una herramienta de desarrollo, fuera del ecosistema que usa una aplicación: lleva su versión aparte (tres números, como pide VS Code) y `tools/versioning.py` no la gestiona. `tests/test_boundaries.py` comprueba que el núcleo no importa el ecosistema y que las extensiones no usan nada interno; `tests/test_packages.py`, que versiones y rangos son compatibles.
 
 ### Lo que el núcleo ofrece a las extensiones
 
@@ -58,9 +58,9 @@ Cada paquete tiene versión propia y se prueba por separado. Las extensiones dec
 
 ### Añadir un paquete
 
-1. Crear `packages/janelkit-<nombre>/` con `pyproject.toml` (versión propia, `janelkit>=X,<Y`), `README.md` con una sección «Cambios», `src/janelkit_<nombre>/` y `tests/` con un `conftest.py` que importe las fixtures de `janelkit.testing`.
+1. Crear `packages/janelkit-<nombre>/` con `pyproject.toml` (la primera versión de la serie actual, `E.S.0.0`, y `janelkit>=E.S,<E.(S+1)`), `README.md` con una sección «Cambios», `src/janelkit_<nombre>/` y `tests/` con un `conftest.py` que importe las fixtures de `janelkit.testing`.
 2. Usar solo la API pública del núcleo. Si falta algo, se añade antes al núcleo, con prueba y entrada en [api.md](api.md).
-3. Añadirlo a `pytest.ini`, a `requirements-dev.txt`, a la matriz `extensions` de la CI y, si tiene wheel, a `EXTENSIONS` en `tools/check_wheel.py`; y crear su etiqueta de partida (`git tag janelkit-<nombre>-v0.1.0`). Actualizar la lista esperada de `tests/test_packages.py`.
+3. Añadirlo a `pytest.ini`, a `requirements-dev.txt`, a la matriz `extensions` de la CI y, si tiene wheel, a `EXTENSIONS` en `tools/check_wheel.py`. No necesita etiqueta de partida: sin etiqueta, sale con la versión del `pyproject.toml`. Actualizar la lista esperada de `tests/test_packages.py`.
 
 ## Capas del núcleo
 
@@ -124,20 +124,21 @@ Cada pieza de una caja o de un `<text>` se crea solo si se usa (`jk.js`, `flexDe
 
 ## Versiones y publicación
 
-La versión no se escribe a mano: la calcula `.github/workflows/version.yml` (con `tools/versioning.py`) cuando la CI pasa en `main`, a partir del **prefijo** de cada commit. El prefijo dice qué nota quien usa JanelKit, no cuánto costó el cambio:
+Una versión tiene cuatro números, `E.S.M.m` ([qué significa cada uno](api.md#política-de-versiones)). Los dos primeros, estable y **serie**, los decide una persona y son los mismos para todos los paquetes. Los dos últimos no se escriben a mano: los calcula `.github/workflows/version.yml` (con `tools/versioning.py`) para cada paquete cuando la CI pasa en `main`, a partir del **prefijo** de cada commit. El prefijo dice qué nota quien usa JanelKit, no cuánto costó el cambio:
 
 | Prefijo | Sube | Cuándo |
 |---|---|---|
-| `mayor:` | 0.**#**.0 | API pública nueva, algo que se rompe o se retira, un cambio de comportamiento |
-| `menor:` | 0.0.**#** | Corrige o mejora sin añadir ni quitar API: errores, rendimiento, mensajes |
+| `mayor:` | 0.0.**#**.0 | API pública nueva, algo que se rompe o se retira, un cambio de comportamiento |
+| `menor:` | 0.0.0.**#** | Corrige o mejora sin añadir ni quitar API: errores, rendimiento, mensajes |
 | `interno:` | — | Reorganización, pruebas, CI, herramientas: el usuario no lo nota |
 | `docs:` | — | Solo documentación |
 | `version:` | — | Reservado al commit que hace el workflow |
 
-- Cada paquete de `packages/` sube por separado: un commit cuenta para los paquetes cuyos archivos toca. Se miran los commits desde la última etiqueta del paquete (`janelkit-v0.2.0`, `janelkit-desktop-v0.1.1`), y `mayor:` gana a `menor:`.
-- El workflow escribe la versión (`pyproject.toml` y `__version__`) y el registro de cambios. Si ya hay una sección con esa versión escrita a mano (`## 0.2.0 (sin publicar)`), solo le pone la fecha; si no, la crea con los asuntos de los commits. Después hace el commit `version: …` y las etiquetas, y lanza `release.yml`, que publica en PyPI.
-- Si el núcleo va a salir del rango que declara una extensión (`janelkit>=0.1,<0.2` y el núcleo pasa a 0.2.0), el cálculo se detiene con un error: primero se amplía el rango con un commit `menor:` de la extensión. La CI prueba cada extensión contra el núcleo de la misma rama.
-- La **1.0.0** nunca se calcula: se decide a mano.
+- Dentro de una serie, cada paquete de `packages/` sube por separado: un commit cuenta para los paquetes cuyos archivos toca. Se miran los commits desde la última etiqueta del paquete (`janelkit-v0.2.1.0`, `janelkit-desktop-v0.2.0.3`); `mayor:` gana a `menor:` y sale una versión por publicación, no una por commit.
+- **Serie nueva** (y la 1.0.0.0): `python tools/versioning.py series 0.3` pasa todos los paquetes a `0.3.0.0` (`pyproject.toml` y `__version__`) y cada extensión a `janelkit>=0.3,<0.4`. Va en un commit `interno:`, porque toca todos los paquetes sin ser un cambio de ninguno. El workflow publica la 0.3.0.0 de todos, también de los que no tienen cambios: en su registro pone «Serie 0.3, sin cambios propios». Lo que se rompe va en la sección `## 0.3.0.0 (sin publicar)` de [cambios.md](cambios.md), escrita a mano.
+- El cálculo se detiene con un error si los paquetes no están en la misma serie, si una extensión no pide exactamente la suya, o si una versión escrita a mano no es la primera de una serie posterior a la publicada.
+- Un paquete sin etiqueta (nunca publicado) sale con la primera versión de la serie, `E.S.0.0`. Las etiquetas de antes de los cuatro números (`janelkit-v0.1.1`) se leen como `0.1.1.0`.
+- El workflow escribe la versión (`pyproject.toml` y `__version__`) y el registro de cambios. Si ya hay una sección con esa versión escrita a mano (`## 0.2.0.0 (sin publicar)`), solo le pone la fecha; si no, la crea con los asuntos de los commits. Después hace el commit `version: …` y las etiquetas, y lanza `release.yml`, que publica en PyPI.
 - La CI rechaza commits sin prefijo válido; en local lo comprueba el hook (`git config core.hooksPath .githooks`, una vez por clon). `python tools/versioning.py plan` dice qué versión tocaría ahora y por qué.
 
 El trabajo de una versión se acumula en una rama; al integrarla en `main`, la CI (`.github/workflows/ci.yml`) prueba cada paquete por separado y, si pasa, se publica. Qué promete cada versión a quien usa JanelKit está en [api.md](api.md#política-de-versiones).

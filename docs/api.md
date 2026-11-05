@@ -187,13 +187,21 @@ Un plugin que falla al cargarse, o que intenta redefinir un comando de JanelKit,
 
 ## Política de versiones
 
-Mientras JanelKit esté en la serie **0.x**:
+Una versión tiene cuatro números, `E.S.M.m` (por ejemplo `0.2.3.1`):
 
-- **Versión de parche** (0.1.0 → 0.1.1): nunca rompe lo público.
-- **Versión menor** (0.1 → 0.2): puede romper lo público, pero cada cambio se anuncia en las notas de la versión con cómo migrar. Cuando sea viable, lo antiguo sigue funcionando una versión menor más con un aviso (`DeprecationWarning` o advertencia del compilador).
+| Nivel | Sube cuando… | Lo decide |
+|---|---|---|
+| **Estable** (#.0.0.0) | JanelKit es estable según el uso y la comunidad: la 1.0.0.0. | Una persona |
+| **Serie** (0.#.0.0) | Hay un cambio fuerte de arquitectura o de paradigma que rompe, como el de la 0.2 (núcleo más pequeño, navegación y stores en sus propios paquetes). | Una persona |
+| **Mayor** (0.0.#.0) | API pública nueva, algo que se rompe o se retira, un cambio de comportamiento. | Los commits `mayor:` |
+| **Menor** (0.0.0.#) | Corrige o mejora sin añadir ni quitar API: errores, rendimiento, mensajes. | Los commits `menor:` |
+
+- **Al cambiar de serie** puede romperse mucho de lo público. Cada cambio se anuncia en las notas de la versión con cómo migrar y, cuando se puede, `janel migrate` lo hace.
+- **Dentro de una serie**, si una versión mayor rompe o retira algo público, se anuncia en las notas con cómo migrar y, cuando es viable, lo antiguo sigue funcionando con un aviso (`DeprecationWarning` o advertencia del compilador) hasta la serie siguiente.
 - **Formato `.janel`**: `FORMAT_VERSION` sube solo cuando un archivo que compilaba deja de compilar o cambia de significado. Añadir sintaxis nueva no lo cambia. Las herramientas (editores, linters) pueden usarlo para saber qué esperar.
-- Desde la **1.0**, se aplica versionado semántico estricto.
+
+Cómo se calcula cada versión: [arquitectura.md](arquitectura.md#versiones-y-publicación).
 
 ### Paquetes del ecosistema
 
-`janelkit-i18n` y `janelkit-desktop` tienen **versión propia** y siguen la misma política para su propia API. Cada uno declara en su `pyproject.toml` las versiones del núcleo con las que funciona (por ejemplo `janelkit>=0.1,<0.2`) y solo usa la API pública del núcleo, así que una versión de parche del núcleo no los rompe. Cuando el núcleo publica una versión menor, se prueban contra ella y se amplía el rango (con una versión de parche de la extensión) o se adaptan (con una versión menor).
+`janelkit-i18n`, `janelkit-desktop`, `janelkit-router` y `janelkit-store` **comparten la serie con el núcleo**: `janelkit-desktop` 0.2.x.x va con `janelkit` 0.2.x.x, y cada uno lo declara en su `pyproject.toml` (`janelkit>=0.2,<0.3`). Al cambiar de serie, todos los paquetes pasan a la nueva (0.3.0.0), aunque no tengan cambios, para que la compatibilidad se vea en el número. Los niveles mayor y menor son de cada paquete y siguen la misma política para su propia API. Las extensiones solo usan la API pública del núcleo, y la CI prueba cada una contra el núcleo de la misma rama, así que no se publica una versión del núcleo que rompa una extensión del repositorio.

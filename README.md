@@ -5,7 +5,7 @@
 [![CI](https://github.com/janelkit/janelkit/actions/workflows/ci.yml/badge.svg)](https://github.com/janelkit/janelkit/actions/workflows/ci.yml)
 [![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue)](LICENSE)
 
-> **Alfa (0.1).** Lo público está documentado y protegido por pruebas ([api.md](docs/api.md)); en la serie 0.x una versión menor puede romperlo, siempre con notas de migración ([cambios.md](docs/cambios.md)).
+> **Alfa (0.2).** Lo público está documentado y protegido por pruebas ([api.md](docs/api.md)). Cada serie (0.1, 0.2…) es un cambio de paradigma que puede romperlo, siempre con notas de migración ([cambios.md](docs/cambios.md)).
 
 Componentes de archivo único (`.janel`) para aplicaciones de escritorio: **Python** para la lógica, una plantilla declarativa reactiva y **Qt Quick** (PySide6) para el renderizado. Sin JavaScript ni QML escrito a mano.
 
@@ -181,7 +181,7 @@ git config core.hooksPath .githooks   # una vez: comprueba el prefijo de cada co
 python tools/versioning.py plan       # qué versión tocaría publicar y por qué
 ```
 
-Cada commit empieza por `mayor:`, `menor:`, `interno:` o `docs:`: de ahí sale la versión de cada paquete, que calcula y publica la CI ([cómo se calcula](docs/arquitectura.md#versiones-y-publicación)).
+Cada commit empieza por `mayor:`, `menor:`, `interno:` o `docs:`: de ahí salen los dos últimos números de la versión de cada paquete (0.2.**#**.**#**), que calcula y publica la CI. La serie (0.**#**.0.0) es la misma para todos los paquetes y se cambia a mano con `python tools/versioning.py series` ([cómo se calcula](docs/arquitectura.md#versiones-y-publicación)).
 
 ## Licencia
 

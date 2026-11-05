@@ -131,7 +131,8 @@ def main() -> int:
         wheels = [next(dist.glob(f"{module}-*.whl")) for module in EXTENSIONS.values()]
         run([str(py), "-m", "pip", "install", "--quiet", *map(str, wheels)])
         run([str(py), "-m", "pip", "check"], cwd=outside, env=env)
-        code = "import janelkit_desktop as d, janelkit_i18n as i, janelkit_router as r; print(d.__file__); print(i.__file__); print(r.__file__)"
+        code = ("import janelkit_desktop as d, janelkit_i18n as i, janelkit_router as r, janelkit_store as s; "
+                "print(d.__file__); print(i.__file__); print(r.__file__); print(s.__file__)")
         origins = [Path(o) for o in run([str(py), "-c", code], cwd=outside, env=env).stdout.splitlines()]
         if any(o.resolve().is_relative_to(REPO) for o in origins):
             raise SystemExit("las extensiones se importan desde el repositorio, no desde los wheels")

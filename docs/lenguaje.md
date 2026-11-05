@@ -602,6 +602,18 @@ Para chats, registros y cualquier lista que crece:
 - **`on:scroll`**: como mucho una vez por fotograma, con `event = {"top": bool, "bottom": bool, "y": píxeles desde arriba, "height": alto del contenido}`. Sirve para saber si el usuario está abajo (`on:scroll={abajo = event["bottom"]}`).
 - Con `lista = ref()`: `lista.scroll_to_end()` (y con `follow` vuelve a seguir las nuevas), `lista.scroll_to_start()` y `lista.scroll_to(índice)` (lo justo para que se vea esa fila).
 
+`<Scroll>` admite lo mismo, para contenido que no es una lista de filas iguales (un registro corto, un formulario largo, un documento):
+
+```html
+<Scroll follow ref={zona} on:bottom={leido = True}>
+  ...
+  <Text ref={aviso}>Condiciones</Text>
+</Scroll>
+```
+
+- `follow`, `on:top`, `on:bottom` y `on:scroll` funcionan como en `<List>`.
+- `zona.scroll_to_start()`, `zona.scroll_to_end()` y `zona.scroll_to(aviso)`: con el `ref` de un elemento de dentro, desplaza lo justo para que se vea entero (si ya se ve, no se mueve).
+
 Con 10 000 filas, crear la lista tarda unos 40 ms (ver `python tools/bench.py`).
 
 ## Accesibilidad
@@ -883,7 +895,7 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
 | `Window` | `ApplicationWindow` | `title`, `width`, `height`, `minWidth`, `minHeight`, `background`, `screen`, `fullscreen` | `on:activate`, `on:deactivate` | — |
 | `Column` | `<flex direction="column">` | `gap`, `padding` | `on:click` | — |
 | `Row` | `<flex direction="row">` | `gap`, `padding` | `on:click` | — |
-| `Scroll` | `ScrollView` + columna | `gap`, `padding` | — | — |
+| `Scroll` | `ScrollView` + columna | `gap`, `padding`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
 | `List` | `ListView` | `gap`, `padding`, `animate`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
 | `Text` | `Label` | `text`, `color`, `format` (`plain`, `markdown`, `html`), `selectable` | `on:link(url)` | — |
 | `Button` | `Button` | `text`, `variant` (`default`, `primary`, `danger`, `ghost`), `flat` | `on:click` | — |
@@ -925,7 +937,7 @@ Propiedades comunes a todos salvo `Window`: `width`, `height`, `flex`, `visible`
   ```
 - `Column` y `Row` son atajos de `<flex>` con sus valores por defecto de siempre: en una columna, texto y cajas ocupan el ancho y los controles se quedan a la izquierda; en una fila, los hijos se centran en vertical; solo encoge lo que tiene `flex`. Admiten todo el flexbox de `<flex>` en `<style>` (también `flex-wrap`). Si solo usan lo básico (`gap`, `padding`, alineación, márgenes fijos, un hijo con `flex`), se colocan con un layout de Qt, más rápido; no hay que hacer nada para ello.
 - `<flex>`, `Column` y `Row` con `on:click` se pueden pulsar en toda su superficie (tarjetas, filas): muestran cursor de mano y un resaltado al pasar el ratón. Un botón dentro sigue funcionando por separado.
-- `Scroll` es una columna con desplazamiento vertical; por defecto ocupa el espacio libre (`flex: 1`).
+- `Scroll` es una columna con desplazamiento vertical; por defecto ocupa el espacio libre (`flex: 1`). Para moverlo desde el código, ver [Desplazamiento](#desplazamiento).
 - `Spacer` ocupa el espacio libre y empuja a sus hermanos hacia los extremos.
 - `width`/`height` fijan el tamaño preferido dentro del contenedor; `flex={1}` hace crecer el elemento en el eje del contenedor. Ver [estilos.md](estilos.md#disposición).
 

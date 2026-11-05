@@ -63,7 +63,7 @@ Se llaman mientras se ejecuta el `<script>` de un componente; fuera de él lanza
 | `is_visible` | `is_visible()` devuelve un `computed` que dice si el componente se ve: `False` en una página de debajo de la pila, en una sección que no es la actual, dentro de un `{#hidden}` que lo oculta o en una fila de `<List>` fuera de la vista. La raíz de una ventana siempre se ve (minimizarla no cuenta). Se llama en el script, como `on_mount`. |
 | `inject` | `inject(clave, defecto)` lee el valor del antecesor más cercano que lo provee. Sin defecto y sin proveedor: `LookupError`. |
 | `ref` | `ref()` crea una referencia para `ref={nombre}` en la plantilla. |
-| `Ref` | Tipo de `ref`: `.value` (reactivo; el objeto Qt o `None`), `.exists`, `.focused` (¿tiene el foco él o algo de dentro?; no reactivo), `.focus()`, `.blur()`, `.select_all()`; en una `<List>`, `.scroll_to_start()`, `.scroll_to_end()`, `.scroll_to(índice)`. |
+| `Ref` | Tipo de `ref`: `.value` (reactivo; el objeto Qt o `None`), `.exists`, `.focused` (¿tiene el foco él o algo de dentro?; no reactivo), `.focus()`, `.blur()`, `.select_all()`; en una `<List>` o un `<Scroll>`, `.scroll_to_start()`, `.scroll_to_end()` y `.scroll_to(...)` (el índice de una fila en `<List>`; el `ref` de un elemento de dentro en `<Scroll>`). |
 
 ### Eventos de las cajas
 

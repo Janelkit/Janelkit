@@ -79,6 +79,13 @@ ROUTED_EVENTS = (
     "pointerenter", "pointerleave", "wheel", "keydown", "keyup", "focus", "blur", "resize",
     "dragstart", "dragover", "drop", "dragend",
 )  # fmt: skip
+# Zonas con desplazamiento (<Scroll>, <List>).
+_SCROLL_EVENTS = {
+    "top": EventSpec("onReachedTop"),
+    "bottom": EventSpec("onReachedBottom"),
+    "scroll": EventSpec("onScrolled", ("info",), enables="jkScrollHandled", params=("info",)),
+}
+
 _BOX_EVENTS = {
     name: EventSpec(ROUTE, enables="jkClickable" if name == "click" else None) for name in ROUTED_EVENTS
 }
@@ -130,7 +137,12 @@ CONTROLS: dict[str, ControlSpec] = {
     "Row": ControlSpec("JkRow", props=dict(_BOX_PROPS), events=dict(_BOX_EVENTS), container=True, horizontal=True),
     "Scroll": ControlSpec(
         "JkScroll",
-        props={"gap": PropSpec("gap", "number"), "padding": PropSpec("innerPadding", "number")},
+        props={
+            "gap": PropSpec("gap", "number"),
+            "padding": PropSpec("innerPadding", "number"),
+            "follow": PropSpec("follow", "bool"),
+        },
+        events=dict(_SCROLL_EVENTS),
         container=True,
     ),
     "List": ControlSpec(
@@ -141,11 +153,7 @@ CONTROLS: dict[str, ControlSpec] = {
             "animate": PropSpec("animate", "bool"),
             "follow": PropSpec("follow", "bool"),
         },
-        events={
-            "top": EventSpec("onReachedTop"),
-            "bottom": EventSpec("onReachedBottom"),
-            "scroll": EventSpec("onScrolled", ("info",), enables="jkScrollHandled", params=("info",)),
-        },
+        events=dict(_SCROLL_EVENTS),
     ),
     "Text": ControlSpec(
         "JkText",

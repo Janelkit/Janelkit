@@ -184,16 +184,31 @@ class Ref:
         self._call("selectAll")
 
     def scroll_to_start(self) -> None:
-        """Lleva una `<List>` al principio."""
+        """Lleva una `<List>` o un `<Scroll>` al principio."""
         self._call("scrollToStart")
 
     def scroll_to_end(self) -> None:
-        """Lleva una `<List>` al final (con `follow`, vuelve a seguir las filas nuevas)."""
+        """Lleva una `<List>` o un `<Scroll>` al final (con `follow`, vuelve a seguir lo nuevo)."""
         self._call("scrollToEnd")
 
-    def scroll_to(self, index: int) -> None:
-        """Desplaza una `<List>` lo justo para que se vea la fila `index`."""
-        self._call("scrollTo", index)
+    def scroll_to(self, target: "int | Ref") -> None:
+        """Desplaza lo justo para que se vea: en una `<List>`, la fila `target` (un índice);
+        en un `<Scroll>`, el elemento de dentro cuyo `ref` es `target`."""
+        item = self._live()
+        if item is None:
+            return
+        if isinstance(target, Ref):
+            if not item.inherits("QQuickScrollView"):
+                raise TypeError("scroll_to(ref) es para <Scroll>; en una <List>, pasa el índice de la fila")
+            inner = target._live()
+            if inner is None:
+                return
+            if not item.isAncestorOf(inner):
+                raise ValueError("scroll_to(): el elemento no está dentro de este <Scroll>")
+            target = inner
+        elif item.inherits("QQuickScrollView"):
+            raise TypeError("scroll_to() de un <Scroll> recibe el ref de un elemento de dentro")
+        self._call("scrollTo", target)
 
     def _call(self, method: str, *args: Any) -> None:
         item = self._live()

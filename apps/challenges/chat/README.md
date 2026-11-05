@@ -27,7 +27,6 @@ python bench.py --rate 20 --seconds 300
 - Mensajes con Markdown (negrita, enlaces, código); el HTML que llega se escapa.
 - Imágenes servidas por el propio servidor, reacciones e indicador «escribiendo…».
 - Reconexión automática con aviso; al volver se recuperan los mensajes perdidos.
-- Notificación del sistema si la ventana no está en primer plano.
 - Español, inglés y árabe (de derecha a izquierda).
 - Cada sala guarda como mucho unos 600 mensajes en memoria; lo anterior se vuelve a pedir al subir.
 

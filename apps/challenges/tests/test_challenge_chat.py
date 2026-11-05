@@ -133,18 +133,6 @@ def test_new_messages_while_reading_older_ones(chat):
     assert app.get("new_below") == 0 and room(app).unread.value == 0
 
 
-def test_notifies_only_when_the_window_is_not_active(chat):
-    app, srv = chat
-    before = len(app.notifications())
-    srv.say("general", "con la ventana activa")
-    app.wait(until=lambda: room(app).messages.value[-1]["text"] == "con la ventana activa")
-    assert len(app.notifications()) == before
-    app.namespace["active"].value = False  # lo que hace on:deactivate
-    srv.say("random", "¿estás?", author="Luis")
-    app.wait(until=lambda: len(app.notifications()) == before + 1)
-    assert app.notifications()[-1] == {"title": "Luis · Aleatorio", "message": "¿estás?"}
-
-
 def test_reconnects_and_recovers_missed_messages(chat):
     app, srv = chat
     client = app.get("client")

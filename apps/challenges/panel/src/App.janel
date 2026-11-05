@@ -3,7 +3,6 @@
 import os
 
 from janelkit import computed, interval, open_window, state, theme
-from janelkit_desktop import notify
 from components.Card import Card
 from components.ChartWindow import ChartWindow
 from services.metrics import Monitor, SimulatedSource, SystemSource, format_value
@@ -43,11 +42,7 @@ core_rows = [monitor.cores[i:i + 8] for i in range(0, len(monitor.cores), 8)]
 
 @interval(RATE_MS)
 def sampler():
-    before = {s.id for s in monitor.alerts()}
     monitor.sample()
-    fresh = [s for s in monitor.alerts() if s.id not in before]
-    if fresh and not active.peek():
-        notify("Umbral superado", ", ".join(f"{s.label}: {s.text()}" for s in fresh))
 
 
 @interval(1000)

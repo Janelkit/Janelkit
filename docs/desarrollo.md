@@ -73,7 +73,7 @@ def test_búsqueda_asíncrona():
 - Las acciones (`click`, `type`, `check`, `choose`, `slide`, `submit`) emiten las mismas señales que el usuario: pasan por los manejadores y los `bind:` reales. Sobre un control desactivado fallan, como fallaría el usuario.
 - `app.texts()` devuelve los textos visibles en orden de lectura.
 - `app.wait(segundos)` o `app.wait(until=condición)` deja correr las tareas asíncronas y los temporizadores.
-- Diálogos y notificaciones de `janelkit-desktop`: `app.answer_dialog(...)`, `app.notifications()` (ver su [README](../packages/janelkit-desktop/README.md#en-pruebas)).
+- Diálogos de `janelkit-desktop`: `app.dialogs()`, `app.answer_dialog(...)` (ver su [README](../packages/janelkit-desktop/README.md#en-pruebas)).
 - Capturas: `app.screenshot("pantalla.png")` o `elemento.screenshot(...)` devuelven un `QImage` (y lo guardan si se da una ruta). Con `headless=True` (por defecto) en Windows la captura sale sin fuentes ni vídeo; para revisarla a ojo, `mount(..., headless=False)`.
 
 Ver la referencia en [api.md](api.md#janelkitinspect-pruebas-y-herramientas).

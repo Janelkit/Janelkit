@@ -51,21 +51,14 @@ def test_cards_cores_and_history(panel):
     assert cpu.text() in app.texts()
 
 
-def test_threshold_alert_and_notification(panel):
+def test_threshold_alert(panel):
     app = panel
     monitor, source = app.get("monitor"), app.get("source")
-    before = len(app.notifications())
     source.forced["cpu"] = 97.0
     app.wait(until=lambda: monitor.series["cpu"].alert.value)
     assert any(t.startswith("⚠ Por encima del umbral: CPU 97 %") for t in app.texts())
-    assert len(app.notifications()) == before  # con la ventana activa no hace falta avisar al sistema
-
     source.forced.clear()
     app.wait(until=lambda: not monitor.series["cpu"].alert.value)
-    app.namespace["active"].value = False
-    source.forced["mem"] = 95.0
-    app.wait(until=lambda: len(app.notifications()) == before + 1)
-    assert app.notifications()[-1]["message"] == "Memoria: 95 %"
 
 
 def test_sorting_and_filtering_keep_the_selection_and_the_scroll(panel):

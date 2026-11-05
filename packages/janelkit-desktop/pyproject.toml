@@ -5,13 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "janelkit-desktop"
 version = "0.1.0"
-description = "Diálogos nativos, portapapeles y notificaciones del sistema para JanelKit"
+description = "Diálogos nativos y portapapeles del sistema para JanelKit"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "d4ndres", email = "d4ndres@gmail.com" }]
-keywords = ["janelkit", "dialogs", "clipboard", "notifications", "desktop", "qt", "pyside6"]
+keywords = ["janelkit", "dialogs", "clipboard", "desktop", "qt", "pyside6"]
 dependencies = ["janelkit>=0.1,<0.3"]  # rango del núcleo probado (docs/api.md, política de versiones)
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -46,5 +46,3 @@ where = ["src"]
 testpaths = ["tests"]
 addopts = "--import-mode=importlib"
 
-[tool.setuptools.package-data]
-janelkit_desktop = ["icon.png"]

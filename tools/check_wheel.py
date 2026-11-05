@@ -7,7 +7,7 @@
    y confirma que `janelkit` se importa desde el entorno, no desde el checkout.
 5. Construye e instala junto a él los wheels de las extensiones (janelkit-i18n,
    janelkit-desktop, janelkit-router) y comprueba que se importan, que incluyen sus
-   archivos (icono, elementos .qml) y que pip acepta su rango del núcleo.
+   archivos (los elementos .qml del router) y que pip acepta su rango del núcleo.
 
 Uso:  python tools/check_wheel.py [--keep]
 """
@@ -135,8 +135,6 @@ def main() -> int:
         origins = [Path(o) for o in run([str(py), "-c", code], cwd=outside, env=env).stdout.splitlines()]
         if any(o.resolve().is_relative_to(REPO) for o in origins):
             raise SystemExit("las extensiones se importan desde el repositorio, no desde los wheels")
-        if not (origins[0].parent / "icon.png").is_file():
-            raise SystemExit("el wheel de janelkit-desktop no incluye icon.png")
         if not all((origins[2].parent / f).is_file() for f in ("Pages.qml", "Sections.qml")):
             raise SystemExit("el wheel de janelkit-router no incluye Pages.qml y Sections.qml")
         print("   instaladas sobre el núcleo del wheel; pip check sin conflictos")

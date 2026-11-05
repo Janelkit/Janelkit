@@ -1,13 +1,10 @@
 <script lang="python">
 # Reto 4: cliente de chat por WebSocket. Ver ../README.md.
 import os
-import re
-import time
 from pathlib import Path
 
 from janelkit import computed, on_mount, ref, spawn, state
 from janelkit_i18n import i18n, t
-from janelkit_desktop import notify
 from components.Message import Message
 from services.chat import ChatClient
 
@@ -26,7 +23,6 @@ active = state(True)  # la ventana está en primer plano
 at_bottom = state(True)  # la lista de mensajes está abajo del todo
 new_below = state(0)  # mensajes nuevos que llegaron estando más arriba
 messages = ref()
-last_notice = {"at": 0.0}
 
 
 @computed
@@ -41,9 +37,6 @@ def on_message(r, msg):
         new_below.value += 1
     if not mine and not (here and active.peek() and at_bottom.peek()):
         r.unread.value += 1
-        if not active.peek() and time.monotonic() - last_notice["at"] > 3:  # sin inundar el sistema
-            last_notice["at"] = time.monotonic()
-            notify(f"{msg['author']} · {r.name}", re.sub(r"[*_`]", "", msg["text"])[:120], on_click=lambda: select(r.id))
     if not here or at_bottom.peek():
         r.trim()
 

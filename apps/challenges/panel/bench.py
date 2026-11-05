@@ -78,10 +78,7 @@ def main() -> None:
 
     previous = qInstallMessageHandler(on_qt_message)
 
-    from janelkit import notifications
     from janelkit.inspect import mount
-
-    notifications._tray_icon = lambda: None  # sin avisos reales del sistema durante la medición
 
     proc = psutil.Process()
     main_id = threading.main_thread().native_id

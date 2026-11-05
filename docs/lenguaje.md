@@ -653,9 +653,9 @@ def abrir_ajustes():
 - Devuelve un objeto con `is_open` (reactivo: úsalo en la plantilla o en un `computed`), `close()`, `focus()` e `instance`.
 - `single=True`: si ya hay una ventana abierta de ese componente, la trae al frente y la devuelve en vez de abrir otra (las props nuevas no se aplican). Sirve para «Ajustes» o «Acerca de», que se abren desde un menú o un atajo.
 
-## Diálogos, portapapeles y notificaciones
+## Diálogos y portapapeles
 
-Son del paquete [`janelkit-desktop`](../packages/janelkit-desktop/README.md): diálogos nativos que se esperan con `await` (`await dialogs.open_file(...)`, `await dialogs.confirm(...)`), el portapapeles reactivo y las notificaciones del sistema.
+Son del paquete [`janelkit-desktop`](../packages/janelkit-desktop/README.md): diálogos nativos que se esperan con `await` (`await dialogs.open_file(...)`, `await dialogs.confirm(...)`) y el portapapeles reactivo.
 
 ## Elementos propios en QML
 
@@ -806,7 +806,7 @@ Propiedades comunes a todos salvo `window`: `width`, `height`, `flex`, `visible`
 | `spacer` | `Item` | — | — | — |
 
 - **`list`** es una lista virtualizada para colecciones grandes; ver [Listas grandes](#listas-grandes-list) y [Desplazamiento](#desplazamiento).
-- **`window`**: `on:activate` y `on:deactivate` avisan cuando la ventana pasa a primer plano o deja de estarlo (para marcar como leído o decidir si mostrar una notificación con `notify`).
+- **`window`**: `on:activate` y `on:deactivate` avisan cuando la ventana pasa a primer plano o deja de estarlo (para marcar como leído, o pausar lo que solo importa mientras se mira).
 - **`window` en otra pantalla:** `screen={i}` la abre en la pantalla `i` de `screens` (o `screen={"nombre"}`, por su nombre), centrada; `fullscreen={bool}` la pone a pantalla completa o la saca. Los dos son reactivos: cambiar `screen` estando a pantalla completa mueve la ventana a la otra pantalla y la deja a pantalla completa allí. Si la pantalla no existe (un proyector desconectado), la ventana se queda donde está y vuelve a colocarse cuando se conecta. `screens` es la lista reactiva de pantallas (`Screen`: `index`, `name`, `width`, `height`, `x`, `y`, `primary`, `scale`):
 
   ```html

@@ -64,10 +64,7 @@ def main() -> None:
     os.environ["CHAT_URL"] = f"ws://127.0.0.1:{port}"
     time.sleep(1)
 
-    from janelkit import notifications
     from janelkit.inspect import mount
-
-    notifications._tray_icon = lambda: None  # sin avisos reales del sistema durante la medición
 
     lags: list[float] = []
 

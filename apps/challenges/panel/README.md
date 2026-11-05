@@ -24,7 +24,7 @@ python bench.py --metrics 50 --rate 10 --seconds 60
 
 - Tarjetas de CPU, memoria, red y disco con su valor y una gráfica de los últimos 60 s (4 muestras por segundo).
 - CPU de cada núcleo con su barra.
-- Si un valor supera su umbral (CPU o memoria ≥ 90 %), la tarjeta se tiñe con una transición, aparece un aviso arriba y, si la ventana no está en primer plano, una notificación del sistema.
+- Si un valor supera su umbral (CPU o memoria ≥ 90 %), la tarjeta se tiñe con una transición, y aparece un aviso arriba.
 - Tabla de procesos (se lee cada segundo, en otro hilo): ordenable por cualquier columna, filtrable por nombre o PID, con selección y detalles. Ordenar, filtrar o refrescar no pierde la selección ni la posición del scroll.
 - `↗` abre cualquier gráfica en su propia ventana; las dos usan el mismo `state` y se actualizan juntas.
 - Pausa, cambio del ritmo de muestreo y tema claro/oscuro.

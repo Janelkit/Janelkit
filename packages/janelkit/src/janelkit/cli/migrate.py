@@ -36,7 +36,7 @@ _SKIP_DIRS = {".venv", "venv", ".git", "__pycache__", "build", "dist", "node_mod
 
 # Lo que se quitó y no se puede migrar solo: nombre -> qué hacer.
 _REMOVED = {
-    "History": "History se quitó en 0.2.0: anota los pasos de deshacer como pares de funciones en una clase propia",
+    "History": "History se quitó en la 0.2: anota los pasos de deshacer como pares de funciones en una clase propia",
 }
 # Lo que pasó a otro paquete: nombre en janelkit -> (paquete, nombre allí).
 _MOVED = {

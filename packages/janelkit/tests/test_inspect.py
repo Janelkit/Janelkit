@@ -199,3 +199,12 @@ nombre = state("Pan")
         assert field.value == "Pan" and field.text is None
         assert app.find(text="Pan").tag == "text"  # el campo no cuenta como texto
         assert app.texts() == ["Pan"]
+
+
+def test_an_unknown_method_points_to_the_extensions(tmp_path):
+    (tmp_path / "App.janel").write_text("<text>hola</text>", encoding="utf-8")
+    with mount(tmp_path / "App.janel") as app:
+        with pytest.raises(AttributeError, match=r"no tiene 'notifications'; si lo añade una extensión \(como dialogs\(\) de janelkit-desktop"):
+            app.notifications()
+        with pytest.raises(AttributeError, match=r"no tiene '_privado'$"):
+            app._privado

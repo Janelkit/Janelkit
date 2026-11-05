@@ -585,7 +585,7 @@ class MountedApp:
         # Métodos que añaden otros paquetes con `janelkit.ext.inspector` (p. ej. `dialogs()`).
         method = _extensions.get(name)
         if method is None:
-            hint = "" if name.startswith("_") else "; si lo añade una extensión (como dialogs() o notifications()), impórtala"
+            hint = "" if name.startswith("_") else "; si lo añade una extensión (como dialogs() de janelkit-desktop o store() de janelkit-store), impórtala"
             raise AttributeError(f"MountedApp no tiene {name!r}{hint}")
         return functools.partial(method, self)
 

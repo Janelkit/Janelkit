@@ -2,6 +2,8 @@
 import re
 from pathlib import Path
 
+import pytest
+
 import janelkit
 import janelkit.compiler
 import janelkit.diagnostics
@@ -45,13 +47,32 @@ def test_public_names_exist():
             assert hasattr(module, name), f"{module_name}.{name}"
 
 
-def test_removed_names_say_what_happened():
-    import pytest
+REMOVED_IN_02 = {  # lo que salió del núcleo en la serie 0.2 → qué dice el error
+    "History": "History se quitó en JanelKit 0.2",
+    "pages": "pip install janelkit-router y from janelkit_router import pages",
+    "sections": "pip install janelkit-router y from janelkit_router import sections",
+    "navigation": "pip install janelkit-router y from janelkit_router import navigation",
+    "PageStack": "pip install janelkit-router y from janelkit_router import PageStack",
+    "Sections": "se llama SectionSet",
+    "persisted": "pip install janelkit-store y from janelkit_store import persisted",
+    "Persisted": "pip install janelkit-store y from janelkit_store import Persisted",
+}
 
-    with pytest.raises(ImportError, match="History se quitó en JanelKit 0.2.0"):
-        exec("from janelkit import History")
-    with pytest.raises(ImportError, match="pip install janelkit-router"):
-        exec("from janelkit import pages")
+
+@pytest.mark.parametrize("name, message", REMOVED_IN_02.items(), ids=list(REMOVED_IN_02))
+def test_removed_names_say_what_happened(name, message):
+    with pytest.raises(ImportError, match=re.escape(message)):
+        exec(f"from janelkit import {name}")
+    assert name not in janelkit.__all__
+
+
+def test_an_unknown_name_is_a_plain_attribute_error():
+    with pytest.raises(AttributeError, match="no attribute 'no_existe'"):
+        janelkit.no_existe  # noqa: B018
+
+
+def test_the_version_has_four_numbers():
+    assert re.fullmatch(r"\d+\.\d+\.\d+\.\d+", janelkit.__version__)
 
 
 def test_every_public_name_is_documented_and_nothing_else():

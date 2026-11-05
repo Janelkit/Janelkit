@@ -84,7 +84,7 @@ Comparte la serie con el núcleo: janelkit-desktop 0.2.x.x va con janelkit 0.2.x
 
 ### 0.2.0.0 (sin publicar)
 
-- **Se quitan las notificaciones:** `notify`, el icono de la bandeja del sistema y `app.notifications()` en `janelkit.inspect`. El paquete se queda con lo que casi toda aplicación de escritorio necesita: diálogos de archivos, carpeta, mensaje y confirmación, y el portapapeles. Para avisar dentro de la aplicación, usa un aviso en la propia ventana (por ejemplo, un `{#if}` con un `timeout`).
+- **Se quitan las notificaciones:** `notify`, el icono de la bandeja del sistema y `app.notifications()` en `janelkit.inspect`. El paquete se queda con lo que casi toda aplicación de escritorio necesita: diálogos de archivos, carpeta, mensaje y confirmación, y el portapapeles. Para avisar dentro de la aplicación, usa un aviso en la propia ventana (por ejemplo, un `{#if}` con un `timeout`). Importar `notify` da un error que lo explica.
 
 ### 0.1.0
 

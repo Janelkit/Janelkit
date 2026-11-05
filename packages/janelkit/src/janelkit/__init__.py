@@ -93,19 +93,19 @@ else:
 
 # Lo que salió del núcleo: importarlo da un error que dice qué hacer.
 _REMOVED = {
-    "History": "History se quitó en JanelKit 0.2.0: el núcleo ya no incluye deshacer y rehacer. "
+    "History": "History se quitó en JanelKit 0.2: el núcleo ya no incluye deshacer y rehacer. "
     "Anota tus pasos con funciones (deshacer, rehacer); ver docs/cambios.md.",
     **{
-        name: f"{name} pasó al paquete janelkit-router en JanelKit 0.2.0: pip install janelkit-router y "
+        name: f"{name} pasó al paquete janelkit-router en JanelKit 0.2: pip install janelkit-router y "
         f"from janelkit_router import {name}" + (" (y Pages para <Pages>)" if name == "pages" else "")
         for name in ("pages", "sections", "navigation", "PageStack")
     },
     **{
-        name: f"{name} pasó al paquete janelkit-store en JanelKit 0.2.0: pip install janelkit-store y "
+        name: f"{name} pasó al paquete janelkit-store en JanelKit 0.2: pip install janelkit-store y "
         f"from janelkit_store import {name}"
         for name in ("persisted", "Persisted")
     },
-    "Sections": "Sections pasó a janelkit-router en JanelKit 0.2.0: el tipo de sections() se llama "
+    "Sections": "Sections pasó a janelkit-router en JanelKit 0.2: el tipo de sections() se llama "
     "SectionSet y la etiqueta <Sections> se importa con from janelkit_router import Sections",
 }
 

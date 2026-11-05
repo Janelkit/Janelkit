@@ -49,7 +49,7 @@ def test_removed_names_say_what_happened():
     import pytest
 
     with pytest.raises(ImportError, match="History se quitó en JanelKit 0.2.0"):
-        from janelkit import History  # noqa: F401
+        exec("from janelkit import History")
 
 
 def test_every_public_name_is_documented_and_nothing_else():

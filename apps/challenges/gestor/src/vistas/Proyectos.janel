@@ -3,22 +3,23 @@
 # Abrir uno apila su página (navigation()); la búsqueda se conserva al volver.
 from janelkit import computed, inject, state
 from janelkit_router import navigation
-from services.datos import cuenta
+from janelkit_store import use
+from services.datos import cuenta, Datos
 from vistas.Proyecto import Proyecto
 
-datos = inject("datos")
+datos = use(Datos)
 nav = navigation()
 buscar = state("")
 archivados = state(False)
 
 visibles = computed(lambda: [
-    p for p in datos.proyectos.value
+    p for p in datos.proyectos
     if p["archivado"] == archivados.value and buscar.value.strip().lower() in p["nombre"].lower()
 ])
 
 
 def resumen_general():
-    activos = [p for p in datos.proyectos.value if not p["archivado"]]
+    activos = [p for p in datos.proyectos if not p["archivado"]]
     total = sum(datos.resumen(p)["total"] for p in activos)
     return f"{cuenta(len(activos), 'proyecto activo', 'proyectos activos')} · {cuenta(total, 'tarjeta')}"
 

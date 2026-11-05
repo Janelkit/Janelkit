@@ -1,5 +1,7 @@
 """Los datos de la aplicación: proyectos, directorio de personas, un historial de deshacer
-común y el archivo JSON.
+común y el archivo JSON. Es un store de janelkit-store: cada vista lo pide con
+`use(Datos)` (la misma instancia en toda la aplicación, sin provide/inject), sus campos
+se leen sin `.value` y sus métodos son acciones que se anotan.
 
     {"personas": [{"id", "nombre", "color", "correo", "rol"}],
      "proyectos": [{"id", "nombre", "color", "descripcion", "archivado",
@@ -12,12 +14,14 @@ en todos los proyectos. La última columna de un proyecto es la «de hecho» (su
 from __future__ import annotations
 
 import json
+import os
 import random
 import re
 from pathlib import Path
 from typing import Any, Callable
 
 from janelkit import batch, state, timeout
+from janelkit_store import store
 from services.tablero import ETIQUETAS, Tablero, columnas_ejemplo
 
 def cuenta(n: int, nombre: str, plural: str | None = None) -> str:
@@ -63,26 +67,33 @@ class Historial:
         self._al_cambiar()
 
 
+@store
 class Datos:
-    def __init__(self, archivo: Path | None = None, datos: dict[str, Any] | None = None):
-        self.archivo = archivo
-        if datos is None:
-            datos = json.loads(archivo.read_text(encoding="utf-8")) if archivo and archivo.exists() else ejemplo()
-        self.personas = state(datos["personas"])
-        self.proyectos = state(datos["proyectos"])
+    """No es estricto: los tableros (services/tablero.py) y deshacer modifican los proyectos en el
+    sitio sin pasar por un método de Datos; esos cambios se anotan como «sin acción»."""
+
+    personas: list[dict[str, Any]] = []
+    proyectos: list[dict[str, Any]] = []
+    _archivo: Path | None = None
+    _contador: int = 0
+    _tableros: dict[str, Tablero] = {}
+    _guardado: Any = None
+
+    def setup(self) -> None:
+        self._archivo, datos = cargar()
+        self.personas = datos["personas"]
+        self.proyectos = datos["proyectos"]
         tarjetas = [t for p in datos["proyectos"] for c in p["columnas"] for t in c["tarjetas"]]
         self._contador = max((int(re.sub(r"\D", "", x["id"]) or 0) for x in [*tarjetas, *datos["personas"], *datos["proyectos"]]),
                              default=0)
         self.historial = Historial(self._programar_guardado)
-        self._tableros: dict[str, Tablero] = {}
-        self._guardado = None
 
     # -- consultas -------------------------------------------------------------
     def proyecto(self, pid: str) -> Any:
-        return next(p for p in self.proyectos.value if p["id"] == pid)
+        return next(p for p in self.proyectos if p["id"] == pid)
 
     def persona(self, ident: str) -> Any | None:
-        return next((p for p in self.personas.value if p["id"] == ident), None)
+        return next((p for p in self.personas if p["id"] == ident), None)
 
     def nombre(self, ident: str) -> str:
         p = self.persona(ident) if ident else None
@@ -105,13 +116,13 @@ class Datos:
 
     def tarjetas_de(self, ident: str) -> list[tuple[Any, Any, Any]]:
         """(proyecto, columna, tarjeta) de las tarjetas de una persona, en todos los proyectos activos."""
-        return [(p, c, t) for p in self.proyectos.value if not p["archivado"]
+        return [(p, c, t) for p in self.proyectos if not p["archivado"]
                 for c in p["columnas"] for t in c["tarjetas"] if t["responsable"] == ident]
 
     def cuentas(self) -> dict[str, int]:
         """Nº de tarjetas de cada persona (por id), en todos los proyectos."""
         n: dict[str, int] = {}
-        for p in self.proyectos.value:
+        for p in self.proyectos:
             for c in p["columnas"]:
                 for t in c["tarjetas"]:
                     if t["responsable"]:
@@ -119,15 +130,15 @@ class Datos:
         return n
 
     def cuantas_de(self, ident: str) -> int:
-        return sum(1 for p in self.proyectos.value for c in p["columnas"] for t in c["tarjetas"] if t["responsable"] == ident)
+        return sum(1 for p in self.proyectos for c in p["columnas"] for t in c["tarjetas"] if t["responsable"] == ident)
 
     # -- operaciones (cada una devuelve su inversa) --------------------------------
     def _poner(self, lista: str, indice: int, valor: dict) -> tuple[Callable, tuple]:
-        getattr(self, lista).value.insert(indice, valor)
+        getattr(self, lista).insert(indice, valor)
         return self._quitar, (lista, valor["id"])
 
     def _quitar(self, lista: str, ident: str) -> tuple[Callable, tuple]:
-        items = getattr(self, lista).value
+        items = getattr(self, lista)
         i = next(i for i, x in enumerate(items) if x["id"] == ident)
         return self._poner, (lista, i, items.pop(i))
 
@@ -143,12 +154,12 @@ class Datos:
         with batch():
             inversa = self._quitar("personas", ident)
             miembros = []
-            for p in self.proyectos.value:
+            for p in self.proyectos:
                 for i, m in enumerate(p["miembros"]):
                     if m["persona"] == ident:
                         miembros.append((p, i, p["miembros"].pop(i)))
                         break
-            tarjetas = [t for p in self.proyectos.value for c in p["columnas"] for t in c["tarjetas"] if t["responsable"] == ident]
+            tarjetas = [t for p in self.proyectos for c in p["columnas"] for t in c["tarjetas"] if t["responsable"] == ident]
             for t in tarjetas:
                 t["responsable"] = ""
         return self._volver_persona, (inversa, miembros, tarjetas)
@@ -188,11 +199,11 @@ class Datos:
     # -- acciones de la interfaz ------------------------------------------------------
     def nuevo_proyecto(self, nombre: str = "Proyecto nuevo") -> str:
         pid = self._id("p")
-        p = {"id": pid, "nombre": nombre, "color": COLORES[len(self.proyectos.value) % len(COLORES)], "descripcion": "",
+        p = {"id": pid, "nombre": nombre, "color": COLORES[len(self.proyectos) % len(COLORES)], "descripcion": "",
              "archivado": False, "miembros": [], "etiquetas": dict(ETIQUETAS),
              "columnas": [{"id": f"{pid}c{i + 1}", "nombre": n, "tarjetas": []}
                           for i, n in enumerate(["Pendiente", "En curso", "Hecho"])]}
-        self.historial.hacer(f"crear «{nombre}»", self._poner, "proyectos", len(self.proyectos.value), p)
+        self.historial.hacer(f"crear «{nombre}»", self._poner, "proyectos", len(self.proyectos), p)
         return pid
 
     def editar_proyecto(self, pid: str, **campos: Any) -> None:
@@ -207,8 +218,8 @@ class Datos:
 
     def nueva_persona(self, nombre: str = "Persona nueva") -> str:
         ident = self._id("u")
-        p = {"id": ident, "nombre": nombre, "color": COLORES[len(self.personas.value) % len(COLORES)], "correo": "", "rol": ""}
-        self.historial.hacer(f"añadir a «{nombre}»", self._poner, "personas", len(self.personas.value), p)
+        p = {"id": ident, "nombre": nombre, "color": COLORES[len(self.personas) % len(COLORES)], "correo": "", "rol": ""}
+        self.historial.hacer(f"añadir a «{nombre}»", self._poner, "personas", len(self.personas), p)
         return ident
 
     def editar_persona(self, ident: str, **campos: Any) -> None:
@@ -227,14 +238,14 @@ class Datos:
 
     # -- archivo ------------------------------------------------------------------------
     def _programar_guardado(self) -> None:
-        if self.archivo is not None and self._guardado is None:  # un guardado por ráfaga de cambios
+        if self._archivo is not None and self._guardado is None:  # un guardado por ráfaga de cambios
             self._guardado = timeout(300)(self.guardar)
 
     def guardar(self) -> None:
         self._guardado = None
-        if self.archivo is not None:
-            datos = {"personas": self.personas.peek(), "proyectos": self.proyectos.peek()}
-            self.archivo.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
+        if self._archivo is not None:
+            datos = {"personas": list(self.personas), "proyectos": list(self.proyectos)}
+            self._archivo.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
 
     def _id(self, prefijo: str) -> str:
         self._contador += 1
@@ -242,6 +253,28 @@ class Datos:
 
     def _id_tarjeta(self) -> str:
         return self._id("t")
+
+
+def cargar() -> tuple[Path | None, dict[str, Any]]:
+    """Archivo y datos iniciales según el entorno.
+
+    GESTOR_FILE: archivo JSON de los datos (por defecto, datos.json junto a la app; si no
+    existe, se crean datos de ejemplo y se importa el tablero.json del reto 3).
+    GESTOR_DEMO=10x4x50x300: proyectos × columnas × tarjetas por columna × personas, sin
+    archivo (pruebas y mediciones)."""
+    if os.environ.get("GESTOR_DEMO"):
+        p, c, t, g = (int(n) for n in os.environ["GESTOR_DEMO"].split("x"))
+        return None, ejemplo(p, c, t, g)
+    raiz = Path(__file__).resolve().parents[2]
+    archivo = Path(os.environ.get("GESTOR_FILE", raiz / "datos.json"))
+    if archivo.exists():
+        return archivo, json.loads(archivo.read_text(encoding="utf-8"))
+    inicial = ejemplo()
+    kanban = raiz.parent / "kanban" / "tablero.json"
+    if kanban.exists():
+        inicial["proyectos"].insert(0, importar_kanban(json.loads(kanban.read_text(encoding="utf-8")),
+                                                        inicial["personas"], pid="p0", nombre="Tablero del reto 3"))
+    return archivo, inicial
 
 
 def importar_kanban(datos_kanban: dict[str, Any], personas: list[dict[str, Any]], pid: str = "p1",

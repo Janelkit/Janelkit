@@ -43,7 +43,7 @@ Tres **secciones** en la cabecera de la ventana (Ctrl+1, Ctrl+2, Ctrl+3), cada u
 | `src/vistas/MiTrabajo.janel` | Las tarjetas de una persona en todos los proyectos. |
 | `src/components/Miembros.janel`, `AjustesProyecto.janel` | Las pestañas Miembros y Ajustes. |
 | `src/components/Columna.janel`, `Tarjeta.janel`, `Detalle.janel`, `MenuContextual.janel` | El tablero del reto 3, adaptado a etiquetas y miembros por proyecto. |
-| `src/services/datos.py` | Proyectos, personas, el historial común, el archivo, importar el reto 3 y los datos de ejemplo. |
+| `src/services/datos.py` | Proyectos, personas, el historial común, el archivo, importar el reto 3 y los datos de ejemplo. Es un store de `janelkit-store`: cada vista lo pide con `use(Datos)`. |
 | `src/services/tablero.py` | Las operaciones del tablero de un proyecto (con su inversa, sobre el historial común). |
 | `src/services/interfaz.py` | Estado de un proyecto abierto: detalle, menú, tarjeta que enfocar y filtro. |
 | `bench.py` | Mediciones. |

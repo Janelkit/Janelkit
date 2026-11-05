@@ -3,11 +3,12 @@
 # como un solo cambio), archivar o recuperar, y borrar con confirmación.
 from janelkit import before_leave, event, inject, prop, state
 from janelkit_desktop import dialogs
-from services.datos import COLORES, cuenta
+from janelkit_store import use
+from services.datos import COLORES, cuenta, Datos
 
 pid = prop("")
 borrado = event()
-datos = inject("datos")
+datos = use(Datos)
 proyecto = datos.proyecto(pid.value)
 nombre = state(proyecto["nombre"])
 descripcion = state(proyecto["descripcion"])

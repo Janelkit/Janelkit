@@ -3,10 +3,11 @@
 # tarjetas en el proyecto pregunta antes; sus tarjetas se quedan sin responsable.
 from janelkit import inject, prop, state
 from janelkit_desktop import dialogs
-from services.datos import ROLES, cuenta
+from janelkit_store import use
+from services.datos import ROLES, cuenta, Datos
 
 pid = prop("")
-datos = inject("datos")
+datos = use(Datos)
 tablero = datos.tablero(pid.value)
 proyecto = tablero.proyecto
 nueva = state("")
@@ -16,7 +17,7 @@ ROLES_OPC = [{"label": r, "value": r} for r in ROLES]
 def candidatas():
     dentro = {m["persona"] for m in proyecto["miembros"]}
     return [{"label": "Añadir a…", "value": ""}] + [
-        {"label": p["nombre"], "value": p["id"]} for p in datos.personas.value if p["id"] not in dentro]
+        {"label": p["nombre"], "value": p["id"]} for p in datos.personas if p["id"] not in dentro]
 
 
 def tarjetas_de(ident):

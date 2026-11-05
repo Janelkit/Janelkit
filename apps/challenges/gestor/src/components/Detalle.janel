@@ -4,11 +4,13 @@
 # Salir del proyecto (o cerrar la ventana) con cambios sin guardar pregunta antes.
 from janelkit import before_leave, event, inject, on_mount, prop, ref, state
 from janelkit_desktop import dialogs
+from janelkit_store import use
+from services.datos import Datos
 
 ident = prop("")
 cerrar = event()
 tablero = inject("tablero")
-datos = inject("datos")
+datos = use(Datos)
 t = tablero.tarjeta(ident.value)
 ETIQUETAS = tablero.etiquetas
 titulo = state(t["titulo"])

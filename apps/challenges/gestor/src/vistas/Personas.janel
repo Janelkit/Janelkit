@@ -2,17 +2,18 @@
 # Inicio de la sección Personas: el directorio, con búsqueda. Abrir una apila su ficha.
 from janelkit import computed, inject, state
 from janelkit_router import navigation
-from services.datos import cuenta
+from janelkit_store import use
+from services.datos import cuenta, Datos
 from vistas.Persona import Persona
 
-datos = inject("datos")
+datos = use(Datos)
 nav = navigation()
 buscar = state("")
 
 # Tarjetas por persona, contadas una vez (y no fila a fila, cada una recorriendo todos los proyectos).
 cuentas = computed(lambda: datos.cuentas())
 visibles = computed(lambda: [
-    p for p in datos.personas.value
+    p for p in datos.personas
     if not buscar.value.strip() or buscar.value.strip().lower() in (p["nombre"] + " " + p["correo"]).lower()
 ])
 
@@ -25,7 +26,7 @@ def nueva():
   <flex class="cabecera">
     <flex class="titulos">
       <text class="titulo">Personas</text>
-      <text class="subtitulo">{f"{len(visibles)} de {len(datos.personas.value)}"}</text>
+      <text class="subtitulo">{f"{len(visibles)} de {len(datos.personas)}"}</text>
     </flex>
     <spacer />
     <textfield class="buscar" bind:value={buscar} placeholder="Buscar por nombre o correo…" label="Buscar personas" />

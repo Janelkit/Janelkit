@@ -1,33 +1,16 @@
 <script lang="python">
 # Reto 6: gestor de proyectos. Ver ../README.md.
-# GESTOR_FILE: archivo JSON de los datos (por defecto, datos.json junto a la app; si no
-# existe, se crean datos de ejemplo y se importa el tablero.json del reto 3).
-# GESTOR_DEMO=10x4x50x300: proyectos × columnas × tarjetas por columna × personas, sin
-# archivo (pruebas y mediciones).
-import json
-import os
-from pathlib import Path
-
+# Los datos (GESTOR_FILE, GESTOR_DEMO) los carga el store: ver services/datos.py.
 from janelkit import provide
 from janelkit_router import sections, Sections
+from janelkit_store import use
 from vistas.MiTrabajo import MiTrabajo
 from vistas.Personas import Personas
 from vistas.Proyecto import Proyecto
 from vistas.Proyectos import Proyectos
-from services.datos import Datos, ejemplo, importar_kanban
+from services.datos import Datos
 
-if os.environ.get("GESTOR_DEMO"):
-    p, c, t, g = (int(n) for n in os.environ["GESTOR_DEMO"].split("x"))
-    datos = Datos(None, ejemplo(p, c, t, g))
-else:
-    archivo = Path(os.environ.get("GESTOR_FILE", Path(__file__).parent.parent / "datos.json"))
-    inicial = None
-    kanban = Path(__file__).parent.parent.parent / "kanban" / "tablero.json"
-    if not archivo.exists() and kanban.exists():
-        inicial = ejemplo()
-        inicial["proyectos"].insert(0, importar_kanban(json.loads(kanban.read_text(encoding="utf-8")),
-                                                        inicial["personas"], pid="p0", nombre="Tablero del reto 3"))
-    datos = Datos(archivo, inicial)
+datos = use(Datos)  # la misma instancia en todas las vistas: no hace falta provide
 
 secciones = sections(proyectos=Proyectos, personas=Personas, trabajo=MiTrabajo)
 historial = datos.historial
@@ -47,7 +30,6 @@ async def abrir_tarjeta(pid, tid):
         nav.push(Proyecto, ident=pid, enfocar=tid)
 
 
-provide("datos", datos)
 provide("secciones", secciones)
 provide("abrir_tarjeta", abrir_tarjeta)
 </script>

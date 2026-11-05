@@ -4,17 +4,18 @@
 # El tablero es el del reto 3, con las etiquetas y los miembros del proyecto.
 from janelkit import inject, prop, provide, state
 from janelkit_router import navigation
+from janelkit_store import use
 from components.AjustesProyecto import AjustesProyecto
 from components.Columna import Columna
 from components.Detalle import Detalle
 from components.Miembros import Miembros
 from components.MenuContextual import MenuContextual
-from services.datos import cuenta
+from services.datos import cuenta, Datos
 from services.interfaz import Interfaz
 
 ident = prop("")
 enfocar = prop("")  # id de una tarjeta que enfocar al abrir (enlaces de «Mi trabajo»)
-datos = inject("datos")
+datos = use(Datos)
 nav = navigation()
 tablero = datos.tablero(ident.value)
 proyecto = tablero.proyecto

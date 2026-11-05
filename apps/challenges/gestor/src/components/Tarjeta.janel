@@ -5,11 +5,13 @@
 # `abierta` es estado local de la tarjeta: sobrevive al arrastre, también a otra columna
 # (la fila se traslada entre las dos <list>, con su estado y su foco).
 from janelkit import inject, on_destroy, on_mount, prop, ref, state
+from janelkit_store import use
+from services.datos import Datos
 
 t = prop({})
 atenuada = prop(False)
 tablero = inject("tablero")
-datos = inject("datos")  # el responsable es un id del directorio de personas
+datos = use(Datos)  # el responsable es un id del directorio de personas
 ui = inject("ui")  # estado compartido de la ventana: detalle, menú y tarjeta nueva que enfocar
 abierta = state(False)
 caja = ref()

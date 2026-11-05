@@ -2,17 +2,18 @@
 # Sección Mi trabajo: las tarjetas de una persona en todos los proyectos, por proyecto o
 # por fecha. Abrir una lleva a su tablero con ella enfocada (enlace entre secciones).
 from janelkit import computed, inject, state
-from services.datos import cuenta
+from janelkit_store import use
+from services.datos import cuenta, Datos
 
-datos = inject("datos")
+datos = use(Datos)
 abrir_tarjeta = inject("abrir_tarjeta")
-quien = state(datos.personas.peek()[0]["id"] if datos.personas.peek() else "")
+quien = state(datos.personas[0]["id"] if datos.personas else "")
 orden = state("proyecto")
 ORDEN_OPC = [{"label": "Por proyecto", "value": "proyecto"}, {"label": "Por fecha", "value": "fecha"}]
 
 
 def personas_opc():
-    return [{"label": p["nombre"], "value": p["id"]} for p in datos.personas.value]
+    return [{"label": p["nombre"], "value": p["id"]} for p in datos.personas]
 
 
 filas = computed(lambda: sorted(

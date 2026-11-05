@@ -243,7 +243,7 @@ def test_proyecto_nuevo_archivar_y_guardar_en_el_archivo(app, archivo):
     pestaña(app, "Ajustes")
     app.find("button", text="Archivar").click()
     app.wait(0.05)
-    nuevo = datos.proyectos.peek()[-1]
+    nuevo = datos.proyectos[-1]
     assert nuevo["archivado"] and "Archivado" in app.texts()
     app.wait(0.5)  # el guardado espera a que acabe la ráfaga de cambios
     guardado = json.loads(archivo.read_text(encoding="utf-8"))

@@ -71,10 +71,10 @@ Si la primera importación ocurre dentro de `background()` mientras OpenCV lee c
 
 ### Dónde llamar a `push`
 
-`push` copia y convierte el fotograma en el hilo que lo llama: unos 0,4 ms a 640 × 480 y 1,1 ms a 1920 × 1080 en el equipo de referencia ([arquitectura.md](arquitectura.md#rendimiento)).
+`push` copia y convierte el fotograma en el hilo que lo llama: 1,6 ms a 640 × 480 y 3,6 ms a 1920 × 1080 en el portátil de 2013 de [arquitectura.md](arquitectura.md#rendimiento). Un equipo actual tarda varias veces menos.
 
 - En el hilo de cada cámara, o dentro de la función que corre en `background()`, ese coste no lo paga la interfaz.
-- En el tic, después del `await` (como en el ejemplo de arriba), sí: con cuatro vistas de 1080p son unos 4 ms de cada ciclo en el hilo de la interfaz. Si el ciclo va justo, pasa los `Frames` a la función de `background()` y haz el `push` allí: `Frames` no necesita el hilo de la interfaz para recibir fotogramas.
+- En el tic, después del `await` (como en el ejemplo de arriba), sí: con cuatro vistas de 1080p son unos 14 ms de cada ciclo en el hilo de la interfaz, en ese portátil. Si el ciclo va justo, pasa los `Frames` a la función de `background()` y haz el `push` allí: `Frames` no necesita el hilo de la interfaz para recibir fotogramas.
 
 ### Un fotograma lo pueden tener varios
 

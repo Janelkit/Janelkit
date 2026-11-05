@@ -161,15 +161,23 @@ Tiempos indicativos (Windows 11, `offscreen` salvo que se diga), para saber qué
 
 **Disposición** (`python apps/examples/flex/bench.py`, ventana real): rejilla de 200 tarjetas, 17 ms por fotograma; 300 tarjetas en un `<scroll>`, 8,7 ms por paso al cambiar el ancho. Una caja vacía cuesta ~32 µs al crearse y un `<text>`, ~30 µs.
 
-**Vídeo** (`python apps/examples/video/bench.py --ventana`; un hilo empuja fotogramas a 60 fps):
+**Vídeo** (`python apps/examples/video/bench.py --ventana --fps 47 --rondas 5`). Se midió con una ventana real y Direct3D 11, en un portátil de 2013 con Windows 10: Intel Core i7-4702MQ y pantalla de 60 Hz con Intel HD Graphics 4600; Python 3.13 y PySide6 6.11. Un hilo empuja fotogramas a 47 fps, y cada cifra es la mediana de 5 rondas de 3 s:
 
-| Resolución | Entregados | `push` | De `push` a la entrega (p50 / p95) | CPU del hilo de la interfaz |
-|---|---|---|---|---|
-| 640 × 480 | 59,6 fps | 0,37 ms | 0,57 / 0,69 ms | 3,1 % |
-| 1280 × 720 | 60,1 fps | 0,62 ms | 0,94 / 1,29 ms | 2,6 % |
-| 1920 × 1080 | 59,6 fps | 1,07 ms | 1,54 / 1,84 ms | 6,2 % |
+| Resolución | Entregados | `push` | De `push` a la entrega (p50 / p95) | De `push` a la pantalla (p50 / p95) | CPU del hilo de la interfaz |
+|---|---|---|---|---|---|
+| 640 × 480 | 47,0 fps | 1,6 ms | 2,1 / 3,3 ms | 12,6 / 21,3 ms | 5,2 % |
+| 1280 × 720 | 47,0 fps | 2,1 ms | 2,8 / 6,6 ms | 14,6 / 25,1 ms | 3,6 % |
+| 1920 × 1080 | 46,9 fps | 3,6 ms | 4,8 / 10,9 ms | 17,3 / 31,5 ms | 5,2 % |
 
-`push` copia y convierte la imagen en el hilo que lo llama, así que el de la interfaz solo entrega un `QImage` ya listo, que `JkVideoSurface` sube como textura de Qt Quick (sin QtMultimedia, que está en PySide6-Addons). Medido en la 0.2 contra el `VideoOutput` de antes, alternando ejecuciones con ventana: los mismos fotogramas entregados y la misma CPU dentro del ruido de la medición.
+- **`push`** copia y convierte la imagen en el hilo que lo llama. El de la interfaz solo entrega un `QImage` ya listo, que `JkVideoSurface` sube como textura de Qt Quick, sin QtMultimedia (que está en PySide6-Addons). Su coste depende sobre todo de la CPU: en el equipo con Windows 11 de las demás cifras, y sin ventana, era de 0,37 ms a 640 × 480 y 1,07 ms a 1080p.
+- **Hasta la pantalla** se mide hasta el `frameSwapped` del fotograma en el que se dibuja la imagen. Casi todo es la espera hasta el siguiente refresco del monitor (16,7 ms a 60 Hz). No incluye el barrido del monitor ni el compositor de Windows.
+    - Entre ejecuciones, la mediana varía unos ±3 ms.
+    - Se empuja a 47 fps y no a 60 porque, a 60, el hilo y el refresco van casi en fase y cada ejecución mide una espera distinta. A 60 fps las medianas salen parecidas: 12,9, 12,6 y 20,3 ms.
+- **Sin ventana** (`offscreen`), Qt Quick dibuja por software en el hilo de la interfaz: su CPU sube al 20–45 % y no hay pantalla. No sirve para medir el vídeo.
+- **Frente al `VideoOutput` de QtMultimedia** de la 0.1, alternando ejecuciones con ventana real (9 rondas):
+    - Se entregan los mismos fotogramas, con la misma latencia hasta la entrega y hasta la pantalla dentro del ruido. A 1080p, la mediana hasta la pantalla es de 21 ms frente a 20 ms.
+    - El hilo de la interfaz queda parado menos tiempo en cada sincronización con el de render: 0,1–0,3 ms frente a 1–1,5 ms.
+- **`frames.stalled` y los eventos con `image_x`** cuestan 0,7 µs por fotograma y 10 µs por evento de puntero en un `<video>` con manejador.
 
 ## Herramientas
 

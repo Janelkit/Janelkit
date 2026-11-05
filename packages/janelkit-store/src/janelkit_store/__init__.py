@@ -20,7 +20,7 @@ from janelkit.ext import inspector
 from ._files import Persisted, persisted
 from ._store import Change, Mutation, StoreError, field, mutations, reset, snapshot, store, subscribe, use
 
-__version__ = "0.1.0"
+__version__ = "0.2.0.0"
 __all__ = [
     "Change", "Mutation", "Persisted", "StoreError", "__version__", "field", "mutations", "persisted", "reset",
     "snapshot", "store", "subscribe", "use",

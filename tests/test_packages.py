@@ -1,7 +1,8 @@
 """Los paquetes de packages/ son coherentes entre sí (docs/api.md, política de versiones).
 
-- La versión del pyproject.toml es la `__version__` del módulo.
-- Cada extensión declara un rango del núcleo que incluye la versión del núcleo de este repositorio.
+- La versión del pyproject.toml es la `__version__` del módulo, con cuatro números (E.S.M.m).
+- Todos los paquetes están en la misma serie (E.S), y cada extensión pide exactamente esa
+  serie del núcleo: janelkit>=E.S,<E.(S+1).
 """
 import importlib
 import re
@@ -9,6 +10,7 @@ from pathlib import Path
 
 import pytest
 from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
 
 REPO = Path(__file__).resolve().parents[1]
 PYTHON_PACKAGES = sorted(p for p in (REPO / "packages").iterdir() if (p / "pyproject.toml").exists())
@@ -38,9 +40,22 @@ def test_pyproject_version_is_the_module_version(package):
     assert module.__version__ == meta["version"]
 
 
+def series() -> tuple[int, int]:
+    major, minor, *_ = (int(n) for n in project(REPO / "packages" / "janelkit")["version"].split("."))
+    return major, minor
+
+
+@pytest.mark.parametrize("package", PYTHON_PACKAGES, ids=lambda p: p.name)
+def test_versions_have_four_numbers_and_share_the_series(package):
+    version = project(package)["version"]
+    assert re.fullmatch(r"\d+\.\d+\.\d+\.\d+", version), f"{version}: se esperan cuatro números (E.S.M.m)"
+    assert version.startswith("%d.%d." % series()), (
+        f"{version} no está en la serie del núcleo ({'%d.%d' % series()}): python tools/versioning.py series E.S")
+
+
 @pytest.mark.parametrize("package", EXTENSIONS, ids=lambda p: p.name)
-def test_extensions_accept_the_core_of_this_repository(package):
-    core_version = project(REPO / "packages" / "janelkit")["version"]
+def test_extensions_ask_for_the_series_of_this_repository(package):
+    major, minor = series()
+    expected = f">={major}.{minor},<{major}.{minor + 1}"
     (core,) = [Requirement(d) for d in project(package)["dependencies"] if Requirement(d).name == "janelkit"]
-    assert core.specifier.contains(core_version, prereleases=True), f"{core} no admite janelkit {core_version}"
-    assert not core.specifier.contains("99"), f"{core} debe tener límite superior (política de versiones)"
+    assert core.specifier == SpecifierSet(expected), f"{core}: en la serie {major}.{minor} se pide janelkit{expected}"

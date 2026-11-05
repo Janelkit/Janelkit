@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "janelkit-router"
-version = "0.1.0"
+version = "0.2.0.0"
 description = "Navegación entre pantallas para JanelKit: pilas de páginas y secciones"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,9 +12,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "d4ndres", email = "d4ndres@gmail.com" }]
 keywords = ["janelkit", "router", "navigation", "pages", "desktop", "qt", "pyside6"]
-# TEMPORAL: >=0.1.1 mientras el núcleo del repositorio no tenga su versión 0.2.0; al fijarla, pasa a
-# janelkit>=0.2,<0.3 (necesita janelkit.ext.Host, de 0.2).
-dependencies = ["janelkit>=0.1.1,<0.3"]  # rango del núcleo probado (docs/api.md, política de versiones)
+dependencies = ["janelkit>=0.2,<0.3"]  # la misma serie que el núcleo (docs/api.md, política de versiones)
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

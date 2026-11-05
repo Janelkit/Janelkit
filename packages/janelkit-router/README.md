@@ -156,15 +156,15 @@ Solo usa la API pública del núcleo, como cualquier paquete externo: `Pages.qml
 
 | janelkit-router | janelkit | Python |
 |---|---|---|
-| 0.1.x | ≥ 0.2, < 0.3 | ≥ 3.10 |
+| 0.2.x.x | 0.2.x.x | ≥ 3.10 |
 
-Sigue la misma [política de versiones](https://github.com/janelkit/janelkit/blob/main/docs/api.md#paquetes-del-ecosistema) que el núcleo, con versión propia.
+Comparte la serie con el núcleo: janelkit-router 0.2.x.x va con janelkit 0.2.x.x. Los dos últimos números son suyos ([política de versiones](https://github.com/janelkit/janelkit/blob/main/docs/api.md#paquetes-del-ecosistema)).
 
 ## Cambios
 
-### 0.1.0
+### 0.2.0.0 (sin publicar)
 
-- Primera versión. Antes era la navegación del núcleo (`janelkit.pages`): cambia `from janelkit import pages, navigation, sections` por `from janelkit_router import pages, navigation, sections` e importa los elementos que uses (`from janelkit_router import Pages, Sections`). El tipo de `sections()` pasa a llamarse `SectionSet`. `janel migrate` hace el cambio.
+- Primera versión, en la serie 0.2. Antes era la navegación del núcleo (`janelkit.pages`): cambia `from janelkit import pages, navigation, sections` por `from janelkit_router import pages, navigation, sections` e importa los elementos que uses (`from janelkit_router import Pages, Sections`). El tipo de `sections()` pasa a llamarse `SectionSet`. `janel migrate` hace el cambio.
 
 ## Licencia
 

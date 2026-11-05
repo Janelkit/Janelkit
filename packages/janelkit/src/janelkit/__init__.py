@@ -28,10 +28,10 @@ from .timers import Timer, interval, timeout
 from .windows import open_window
 from .displays import Screen, screens
 
-__version__ = "0.1.1"
+__version__ = "0.2.0.0"
 
-# API pública: lo que se importa desde `janelkit` es estable dentro de una
-# versión menor (ver docs/api.md). Cualquier otro módulo es interno.
+# API pública: lo que se importa desde `janelkit` sigue la política de versiones
+# (ver docs/api.md). Cualquier otro módulo es interno.
 __all__ = [
     "Computed",
     "Effect",

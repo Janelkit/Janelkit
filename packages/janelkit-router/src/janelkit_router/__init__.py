@@ -31,7 +31,7 @@ from typing import Any, Callable
 from janelkit import State, inject
 from janelkit.ext import Child, Container, Gate, Host, app, ask_to_leave, is_component
 
-__version__ = "0.1.0"
+__version__ = "0.2.0.0"
 __all__ = ["PageStack", "SectionSet", "navigation", "pages", "sections"]
 
 _NAV = object()  # clave de contexto: la pila de la página (la lee navigation())

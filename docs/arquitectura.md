@@ -12,6 +12,19 @@ Una funcionalidad es del **núcleo** (`janelkit`) si cumple al menos una de esta
 
 Si algo puede construirse **solo con la API pública** y no todas las aplicaciones lo necesitan, va en un paquete aparte. Por eso la reactividad (`state`, `computed`, `effect`) y el idioma de la interfaz (`janelkit.locale`, que cambia la dirección de toda la disposición) son del núcleo, y la navegación entre pantallas, los stores y `persisted`, las traducciones o los diálogos del sistema no: son paquetes que usan la API pública, como podría hacerlo cualquiera.
 
+En la 0.2 se aplicó el criterio a lo que ya había:
+
+| Salió del núcleo | A dónde | Por qué |
+|---|---|---|
+| `History` (deshacer y rehacer) | Se quitó | No toda aplicación lo necesita y cada una deshace a su manera; los challenges `kanban` y `hoja` traen el suyo con la API pública |
+| `pages`, `sections`, `navigation`, `<Pages>`, `<Sections>` | `janelkit-router` | Se construye con `janelkit.ext.Host` y un elemento `.qml`; no toda aplicación tiene varias pantallas |
+| `persisted` | `janelkit-store` | Es estado de la aplicación, como los stores: los dos guardan en la sesión |
+| Notificaciones del sistema | Se quitaron de `janelkit-desktop` | Poco usadas y dependen de cada sistema; el paquete se queda con diálogos y portapapeles |
+
+Se quedan en el núcleo los controles con los que se escribe un formulario (`<checkbox>`, `<select>`, `<slider>`…): como en HTML, son lo que da la plataforma, y moverlos obligaría a hacer públicas piezas internas que aún cambian (el motor de `<flex>`, las tablas de estilos, las acciones de `inspect`). También `<video>` y `Frames`, que solo cubren lo básico; lo especializado irá en un paquete aparte.
+
+**Nombres:** en una plantilla, minúscula es lo que da el núcleo (`<text>`, `<button>`) y mayúscula, lo que se importa (`<TodoItem>`, `<Pages>`), venga del proyecto o de un paquete.
+
 ## Paquetes del repositorio
 
 | Paquete | Qué es | Depende de |

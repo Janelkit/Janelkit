@@ -112,8 +112,10 @@ def test_add(tmp_path):
 
 | Paquete | Qué añade |
 |---|---|
+| [`janelkit-router`](https://pypi.org/project/janelkit-router/) | Navegación entre pantallas: pilas de páginas y secciones. |
+| [`janelkit-store`](https://pypi.org/project/janelkit-store/) | Datos compartidos: stores con acciones, escritura controlada y seguimiento de cambios; `persisted`. |
 | [`janelkit-i18n`](https://pypi.org/project/janelkit-i18n/) | Traducciones, plurales, formatos según el idioma y cambio de idioma en caliente. |
-| [`janelkit-desktop`](https://pypi.org/project/janelkit-desktop/) | Diálogos nativos, portapapeles y notificaciones del sistema. |
+| [`janelkit-desktop`](https://pypi.org/project/janelkit-desktop/) | Diálogos nativos (archivos, carpeta, mensaje, confirmación) y portapapeles. |
 | [Resaltado para VS Code](https://github.com/janelkit/janelkit/tree/main/packages/janelkit-vscode) | Sintaxis de `.janel`: Python, plantilla y CSS. |
 
 ## Requisitos

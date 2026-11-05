@@ -69,6 +69,29 @@ python main.py
 - **Diagnósticos:** errores con archivo, línea, columna y sugerencias («¿quisiste decir…?»), también para errores de Qt y de ejecución.
 - **Herramientas:** `janel new`, `janel dev` (recarga al guardar), `janel build`, `janel compile`, `janel parse`.
 
+## Qué instalar
+
+`pip install janelkit` es todo lo necesario para una aplicación de una pantalla. Lo demás se añade cuando hace falta:
+
+| Necesitas | Instala | Usa |
+|---|---|---|
+| Una aplicación: estado, plantilla, componentes, estilos, controles, ventanas, tareas | `janelkit` | `state`, `computed`, `<text>`, `<button>`, `open_window`… |
+| Varias pantallas: pilas de páginas, barra lateral con secciones | `janelkit-router` | `pages`, `<Pages>`, `sections`, `<Sections>` |
+| Datos que comparten varias vistas o ventanas; recordar entre sesiones | `janelkit-store` | `@store`, `use`, `persisted` |
+| Diálogos de archivos y del sistema, portapapeles | `janelkit-desktop` | `dialogs`, `clipboard` |
+| Traducciones | `janelkit-i18n` | `t`, `i18n` |
+
+## Por dónde empezar
+
+| Nivel | Qué | Dónde |
+|---|---|---|
+| 1 | Estado, plantilla, elementos (`<text>`, `<button>`…), componentes, estilos | [tutorial](docs/tutorial.md), [lenguaje.md](docs/lenguaje.md), [estilos.md](docs/estilos.md) |
+| 2 | Asincronía, temporizadores, ciclo de vida, varias ventanas, pruebas | [lenguaje.md](docs/lenguaje.md#trabajo-asíncrono), [desarrollo.md](docs/desarrollo.md) |
+| 3 | Paquetes: navegación, datos compartidos, sistema, traducciones | [router](packages/janelkit-router/README.md), [store](packages/janelkit-store/README.md), [desktop](packages/janelkit-desktop/README.md), [i18n](packages/janelkit-i18n/README.md) |
+| 4 | Extender JanelKit: elementos en QML, paquetes propios | [lenguaje.md](docs/lenguaje.md#elementos-propios-en-qml), [arquitectura.md](docs/arquitectura.md) |
+
+Una regla para leer cualquier plantilla: **en minúscula, lo que da JanelKit** (`<text>`, `<button>`, `<column>`, como en HTML); **en mayúscula, un componente importado** (`<TodoItem>`, `<Pages>`).
+
 ## Organización del repositorio
 
 Un solo repositorio con el núcleo y los paquetes del ecosistema, que se publican por separado:
@@ -91,7 +114,7 @@ Las extensiones solo usan la API pública del núcleo (`tests/test_boundaries.py
 ```bash
 python -m venv .venv
 .venv\Scripts\activate          # Windows  (Linux/macOS: source .venv/bin/activate)
-python -m pip install -r requirements-dev.txt   # los tres paquetes editables y las herramientas, con versiones probadas
+python -m pip install -r requirements-dev.txt   # los paquetes editables y las herramientas, con versiones probadas
 python -m pytest                                # toda la suite; o un paquete: python -m pytest packages/janelkit
 
 janel new mi-app
@@ -111,12 +134,15 @@ Ejemplos incluidos (cada uno se ejecuta con `python apps/examples/<nombre>/main.
 | `compra` | la aplicación del [tutorial](docs/tutorial.md): componentes, slot, guardado en segundo plano y pruebas |
 | `idiomas` | cambio de idioma en caliente, plurales, formatos según el idioma y árabe (derecha a izquierda), con `janelkit-i18n` |
 | `files` | explorador de archivos: `<list>` virtualizada, slots, `provide`/`inject`, `ref`, atajos, diálogos (`janelkit-desktop`) y vista previa en segundo plano |
+| `preferencias` | lo que se recuerda al cerrar: `persisted` (`janelkit-store`) |
+| `carrito` | datos compartidos por dos ventanas: un store estricto, `use()` y el registro de cambios (`janelkit-store`) |
 
 ## Comandos
 
 | Comando | Qué hace |
 |---|---|
 | `janel new <nombre> [--path DIR]` | Crea un proyecto con `main.py` y `src/App.janel`. No sobrescribe carpetas con contenido. |
+| `janel migrate [carpeta] [--write]` | Actualiza un proyecto a esta versión (ver [cambios.md](docs/cambios.md)). |
 | `python main.py` | Forma canónica de ejecutar una aplicación. |
 | `janel dev [carpeta]` | Ejecuta la app y la recarga al guardar (`.janel`) o la reinicia (`.py`). |
 | `janel build [carpeta]` | Valida todos los componentes y guarda el QML generado en `build/qml`. No crea ejecutables. |

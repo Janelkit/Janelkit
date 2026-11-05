@@ -322,7 +322,15 @@ pytest
 
 ## Siguientes pasos
 
-- [lenguaje.md](lenguaje.md): todo el formato `.janel`, los elementos disponibles, `<list>` para listas grandes, diálogos, accesibilidad y elementos propios en QML.
+El tutorial solo usa el núcleo (`janelkit`). Cuando la aplicación crezca:
+
+- **Varias pantallas** (una lista y su detalle, una barra lateral): [`janelkit-router`](../packages/janelkit-router/README.md).
+- **Datos que comparten varias vistas o ventanas**, o que se recuerdan al cerrar: [`janelkit-store`](../packages/janelkit-store/README.md).
+- **Abrir y guardar archivos con los diálogos del sistema**: [`janelkit-desktop`](../packages/janelkit-desktop/README.md). **Traducciones**: [`janelkit-i18n`](../packages/janelkit-i18n/README.md).
+
+Y para profundizar:
+
+- [lenguaje.md](lenguaje.md): todo el formato `.janel`, los elementos disponibles, `<list>` para listas grandes, accesibilidad y elementos propios en QML.
 - [estilos.md](estilos.md): propiedades de estilo, `flex` y temas.
 - [desarrollo.md](desarrollo.md): `janel dev`, errores y pruebas.
 - Los ejemplos de `apps/examples/`, en especial `files` (explorador de archivos) y `books` (cliente de una API).

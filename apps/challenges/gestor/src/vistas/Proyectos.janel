@@ -1,7 +1,8 @@
 <script lang="python">
 # Inicio de la sección Proyectos: rejilla con color, nº de tarjetas, progreso y miembros.
 # Abrir uno apila su página (navigation()); la búsqueda se conserva al volver.
-from janelkit import computed, inject, navigation, state
+from janelkit import computed, inject, state
+from janelkit_router import navigation
 from services.datos import cuenta
 from vistas.Proyecto import Proyecto
 

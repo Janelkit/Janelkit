@@ -169,11 +169,9 @@ def test_component_whose_root_is_a_builtin_is_found_by_both_names(tmp_path):
         "<script>\nfrom janelkit import state\nn = state(0)\n</script>\n"
         "<button on:click={n += 1}>pulsado {n}</button>\n", encoding="utf-8")
     (tmp_path / "App.janel").write_text("""<script>
-from janelkit import sections
 from Otra import Otra
-s = sections(b=Otra)
 </script>
-<window><Sections of={s} /></window>
+<window><Otra /></window>
 """, encoding="utf-8")
     with mount(tmp_path / "App.janel") as app:
         assert app.texts() == ["otra"]

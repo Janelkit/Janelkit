@@ -1,6 +1,7 @@
 <script lang="python">
 # Inicio de la sección Personas: el directorio, con búsqueda. Abrir una apila su ficha.
-from janelkit import computed, inject, navigation, state
+from janelkit import computed, inject, state
+from janelkit_router import navigation
 from services.datos import cuenta
 from vistas.Persona import Persona
 

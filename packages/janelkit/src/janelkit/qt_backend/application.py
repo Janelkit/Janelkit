@@ -67,7 +67,7 @@ class _CloseGuard(QObject):
             self._approved = False
         if event.type() != QEvent.Type.Close or self._approved or self._instance.disposed:
             return False
-        from ..pages import ask_to_leave, leave_guards
+        from ..lifecycle import ask_to_leave, leave_guards
 
         guards = leave_guards(self._instance)
         if not guards:

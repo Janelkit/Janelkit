@@ -44,6 +44,10 @@ class ControlSpec:
     horizontal: bool = False  # contenedores: eje principal horizontal
     tag: str | None = None  # elementos propios (QML del proyecto): nombre en la plantilla
     fixed: dict[str, str] = field(default_factory=dict)  # propiedades QML que el compilador fija siempre
+    # Elementos propios: atributos que reciben un anfitrión de Python (`property JkHost stack`)
+    # y si el elemento es un mazo (su raíz es JkDeck: crece y admite transition:).
+    hosts: tuple[str, ...] = ()
+    deck: bool = False
 
 
 # Propiedades de disposición comunes a todos los elementos salvo <window>.
@@ -277,15 +281,13 @@ CONTROLS: dict[str, ControlSpec] = {
         props={"keys": PropSpec("keys", "string")},
         events={"activate": EventSpec("onActivated")},
     ),
-    "Pages": ControlSpec("JkPages"),  # stack={nav}: lo trata el compilador (como ref)
-    "Sections": ControlSpec("JkPages"),  # of={secciones}: una <Pages> por sección, dentro
     "spacer": ControlSpec("JkSpacer"),
 }
 
 QML_IMPORTS = ("QtQuick", "QtQuick.Controls", "QtQuick.Layouts", "Janel")
 
 # Elementos del núcleo: se escriben en minúscula, como los de HTML. La mayúscula es para
-# los componentes importados (y, hasta que salgan a janelkit-router, <Pages> y <Sections>).
+# los componentes importados.
 BASE_ELEMENTS = tuple(tag for tag in CONTROLS if tag[:1].islower())
 
 # Valores admitidos en los atributos de texto de los elementos del núcleo (se validan si son literales).

@@ -45,7 +45,7 @@ jobs:
       - name: Instalar
         run: |
           python -m pip install --upgrade pip
-          pip install -e "packages/janelkit[dev]" -e packages/janelkit-i18n -e packages/janelkit-desktop
+          pip install -e "packages/janelkit[dev]" -e packages/janelkit-i18n -e packages/janelkit-desktop -e packages/janelkit-router
       - name: Análisis estático
         run: python -m pyflakes packages apps tests tools
       - name: Frontera y coherencia entre paquetes
@@ -92,7 +92,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [janelkit-i18n, janelkit-desktop]
+        package: [janelkit-i18n, janelkit-desktop, janelkit-router]
         os: [windows-latest, ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
@@ -141,7 +141,7 @@ jobs:
       - name: Instalar
         run: |
           python -m pip install --upgrade pip
-          pip install pytest -e packages/janelkit -e packages/janelkit-i18n -e packages/janelkit-desktop -r apps/requirements.txt
+          pip install pytest -e packages/janelkit -e packages/janelkit-i18n -e packages/janelkit-desktop -e packages/janelkit-router -r apps/requirements.txt
       - name: Pruebas de ejemplos y retos
         run: python -m pytest -q apps/examples/tests apps/challenges/tests
       - name: Ejemplos con python main.py

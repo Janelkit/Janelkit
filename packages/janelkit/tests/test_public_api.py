@@ -12,14 +12,14 @@ API_DOC = (Path(__file__).resolve().parents[3] / "docs" / "api.md").read_text(en
 
 PUBLIC = {
     "janelkit": [
-        "Computed", "DragEvent", "Effect", "Event", "FocusEvent", "Frames", "KeyEvent", "PageStack", "Persisted", "PointerEvent", "ResizeEvent", "WheelEvent", "Prop", "PropError", "Ref", "Screen", "Sections", "State", "Task", "Timer", "__version__", "background",
-        "batch", "before_leave", "computed", "effect", "event", "inject", "interval", "is_visible", "locale", "navigation", "on_destroy", "on_mount", "open_window", "pages", "persisted", "prop", "provide", "ref", "run", "screens", "sections",
+        "Computed", "DragEvent", "Effect", "Event", "FocusEvent", "Frames", "KeyEvent", "Persisted", "PointerEvent", "ResizeEvent", "WheelEvent", "Prop", "PropError", "Ref", "Screen", "State", "Task", "Timer", "__version__", "background",
+        "batch", "before_leave", "computed", "effect", "event", "inject", "interval", "is_visible", "locale", "on_destroy", "on_mount", "open_window", "persisted", "prop", "provide", "ref", "run", "screens",
         "spawn", "state", "task", "theme", "timeout", "untracked",
     ],
     "janelkit.compiler": ["CompiledComponent", "FORMAT_VERSION", "check_file", "check_source", "compile_file", "compile_source"],
     "janelkit.diagnostics": ["Diagnostic", "JanelError", "SourceLocation"],
     "janelkit.inspect": ["Element", "InspectError", "MountedApp", "mount"],
-    "janelkit.ext": ["app", "inspector"],
+    "janelkit.ext": ["Child", "Container", "Gate", "Host", "app", "ask_to_leave", "inspector", "is_component"],
 }  # fmt: skip
 
 
@@ -50,6 +50,8 @@ def test_removed_names_say_what_happened():
 
     with pytest.raises(ImportError, match="History se quitó en JanelKit 0.2.0"):
         exec("from janelkit import History")
+    with pytest.raises(ImportError, match="pip install janelkit-router"):
+        exec("from janelkit import pages")
 
 
 def test_every_public_name_is_documented_and_nothing_else():

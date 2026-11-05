@@ -31,6 +31,7 @@ _PROPERTY = re.compile(
     r"^\s*(?P<mods>(?:(?:default|required|readonly|final|virtual|override)\s+)*)property\s+"
     r"(?P<type>list\s*<\s*[\w.]+\s*>|[\w.]+)\s+(?P<name>[A-Za-z_]\w*)"
 )
+_ROOT = re.compile(r"^(?:\s|import\b[^\n]*|pragma\b[^\n]*)*?(?P<type>[A-Z][\w.]*)\s*\{")
 _SIGNAL = re.compile(r"^\s*signal\s+(?P<name>[A-Za-z_]\w*)\s*(?:\((?P<params>[^)]*)\))?")
 
 
@@ -107,19 +108,27 @@ def read_interface(path: Path, tag: str, alias: str) -> ControlSpec:
     props: dict[str, PropSpec] = {}
     events: dict[str, EventSpec] = {}
     two_way: dict[str, TwoWaySpec] = {}
-    for statement in _root_members(_strip(text)):
+    hosts: list[str] = []
+    stripped = _strip(text)
+    root = _ROOT.match(stripped)
+    for statement in _root_members(stripped):
         m = _PROPERTY.match(statement)
-        if m:
+        if m and not m.group("name").startswith("jk"):  # jk…: internas de JanelKit, no se pasan
             name = m.group("name")
             type_ = re.sub(r"\s+", "", m.group("type"))
             cap = name[0].upper() + name[1:]
-            if "readonly" not in m.group("mods").split():
+            if type_ in ("JkHost", "Janel.JkHost"):  # recibe un anfitrión de Python (janelkit.ext.Host)
+                hosts.append(name)
+            elif "readonly" not in m.group("mods").split():
                 props[name] = PropSpec(name, _TYPES.get(type_, "any"))
                 two_way[name] = TwoWaySpec(name, f"on{cap}Changed")
         m = _SIGNAL.match(statement)
-        if m:
+        if m and not m.group("name").startswith("jk"):
             name = m.group("name")
             params = _params(m.group("params"))
             events[name] = EventSpec(f"on{name[0].upper()}{name[1:]}", params, params=params)
-    return ControlSpec(f"{alias}.{tag}", props=props, events=events, two_way=two_way, tag=tag)
+    deck = root is not None and root.group("type") in ("JkDeck", "Janel.JkDeck")
+    return ControlSpec(
+        f"{alias}.{tag}", props=props, events=events, two_way=two_way, tag=tag, hosts=tuple(hosts), deck=deck
+    )
 

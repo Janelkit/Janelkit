@@ -169,6 +169,7 @@ class _Lowerer:
         self.slot_fragments: list[Fragment] = []
         self.qml_imports: dict[str, QmlImport] = {}  # tag -> import
         self.pending_transitions: dict[int, SourceLocation] = {}  # id(IRElement) -> ubicación
+        self.decks: set[int] = set()  # id(IRElement) de los mazos (elementos .qml con raíz JkDeck)
         self.use_counts: dict[str, int] = {}  # etiqueta de componente -> usos vistos
         self.qml_specs: dict[str, ControlSpec] = {}
         self._reported: set[tuple] = set()
@@ -451,6 +452,9 @@ class _Lowerer:
             return None
         ir = IRElement(spec.qml_type, el.loc)
         ir.props.update({k: Literal(v) for k, v in spec.fixed.items()})
+        if spec.deck:  # un mazo crece sin pedirlo (flex: 1), como <scroll>; flex={0} lo cambia
+            self.decks.add(id(ir))
+            ir.props["jkFlex"] = Literal("1")
         node = self.style_node(el, ir, match_tag)
         node.passed = el is self.passed_root
         self.last_node = node
@@ -467,7 +471,7 @@ class _Lowerer:
                     ir.props["objectName"] = Literal(qml_string(attr.value))
                 else:
                     self.error('el atributo id debe ser un texto literal, p. ej. id="guardar"', attr.loc)
-            elif attr.name == "ref" or (el.tag == "Pages" and attr.name == "stack") or (el.tag == "Sections" and attr.name == "of"):
+            elif attr.name == "ref" or attr.name in spec.hosts:
                 self.ref(attr, ir)
             elif attr.directive == "on":
                 self.event(attr, spec, ir)
@@ -551,7 +555,7 @@ class _Lowerer:
                 self.error(f"{attr.name} espera la duración en milisegundos, p. ej. {attr.name}={{300}}", attr.loc)
                 return
             ms = value
-        if ir.qml_type == "JkPages":  # <Pages transition:slide>: anima la página que entra
+        if id(ir) in self.decks:  # mazo (JkDeck), p. ej. <Pages transition:slide>: anima el hijo que entra
             ir.props["jkTransition"] = Literal(qml_string(kind))
             ir.props["jkTransitionMs"] = Literal(str(ms))
             return
@@ -580,15 +584,20 @@ class _Lowerer:
             frag.leave_ms = root.transitions["out"][1]
 
     def ref(self, attr: Attribute, ir: IRElement) -> None:
+        """ref={campo}, o un atributo que recibe un anfitrión (<Pages stack={nav}>): el elemento se le pasa al nombre."""
         name = _parse_name(attr.value.code) if isinstance(attr.value, Expression) else None
         if name is None:
+            if attr.name != "ref":
+                self.error(f"{attr.name} necesita el nombre de una variable del script", attr.loc, f"{attr.name}={{nombre}}")
+                return
             self.error("ref necesita el nombre de una referencia", attr.loc, "declara campo = ref() en el script y usa ref={campo}")
             return
         if name in self.local_names():
-            self.error(f"ref no puede usar la variable de {{#each}} '{name}'", attr.loc, "declara la referencia en el script")
+            what = "la referencia" if attr.name == "ref" else "la variable"
+            self.error(f"{attr.name} no puede usar la variable de {{#each}} '{name}'", attr.loc, f"declara {what} en el script")
             return
         self.check_expr(attr.value)
-        use = RefUse(self.next_id("r"), name, attr.loc)
+        use = RefUse(self.next_id("r"), name, attr.loc, attr.name)
         self.tpl.refs.append(use)
         ir.handlers.setdefault("Component.onCompleted", []).append(f'jk.setRef("{use.id}", this, true)')
 
@@ -662,13 +671,18 @@ class _Lowerer:
         if el.tag.lower() in BASE_ELEMENTS:
             self.error(f"elemento desconocido <{el.tag}>", el.loc, f"los elementos del núcleo van en minúscula: <{el.tag.lower()}>")
             return
+        if el.tag in _MOVED_ELEMENTS:
+            package = _MOVED_ELEMENTS[el.tag]
+            hint = f"pasó al paquete {package.replace('_', '-')}: from {package} import {el.tag}"
+            self.error(f"elemento desconocido <{el.tag}>", el.loc, hint)
+            return
         options = sorted({*(t for t in CONTROLS if t not in BASE_ELEMENTS), *self.info.components})
         close = difflib.get_close_matches(el.tag, options, n=1)
         if close:
             hint = f"¿quisiste decir <{close[0]}>?"
         else:
             hint = f"si es un componente, impórtalo en el script: from components.{el.tag} import {el.tag}"
-            core = difflib.get_close_matches(el.tag.lower(), BASE_ELEMENTS, n=1)
+            core = difflib.get_close_matches(el.tag.lower(), BASE_ELEMENTS, n=1, cutoff=0.75)
             if core:
                 hint += f"; si es un elemento del núcleo, va en minúscula: <{core[0]}>"
         self.error(f"elemento desconocido <{el.tag}>", el.loc, hint)
@@ -1333,6 +1347,8 @@ class _Lowerer:
 _BOXES = BOX_TYPES
 _TRANSITIONS = ("fade", "scale", "slide")
 _TRANSITION_MS = 200
+# Elementos que salieron del núcleo a un paquete: <Pages> sin importar dice dónde está.
+_MOVED_ELEMENTS = {"Pages": "janelkit_router", "Sections": "janelkit_router"}
 
 
 def _self_closing_hint(tag: str, spec: ControlSpec) -> str:

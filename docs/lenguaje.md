@@ -606,97 +606,20 @@ Las traducciones (catálogos, plurales, formatos de número y fecha) son del paq
 
 ## Navegación entre pantallas
 
+Las pilas de páginas (`pages`, `<Pages>`), las secciones (`sections`, `<Sections>`), `navigation()` y los resultados con `await nav.push(...)` son del paquete [`janelkit-router`](../packages/janelkit-router/README.md):
+
 ```python
-from janelkit import pages
+from janelkit_router import pages, Pages
 from pages.Inicio import Inicio
-from pages.Detalle import Detalle
 
 nav = pages(Inicio)
-
-def abrir(item):
-    nav.push(Detalle, item=item, on_borrado=borrar)
 ```
 
 ```html
-<row class="barra">
-  <button on:click={nav.pop()} enabled={nav.can_go_back}>← Volver</button>
-  <text>{nav.current}</text>
-</row>
-<Pages stack={nav} />
+<Pages stack={nav} transition:slide />
 ```
 
-- `<Pages stack={nav} />` muestra la página de arriba de la pila y ocupa el espacio libre (`flex: 1`).
-- `push` muestra una página nueva encima; la de debajo **sigue viva** y, al volver con `pop()`, conserva su estado. Mientras está debajo, lo que muestra espera, como en [`{#hidden}`](#hidden): se pone al día al volver a verse. `replace` sustituye la actual; `reset` vacía la pila y empieza de nuevo. Las páginas descartadas se liberan (sus `on_destroy` se ejecutan).
-- Cada página ocupa todo su `<Pages>` (y cada sección, su `<Sections>`) y se estrecha con la ventana hasta el mínimo de su contenido; lo que deba desplazarse, con `overflow: auto`. La raíz de la página puede cambiarlo con CSS, como un bloque en una columna:
-
-  ```css
-  .pagina { max-width: 720px; margin: 0 auto; }   /* una columna centrada */
-  .pagina { width: 400px; height: 300px; }         /* tamaño fijo, arriba a la izquierda */
-  .pagina { align-self: center; }                  /* su ancho natural, centrada */
-  .pagina { margin: 24px; }                        /* llena, con margen alrededor */
-  ```
-- Las palabras clave son props y eventos (`on_...`) de la página, como en `open_window`. Las páginas heredan el contexto (`inject`) del componente que declara la pila.
-- `nav.current` (nombre de la página visible), `nav.depth` y `nav.can_go_back` son reactivos; `nav.page` da la instancia visible.
-- **Transiciones:** `<Pages stack={nav} transition:slide />` anima la página que entra: al avanzar llega desde la derecha y al volver desde la izquierda. También `fade` y `scale`, y la duración: `transition:fade={150}`. En `<Sections>`, la transición se aplica al cambiar de sección y a las páginas de cada una.
-- **Atrás con el teclado y el ratón:** Alt+← y el botón «atrás» del ratón vuelven a la página anterior, en la pila visible más interna. Alt+← actúa cuando el foco está dentro de la pila (si está, por ejemplo, en un botón de la barra lateral, no hace nada); el ratón, al pulsar sobre ella. Si un elemento de la página ya usa Alt+← (por ejemplo, para mover una tarjeta), gana el elemento.
-
-### Navegar desde una página
-
-Dentro de una página (o de cualquier componente que contenga), `navigation()` da su pila, sin pasarla como prop:
-
-```python
-from janelkit import navigation
-from pages.Detalle import Detalle
-
-nav = navigation()
-
-def abrir(item):
-    nav.push(Detalle, item=item)
-```
-
-### Devolver un resultado
-
-`push` se puede esperar: `await` devuelve el valor con el que la página vuelve con `nav.back(valor)` (o `None` si se descarta de otra forma, con `pop`, `replace` o `reset`).
-
-```python
-async def elegir_responsable():                  # en la página que pregunta
-    persona = await nav.push(ElegirPersona)
-    if persona is not None:
-        tarjeta["responsable"] = persona["id"]
-```
-
-```html
-<!-- en ElegirPersona.janel -->
-<button on:click={nav.back(p)}>{p["nombre"]}</button>
-```
-
-### Secciones
-
-Una aplicación con barra lateral o pestañas tiene varias secciones, y cada una necesita su pila. `sections()` las crea; `<Sections of={...} />` muestra la actual:
-
-```python
-from janelkit import sections
-from pages.Proyectos import Proyectos
-from pages.Personas import Personas
-
-secciones = sections(proyectos=Proyectos, personas=Personas)
-```
-
-```html
-<flex>
-  <flex direction="column" class="barra">
-    <button on:click={secciones.show("proyectos")} class:activa={secciones.current == "proyectos"}>Proyectos</button>
-    <button on:click={secciones.show("personas")} class:activa={secciones.current == "personas"}>Personas</button>
-  </flex>
-  <Sections of={secciones} />
-</flex>
-```
-
-- Cada sección es una pila (`secciones["personas"]`, o `secciones.stack` para la visible) y empieza en el componente indicado. Dentro, `navigation()` da la pila de su sección.
-- Una sección se crea la primera vez que se muestra. Al cambiar a otra **se conserva entera**, con todas sus páginas y su estado; volver a ella cuesta lo mismo que mostrarla. Mientras no se ve, lo que muestra espera (como en [`{#hidden}`](#hidden)): un cambio de datos en otra sección no la recalcula.
-- `secciones.current` (el nombre de la visible) es reactivo; `secciones.names` lista los nombres.
-
-### Preguntar antes de salir
+## Preguntar antes de salir
 
 `before_leave(fn)` en el script de un componente registra una pregunta: si `fn()` devuelve `False`, no se sale. Puede ser `async`, para preguntar con un diálogo:
 
@@ -709,16 +632,8 @@ async def salir():
     return not cambios.value or await dialogs.confirm("Hay cambios sin guardar. ¿Salir igualmente?")
 ```
 
-- Se consulta al descartar la página que contiene el componente (`pop`, `back`, `replace`, `reset`, Alt+←) y al cerrar con la X la ventana que lo muestra. Cerrar la ventana principal consulta también las ventanas que abrió.
-- Cambiar de sección no pregunta: la sección se conserva y no se pierde nada.
-- Para encadenar navegaciones, espera la salida: `pop`, `back`, `replace` y `reset` devuelven `True` si se salió y `False` si un `before_leave` lo impidió (la respuesta puede llegar después de un diálogo):
-
-```python
-async def ir_a_tarjeta(pid, tid):
-    if await nav.reset(Proyectos):      # un detalle con cambios puede pedir quedarse
-        nav.push(Proyecto, ident=pid, enfocar=tid)
-```
-- Cerrar desde el código (`ventana.close()`) no pregunta.
+- Se consulta al cerrar con la X la ventana que muestra el componente; cerrar la ventana principal consulta también las ventanas que abrió. Cerrar desde el código (`ventana.close()`) no pregunta.
+- También lo consulta un anfitrión que va a descartar el componente: en `janelkit-router`, `pop`, `back`, `replace`, `reset` y Alt+← sobre la página que lo contiene.
 
 ## Varias ventanas
 
@@ -775,7 +690,9 @@ from widgets.Meter import Meter
 - Eventos: cada `signal`. El manejador recibe sus parámetros (`def elegido(step):`; en línea, `event`).
 - `bind:prop={estado}` funciona con cualquier propiedad escribible: los cambios que haga el QML (también por asignación, `root.value = 3`) vuelven al `state`. Los números de QML (`real`) llegan como `float`.
 - `janel dev` reinicia la aplicación al guardar el `.qml` (Qt no siempre vuelve a leer en el mismo proceso un `.qml` ya cargado).
-- El QML es **interfaz de Qt, no de JanelKit**: su contenido no está cubierto por la política de versiones, y sus errores se muestran tal como los da Qt.
+- Las `property` y `signal` cuyo nombre empieza por `jk` son internas: no se pueden pasar ni escuchar desde la plantilla.
+- **Montar componentes desde Python.** Un elemento cuya raíz es `JkDeck` (`import Janel`) es un mazo: muestra uno de sus hijos, que ocupa todo el sitio; crece solo (`flex: 1`) y admite `transition:`. Si además declara `property JkHost nombre`, `<Elemento nombre={objeto} />` le pasa el elemento a `objeto`, un `janelkit.ext.Host`, que monta componentes dentro con `container.mount(...)`. Así están hechos `<Pages>` y `<Sections>` de `janelkit-router` ([api.md](api.md#janelkitext-extensiones)).
+- El QML es **interfaz de Qt, no de JanelKit**: su contenido no está cubierto por la política de versiones, y sus errores se muestran tal como los da Qt. Son de JanelKit `jktheme`, `JkDeck` (su `currentIndex` y las propiedades de `transition:`) y `JkHost`.
 
 **Tipos escritos en Python.** Un `QQuickItem` (o `QQuickPaintedItem`) registrado con `@QmlElement` se usa desde un `.qml` como cualquier tipo QML (`import dials` → `PyDial { ... }`). El módulo que lo registra debe importarse **antes** de `run()`, en `main.py`, porque Qt resuelve los imports al cargar la vista.
 

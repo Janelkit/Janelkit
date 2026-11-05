@@ -1,6 +1,6 @@
-"""Lo que no se ve espera: los bindings de {#hidden}, de las secciones que no se muestran
-y de las páginas de debajo no se recalculan; se ponen al día (una vez) al volver a verse.
-Los effect y temporizadores del script siguen funcionando."""
+"""Lo que no se ve espera: los bindings de {#hidden} (y de lo que oculta un anfitrión, como las
+páginas de debajo de janelkit-router; ver test_ext_hosts_qt.py) no se recalculan; se ponen al
+día (una vez) al volver a verse. Los effect y temporizadores del script siguen funcionando."""
 from pathlib import Path
 
 import pytest
@@ -123,45 +123,3 @@ provide("vistos", vistos)
         assert app.get("vistos") == [0, 7] and ns["ticks"].value > antes
 
 
-PAGINAS = {
-    "Inicio.janel": f"""<script>
-{CONTADOR}
-from janelkit import inject
-n = inject("n")
-</script>
-<flex><text>{{f"inicio {{visto(n)}}"}}</text></flex>
-""",
-    "Otra.janel": "<text>otra</text>\n",
-}
-
-
-def test_pages_below_and_other_sections_wait(project):
-    app_file = project({**PAGINAS, "App.janel": """<script>
-from janelkit import provide, sections, state
-from Inicio import Inicio
-from Otra import Otra
-n = state(0)
-provide("n", n)
-s = sections(a=Inicio, b=Otra)
-</script>
-<window><Sections of={s} /></window>
-"""})
-    with mount(app_file) as app:
-        s, n = app.get("s"), app.namespace["n"]
-        veces = s["a"].page.namespace["veces"]
-        assert veces == [0]
-        s["a"].push(app.namespace["Otra"])
-        app.process()
-        n.value = 1
-        n.value = 2
-        assert veces == [0]  # la página de debajo espera
-        s["a"].pop()
-        app.process()
-        assert veces == [0, 2] and "inicio 2" in app.texts()
-        s.show("b")
-        app.process()
-        n.value = 3
-        assert veces == [0, 2]  # su sección no se ve
-        s.show("a")
-        app.process()
-        assert veces == [0, 2, 3]

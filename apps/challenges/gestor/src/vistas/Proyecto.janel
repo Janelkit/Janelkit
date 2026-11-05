@@ -2,7 +2,8 @@
 # Un proyecto: pestañas Tablero, Miembros y Ajustes. Las pestañas usan {#hidden}: al
 # cambiar de una a otra se conservan (filtros, desplazamiento, detalle abierto).
 # El tablero es el del reto 3, con las etiquetas y los miembros del proyecto.
-from janelkit import inject, navigation, prop, provide, state
+from janelkit import inject, prop, provide, state
+from janelkit_router import navigation
 from components.AjustesProyecto import AjustesProyecto
 from components.Columna import Columna
 from components.Detalle import Detalle

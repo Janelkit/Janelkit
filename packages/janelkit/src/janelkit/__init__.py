@@ -22,7 +22,6 @@ from .reactivity import (
 from .locale import locale
 from .events import DragEvent, FocusEvent, KeyEvent, PointerEvent, ResizeEvent, WheelEvent
 from .lifecycle import Ref, before_leave, inject, is_visible, on_destroy, on_mount, provide, ref
-from .pages import PageStack, Sections, navigation, pages, sections
 from .storage import Persisted, persisted
 from .themes import theme
 from .tasks import Task, background, spawn, task
@@ -43,13 +42,11 @@ __all__ = [
     "Frames",
     "KeyEvent",
     "Prop",
-    "PageStack",
     "Persisted",
     "PointerEvent",
     "PropError",
     "Ref",
     "Screen",
-    "Sections",
     "ResizeEvent",
     "State",
     "Task",
@@ -66,10 +63,8 @@ __all__ = [
     "is_visible",
     "interval",
     "locale",
-    "navigation",
     "on_destroy",
     "on_mount",
-    "pages",
     "persisted",
     "open_window",
     "prop",
@@ -77,7 +72,6 @@ __all__ = [
     "ref",
     "run",
     "screens",
-    "sections",
     "spawn",
     "state",
     "task",
@@ -104,6 +98,13 @@ else:
 _REMOVED = {
     "History": "History se quitó en JanelKit 0.2.0: el núcleo ya no incluye deshacer y rehacer. "
     "Anota tus pasos con funciones (deshacer, rehacer); ver docs/cambios.md.",
+    **{
+        name: f"{name} pasó al paquete janelkit-router en JanelKit 0.2.0: pip install janelkit-router y "
+        f"from janelkit_router import {name}" + (" (y Pages para <Pages>)" if name == "pages" else "")
+        for name in ("pages", "sections", "navigation", "PageStack")
+    },
+    "Sections": "Sections pasó a janelkit-router en JanelKit 0.2.0: el tipo de sections() se llama "
+    "SectionSet y la etiqueta <Sections> se importa con from janelkit_router import Sections",
 }
 
 

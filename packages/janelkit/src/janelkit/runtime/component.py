@@ -51,13 +51,15 @@ from ..compiler.ir import (
 )
 from ..compiler.script_analysis import EVENT_FACTORY, PROP_FACTORY
 from ..diagnostics import Diagnostic, SourceLocation
-from ..lifecycle import ElementHost, Ref, _setup
+from ..lifecycle import Ref, _setup
 from ..tasks import spawn
 from ..reactivity import Computed, Effect, Event, Prop, PropError, Scope, State, batch, untracked
 from ..reactivity.props import REQUIRED
 from ..reactivity.collections import to_plain
 from ..reactivity.effects import Gate, when_settled
 from ..reactivity.state import _same
+from .hosts import Container
+from .hosts import Host as ElementHost
 from .list_model import LazySlotModel, SlotModel
 from .markdown import safe_markdown
 from .qt_bridge import make_bridge_class
@@ -310,17 +312,23 @@ class TemplateInstance:
             target = self.resolve(use.name)
         except NameError:
             target = None
-        if isinstance(target, ElementHost):  # <Pages stack={nav}>, <Sections of={...}>
+        if isinstance(target, ElementHost):  # una propiedad JkHost, p. ej. <Pages stack={nav}>
             if attached:
-                target._attach(item, self)
-                self._attached.append((target, item))
+                container = Container(item, self)
+                target.attach(container)
+                self._attached.append((target, container))
             else:
-                target._detach(item)
+                for pair in [p for p in self._attached if p[0] is target and getattr(p[1], "item", None) is item]:
+                    self._attached.remove(pair)
+                    target.detach(pair[1])
             return
         if not isinstance(target, Ref):
             if attached:
                 kind = "no está definido" if target is None else f"es {type(target).__name__}"
-                self.report(f"ref: '{use.name}' {kind}; declara {use.name} = ref() en el script", use.loc)
+                if use.attr == "ref":
+                    self.report(f"ref: '{use.name}' {kind}; declara {use.name} = ref() en el script", use.loc)
+                else:
+                    self.report(f"{use.attr}: '{use.name}' {kind}; espera un anfitrión (janelkit.ext.Host)", use.loc)
             return
         if attached:
             target._attach(item)
@@ -331,7 +339,10 @@ class TemplateInstance:
     def _release_refs(self) -> None:
         attached, self._attached = self._attached, []
         for target, item in attached:
-            target._detach(item)
+            if isinstance(target, ElementHost):
+                target.detach(item)
+            else:
+                target._detach(item)
 
     def call_handler(self, handler: Handler, args: list, kwargs: dict[str, Any] | None = None) -> None:
         if self.disposed:
@@ -1153,8 +1164,12 @@ class ComponentInstance:
         prop_locs: dict[str, SourceLocation] | None = None,
         hmr_key: Any = None,
         gate: Gate | None = None,
+        context: dict[Any, Any] | None = None,
     ):
         self.compiled = compiled
+        # Valores que da quien la monta (Container.mount): los leen con inject la propia
+        # instancia (también mientras se ejecuta su script) y sus descendientes.
+        self.context: dict[Any, Any] = context or {}
         self._prop_locs = prop_locs or {}
         # Identidad estable en el árbol (para conservar el estado al recargar en janel dev).
         own_key = hmr_key if hmr_key is not None else Path(compiled.file).name
@@ -1175,7 +1190,6 @@ class ComponentInstance:
         self._refocus: list[int] | None = None
         self._on_mount: list[Any] = []
         self.leave_guards: list[Any] = []  # before_leave
-        self.page_stack: Any = None  # la pila de pages() si es una página
         self._incoming = props or {}
         self._event_handlers = events or {}
         self.props: dict[str, Prop] = {}
@@ -1237,10 +1251,14 @@ class ComponentInstance:
         self.provided[key] = value
 
     def inject(self, key: Any) -> Any:
+        if key in self.context:
+            return self.context[key]
         ancestor = self.parent
         while ancestor is not None:
             if key in ancestor.provided:
                 return ancestor.provided[key]
+            if key in ancestor.context:
+                return ancestor.context[key]
             ancestor = ancestor.parent
         raise LookupError(key)
 

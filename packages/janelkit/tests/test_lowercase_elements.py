@@ -128,3 +128,21 @@ def test_janel_migrate_shows_a_diff_and_writes_only_with_write(tmp_path, capsys)
     assert app.read_text(encoding="utf-8") == "<window><text>hola</text></window>\n"
     assert (tmp_path / ".venv" / "lib" / "Otro.janel").read_text(encoding="utf-8") == "<Text>no</Text>"
     assert compile_file(app).warnings == []
+
+
+def test_migrate_moves_the_navigation_imports_to_janelkit_router():
+    src = """<script>
+from janelkit import state, pages, navigation as nav_de  # navegación
+from Inicio import Inicio
+nav = pages(Inicio)
+</script>
+<Column><Pages stack={nav} /></Column>
+"""
+    new, _ = migrate_janel(src)
+    assert "from janelkit import state\nfrom janelkit_router import pages, navigation as nav_de, Pages  # navegación\n" in new
+    assert "<column><Pages stack={nav} /></column>" in new
+    assert migrate_janel(new)[0] == new
+    only, _ = migrate_janel("<script>\nfrom janelkit import sections\ns = sections()\n</script>\n<Sections of={s} />\n")
+    assert "\nfrom janelkit_router import sections, Sections\n" in only and "from janelkit import" not in only
+    py, _ = migrate_python("from janelkit import PageStack, Sections\n")
+    assert py == "from janelkit_router import PageStack, SectionSet\n"

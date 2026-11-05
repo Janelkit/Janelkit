@@ -6,7 +6,8 @@
 4. Ejecuta `janel --help`, `janel new demo` y `python main.py` (Qt offscreen)
    y confirma que `janelkit` se importa desde el entorno, no desde el checkout.
 5. Construye e instala junto a él los wheels de las extensiones (janelkit-i18n,
-   janelkit-desktop) y comprueba que se importan y que pip acepta su rango del núcleo.
+   janelkit-desktop, janelkit-router) y comprueba que se importan, que incluyen sus
+   archivos (icono, elementos .qml) y que pip acepta su rango del núcleo.
 
 Uso:  python tools/check_wheel.py [--keep]
 """
@@ -23,7 +24,7 @@ import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-EXTENSIONS = {"janelkit-i18n": "janelkit_i18n", "janelkit-desktop": "janelkit_desktop"}
+EXTENSIONS = {"janelkit-i18n": "janelkit_i18n", "janelkit-desktop": "janelkit_desktop", "janelkit-router": "janelkit_router"}
 REQUIRED = [
     "janelkit/__init__.py",
     "janelkit/compiler/qml_generator.py",
@@ -130,12 +131,14 @@ def main() -> int:
         wheels = [next(dist.glob(f"{module}-*.whl")) for module in EXTENSIONS.values()]
         run([str(py), "-m", "pip", "install", "--quiet", *map(str, wheels)])
         run([str(py), "-m", "pip", "check"], cwd=outside, env=env)
-        code = "import janelkit_desktop as d, janelkit_i18n as i; print(d.__file__); print(i.__file__)"
+        code = "import janelkit_desktop as d, janelkit_i18n as i, janelkit_router as r; print(d.__file__); print(i.__file__); print(r.__file__)"
         origins = [Path(o) for o in run([str(py), "-c", code], cwd=outside, env=env).stdout.splitlines()]
         if any(o.resolve().is_relative_to(REPO) for o in origins):
             raise SystemExit("las extensiones se importan desde el repositorio, no desde los wheels")
         if not (origins[0].parent / "icon.png").is_file():
             raise SystemExit("el wheel de janelkit-desktop no incluye icon.png")
+        if not all((origins[2].parent / f).is_file() for f in ("Pages.qml", "Sections.qml")):
+            raise SystemExit("el wheel de janelkit-router no incluye Pages.qml y Sections.qml")
         print("   instaladas sobre el núcleo del wheel; pip check sin conflictos")
 
         print("\nOK: el recorrido pip install -> janel new -> python main.py funciona fuera del repositorio, también con las extensiones.")

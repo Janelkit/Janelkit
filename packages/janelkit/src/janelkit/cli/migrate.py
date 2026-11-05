@@ -10,6 +10,9 @@ Reglas (0.1 → 0.2):
   nombre de un componente que el script importa no se toca.
 - Con `--tests`, lo mismo en los `.py` de pruebas: las plantillas dentro de cadenas y
   `find("Text")` / `find_all("Text")`.
+- La navegación pasó a janelkit-router: `from janelkit import pages, state` →
+  `from janelkit import state` + `from janelkit_router import pages, Pages` (`Pages` y
+  `Sections` se añaden si la plantilla los usa). El tipo `Sections` pasa a `SectionSet`.
 - Avisa (sin cambiarlo) de lo que se quitó: `History`.
 """
 from __future__ import annotations
@@ -34,6 +37,11 @@ _SKIP_DIRS = {".venv", "venv", ".git", "__pycache__", "build", "dist", "node_mod
 _REMOVED = {
     "History": "History se quitó en 0.2.0: anota los pasos de deshacer como pares de funciones en una clase propia",
 }
+# Lo que pasó a otro paquete: nombre en janelkit -> nombre en janelkit_router.
+_TO_ROUTER = {"pages": "pages", "sections": "sections", "navigation": "navigation", "PageStack": "PageStack",
+              "Sections": "SectionSet"}  # fmt: skip
+_ROUTER_TAGS = ("Pages", "Sections")
+_FROM_JANELKIT = re.compile(r"^([ \t]*)from janelkit import (\([^)]*\)|[^\n]*)", re.MULTILINE)
 
 
 @dataclass
@@ -67,12 +75,47 @@ def migrate_janel(text: str) -> tuple[str, list[str]]:
         out.append(body)
         last = end
     out.append(_template(text[last:], imported))
-    return "".join(out), notes
+    return _move_imports("".join(out)), notes
+
+
+def _move_imports(text: str) -> str:
+    """Los nombres que pasaron a janelkit-router salen de `from janelkit import ...`."""
+    out, last = [], 0
+    for m in _FROM_JANELKIT.finditer(text):
+        body, _, comment = m.group(2).partition("#")
+        names = [n.strip() for n in body.strip().strip("()").replace("\n", " ").split(",") if n.strip()]
+        moved = [n for n in names if n.split(" as ")[0].strip() in _TO_ROUTER]
+        if not moved:
+            continue
+        kept = [n for n in names if n not in moved]
+        router = [_TO_ROUTER[n.split(" as ")[0].strip()] + n[len(n.split(" as ")[0].strip()):] for n in moved]
+        template = _template_after(text, m.end())
+        router += [t for t in _ROUTER_TAGS if t not in router and re.search(rf"<{t}\b", template)]
+        indent = m.group(1)
+        lines = [f"{indent}from janelkit import {', '.join(kept)}"] if kept else []
+        lines.append(f"{indent}from janelkit_router import {', '.join(router)}")
+        out += [text[last:m.start()], "\n".join(lines) + (f"  #{comment}" if comment else "")]
+        last = m.end()
+    out.append(text[last:])
+    return "".join(out)
+
+
+def _template_after(text: str, pos: int) -> str:
+    """Si `pos` está dentro de un <script>, la plantilla que lo sigue (hasta otro <script> o el fin de la cadena)."""
+    opened = text.rfind("<script", 0, pos)
+    if opened < 0 or text.rfind("</script", opened, pos) >= 0:
+        return ""
+    close = text.find("</script", pos)
+    if close < 0:
+        return ""
+    ends = [i for i in (text.find("<script", close), text.find('"""', close)) if i >= 0]
+    return text[close:min(ends) if ends else len(text)]
 
 
 def migrate_python(text: str) -> tuple[str, list[str]]:
     """Un `.py` de pruebas: plantillas en cadenas y `find("Text")`."""
-    new = _TAG_RE.sub(lambda m: "<" + m.group(1) + LEGACY_TAGS[m.group(2)], text)
+    new = _move_imports(text)
+    new = _TAG_RE.sub(lambda m: "<" + m.group(1) + LEGACY_TAGS[m.group(2)], new)
     new = _STYLE_RE.sub(lambda m: m.group(1) + replace_spans(m.group(2), list(css_tag_spans(m.group(2)))) + m.group(3), new)
     new = _FIND_RE.sub(lambda m: m.group(1) + m.group(2) + LEGACY_TAGS[m.group(3)] + m.group(2), new)
     notes = [

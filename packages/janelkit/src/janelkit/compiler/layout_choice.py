@@ -40,7 +40,7 @@ _ITEM_ONLY_FLEX = {
     "jkBottom": ("undefined",), "jkLeft": ("undefined",), "jkFirst": (), "jkLast": (),
 }  # fmt: skip
 # Elementos que crecen sin que se lo pidan (flex: 1 por defecto).
-_GROW_BY_DEFAULT = ("JkScroll", "JkSpacer", "JkList", "JkPages")
+_GROW_BY_DEFAULT = ("JkScroll", "JkSpacer", "JkList")
 # Hijos que no ocupan sitio en la caja (no son Item o son invisibles).
 _NOT_ITEMS = ("JkContext", "JkTransition", "Binding", "HoverHandler", "TapHandler", "Timer")
 

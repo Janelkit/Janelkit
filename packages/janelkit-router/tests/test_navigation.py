@@ -10,7 +10,8 @@ from janelkit.diagnostics import JanelError
 from janelkit.inspect import mount
 
 LISTA = """<script>
-from janelkit import navigation, state
+from janelkit import state
+from janelkit_router import navigation
 from Detalle import Detalle
 
 nav = navigation()
@@ -29,7 +30,8 @@ async def elegir():
 
 DETALLE = """<script>
 import asyncio
-from janelkit import before_leave, navigation, prop, state
+from janelkit import before_leave, prop, state
+from janelkit_router import navigation
 
 item = prop("")
 nav = navigation()
@@ -65,7 +67,7 @@ creada = state(True)
 """
 
 APP = """<script>
-from janelkit import sections
+from janelkit_router import sections, Sections
 from Lista import Lista
 from Personas import Personas
 
@@ -150,7 +152,7 @@ def test_mouse_back_button_goes_back(app):
     from PySide6.QtTest import QTest
 
     nav, _ = detalle(app)
-    pages = nav._container
+    pages = nav._container.item
     centro = pages.mapToScene(pages.boundingRect().center()).toPoint()
     QTest.mouseClick(app.window, Qt.MouseButton.BackButton, Qt.KeyboardModifier.NoModifier, QPoint(centro.x(), centro.y()))
     app.wait(0.05)
@@ -301,22 +303,22 @@ def test_else_is_not_allowed_in_key():
 def test_pages_transition_animates_the_entering_page(app):
     s = secciones(app)
     nav = s["lista"]
-    nav._container.setProperty("jkTransition", "slide")
-    nav._container.setProperty("jkTransitionMs", 100)
+    nav._container.item.setProperty("jkTransition", "slide")
+    nav._container.item.setProperty("jkTransitionMs", 100)
     nav.push(nav.page.namespace["Detalle"], item="y")
-    pagina = nav._pages[-1][1]
+    pagina = nav._pages[-1].item
     assert pagina.opacity() < 1 and pagina.x() > 0  # entra desde la derecha
     app.wait(0.25)
     assert pagina.opacity() == 1 and pagina.x() == 0
     nav.pop()
-    abajo = nav._pages[-1][1]
+    abajo = nav._pages[-1].item
     assert abajo.x() < 0  # al volver, entra desde la izquierda
     app.wait(0.25)
     assert abajo.x() == 0 and abajo.opacity() == 1
 
 
 def test_transition_on_pages_compiles_to_its_properties():
-    src = "<script>\nfrom janelkit import pages\nnav = None\n</script>\n<Pages stack={nav} transition:slide={150} />\n"
+    src = "<script>\nfrom janelkit_router import Pages\nnav = None\n</script>\n<Pages stack={nav} transition:slide={150} />\n"
     qml = compile_source(src).qml
     assert 'jkTransition: "slide"' in qml and "jkTransitionMs: 150" in qml
 
@@ -359,7 +361,7 @@ def test_a_page_fits_its_window_and_its_scrolling_grid_wraps(tmp_path):
 </style>
 """, encoding="utf-8")
     (tmp_path / "App.janel").write_text("""<script>
-from janelkit import sections
+from janelkit_router import sections, Sections
 from Rejilla import Rejilla
 s = sections(a=Rejilla)
 </script>
@@ -398,7 +400,7 @@ def test_the_root_of_a_page_adjusts_its_place_with_css(tmp_path, css, esperado):
 </style>
 """, encoding="utf-8")
     (tmp_path / "App.janel").write_text("""<script>
-from janelkit import sections
+from janelkit_router import sections, Sections
 from Pag import Pag
 s = sections(a=Pag)
 </script>

@@ -10,7 +10,7 @@
 | `janel build [carpeta] [-o DIR]` | Compila **todos** los `.janel` del proyecto (también los que aún no se usan) y escribe el QML generado en `build/qml`. Termina con código 1 si hay errores. |
 | `janel compile <archivo.janel> [-o salida.qml]` | Muestra el QML generado para un componente. |
 | `janel parse <archivo.janel>` | Muestra el AST o los errores con línea y columna. |
-| `janel migrate [carpeta] [--write] [--tests]` | Actualiza un proyecto a esta versión de JanelKit. Sin `--write` solo muestra los cambios (un diff); con `--write` los aplica. Con `--tests`, también las plantillas dentro de las pruebas `.py` y `find("Text")`. Lista aparte lo que hay que revisar a mano. En 0.2: los elementos del núcleo en minúscula (`<Text>` → `<text>`, también al cerrar y en los selectores de `<style>`), sin tocar las etiquetas de componentes importados. |
+| `janel migrate [carpeta] [--write] [--tests]` | Actualiza un proyecto a esta versión de JanelKit. Sin `--write` solo muestra los cambios (un diff); con `--write` los aplica. Con `--tests`, también las plantillas dentro de las pruebas `.py` y `find("Text")`. Lista aparte lo que hay que revisar a mano. En 0.2: los elementos del núcleo en minúscula (`<Text>` → `<text>`, también al cerrar y en los selectores de `<style>`), sin tocar las etiquetas de componentes importados; los imports de la navegación pasan a `janelkit_router` (y se añaden `Pages`/`Sections` si la plantilla los usa). |
 
 Todos admiten `--help`.
 

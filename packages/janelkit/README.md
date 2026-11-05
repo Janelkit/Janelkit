@@ -81,7 +81,7 @@ Cuando cambia un `state`, solo se recalcula lo que lo leyó, y solo se actualiza
 | **Asincronía** | Manejadores `async def`, `@task` con estados de carga y error, `background()` para trabajo bloqueante, temporizadores; todo se cancela al desmontar |
 | **Disposición y estilos** | Flexbox de CSS (`<flex>`, `column`, `row`), posición, pseudo-clases y selectores, tokens `var(--primary)`, temas claro y oscuro intercambiables en caliente |
 | **Controles** | Texto (también Markdown), botones, campos, casillas, `select`, `switch`, `slider`, `radiogroup`, `tabs`, `image`, `progressbar`, `<list>` virtualizada, `<video>`, arrastrar y soltar |
-| **Ventanas y navegación** | Varias ventanas, pilas de páginas, secciones que conservan su estado, `before_leave` para cambios sin guardar, Alt+← |
+| **Ventanas** | Varias ventanas, en otra pantalla y a pantalla completa, `before_leave` para cambios sin guardar. La navegación entre pantallas está en [`janelkit-router`](https://pypi.org/project/janelkit-router/) |
 | **Accesibilidad** | Navegación con teclado, foco visible, nombres accesibles, derecha a izquierda |
 | **Interoperabilidad** | Importa un `.qml` propio como si fuera un componente |
 | **Pruebas** | `janelkit.inspect`: monta sin ventana, busca elementos, simula clics y teclas, lee el estado |

@@ -75,11 +75,13 @@ class Handler:
 
 @dataclass
 class RefUse:
-    """`ref={nombre}`: el elemento se asigna al `Ref` del script cuando existe."""
+    """`ref={nombre}`: el elemento se asigna al `Ref` del script cuando existe. También un
+    atributo que recibe un anfitrión (`<Pages stack={nav}>`): el elemento se le pasa a `nav`."""
 
     id: str
     name: str
     loc: SourceLocation
+    attr: str = "ref"
 
 
 @dataclass

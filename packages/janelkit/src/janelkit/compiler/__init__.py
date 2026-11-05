@@ -191,15 +191,21 @@ class CompileSession:
 def _find_in(folder: Path, name: str, nested: bool) -> Path | None:
     for suffix in (".janel", ".qml"):
         # from components import TodoItem  -> components/TodoItem.janel
-        candidate = folder / f"{name}{suffix}"
-        if candidate.is_file():
-            return candidate.resolve()
+        found = _exact(folder / f"{name}{suffix}")
         # from components.TodoItem import TodoItem  -> components/TodoItem.janel
-        if nested and folder.name == name:
-            candidate = folder.with_suffix(suffix)
-            if candidate.is_file():
-                return candidate.resolve()
+        if found is None and nested and folder.name == name:
+            found = _exact(folder.with_suffix(suffix))
+        if found is not None:
+            return found
     return None
+
+
+def _exact(candidate: Path) -> Path | None:
+    """El archivo, si existe con esas mayúsculas (en Windows, `sections` no es `Sections.qml`)."""
+    if not candidate.is_file():
+        return None
+    real = candidate.resolve()
+    return real if real.name == candidate.name else None
 
 
 def _slot_names(nodes: list[Node]) -> set[str]:

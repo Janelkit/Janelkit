@@ -165,7 +165,7 @@ function hintsOf(c, box) {
         selfStretch: c.jkSelfStretch === true,
         scrollable: c.jkScrollable === true,
         isFlex: c.jkIsFlex === true,
-        pages: c.jkPages === true,  // <Pages>/<Sections>: su mínimo es el de la página visible
+        deck: c.jkDeck === true,  // un mazo (JkDeck, p. ej. <Pages>): su mínimo es el del hijo visible
         wraps: c.jkWraps === true,
         // Usa :first-child o :last-child (el compilador declara jkFirst y jkLast).
         marks: typeof c.jkFirst === "boolean",
@@ -228,7 +228,7 @@ function autoMin(it, horiz, legacy) {
     if (legacy || h.scrollable) return 0
     if (!horiz) return prefH(it)               // en columna no se encoge por debajo del contenido
     if (h.isFlex) return it.c.jkQt === true ? qtMinW(it.c) : it.c.jkMinW
-    if (h.pages) return pagesMinW(it.c)
+    if (h.deck) return deckMinW(it.c)
     if (h.wraps) return 0                      // texto que se corta: puede estrecharse
     return prefW(it)
 }
@@ -257,11 +257,11 @@ function qtMinW(box) {
     return m + pad(box.leftPadding, box.padding) + pad(box.rightPadding, box.padding) + box.jkBorderLeftW + box.jkBorderRightW
 }
 
-// Mínimo de contenido en ancho de <Pages>/<Sections>: el de su página visible (con
-// <Sections>, la de la pila visible; JkPages.jkMinW), con la página ya colocada.
-function pagesMinW(pages) {
-    measure(pages)
-    return pages.jkMinW
+// Mínimo de contenido en ancho de un mazo (JkDeck): el de su hijo visible (con mazos
+// anidados, como <Sections>, el del visible de dentro; JkDeck.jkMinW), ya colocado.
+function deckMinW(deck) {
+    measure(deck)
+    return deck.jkMinW
 }
 
 // padding y gap por lado sin fijar (NaN): los generales (como Jk.pad).
@@ -285,9 +285,9 @@ function layout(box) {
         return
     }
     st.stale = false
-    if (box.jkPages === true) {
+    if (box.jkDeck === true) {
         st.busy = true
-        try { arrangePages(box) } finally { st.busy = false }
+        try { arrangeDeck(box) } finally { st.busy = false }
         return
     }
     const lay = box.jkLay
@@ -308,21 +308,21 @@ function layout(box) {
 }
 
 
-// <Pages>/<Sections> (JkPages): solo se ve una página, y su raíz se coloca como un bloque
-// en una columna: ocupa todo el contenedor salvo que fije su tamaño (width, height,
+// Un mazo (JkDeck, p. ej. <Pages>): solo se ve un hijo, y su raíz se coloca como un bloque
+// en una columna: ocupa todo el mazo salvo que fije su tamaño (width, height,
 // max-width…) o align-self; los márgenes `auto` reparten lo que sobra (margin: 0 auto
 // la centra).
-function arrangePages(pages) {
-    const kids = pages.children, cur = pages.currentIndex
-    const page = cur >= 0 && cur < kids.length ? kids[cur] : null  // JkPages ya oculta las demás
+function arrangeDeck(deck) {
+    const kids = deck.children, cur = deck.currentIndex
+    const page = cur >= 0 && cur < kids.length ? kids[cur] : null  // JkDeck ya oculta los demás
     if (!page) {
-        pages.jkMinW = 0
-        pages.implicitWidth = 0
-        pages.implicitHeight = 0
+        deck.jkMinW = 0
+        deck.implicitWidth = 0
+        deck.implicitHeight = 0
         return
     }
-    const h = hintsOf(page, pages)
-    const W = pages.width, H = pages.height
+    const h = hintsOf(page, deck)
+    const W = deck.width, H = deck.height
     const availW = Math.max(0, W - h.ml - h.mr), availH = Math.max(0, H - h.mt - h.mb)
     const self = h.selfAlign, aligned = self === "start" || self === "center" || self === "end"
     let w = h.fillW && !aligned ? availW : h.pw >= 0 ? h.pw : h.wp > 0 ? W * h.wp / 100 : page.implicitWidth
@@ -344,9 +344,9 @@ function arrangePages(pages) {
     page.x = x
     page.y = y
     const content = h.pw >= 0 ? h.pw : typeof page.jkMinW === "number" ? page.jkMinW : 0
-    pages.jkMinW = Math.max(content, h.minW) + h.ml + h.mr
-    pages.implicitWidth = (h.pw >= 0 ? h.pw : page.implicitWidth) + h.ml + h.mr
-    pages.implicitHeight = (h.ph >= 0 ? h.ph : page.implicitHeight) + h.mt + h.mb
+    deck.jkMinW = Math.max(content, h.minW) + h.ml + h.mr
+    deck.implicitWidth = (h.pw >= 0 ? h.pw : page.implicitWidth) + h.ml + h.mr
+    deck.implicitHeight = (h.ph >= 0 ? h.ph : page.implicitHeight) + h.mt + h.mb
 }
 
 function arrange(box, lay, out) {

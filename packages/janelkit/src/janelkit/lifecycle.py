@@ -78,10 +78,10 @@ def on_destroy(fn: F) -> F:
 
 
 def before_leave(fn: F) -> F:
-    """Pregunta antes de salir: `fn()` se llama al descartar la página que contiene este
-    componente (`pop`, `back`, `replace`, `reset`) y al cerrar su ventana con la X.
-    Si devuelve False, no se sale. Puede ser `async` (p. ej. `await dialogs.confirm(...)`).
-    Se puede usar como decorador."""
+    """Pregunta antes de salir: `fn()` se llama al cerrar con la X la ventana que muestra este
+    componente y cuando un anfitrión lo va a descartar (`ask_to_leave`; p. ej. `pop` en una
+    pila de janelkit-router). Si devuelve False, no se sale. Puede ser `async`
+    (p. ej. `await dialogs.confirm(...)`). Se puede usar como decorador."""
     _current("before_leave").add_leave(fn)
     return fn
 
@@ -104,18 +104,42 @@ def inject(key: Any, default: Any = _MISSING) -> Any:
         return default
 
 
-class ElementHost:
-    """Objeto del script que gestiona un elemento de la plantilla al que se conecta.
+def leave_guards(instance: Any) -> list[Callable[[], Any]]:
+    """Las funciones de `before_leave` de `instance` y de todos sus descendientes."""
+    out = list(getattr(instance, "leave_guards", ()))
+    for child in getattr(instance, "children", ()):
+        out.extend(leave_guards(child))
+    return out
 
-    `<Pages stack={nav}>` y `<Sections of={secciones}>` conectan su contenedor con la pila o las
-    secciones del script. El runtime solo conoce esta interfaz, no la navegación.
-    """
 
-    def _attach(self, container: Any, template: Any) -> None:  # pragma: no cover - abstracto
-        raise NotImplementedError
+def ask_to_leave(guards: list[Callable[[], Any]], proceed: Callable[[], Any], refuse: Callable[[], Any] | None = None) -> bool:
+    """Consulta los `before_leave` en orden y llama a `proceed` si ninguno devuelve False
+    (si alguno lo hace, a `refuse`).
 
-    def _detach(self, container: Any) -> None:  # pragma: no cover - abstracto
-        raise NotImplementedError
+    Si uno es asíncrono, la respuesta llega más tarde: devuelve False (todavía no se
+    sale) y `proceed` se llama cuando todos han respondido que sí. Si todos responden
+    al momento, `proceed` se llama antes de volver y devuelve True."""
+    import inspect
+
+    for i, guard in enumerate(guards):
+        answer = guard()
+        if inspect.isawaitable(answer):
+            from .tasks import spawn
+
+            async def later(answer: Any = answer, rest: list = guards[i + 1:]) -> None:
+                if await answer is not False:
+                    ask_to_leave(rest, proceed, refuse)
+                elif refuse is not None:
+                    refuse()
+
+            spawn(later())
+            return False
+        if answer is False:
+            if refuse is not None:
+                refuse()
+            return False
+    proceed()
+    return True
 
 
 class Ref:

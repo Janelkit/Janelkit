@@ -75,7 +75,8 @@ Un solo repositorio con el núcleo y los paquetes del ecosistema, que se publica
 
 | Carpeta | Paquete | Qué es |
 |---|---|---|
-| [`packages/janelkit`](packages/janelkit/README.md) | `janelkit` | El núcleo: lenguaje `.janel`, compilador, reactividad, runtime, disposición, controles, ventanas, navegación, temas, tareas, `persisted`, `janelkit.inspect` y el comando `janel`. |
+| [`packages/janelkit`](packages/janelkit/README.md) | `janelkit` | El núcleo: lenguaje `.janel`, compilador, reactividad, runtime, disposición, controles, ventanas, temas, tareas, `persisted`, `janelkit.inspect` y el comando `janel`. |
+| [`packages/janelkit-router`](packages/janelkit-router/README.md) | `janelkit-router` | Navegación entre pantallas: pilas de páginas y secciones (`pages`, `sections`, `<Pages>`, `<Sections>`). |
 | [`packages/janelkit-i18n`](packages/janelkit-i18n/README.md) | `janelkit-i18n` | Traducciones (`t`, `i18n`): catálogos, plurales y formatos según el idioma. |
 | [`packages/janelkit-desktop`](packages/janelkit-desktop/README.md) | `janelkit-desktop` | Diálogos nativos, portapapeles y notificaciones (`dialogs`, `clipboard`, `notify`). |
 | [`packages/janelkit-vscode`](packages/janelkit-vscode/README.md) | — | Resaltado de `.janel` para VS Code. |

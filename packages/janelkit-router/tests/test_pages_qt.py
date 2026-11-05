@@ -21,7 +21,8 @@ on_destroy(lambda: log.EVENTS.append(("destroy", item.value)))
 """
 
 APP = """<script>
-from janelkit import state, pages, provide
+from janelkit import state, provide
+from janelkit_router import pages, Pages
 from screens.Home import Home
 from screens.Detail import Detail
 provide("session", "S1")

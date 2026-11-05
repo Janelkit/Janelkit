@@ -8,7 +8,8 @@ import json
 import os
 from pathlib import Path
 
-from janelkit import provide, sections
+from janelkit import provide
+from janelkit_router import sections, Sections
 from vistas.MiTrabajo import MiTrabajo
 from vistas.Personas import Personas
 from vistas.Proyecto import Proyecto

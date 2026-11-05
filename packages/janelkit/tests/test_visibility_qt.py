@@ -42,45 +42,6 @@ def muestrear():
 """
 
 
-def test_sections_and_pages_below_are_not_visible_and_their_timers_wait(project):
-    app_file = project({"Panel.janel": PANEL, "Otra.janel": "<text>otra</text>\n", "App.janel": """<script>
-from janelkit import is_visible, sections
-from Panel import Panel
-from Otra import Otra
-raiz = is_visible()
-s = sections(a=Panel, b=Otra)
-</script>
-<window><Sections of={s} /></window>
-"""})
-    with mount(app_file) as app:
-        s = app.get("s")
-        panel = s["a"].page.namespace
-        assert app.get("raiz") is True  # la raíz de la ventana siempre se ve
-        assert panel["visible"].value is True and panel["muestrear"].active
-        app.wait(0.1)
-        assert panel["ticks"].value > 0
-
-        s.show("b")
-        app.process()
-        assert panel["visible"].value is False and not panel["muestrear"].active
-        quieto = panel["ticks"].value
-        app.wait(0.1)
-        assert panel["ticks"].value == quieto
-
-        s.show("a")
-        app.process()
-        assert panel["visible"].value is True and panel["muestrear"].active
-        app.wait(0.1)
-        assert panel["ticks"].value > quieto
-
-        s["a"].push(app.namespace["Otra"])  # la página de debajo tampoco se ve
-        app.process()
-        assert panel["visible"].value is False and not panel["muestrear"].active
-        s["a"].pop()
-        app.process()
-        assert panel["visible"].value is True and "panel True" in app.texts()
-
-
 def test_a_component_inside_hidden_follows_it(project):
     app_file = project({"Panel.janel": PANEL, "App.janel": """<script>
 from janelkit import state

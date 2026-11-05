@@ -90,7 +90,7 @@ def open_window(
     from PySide6.QtCore import QTimer, Qt
 
     from .compiler import compile_file
-    from .pages import split_component_kwargs
+    from .runtime.hosts import split_component_kwargs
     from .runtime.component import ComponentRef
 
     if not isinstance(component, ComponentRef) or component.owner is None:

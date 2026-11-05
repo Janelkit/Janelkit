@@ -57,7 +57,7 @@ Se llaman mientras se ejecuta el `<script>` de un componente; fuera de él lanza
 |---|---|
 | `on_mount` | `on_mount(fn)` (o como decorador) ejecuta `fn` cuando la vista del componente existe. Si `fn` devuelve una función, se llama al desmontar. |
 | `on_destroy` | `on_destroy(fn)` ejecuta `fn` al desmontar el componente. |
-| `before_leave` | `before_leave(fn)` (o como decorador): `fn()` se consulta antes de descartar la página que lo contiene o de cerrar su ventana con la X; si devuelve `False`, no se sale. Puede ser `async`. |
+| `before_leave` | `before_leave(fn)` (o como decorador): `fn()` se consulta antes de cerrar con la X la ventana que lo muestra y antes de que un anfitrión lo descarte (p. ej. al volver de una página de `janelkit-router`); si devuelve `False`, no se sale. Puede ser `async`. |
 | `provide` | `provide(clave, valor)` pone un valor a disposición de los descendientes. |
 | `is_visible` | `is_visible()` devuelve un `computed` que dice si el componente se ve: `False` en una página de debajo de la pila, en una sección que no es la actual, dentro de un `{#hidden}` que lo oculta o en una fila de `<list>` fuera de la vista. La raíz de una ventana siempre se ve (minimizarla no cuenta). Se llama en el script, como `on_mount`. |
 | `inject` | `inject(clave, defecto)` lee el valor del antecesor más cercano que lo provee. Sin defecto y sin proveedor: `LookupError`. |
@@ -108,16 +108,6 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 | `screens` | Pantallas conectadas, reactivo y de solo lectura: `screens.value` es una lista de `Screen`. Cambia sola al conectar o desconectar una pantalla, al cambiar la principal o la resolución. Vacía hasta que la aplicación arranca. Con `<window screen={i} fullscreen={bool}>` se elige dónde se abre la ventana. |
 | `Screen` | Una pantalla de `screens`: `index`, `name`, `width`, `height`, `x`, `y` (píxeles lógicos del escritorio virtual), `primary`, `scale` (píxeles físicos por píxel lógico). |
 
-### Navegación
-
-| Nombre | Descripción |
-|---|---|
-| `pages` | `nav = pages(Inicio, **props)` en el script crea una pila de páginas; `<Pages stack={nav} />` muestra la de arriba. |
-| `PageStack` | Tipo de `pages`: `.push(C, **props_y_on_eventos)` (se puede esperar: `await` devuelve el valor de `.back(valor)`), `.pop()`, `.back(valor=None)`, `.replace(...)`, `.reset(...)` (los cuatro se pueden esperar: `True` si se salió, `False` si un `before_leave` lo impidió); reactivos `.current`, `.depth`, `.can_go_back`; `.page` (instancia visible). |
-| `navigation` | `nav = navigation()` en el script de una página (o de un componente dentro de ella) da su pila. |
-| `sections` | `secciones = sections(a=A, b=B)` crea secciones paralelas, cada una con su pila; `<Sections of={secciones} />` muestra la actual. |
-| `Sections` | Tipo de `sections`: `.show(nombre)`, `[nombre]` (su pila), `.stack` (la de la visible), `.names`; reactivo `.current`. |
-
 ### Vídeo
 
 | Nombre | Descripción |
@@ -130,7 +120,7 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 |---|---|
 | `locale` | Idioma de la interfaz: `.language`, `.set(idioma)`, `.reset()`, `.rtl` (¿se escribe de derecha a izquierda? Entonces toda la interfaz se refleja). Reactivo; también fija el `QLocale` por defecto de Qt. `janelkit_i18n.i18n.set()` lo cambia. |
 
-Las traducciones (`t`, `i18n`) están en [`janelkit-i18n`](../packages/janelkit-i18n/README.md), y los diálogos, el portapapeles y las notificaciones (`dialogs`, `clipboard`, `notify`), en [`janelkit-desktop`](../packages/janelkit-desktop/README.md).
+La navegación (`pages`, `sections`, `navigation`, `<Pages>`, `<Sections>`) está en [`janelkit-router`](../packages/janelkit-router/README.md); las traducciones (`t`, `i18n`), en [`janelkit-i18n`](../packages/janelkit-i18n/README.md), y los diálogos, el portapapeles y las notificaciones (`dialogs`, `clipboard`, `notify`), en [`janelkit-desktop`](../packages/janelkit-desktop/README.md).
 
 ### Estilos
 
@@ -168,11 +158,17 @@ Las traducciones (`t`, `i18n`) están en [`janelkit-i18n`](../packages/janelkit-
 
 ## `janelkit.ext` (extensiones)
 
-Para paquetes que amplían JanelKit sin tocar el núcleo (`janelkit-i18n`, `janelkit-desktop`…). Una extensión usa solo la API pública: los nombres de `janelkit` y los de estos módulos.
+Para paquetes que amplían JanelKit sin tocar el núcleo (`janelkit-router`, `janelkit-i18n`, `janelkit-desktop`…). Una extensión usa solo la API pública: los nombres de `janelkit` y los de estos módulos.
 
 | Nombre | Descripción |
 |---|---|
 | `app` | `app()` devuelve la aplicación en marcha, o `None`. Son públicos `.engine` (el `QQmlEngine`), `.qt_app` (la `QGuiApplication`) y `.main_window()` (la ventana de la vista montada más reciente, o `None`). |
+| `Host` | Base de un anfitrión: un objeto del script que monta componentes dentro de un elemento `.qml` con una propiedad `property JkHost nombre` (y raíz `JkDeck`, para que muestre uno de sus hijos; ver [lenguaje.md](lenguaje.md#elementos-propios-en-qml)). `<Elemento nombre={objeto} />` llama a `objeto.attach(container)` cuando el elemento existe y a `objeto.detach(container)` cuando se destruye. Así está hecho `janelkit-router`. |
+| `Container` | Lo que recibe `attach`: `.item` (el objeto Qt del elemento), `.visibility` (la compuerta del sitio donde está, o `None`), `.mount(Componente, visibility=None, context=None, **props_y_on_eventos)` (crea el componente dentro del elemento, como hijo del que tiene la plantilla; `context` son valores que el hijo y sus descendientes leen con `inject`) y `.nested(item)` (otro elemento creado dentro, con el mismo dueño). |
+| `Child` | Lo que devuelve `mount`: `.name`, `.instance` (su `.namespace`), `.item`, `.visibility` (su `Gate`), `.leave_guards()` y `.dispose()` (lo libera: sus `on_destroy` se ejecutan). |
+| `Gate` | Compuerta de visibilidad: `Gate(parent=None)`, `.set_open(bool)`, `.parent`, `.visible` (reactivo). Mientras ella o una de fuera está cerrada, lo que muestran los componentes que la llevan espera y se pone al día al abrirse; `is_visible()` la lee. |
+| `ask_to_leave` | `ask_to_leave(guards, proceed, refuse=None)`: consulta los `before_leave` en orden y llama a `proceed` si ninguno devuelve `False` (si no, a `refuse`). Si todos responden al momento, devuelve `True` tras llamar a `proceed`; si alguno es `async`, devuelve `False` y responde más tarde. |
+| `is_component` | `is_component(valor)`: si es un componente importado de un `.janel` (lo que aceptan `mount` y `open_window`; tiene `.name`). |
 | `inspector` | Decorador: `@inspector("nombre")` sobre `fn(app, *args)` añade el método `MountedApp.nombre` de `janelkit.inspect`. Así `janelkit_desktop.dialogs` aporta `dialogs()` y `answer_dialog()`, y `janelkit_desktop.notifications` aporta `notifications()`. |
 
 **Subcomandos de `janel`:** un paquete los declara como entry points del grupo `janelkit.commands`. El nombre del entry point es el del comando y apunta a `configurar(parser)`, que recibe el `ArgumentParser` del subcomando, le añade sus argumentos y fija `parser.set_defaults(func=ejecutar)`. `ejecutar(args)` devuelve el código de salida, y la primera línea de la documentación de `configurar` es la ayuda.

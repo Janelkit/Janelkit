@@ -1,7 +1,8 @@
 <script lang="python">
 # Ficha de una persona: editar sus datos (un borrador), ver sus tarjetas en todos los
 # proyectos (abrir una lleva a su tablero) y darla de baja, con aviso de cuántas tiene.
-from janelkit import before_leave, inject, navigation, prop, state
+from janelkit import before_leave, inject, prop, state
+from janelkit_router import navigation
 from janelkit_desktop import dialogs
 from services.datos import ROLES, cuenta
 

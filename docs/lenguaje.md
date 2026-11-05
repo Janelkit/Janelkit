@@ -46,6 +46,20 @@ def reset():
 
 Otras utilidades: `count.set(v)`, `count.update(fn)`, `count.peek()` (lee sin registrar dependencia). Asignar un valor igual (mismo tipo y `==`) no notifica.
 
+En una clase (un servicio con estado propio), `@computed` sobre un método da un `computed` por instancia, que vive lo que vive la instancia:
+
+```python
+class Camara:
+    def __init__(self):
+        self.fps = state(0.0)
+
+    @computed
+    def estado(self):
+        return "en marcha" if self.fps.value > 0 else "parada"
+```
+
+En Python se lee `camara.estado.value`; en la plantilla, `{camara.estado}`.
+
 ### Colecciones reactivas
 
 Un `list`, `dict` o `set` guardado en un `state` se convierte (también los anidados) en una versión reactiva que sigue siendo una subclase de `list`/`dict`/`set`: `append`, `remove`, `sort`, `todo["done"] = True`, `del d[k]`, `s.add(x)`… actualizan la interfaz.

@@ -30,7 +30,7 @@ Lo público es:
 |---|---|
 | `state` | `state(valor)` crea un `State`. Las listas, diccionarios y conjuntos se vuelven reactivos: modificarlos en el sitio notifica. |
 | `State` | Tipo de `state`. `.value`, `.set()`, `.update(fn)`, `.peek()`, `.notify()`. Para depurar: `.subscriber_count`, cuántos efectos y `computed` lo leen ahora (debe bajar al desmontar lo que lo usa; también en `Computed`). |
-| `computed` | Decorador de valores derivados, perezosos y en caché. Si al recalcularse da el mismo valor (números, texto, tuplas… no objetos mutables), lo que depende solo de él no se vuelve a ejecutar. |
+| `computed` | Decorador de valores derivados, perezosos y en caché. Si al recalcularse da el mismo valor (números, texto, tuplas… no objetos mutables), lo que depende solo de él no se vuelve a ejecutar. En un método de una clase (`@computed def total(self)`), cada instancia tiene el suyo: `objeto.total.value`. |
 | `Computed` | Tipo de `computed`. `.value`, `.peek()`. |
 | `effect` | `effect(fn)` ejecuta `fn` ahora y cada vez que cambie lo que leyó. Dentro de un componente se libera al desmontarlo. |
 | `Effect` | Tipo de `effect`. `.dispose()`. Su `repr` dice qué función ejecuta, cuántas fuentes lee y si está liberado o en espera porque no se ve. |

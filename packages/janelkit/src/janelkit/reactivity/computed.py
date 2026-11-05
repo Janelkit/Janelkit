@@ -1,9 +1,25 @@
-"""Valores derivados perezosos con invalidación automática."""
+"""Valores derivados perezosos con invalidación automática.
+
+`@computed` también vale en un método de una clase: cada instancia tiene su propio
+`computed` (se crea la primera vez que se lee y vive lo que vive la instancia):
+
+    class Carrito:
+        def __init__(self):
+            self.items = state([])
+
+        @computed
+        def total(self):
+            return sum(i["precio"] for i in self.items.value)
+
+    carrito.total.value      # en la plantilla, {carrito.total}
+"""
 from __future__ import annotations
 
-from typing import Callable, Generic, TypeVar
+import inspect
+import types
+from typing import Any, Callable, Generic, TypeVar
 
-from .effects import Observer, Source
+from .effects import Observer, Source, current_scope
 
 T = TypeVar("T")
 
@@ -27,6 +43,7 @@ def _immutable(value: object) -> bool:
 
 class Computed(Observer, Source, Generic[T]):
     _certain = False  # avisa de que quizá cambió: quien lo lea lo recalcula para saberlo
+    _method: str | None = None  # @computed sobre un método: su nombre en la clase
 
     """Valor calculado a partir de otros estados; se recalcula solo al leerse tras un cambio."""
 
@@ -49,6 +66,26 @@ class Computed(Observer, Source, Generic[T]):
             self._dirty = self.disposed
         self._track()
         return self._value  # type: ignore[return-value]
+
+    # -- @computed en un método: un computed por instancia -----------------------------
+    def __set_name__(self, owner: type, name: str) -> None:
+        if _takes_self(self._fn):
+            self._method = name
+
+    def __get__(self, obj: Any, objtype: type | None = None) -> Any:
+        name = self._method
+        if obj is None or name is None:
+            return self
+        bound: Computed[Any] = Computed(types.MethodType(self._fn, obj))
+        # Vive lo que vive la instancia, no lo que vive quien lo leyó primero.
+        scope = current_scope()
+        if scope is not None:
+            scope.discard(bound)
+        try:
+            vars(obj)[name] = bound  # las siguientes lecturas ya no pasan por aquí
+        except TypeError:
+            raise TypeError(f"@computed en un método necesita que {type(obj).__name__} tenga __dict__ (sin __slots__)") from None
+        return bound
 
     def peek(self) -> T:
         from .effects import untracked
@@ -75,5 +112,16 @@ class Computed(Observer, Source, Generic[T]):
 
 
 def computed(fn: Callable[[], T]) -> Computed[T]:
-    """Decorador: `@computed def total(): return a.value + b.value`."""
+    """Decorador: `@computed def total(): return a.value + b.value`. En un método de una
+    clase (`def total(self)`), un computed por instancia."""
     return Computed(fn)
+
+
+def _takes_self(fn: Callable[..., Any]) -> bool:
+    """¿Es `fn` un método (un único parámetro posicional obligatorio)?"""
+    try:
+        params = list(inspect.signature(fn).parameters.values())
+    except (TypeError, ValueError):
+        return False
+    required = [p for p in params if p.default is p.empty and p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)]
+    return len(required) == 1

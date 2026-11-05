@@ -146,3 +146,8 @@ nav = pages(Inicio)
     assert "\nfrom janelkit_router import sections, Sections\n" in only and "from janelkit import" not in only
     py, _ = migrate_python("from janelkit import PageStack, Sections\n")
     assert py == "from janelkit_router import PageStack, SectionSet\n"
+
+
+def test_migrate_moves_persisted_to_janelkit_store():
+    py, _ = migrate_python("from janelkit import state, persisted, pages\n")
+    assert py == "from janelkit import state\nfrom janelkit_store import persisted\nfrom janelkit_router import pages\n"

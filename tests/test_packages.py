@@ -28,7 +28,7 @@ def project(package: Path) -> dict:
 
 
 def test_the_repository_has_the_expected_packages():
-    assert [project(p)["name"] for p in PYTHON_PACKAGES] == ["janelkit", "janelkit-desktop", "janelkit-i18n", "janelkit-router"]
+    assert [project(p)["name"] for p in PYTHON_PACKAGES] == ["janelkit", "janelkit-desktop", "janelkit-i18n", "janelkit-router", "janelkit-store"]
 
 
 @pytest.mark.parametrize("package", PYTHON_PACKAGES, ids=lambda p: p.name)

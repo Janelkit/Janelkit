@@ -28,12 +28,20 @@ def janel_app():
 
 @pytest.fixture
 def mount(janel_app):
-    """Monta componentes desde código fuente (o un archivo) y los desmonta al terminar la prueba."""
+    """Monta componentes desde código fuente (o un archivo) y los desmonta al terminar la prueba.
+
+    Abre una sesión de aplicación (janelkit.ext.session) si no hay ninguna, y la termina al final."""
+    from pathlib import Path
+
+    from janelkit import session
     from janelkit.compiler import compile_file, compile_source
 
     mounted = []
+    opened = []
 
     def _mount(source, file: str = "App.janel"):
+        if session.current() is None:
+            opened.append(session.start(Path(source) if hasattr(source, "read_text") else Path(file)))
         compiled = compile_file(source) if hasattr(source, "read_text") else compile_source(source, file)
         m = janel_app.mount(compiled)
         janel_app.qt_app.processEvents()
@@ -45,11 +53,13 @@ def mount(janel_app):
         if m in janel_app.mounted:
             janel_app.unmount(m)
     janel_app.qt_app.processEvents()
+    if opened and session.current() is opened[0]:
+        session.end()
 
 
 @pytest.fixture(autouse=True, scope="session")
 def isolated_data(tmp_path_factory):
-    """`persisted` escribe en una carpeta temporal, no en la del usuario."""
+    """Lo que se guarda en la carpeta de datos (persisted, stores) va a una temporal, no a la del usuario."""
     os.environ["JANELKIT_DATA_DIR"] = str(tmp_path_factory.mktemp("persisted"))
     yield
 

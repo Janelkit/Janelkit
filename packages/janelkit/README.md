@@ -75,7 +75,7 @@ Cuando cambia un `state`, solo se recalcula lo que lo leyó, y solo se actualiza
 
 | Área | Contenido |
 |---|---|
-| **Reactividad** | `state`, `@computed`, `effect`, `batch`, colecciones reactivas, `persisted` (estado que se recuerda entre sesiones) |
+| **Reactividad** | `state`, `@computed` (también en métodos), `effect`, `batch`, colecciones reactivas. Los stores y `persisted` están en [`janelkit-store`](https://pypi.org/project/janelkit-store/) |
 | **Plantilla** | `{expr}` con formato (`{cpu:.1f}`), `on:evento`, `bind:value`, `class:x={cond}`, `{#if}`, `{#each}` con claves, `{#key}`, `{#hidden}`, transiciones |
 | **Componentes** | Importados como módulos Python, `prop()` con tipos, `event()`, slots, `on_mount`/`on_destroy`, `ref`, `provide`/`inject` |
 | **Asincronía** | Manejadores `async def`, `@task` con estados de carga y error, `background()` para trabajo bloqueante, temporizadores; todo se cancela al desmontar |

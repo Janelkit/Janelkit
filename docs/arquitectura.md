@@ -10,7 +10,7 @@ Una funcionalidad es del **núcleo** (`janelkit`) si cumple al menos una de esta
 2. Necesita detalles internos que no deben ser públicos: el puente QObject, las regiones dinámicas, el IR del compilador.
 3. Define una semántica que todo lo demás asume: cómo se propaga un cambio, cuándo se monta y desmonta un componente, cuándo se agrupan cambios (`batch`).
 
-Si algo puede construirse **solo con la API pública** y no todas las aplicaciones lo necesitan, va en un paquete aparte. Por eso la gestión de estado (`persisted` incluido) y el idioma de la interfaz (`janelkit.locale`, que cambia la dirección de toda la disposición) son del núcleo, y la navegación entre pantallas, las traducciones o los diálogos del sistema no: son paquetes que usan la API pública, como podría hacerlo cualquiera.
+Si algo puede construirse **solo con la API pública** y no todas las aplicaciones lo necesitan, va en un paquete aparte. Por eso la reactividad (`state`, `computed`, `effect`) y el idioma de la interfaz (`janelkit.locale`, que cambia la dirección de toda la disposición) son del núcleo, y la navegación entre pantallas, los stores y `persisted`, las traducciones o los diálogos del sistema no: son paquetes que usan la API pública, como podría hacerlo cualquiera.
 
 ## Paquetes del repositorio
 
@@ -18,6 +18,7 @@ Si algo puede construirse **solo con la API pública** y no todas las aplicacion
 |---|---|---|
 | `packages/janelkit` | El núcleo: lenguaje, compilador, reactividad, runtime, controles, CLI, inspección | PySide6, qasync |
 | `packages/janelkit-router` | Navegación: pilas de páginas, secciones, `<Pages>`, `<Sections>` | `janelkit`, solo su API pública |
+| `packages/janelkit-store` | Stores: datos compartidos con acciones, modo estricto, seguimiento de cambios y persistencia; `persisted` | `janelkit`, solo su API pública |
 | `packages/janelkit-i18n` | Traducciones: catálogos, plurales, formatos | `janelkit`, solo su API pública |
 | `packages/janelkit-desktop` | Diálogos, portapapeles, notificaciones | `janelkit`, solo su API pública |
 | `packages/janelkit-vscode` | Resaltado de `.janel` en VS Code | — |
@@ -56,7 +57,7 @@ Cada módulo de `janelkit` pertenece a una capa y solo importa de su capa o de l
 |---|---|---|
 | **0** | `reactivity`, `diagnostics`, `events` | Estado reactivo (`State`, `Computed`, `Effect`, `batch`, `Scope`, `Gate`, colecciones, props, enganche de escrituras); errores con ubicación; los objetos de evento de `<flex>`. Python puro |
 | **1** | `compiler` | `.janel` → AST → IR → QML, con el catálogo de elementos (`elements.py`) y el CSS (`css_parser.py`, `css.py`, `cascade.py`). Python puro |
-| **2** | `runtime`, `lifecycle`, `windows`, `tasks`, `timers`, `storage`, `locale`, `themes`, `displays` | Instancias de componentes, puente con QML, anfitriones (`runtime/hosts.py`), ciclo de vida, ventanas, asincronía, temporizadores, `persisted`, idioma, temas, pantallas |
+| **2** | `runtime`, `lifecycle`, `windows`, `tasks`, `timers`, `session`, `locale`, `themes`, `displays` | Instancias de componentes, puente con QML, anfitriones (`runtime/hosts.py`), ciclo de vida, ventanas, asincronía, temporizadores, sesión de aplicación, idioma, temas, pantallas |
 | **3** | `qt_backend`, `video` | Arranque de Qt y del bucle de eventos, carga del QML, eventos de `<flex>`, motor de disposición, vídeo |
 | **4** | `cli`, `inspect`, `testing`, `ext`, `janelkit` (raíz) | La CLI `janel`, la inspección para pruebas, las fixtures de pytest, la API para extensiones y lo que exporta `janelkit` |
 

@@ -29,7 +29,7 @@ def imports(path: Path) -> list[tuple[str, list[str], int]]:
 
 
 def test_there_are_ecosystem_packages_to_check():
-    assert {p.name for p in ECOSYSTEM} >= {"janelkit_i18n", "janelkit_desktop", "janelkit_router"}
+    assert {p.name for p in ECOSYSTEM} >= {"janelkit_i18n", "janelkit_desktop", "janelkit_router", "janelkit_store"}
 
 
 def test_the_core_does_not_import_the_ecosystem():

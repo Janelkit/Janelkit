@@ -6,7 +6,7 @@
 4. Ejecuta `janel --help`, `janel new demo` y `python main.py` (Qt offscreen)
    y confirma que `janelkit` se importa desde el entorno, no desde el checkout.
 5. Construye e instala junto a él los wheels de las extensiones (janelkit-i18n,
-   janelkit-desktop, janelkit-router) y comprueba que se importan, que incluyen sus
+   janelkit-desktop, janelkit-router, janelkit-store) y comprueba que se importan, que incluyen sus
    archivos (los elementos .qml del router) y que pip acepta su rango del núcleo.
 
 Uso:  python tools/check_wheel.py [--keep]
@@ -24,7 +24,7 @@ import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-EXTENSIONS = {"janelkit-i18n": "janelkit_i18n", "janelkit-desktop": "janelkit_desktop", "janelkit-router": "janelkit_router"}
+EXTENSIONS = {"janelkit-i18n": "janelkit_i18n", "janelkit-desktop": "janelkit_desktop", "janelkit-router": "janelkit_router", "janelkit-store": "janelkit_store"}
 REQUIRED = [
     "janelkit/__init__.py",
     "janelkit/compiler/qml_generator.py",

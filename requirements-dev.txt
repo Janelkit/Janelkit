@@ -8,6 +8,7 @@
 -e packages/janelkit-i18n
 -e packages/janelkit-desktop
 -e packages/janelkit-router
+-e packages/janelkit-store
 
 # Pruebas y comprobaciones
 pytest==9.1.1

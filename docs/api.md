@@ -36,8 +36,6 @@ Lo público es:
 | `Effect` | Tipo de `effect`. `.dispose()`. Su `repr` dice qué función ejecuta, cuántas fuentes lee y si está liberado o en espera porque no se ve. |
 | `batch` | `with batch():` agrupa cambios; los efectos se ejecutan una vez al final. |
 | `untracked` | `with untracked():` lee estado sin registrar dependencias. |
-| `persisted` | `persisted(clave, valor_inicial)` crea un `Persisted`: un `state` que se recuerda entre sesiones. Lee el valor guardado al crearse y guarda cada cambio (también en el sitio) en `<carpeta de datos>/<clave>.json`, agrupado y al cerrar. La misma clave devuelve el mismo objeto. Solo valores JSON. Ver [lenguaje.md](lenguaje.md#estado-que-se-recuerda-persisted). |
-| `Persisted` | Tipo de `persisted`: lo de `State` más `.key`, `.file` y `.flush()` (escribe ya lo pendiente). |
 
 ### Componentes
 
@@ -120,7 +118,7 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 |---|---|
 | `locale` | Idioma de la interfaz: `.language`, `.set(idioma)`, `.reset()`, `.rtl` (¿se escribe de derecha a izquierda? Entonces toda la interfaz se refleja). Reactivo; también fija el `QLocale` por defecto de Qt. `janelkit_i18n.i18n.set()` lo cambia. |
 
-La navegación (`pages`, `sections`, `navigation`, `<Pages>`, `<Sections>`) está en [`janelkit-router`](../packages/janelkit-router/README.md); las traducciones (`t`, `i18n`), en [`janelkit-i18n`](../packages/janelkit-i18n/README.md), y los diálogos y el portapapeles (`dialogs`, `clipboard`), en [`janelkit-desktop`](../packages/janelkit-desktop/README.md).
+La navegación (`pages`, `sections`, `navigation`, `<Pages>`, `<Sections>`) está en [`janelkit-router`](../packages/janelkit-router/README.md); los stores y `persisted`, en [`janelkit-store`](../packages/janelkit-store/README.md); las traducciones (`t`, `i18n`), en [`janelkit-i18n`](../packages/janelkit-i18n/README.md), y los diálogos y el portapapeles (`dialogs`, `clipboard`), en [`janelkit-desktop`](../packages/janelkit-desktop/README.md).
 
 ### Estilos
 
@@ -171,7 +169,7 @@ Para paquetes que amplían JanelKit sin tocar el núcleo (`janelkit-router`, `ja
 | `is_component` | `is_component(valor)`: si es un componente importado de un `.janel` (lo que aceptan `mount` y `open_window`; tiene `.name`). |
 | `Scope` | Un ámbito propio para lo que no es de ningún componente (un store): `Scope()`; `with ambito.active():` hace suyo lo que se crea dentro (`effect`, `computed`, temporizadores, tareas, también tras un `await`); `.dispose()` lo libera todo; `.disposed`. |
 | `session` | `session()` da la sesión de la aplicación en marcha, o `None`. Cada `run()` abre una y cada `inspect.mount()` otra nueva, con su carpeta de datos temporal: lo que un paquete guarda en ella es de esa aplicación, no del proceso, y una prueba no ve lo que dejó la anterior. |
-| `Session` | Tipo de `session()`: `.name` (el de la carpeta del proyecto), `.data_dir` (`JANELKIT_DATA_DIR`, la temporal de `mount` o la carpeta de datos del usuario más `.name`), `.data` (un diccionario para los paquetes; cada uno con su clave), `.on_end(fn)` (al cerrar la aplicación o desmontarla; en orden inverso, y un error en una no impide las demás). `persisted` guarda en su `.data_dir`. |
+| `Session` | Tipo de `session()`: `.name` (el de la carpeta del proyecto), `.data_dir` (`JANELKIT_DATA_DIR`, la temporal de `mount` o la carpeta de datos del usuario más `.name`), `.data` (un diccionario para los paquetes; cada uno con su clave), `.on_end(fn)` (al cerrar la aplicación o desmontarla; en orden inverso, y un error en una no impide las demás). `persisted` y los stores de `janelkit-store` guardan en su `.data_dir`. |
 | `on_write` | `on_write(fn)` llama a `fn(destino, dueño, antes)` justo **antes** de cada escritura de estado: al asignar un `State` (`antes` es su valor) y al modificar en el sitio una lista, diccionario o conjunto reactivo (`antes` es `None`; la colección aún tiene el contenido de antes). `dueño` es lo que se le dio con `own`, o `None`. Si `fn` lanza una excepción, la escritura no se hace. Devuelve la función que lo quita. Sin nadie escuchando no cuesta nada. |
 | `own` | `own(destino, dueño)` marca un `State` o una colección reactiva, y todo lo que contiene, como de `dueño`; lo que se inserte o se asigne después lo hereda. Así un store sabe que `items[3]["hecho"] = True` es de su campo `items`. |
 | `inspector` | Decorador: `@inspector("nombre")` sobre `fn(app, *args)` añade el método `MountedApp.nombre` de `janelkit.inspect`. Así `janelkit_desktop.dialogs` aporta `dialogs()` y `answer_dialog()`. |

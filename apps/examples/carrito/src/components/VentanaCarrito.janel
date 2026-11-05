@@ -1,0 +1,32 @@
+<script>
+# La segunda ventana: el mismo carrito (use() da la misma instancia en toda la aplicación).
+from janelkit_store import use
+from stores.carrito import Carrito
+carrito = use(Carrito)
+</script>
+
+<window title="Carrito" width={320} height={360}>
+  <column class="pagina">
+    <text class="titulo">Carrito · {carrito.unidades} unidades</text>
+    {#each carrito.lineas as l (l["id"])}
+      <row class="linea">
+        <text flex={1}>{l["cantidad"]} × {l["nombre"]}</text>
+        <button variant="ghost" on:click={carrito.quitar(l["id"])} label={f"Quitar {l['nombre']}"}>−</button>
+      </row>
+    {:else}
+      <text class="suave">Vacío.</text>
+    {/each}
+    <textfield bind:value={carrito.nota} placeholder="Nota para el pedido" />
+    <row class="pie">
+      <text flex={1}>Total: {carrito.total:.2f} €</text>
+      <button on:click={carrito.vaciar()} enabled={carrito.unidades > 0}>Vaciar</button>
+    </row>
+  </column>
+</window>
+
+<style>
+.pagina { padding: 16px; gap: 8px; }
+.titulo { font-weight: 600; }
+.linea, .pie { gap: 8px; align-items: center; }
+.suave { color: var(--text-muted); }
+</style>

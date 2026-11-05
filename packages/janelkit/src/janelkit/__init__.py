@@ -22,7 +22,6 @@ from .reactivity import (
 from .locale import locale
 from .events import DragEvent, FocusEvent, KeyEvent, PointerEvent, ResizeEvent, WheelEvent
 from .lifecycle import Ref, before_leave, inject, is_visible, on_destroy, on_mount, provide, ref
-from .storage import Persisted, persisted
 from .themes import theme
 from .tasks import Task, background, spawn, task
 from .timers import Timer, interval, timeout
@@ -42,7 +41,6 @@ __all__ = [
     "Frames",
     "KeyEvent",
     "Prop",
-    "Persisted",
     "PointerEvent",
     "PropError",
     "Ref",
@@ -65,7 +63,6 @@ __all__ = [
     "locale",
     "on_destroy",
     "on_mount",
-    "persisted",
     "open_window",
     "prop",
     "provide",
@@ -102,6 +99,11 @@ _REMOVED = {
         name: f"{name} pasó al paquete janelkit-router en JanelKit 0.2.0: pip install janelkit-router y "
         f"from janelkit_router import {name}" + (" (y Pages para <Pages>)" if name == "pages" else "")
         for name in ("pages", "sections", "navigation", "PageStack")
+    },
+    **{
+        name: f"{name} pasó al paquete janelkit-store en JanelKit 0.2.0: pip install janelkit-store y "
+        f"from janelkit_store import {name}"
+        for name in ("persisted", "Persisted")
     },
     "Sections": "Sections pasó a janelkit-router en JanelKit 0.2.0: el tipo de sections() se llama "
     "SectionSet y la etiqueta <Sections> se importa con from janelkit_router import Sections",

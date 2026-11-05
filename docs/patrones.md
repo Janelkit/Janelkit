@@ -104,9 +104,12 @@ async def tick():
 
 `when=` acepta cualquier condición reactiva: `when=hub.ready`, `when=lambda: visible.value and hub.ready.value`. Un `effect` puede usar `visible` igual, por ejemplo para soltar la cámara mientras no se ve.
 
-## Servicios compartidos con `state`
+## Datos compartidos: store o `state` en un servicio
 
-Un servicio (`services/cameras.py`) puede tener `state` como atributos y la plantilla los usa directamente: `{hub.status}`, `{#if hub.ready}`, `{#each hub.errors as e}` se muestran con su valor y se actualizan. Dentro de una operación, pide el valor: `{hub.ready.value and "lista"}`.
+- Lo que comparten varias vistas o ventanas (el usuario, los documentos, el carrito) va en un **store** de [`janelkit-store`](../packages/janelkit-store/README.md): una instancia por aplicación (`use(Carrito)`), acciones que agrupan y anotan cada cambio, modo estricto si se quiere, y una instancia nueva en cada prueba.
+- `state` en un `.py` queda para lo que no es «los datos de la aplicación»: un objeto con estado propio del que hay varios (una `Camara` por cámara con `self.estado = state(...)`), una biblioteca que ofrece una API reactiva, o lógica que se prueba sin Qt.
+
+Un servicio con `state` como atributos se usa directamente en la plantilla: `{hub.status}`, `{#if hub.ready}`, `{#each hub.errors as e}` se muestran con su valor y se actualizan. Dentro de una operación, pide el valor: `{hub.ready.value and "lista"}`. `@computed` sobre un método da un derivado por instancia.
 
 Un temporizador creado en el servicio (por ejemplo, el que oculta un aviso) no hace falta guardarlo: sigue vivo mientras está activo.
 

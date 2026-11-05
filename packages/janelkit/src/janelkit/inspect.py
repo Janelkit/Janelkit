@@ -630,7 +630,7 @@ def mount(entry: str | os.PathLike[str], headless: bool = True) -> Iterator[Moun
         sys.path.insert(0, str(path.parent))
     before = set(sys.modules)
     application = Application.current or Application([])
-    # Una sesión por montaje, con una carpeta de datos temporal: persisted() y los paquetes
+    # Una sesión por montaje, con una carpeta de datos temporal: los paquetes (persisted, stores)
     # no tocan los datos reales del usuario, y una prueba no ve lo que dejó la anterior.
     data = Path(tempfile.mkdtemp(prefix="janelkit-data-"))
     session.start(path, data)

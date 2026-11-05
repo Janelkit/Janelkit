@@ -1,17 +1,21 @@
-"""persisted(clave, valor): estado que se recuerda entre sesiones (janelkit/storage.py)."""
+"""persisted(clave, valor): estado que se recuerda entre sesiones (janelkit_store/_files.py)."""
 import json
 import tempfile
 from pathlib import Path
 
 import pytest
 
-from janelkit import Persisted, computed, persisted, session, storage
+from janelkit import computed, session
+from janelkit_store import Persisted, persisted
+from janelkit_store._files import data_dir
+
+DATA_ENV = "JANELKIT_DATA_DIR"
 from janelkit.inspect import mount
 
 
 @pytest.fixture
 def data(tmp_path, monkeypatch):
-    monkeypatch.setenv(storage.DATA_ENV, str(tmp_path))
+    monkeypatch.setenv(DATA_ENV, str(tmp_path))
     session.start(tmp_path / "App.janel")
     yield tmp_path
     session.end()
@@ -63,16 +67,16 @@ def test_bad_keys_values_and_files(data, caplog):
 
 
 def test_in_an_app_writes_are_grouped_and_mount_uses_a_temporary_folder(monkeypatch):
-    monkeypatch.delenv(storage.DATA_ENV, raising=False)
+    monkeypatch.delenv(DATA_ENV, raising=False)
     d = Path(tempfile.mkdtemp()) / "notas" / "src"
     d.mkdir(parents=True)
     (d / "App.janel").write_text("""<script>
-from janelkit import persisted
+from janelkit_store import persisted
 n = persisted("n", 0)
 </script>
 <column><button text={f"n={n}"} on:click={n += 1} /></column>""", encoding="utf-8")
     with mount(d / "App.janel") as app:
-        folder = storage.data_folder()
+        folder = data_dir()
         assert folder.name.startswith("janelkit-data-")  # no la carpeta real del usuario
         for _ in range(3):
             app.find("button").click()
@@ -84,9 +88,9 @@ n = persisted("n", 0)
 
 
 def test_app_name_comes_from_the_project_folder(monkeypatch):
-    monkeypatch.delenv(storage.DATA_ENV, raising=False)
+    monkeypatch.delenv(DATA_ENV, raising=False)
     session.start(Path("/x/gestor/src/App.janel"))
-    assert storage.data_folder().name == "gestor"
+    assert data_dir().name == "gestor"
     session.start(Path("/x/contador/App.janel"))
-    assert storage.data_folder().name == "contador"
+    assert data_dir().name == "contador"
     session.end()

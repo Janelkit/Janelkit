@@ -12,8 +12,8 @@ API_DOC = (Path(__file__).resolve().parents[3] / "docs" / "api.md").read_text(en
 
 PUBLIC = {
     "janelkit": [
-        "Computed", "DragEvent", "Effect", "Event", "FocusEvent", "Frames", "KeyEvent", "Persisted", "PointerEvent", "ResizeEvent", "WheelEvent", "Prop", "PropError", "Ref", "Screen", "State", "Task", "Timer", "__version__", "background",
-        "batch", "before_leave", "computed", "effect", "event", "inject", "interval", "is_visible", "locale", "on_destroy", "on_mount", "open_window", "persisted", "prop", "provide", "ref", "run", "screens",
+        "Computed", "DragEvent", "Effect", "Event", "FocusEvent", "Frames", "KeyEvent", "PointerEvent", "ResizeEvent", "WheelEvent", "Prop", "PropError", "Ref", "Screen", "State", "Task", "Timer", "__version__", "background",
+        "batch", "before_leave", "computed", "effect", "event", "inject", "interval", "is_visible", "locale", "on_destroy", "on_mount", "open_window", "prop", "provide", "ref", "run", "screens",
         "spawn", "state", "task", "theme", "timeout", "untracked",
     ],
     "janelkit.compiler": ["CompiledComponent", "FORMAT_VERSION", "check_file", "check_source", "compile_file", "compile_source"],

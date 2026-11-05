@@ -13,6 +13,7 @@ Reglas (0.1 → 0.2):
 - La navegación pasó a janelkit-router: `from janelkit import pages, state` →
   `from janelkit import state` + `from janelkit_router import pages, Pages` (`Pages` y
   `Sections` se añaden si la plantilla los usa). El tipo `Sections` pasa a `SectionSet`.
+- `persisted` y `Persisted` pasaron a janelkit-store: `from janelkit_store import persisted`.
 - Avisa (sin cambiarlo) de lo que se quitó: `History`.
 """
 from __future__ import annotations
@@ -37,9 +38,13 @@ _SKIP_DIRS = {".venv", "venv", ".git", "__pycache__", "build", "dist", "node_mod
 _REMOVED = {
     "History": "History se quitó en 0.2.0: anota los pasos de deshacer como pares de funciones en una clase propia",
 }
-# Lo que pasó a otro paquete: nombre en janelkit -> nombre en janelkit_router.
-_TO_ROUTER = {"pages": "pages", "sections": "sections", "navigation": "navigation", "PageStack": "PageStack",
-              "Sections": "SectionSet"}  # fmt: skip
+# Lo que pasó a otro paquete: nombre en janelkit -> (paquete, nombre allí).
+_MOVED = {
+    "pages": ("janelkit_router", "pages"), "sections": ("janelkit_router", "sections"),
+    "navigation": ("janelkit_router", "navigation"), "PageStack": ("janelkit_router", "PageStack"),
+    "Sections": ("janelkit_router", "SectionSet"),
+    "persisted": ("janelkit_store", "persisted"), "Persisted": ("janelkit_store", "Persisted"),
+}  # fmt: skip
 _ROUTER_TAGS = ("Pages", "Sections")
 _FROM_JANELKIT = re.compile(r"^([ \t]*)from janelkit import (\([^)]*\)|[^\n]*)", re.MULTILINE)
 
@@ -79,21 +84,27 @@ def migrate_janel(text: str) -> tuple[str, list[str]]:
 
 
 def _move_imports(text: str) -> str:
-    """Los nombres que pasaron a janelkit-router salen de `from janelkit import ...`."""
+    """Los nombres que pasaron a otro paquete salen de `from janelkit import ...`."""
     out, last = [], 0
     for m in _FROM_JANELKIT.finditer(text):
         body, _, comment = m.group(2).partition("#")
         names = [n.strip() for n in body.strip().strip("()").replace("\n", " ").split(",") if n.strip()]
-        moved = [n for n in names if n.split(" as ")[0].strip() in _TO_ROUTER]
+        moved = [n for n in names if n.split(" as ")[0].strip() in _MOVED]
         if not moved:
             continue
         kept = [n for n in names if n not in moved]
-        router = [_TO_ROUTER[n.split(" as ")[0].strip()] + n[len(n.split(" as ")[0].strip()):] for n in moved]
-        template = _template_after(text, m.end())
-        router += [t for t in _ROUTER_TAGS if t not in router and re.search(rf"<{t}\b", template)]
+        packages: dict[str, list[str]] = {}
+        for n in moved:
+            base = n.split(" as ")[0].strip()
+            package, new = _MOVED[base]
+            packages.setdefault(package, []).append(new + n[len(base):])
+        if "janelkit_router" in packages:
+            template = _template_after(text, m.end())
+            router = packages["janelkit_router"]
+            router += [t for t in _ROUTER_TAGS if t not in router and re.search(rf"<{t}\b", template)]
         indent = m.group(1)
         lines = [f"{indent}from janelkit import {', '.join(kept)}"] if kept else []
-        lines.append(f"{indent}from janelkit_router import {', '.join(router)}")
+        lines += [f"{indent}from {package} import {', '.join(names)}" for package, names in packages.items()]
         out += [text[last:m.start()], "\n".join(lines) + (f"  #{comment}" if comment else "")]
         last = m.end()
     out.append(text[last:])

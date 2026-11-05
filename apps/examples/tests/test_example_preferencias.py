@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from janelkit import storage, theme
+from janelkit import theme
 from janelkit.inspect import mount
 
 APP = Path(__file__).resolve().parents[1] / "preferencias" / "src" / "App.janel"
@@ -12,7 +12,7 @@ APP = Path(__file__).resolve().parents[1] / "preferencias" / "src" / "App.janel"
 
 @pytest.fixture
 def data(tmp_path, monkeypatch):
-    monkeypatch.setenv(storage.DATA_ENV, str(tmp_path))  # la misma carpeta en los dos montajes
+    monkeypatch.setenv("JANELKIT_DATA_DIR", str(tmp_path))  # la misma carpeta en los dos montajes
     yield tmp_path
     theme.set("light")
 

@@ -473,30 +473,26 @@ tema = inject("tema", "claro")       # con valor por defecto
 - Lo que se comparte es el objeto tal cual: para que sea reactivo, comparte un `state` (o un objeto que los contenga).
 - Para estado global de toda la aplicación sigue valiendo un módulo Python (`services/store.py`). El contexto es para valores que dependen de dónde está el componente en el árbol.
 
-## Estado que se recuerda: `persisted`
+## Datos compartidos y estado que se recuerda
 
-Lo que la aplicación debe recordar al volver a abrirse (el tema, la última sección, el tamaño de un panel, los archivos recientes) es un `persisted`: un `state` que se guarda solo.
+Lo que comparten varias vistas o ventanas va en un **store**, y lo que la aplicación debe recordar al volver a abrirse, en un `persisted` o un store con `persist=`. Los dos son del paquete [`janelkit-store`](../packages/janelkit-store/README.md):
 
 ```python
-from janelkit import persisted
+from janelkit_store import persisted, store, use
 
-tema = persisted("tema", "claro")
-recientes = persisted("recientes", [])
+tema = persisted("tema", "claro")      # un state que se guarda solo
 
-def abrir(ruta):
-    recientes.value.insert(0, ruta)   # los cambios en el sitio también se guardan
+@store(persist="carrito")
+class Carrito:
+    items: list[dict] = []
+
+    def agregar(self, item):
+        self.items.append(item)
+
+carrito = use(Carrito)                 # la misma instancia en todas las vistas y ventanas
 ```
 
-- Se usa igual que un `state` (`.value`, `bind:`, en la plantilla sin `.value`). Al crearse lee el valor guardado; si no hay ninguno, toma el inicial.
-- Los cambios se escriben agrupados (como mucho cada 300 ms) y al cerrar la aplicación. La escritura es atómica: un corte no deja el archivo a medias.
-- La clave es de toda la aplicación: `persisted("tema", ...)` en dos módulos es el mismo objeto. Letras, cifras, `.`, `_` y `-`; para agrupar, `prefs.tema`.
-- Solo valores JSON: textos, números, booleanos, `None`, listas y diccionarios con claves de texto. Otro valor da `TypeError` al crearlo o al asignarlo.
-- Cada clave es un archivo `<clave>.json` en la carpeta de datos del usuario más el nombre del proyecto (`%APPDATA%\gestor` en Windows, `~/Library/Application Support/gestor` en macOS, `~/.config/gestor` en Linux). `JANELKIT_DATA_DIR` la cambia.
-- En las pruebas con `janelkit.inspect.mount`, cada montaje usa una carpeta temporal vacía: no se tocan los datos reales. Para probar que algo se recuerda entre dos montajes, fija `JANELKIT_DATA_DIR`.
-- Es para preferencias y datos pequeños: cada cambio reescribe el archivo de esa clave. Los datos grandes de la aplicación (documentos, bases de datos) siguen en sus propios archivos.
-- Lo habitual es reunirlos en un módulo (`services/prefs.py`). `bind:value={prefs.tema}` enlaza con el del módulo; para leerlo en la plantilla sin `.value`, impórtalo por su nombre (`from services.prefs import tema`): la plantilla desenvuelve nombres, no atributos (`{prefs.tema}` es el `state`, `{prefs.tema.value}` su valor).
-
-Ejemplo: `apps/examples/preferencias` (nombre, tema, tamaño de letra, notas y un contador de aperturas; `python apps/examples/preferencias/main.py`, ciérrala y vuelve a abrirla).
+Ejemplos: `apps/examples/carrito` (dos ventanas con el mismo store) y `apps/examples/preferencias` (`persisted`).
 
 ## Vídeo: `<video>` y `Frames`
 

@@ -19,7 +19,7 @@ PUBLIC = {
     "janelkit.compiler": ["CompiledComponent", "FORMAT_VERSION", "check_file", "check_source", "compile_file", "compile_source"],
     "janelkit.diagnostics": ["Diagnostic", "JanelError", "SourceLocation"],
     "janelkit.inspect": ["Element", "InspectError", "MountedApp", "mount"],
-    "janelkit.ext": ["Child", "Container", "Gate", "Host", "Session", "app", "ask_to_leave", "inspector", "is_component", "on_write", "own", "session"],
+    "janelkit.ext": ["Child", "Container", "Gate", "Host", "Scope", "Session", "app", "ask_to_leave", "inspector", "is_component", "on_write", "own", "session"],
 }  # fmt: skip
 
 

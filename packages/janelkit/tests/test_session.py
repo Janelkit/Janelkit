@@ -35,3 +35,17 @@ def test_an_error_in_one_end_callback_does_not_stop_the_others(tmp_path, caplog)
         s.on_end(lambda: ended.append("a"))
         s.on_end(lambda: 1 / 0)
     assert ended == ["a"] and "error al terminar la sesión" in caplog.text
+
+
+def test_an_ext_scope_owns_what_is_created_inside_it():
+    from janelkit import effect, interval, state
+
+    n, seen = state(0), []
+    scope = ext.Scope()
+    with scope.active():
+        effect(lambda: seen.append(n.value))
+        timer = interval(1000, lambda: None)
+    n.value = 1
+    scope.dispose()
+    n.value = 2
+    assert seen == [0, 1] and scope.disposed and not timer.active

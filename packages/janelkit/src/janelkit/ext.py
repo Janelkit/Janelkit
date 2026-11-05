@@ -15,12 +15,12 @@ from typing import Any, Callable
 from .runtime.hosts import Child, Container, Host, is_component
 from .lifecycle import ask_to_leave
 from .session import Session
-from .reactivity.effects import Gate
+from .reactivity.effects import Gate, Scope
 from .reactivity.writes import on_write, own
 
 __all__ = [
-    "Child", "Container", "Gate", "Host", "Session", "app", "ask_to_leave", "inspector", "is_component", "on_write",
-    "own", "session",
+    "Child", "Container", "Gate", "Host", "Scope", "Session", "app", "ask_to_leave", "inspector", "is_component",
+    "on_write", "own", "session",
 ]  # fmt: skip
 
 

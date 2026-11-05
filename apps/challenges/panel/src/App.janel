@@ -1,5 +1,5 @@
 <script lang="python">
-# Reto 1: panel de monitorización en tiempo real. Ver ../HALLAZGOS.md.
+# Reto 1: panel de monitorización en tiempo real. Ver ../README.md.
 import os
 
 from janelkit import computed, interval, open_window, state, theme

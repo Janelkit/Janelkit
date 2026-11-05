@@ -1,5 +1,5 @@
 <script lang="python">
-# Reto 2: hoja de cálculo. Ver ../README.md y ../HALLAZGOS.md.
+# Reto 2: hoja de cálculo. Ver ../README.md.
 # HOJA_FILE: CSV que se abre al empezar. HOJA_DEMO=10000x26: datos generados (pruebas y
 # mediciones). Sin ninguno de los dos, una hoja vacía de 10 000 × 26.
 import os

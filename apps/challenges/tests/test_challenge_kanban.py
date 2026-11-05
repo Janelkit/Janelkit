@@ -1,4 +1,4 @@
-"""Reto 3 (docs/challenges_to_test.md): tablero Kanban, probado como un usuario.
+"""Reto 3 (apps/challenges/kanban): tablero Kanban, probado como un usuario.
 
 Un tablero pequeño en un JSON temporal (KANBAN_FILE): títulos únicos para encontrar
 las tarjetas por su nombre, y así también se prueba que se carga y se guarda.

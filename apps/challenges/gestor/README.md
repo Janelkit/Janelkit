@@ -1,6 +1,6 @@
 # Reto 6: gestor de proyectos
 
-Gestor de proyectos para un equipo pequeño, todo local, hecho con la API pública de JanelKit a partir del tablero del reto 3 (Kanban). Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
+Gestor de proyectos para un equipo pequeño, todo local, hecho con la API pública de JanelKit a partir del tablero del reto 3 (Kanban). Es uno de los retos de `apps/challenges`, aplicaciones grandes que ponen a prueba el núcleo.
 
 ## Ejecutar
 
@@ -31,8 +31,6 @@ Tres **secciones** en la cabecera de la ventana (Ctrl+1, Ctrl+2, Ctrl+3), cada u
 - **Salir con cambios sin guardar** (el detalle de una tarjeta, los ajustes del proyecto o la ficha de una persona) pregunta antes, también al cerrar la ventana con la X (`before_leave`).
 - Las tarjetas guardan el **id** de su responsable: renombrar a una persona se ve al momento en todos los proyectos.
 - Un solo **historial de deshacer** para todo (Ctrl+Z, Ctrl+Y o los botones de la barra), que dice qué se desharía y en qué proyecto. Se guarda en JSON 300 ms después de cada ráfaga de cambios.
-
-Del plan del reto quedan sin hacer la pestaña Lista (tabla ordenable y editable), las etiquetas y columnas en Ajustes del proyecto, exportar, los ajustes generales y abrir un proyecto en otra ventana (ver [HALLAZGOS.md](HALLAZGOS.md#lo-que-queda-del-plan)).
 
 ## Archivos
 

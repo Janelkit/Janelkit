@@ -1,4 +1,4 @@
-"""Reto 1 (docs/challenges_to_test.md): panel de monitorización, probado como un usuario.
+"""Reto 1 (apps/challenges/panel): panel de monitorización, probado como un usuario.
 
 Usa la fuente simulada (PANEL_SOURCE=sim): valores deterministas y 300 procesos.
 """

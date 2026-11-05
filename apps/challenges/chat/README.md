@@ -1,6 +1,6 @@
 # Reto 4: cliente de chat
 
-Cliente de chat por WebSocket hecho solo con la API pública de JanelKit. Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
+Cliente de chat por WebSocket hecho solo con la API pública de JanelKit. Es uno de los retos de `apps/challenges`, aplicaciones grandes que ponen a prueba el núcleo.
 
 ## Ejecutar
 

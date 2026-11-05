@@ -1,6 +1,6 @@
-# Formato `.janel` — especificación v0 (provisional)
+# Formato `.janel`
 
-Esta especificación describe **lo que el compilador acepta hoy**. Es provisional y puede cambiar antes de declarar estable el lenguaje (ver «Registro de decisiones pendientes» en el plan).
+Esta especificación describe **lo que el compilador acepta hoy**. Los cambios entre versiones y cómo migrar están en [cambios.md](cambios.md); la política de versiones del formato (`FORMAT_VERSION`), en [api.md](api.md).
 
 ## Secciones
 
@@ -523,7 +523,7 @@ Ejemplos: `apps/challenges/kanban` (todo con `step`) y `apps/challenges/hoja` (c
 
 ## Vídeo: `<Video>` y `Frames`
 
-Para mostrar vídeo a tiempo real (una cámara, un vídeo procesado, una simulación) los fotogramas no pasan por la reactividad: van por un `Frames`, que se puede alimentar desde cualquier hilo, y `<Video>` muestra siempre el más reciente. El plan completo, con cámaras y el paquete `janelkit-vision`, está en [vision.md](vision.md).
+Para mostrar vídeo a tiempo real (una cámara, un vídeo procesado, una simulación) los fotogramas no pasan por la reactividad: van por un `Frames`, que se puede alimentar desde cualquier hilo, y `<Video>` muestra siempre el más reciente. Cómo montar una aplicación de visión con cámaras y un modelo está en [vision.md](vision.md).
 
 ```python
 import threading
@@ -562,7 +562,7 @@ def pct(valor, eje):               # de píxeles de la imagen a % de la capa (ej
 - `async for img in frames` da el objeto que se pasó a `push`. Con `background()`, el modelo corre en otro hilo y la vista previa no espera por él. `await frames.next()` espera al próximo.
 - `frames.size` (`(ancho, alto)` o `None`) y `frames.fps` son reactivos. `frames.latest()` es el último fotograma; `frames.clear()` deja la vista en blanco.
 - Los hijos de `<Video>` van en una caja con `position: relative` del tamaño exacto de la imagen que se ve, así que los porcentajes son de la imagen, también con `fit="contain"` (bandas) o `"cover"` (recortada). Para un espejo (cámara frontal), voltea la imagen antes de `push` (`cv2.flip(img, 1)`): así las coordenadas siguen coincidiendo.
-- Abrir cámaras no es del núcleo: con OpenCV (`cv2.VideoCapture`) o QtMultimedia, en un hilo propio. Lo hará `janelkit-vision` ([vision.md](vision.md#janelkit-vision-planeado-sin-implementar)).
+- Abrir cámaras no es del núcleo: con OpenCV (`cv2.VideoCapture`) o QtMultimedia, en un hilo propio. Ver [vision.md](vision.md).
 
 ## Listas grandes: `<List>`
 

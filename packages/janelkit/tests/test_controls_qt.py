@@ -1,4 +1,4 @@
-"""Controles añadidos para el lanzamiento: Switch, Slider, Select, RadioGroup, Tabs, Image, ProgressBar,
+"""Controles: Switch, Slider, Select, RadioGroup, Tabs, Image, ProgressBar,
 Shortcut y on:input en TextArea (los diálogos nativos están en janelkit-desktop)."""
 
 from janelkit.testing import find, texts, visual_items

@@ -1,6 +1,6 @@
 # Reto 2: hoja de cálculo
 
-Hoja de cálculo de 10 000 × 26 hecha con la API pública de JanelKit. Forma parte de los retos de [docs/challenges_to_test.md](../../../docs/challenges_to_test.md); lo que se aprendió está en [HALLAZGOS.md](HALLAZGOS.md).
+Hoja de cálculo de 10 000 × 26 hecha con la API pública de JanelKit. Es uno de los retos de `apps/challenges`, aplicaciones grandes que ponen a prueba el núcleo.
 
 ## Ejecutar
 

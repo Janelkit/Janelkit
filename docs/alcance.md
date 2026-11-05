@@ -1,8 +1,8 @@
 # Alcance de JanelKit: núcleo y ecosistema
 
-JanelKit es un **núcleo** (`janelkit`) y un **ecosistema** de paquetes que se construyen encima con su API pública. Este documento dice qué va en cada sitio, con qué criterio, y qué necesita del núcleo cada paquete. Las prioridades antes del lanzamiento están en [lanzamiento.md](lanzamiento.md).
+JanelKit es un **núcleo** (`janelkit`) y un **ecosistema** de paquetes que se construyen encima con su API pública. Este documento dice qué va en cada sitio, con qué criterio, y qué necesita del núcleo cada paquete.
 
-La frontera se decidió el 28 de octubre de 2026 (decisión 23 de [estado.md](estado.md)) y está aplicada en el código. Dos pruebas la vigilan: `tests/test_boundaries.py` (el núcleo no importa el ecosistema y las extensiones no usan nada interno) y `tests/test_packages.py` (versiones y rangos compatibles).
+La frontera está aplicada en el código. Dos pruebas la vigilan: `tests/test_boundaries.py` (el núcleo no importa el ecosistema y las extensiones no usan nada interno) y `tests/test_packages.py` (versiones y rangos compatibles).
 
 ## Criterio
 
@@ -16,7 +16,7 @@ Si algo puede construirse **solo con la API pública** y no todas las aplicacion
 
 Dos casos que el criterio resuelve y conviene recordar:
 
-- **La gestión de estado es del núcleo**, también la que vendrá (stores con acciones): se apoya en la semántica de `batch`, de los efectos y del ciclo de vida, y un paquete aparte acabaría duplicándola o dependiendo de detalles internos. `persisted` y `History` (deshacer/rehacer) ya están dentro.
+- **La gestión de estado es del núcleo**: se apoya en la semántica de `batch`, de los efectos y del ciclo de vida, y un paquete aparte acabaría duplicándola o dependiendo de detalles internos. `persisted` y `History` (deshacer/rehacer) ya están dentro.
 - **El idioma de la interfaz es del núcleo; las traducciones, no.** La dirección de escritura (derecha a izquierda) y el `QLocale` cambian la disposición de todo, así que `janelkit.locale` está en el núcleo. Los catálogos, plurales y formatos son de `janelkit-i18n`, que cambia ese idioma.
 
 ## Organización del repositorio
@@ -29,8 +29,8 @@ packages/janelkit-vscode    resaltado para VS Code
 apps/examples               ejemplos pequeños, uno por tema
 apps/challenges             aplicaciones grandes que ponen a prueba el framework
 tests/                      frontera y coherencia entre paquetes
-docs/                       documentación (docs/archivo: documentos históricos)
-spikes/                     validaciones técnicas previas
+tools/                      versiones, medición de rendimiento y comprobación del wheel
+docs/                       documentación
 ```
 
 - Cada paquete de `packages/` tiene su `pyproject.toml`, su README, sus pruebas y **versión propia**, y se prueba solo (`python -m pytest packages/janelkit-i18n`). Las extensiones declaran el rango del núcleo que admiten ([api.md](api.md#paquetes-del-ecosistema)).
@@ -44,7 +44,7 @@ spikes/                     validaciones técnicas previas
 |---|---|---|
 | **Lenguaje `.janel`** | Archivo único (`<script lang="python">`, plantilla, `<style>`), interpolación, `on:`, `bind:`, `class:`, `transition:`, `{#if}`, `{#each}`, `{#key}`, `{#hidden}`, slots; `FORMAT_VERSION` | ✅ |
 | **Compilador** | Parser con ubicaciones, análisis del script, IR, generación de QML, diagnósticos con sugerencias; `check_source`/`check_file` para herramientas | ✅ |
-| **Reactividad y estado** | `state`, `computed`, `effect`, `batch`, colecciones reactivas, props, eventos, contexto (`provide`/`inject`), `persisted`, deshacer/rehacer (`History`) | ✅ · stores con acciones: pendientes |
+| **Reactividad y estado** | `state`, `computed`, `effect`, `batch`, colecciones reactivas, props, eventos, contexto (`provide`/`inject`), `persisted`, deshacer/rehacer (`History`) | ✅ |
 | **Runtime de componentes** | Instancias, regiones dinámicas, reconciliación por clave, ciclo de vida, referencias a elementos | ✅ |
 | **Asincronía** | Manejadores `async def`, `@task`, `background`, `spawn`, temporizadores; todo ligado al componente | ✅ |
 | **Disposición y controles** | Motor `<flex>` y vía rápida con layouts de Qt; texto, botón, campos, casilla, select, switch, slider, radio, imagen, progreso, pestañas, lista virtualizada | ✅ |
@@ -53,7 +53,7 @@ spikes/                     validaciones técnicas previas
 | **Estilos y temas** | Subconjunto de CSS con pseudo-clases y selectores, tokens `var(--x)`, temas intercambiables | ✅ |
 | **Idioma de la interfaz** | `janelkit.locale`: idioma, dirección de escritura, `QLocale` | ✅ |
 | **Interoperabilidad con Qt** | Importar un `.qml` propio como componente | ✅ |
-| **Pruebas** | `janelkit.inspect`: montar sin ventana, buscar, simular eventos, leer el estado. `janelkit.testing`: fixtures de pytest | ✅ inspect · `janelkit.testing` aún interno; será un plugin de pytest delgado y público |
+| **Pruebas** | `janelkit.inspect`: montar sin ventana, buscar, simular eventos, leer el estado. `janelkit.testing`: fixtures de pytest | ✅ inspect · `janelkit.testing` es interno |
 | **CLI** | `janel new`, `dev`, `build`, `compile`, `parse`; subcomandos de otros paquetes | ✅ |
 
 **No es del núcleo:** traducciones, servicios del sistema (diálogos, portapapeles, notificaciones), soporte de editores, bibliotecas de componentes ricos, empaquetado en ejecutables, devtools, enrutado por direcciones y backends distintos de Qt Quick.
@@ -64,15 +64,9 @@ spikes/                     validaciones técnicas previas
 |---|---|---|---|
 | [`janelkit-i18n`](../packages/janelkit-i18n/README.md) | `t`, `i18n`: catálogos JSON, plurales, formatos de número, moneda y fecha, cambio de idioma en caliente | `State`, `locale` | ✅ en el repositorio |
 | [`janelkit-desktop`](../packages/janelkit-desktop/README.md) | `dialogs`, `clipboard`, `notify`, con sus métodos de inspección (`app.dialogs()`, `app.notifications()`) | `State`, `janelkit.ext` | ✅ en el repositorio |
-| [`janelkit-vscode`](../packages/janelkit-vscode/README.md) | Resaltado de `.janel` | — | ✅ resaltado · diagnósticos en vivo y autocompletado (`janelkit-lsp`): pendientes |
-| `janelkit-lsp` | Diagnósticos en vivo, autocompletado de elementos, props y nombres del script, ir a definición | `janelkit.compiler` (`check_source`; falta exponer la estructura: props, eventos, nombres) | Idea |
-| `janelkit-kit` | Tablas con ordenación y filtrado, gráficas, selectores de fecha, árboles, paneles acoplables | Slots, `ref`, QML propio, tokens de tema | Idea |
-| `janelkit-router` | Navegar a direcciones con parámetros, historial con «adelante», rutas anidadas, restaurar la ruta | Navegación básica, contexto, ciclo de vida | Idea ([abajo](#navegación-básica-y-enrutado)) |
-| `janelkit-vision` | Cámaras (listar, elegir resolución, cambiar en caliente), tubería de proceso con «el último fotograma gana» y métricas, coordenadas de imagen, capturar y grabar, fuentes falsas para pruebas ([vision.md](vision.md#janelkit-vision-planeado-sin-implementar)) | `<Video>`, `Frames`, `background`, `janelkit.ext` | Planeado, sin implementar |
-| `janel package` | Ejecutables e instaladores con PyInstaller, Nuitka o Briefcase | Recursos del paquete en ubicación estable, `janel build`, plugins de la CLI | Receta manual en [empaquetado.md](empaquetado.md) |
-| Devtools | Árbol de componentes, estado de cada instancia, bindings que se recalculan | `janelkit.inspect`; faltan ganchos de depuración en la reactividad | Idea |
+| [`janelkit-vscode`](../packages/janelkit-vscode/README.md) | Resaltado de `.janel` | — | ✅ resaltado |
 
-Las aplicaciones de `apps/challenges` no son paquetes: son la forma de descubrir qué le falta al núcleo. Cada una tiene un `HALLAZGOS.md` con lo que encontró ([challenges_to_test.md](challenges_to_test.md)).
+Las aplicaciones de `apps/challenges` no son paquetes: son la forma de descubrir qué le falta al núcleo. Cada una tiene un `README.md` con lo que hace y cómo se usa. Empaquetar en ejecutables no es un paquete: hay una receta manual en [empaquetado.md](empaquetado.md).
 
 ## Puntos de extensión
 
@@ -90,22 +84,15 @@ Lo que el núcleo ofrece para que el ecosistema crezca sin tocarlo:
 
 ## Navegación básica y enrutado
 
-Casi toda aplicación necesita varias vistas y ventanas: eso es del núcleo. El enrutador es otra cosa: traduce **direcciones** a vistas.
+Casi toda aplicación necesita varias vistas y ventanas: eso es del núcleo. Se navega a un componente, con sus props: `nav.push(Detalle, item=t)`. El enrutado por **direcciones** (`/proyectos/42?tarjeta=t5`) no es del núcleo: tendría que poder construirse con la API pública.
 
-- **Navegación básica (núcleo):** se navega a un componente, con sus props: `nav.push(Detalle, item=t)`. Incluye ventanas, la pila de vistas, volver conservando el estado, secciones paralelas que se conservan y la confirmación al salir o cerrar con cambios sin guardar.
-- **Enrutado (`janelkit-router`):** se navega a un texto, `/proyectos/42/tablero?tarjeta=t5`, que el enrutador traduce a vistas y parámetros. Sirve para guardar, compartir o reconstruir «dónde estoy».
-
-| Capacidad | Dónde |
+| Capacidad | En el núcleo |
 |---|---|
-| Abrir ventanas con props, eventos y modo modal | Núcleo ✅ |
-| Pila de vistas: ir, volver, sustituir; volver conserva el estado; lo descartado se libera | Núcleo ✅ |
-| Secciones paralelas, cada una con su pila, que se conservan al ocultarse | Núcleo ✅ `sections()`, `{#hidden}` |
-| Confirmar antes de salir de una vista o cerrar una ventana | Núcleo ✅ `before_leave` |
-| Obtener la pila sin pasarla, atrás con teclado y ratón, devolver un resultado | Núcleo ✅ `navigation()`, `back(valor)` |
-| Rutas con nombre y parámetros, historial con adelante, enlaces profundos | Enrutador |
-| Rutas anidadas declaradas como tabla, restaurar la ruta, carga diferida | Enrutador |
-
-El reto del [gestor de proyectos](challenges_to_test.md#6-gestor-de-proyectos) se hizo solo con la navegación básica; sus [hallazgos](../apps/challenges/gestor/HALLAZGOS.md) dicen qué quedaría para el enrutador, que debe poder construirse con la API pública.
+| Abrir ventanas con props, eventos y modo modal | ✅ `open_window` |
+| Pila de vistas: ir, volver, sustituir; volver conserva el estado; lo descartado se libera | ✅ `pages()` |
+| Secciones paralelas, cada una con su pila, que se conservan al ocultarse | ✅ `sections()`, `{#hidden}` |
+| Confirmar antes de salir de una vista o cerrar una ventana | ✅ `before_leave` |
+| Obtener la pila sin pasarla, atrás con teclado y ratón, devolver un resultado | ✅ `navigation()`, `back(valor)` |
 
 ## Añadir un paquete al ecosistema
 

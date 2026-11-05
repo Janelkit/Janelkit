@@ -1,4 +1,4 @@
-"""Reto 6 (docs/challenges_to_test.md): gestor de proyectos, probado como un usuario.
+"""Reto 6 (apps/challenges/gestor): gestor de proyectos, probado como un usuario.
 
 Dos proyectos y tres personas en un JSON temporal (GESTOR_FILE). Cubre la navegación del
 núcleo (secciones que conservan su estado, páginas apiladas, enlaces entre secciones,

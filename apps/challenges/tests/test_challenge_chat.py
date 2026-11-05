@@ -1,4 +1,4 @@
-"""Reto 4 (docs/challenges_to_test.md): cliente de chat por WebSocket, probado como un usuario."""
+"""Reto 4 (apps/challenges/chat): cliente de chat por WebSocket, probado como un usuario."""
 import asyncio
 import sys
 import threading

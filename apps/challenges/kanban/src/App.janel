@@ -1,5 +1,5 @@
 <script lang="python">
-# Reto 3: tablero Kanban. Ver ../README.md y ../HALLAZGOS.md.
+# Reto 3: tablero Kanban. Ver ../README.md.
 # KANBAN_FILE: archivo JSON del tablero (por defecto, tablero.json junto a la app).
 # KANBAN_DEMO=20x200: tablero generado de 20 columnas con 200 tarjetas, sin archivo
 # (pruebas y mediciones).

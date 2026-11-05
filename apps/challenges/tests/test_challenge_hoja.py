@@ -1,4 +1,4 @@
-"""Reto 2 (docs/challenges_to_test.md): hoja de cálculo, probada como un usuario.
+"""Reto 2 (apps/challenges/hoja): hoja de cálculo, probada como un usuario.
 
 Una compra pequeña en un CSV temporal (HOJA_FILE), con fórmulas que dependen unas de
 otras; la hoja sigue teniendo 10 000 × 26 celdas.

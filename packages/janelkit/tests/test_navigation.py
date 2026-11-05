@@ -1,4 +1,4 @@
-"""Navegación básica (lanzamiento.md, 25–27): secciones que se conservan, navigation(),
+"""Navegación básica: secciones que se conservan, navigation(),
 await push / back(valor), atrás con Alt+← y el ratón, before_leave, y {#hidden}."""
 import tempfile
 from pathlib import Path

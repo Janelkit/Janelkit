@@ -1,12 +1,6 @@
 # Visión por computador en tiempo real
 
-Plan para que hacer aplicaciones de visión (cámaras, detección, seguimiento, inspección) con JanelKit sea fácil. Parte va en el núcleo y se implementa ya; el resto es un paquete del ecosistema, **`janelkit-vision`**, que de momento solo está planeado.
-
-| Parte | Dónde | Estado |
-|---|---|---|
-| Mostrar fotogramas a tiempo real: `<Video>` y `Frames` | Núcleo | ✅ (ejemplo sin cámara en `apps/examples/video`) |
-| Cámaras, tubería de proceso, coordenadas, grabación, fuentes falsas | `janelkit-vision` | Planeado, sin implementar |
-| Reto 5: aplicación de visión en tiempo real | [challenges_to_test.md](challenges_to_test.md#5-visión-en-tiempo-real) | Planeado; necesita `janelkit-vision` |
+Cómo hacer aplicaciones de visión (cámaras, detección, seguimiento, inspección) con JanelKit: el núcleo muestra fotogramas en tiempo real (`<Video>` y `Frames`); abrir la cámara y procesar es cosa de la aplicación (OpenCV, QtMultimedia, el modelo que uses). Ejemplo sin cámara en `apps/examples/video`.
 
 ## Por qué es un distintivo
 
@@ -62,7 +56,7 @@ async def procesar():
 </Video>
 ```
 
-`pct(valor, eje)` pasa de píxeles de la imagen a porcentaje de la capa (`100 * valor / frames.size[eje]`); el ejemplo completo está en [lenguaje.md](lenguaje.md#vídeo-video-y-frames). En `janelkit-vision` vendrá hecho.
+`pct(valor, eje)` pasa de píxeles de la imagen a porcentaje de la capa (`100 * valor / frames.size[eje]`); el ejemplo completo está en [lenguaje.md](lenguaje.md#vídeo-video-y-frames).
 
 | Pieza | Qué hace |
 |---|---|
@@ -72,23 +66,7 @@ async def procesar():
 | `frames.latest()`, `frames.clear()` | El último fotograma (o `None`); dejar de mostrar. |
 | `<Video source= fit=>` | Muestra un `Frames` con `VideoOutput` de Qt. `fit`: `contain` (por defecto), `cover`, `fill`. Los hijos van en una capa sobre la imagen. Sin `mirror`: para la cámara frontal se voltea la imagen antes de `push`, y así las coordenadas de las superposiciones siguen coincidiendo. |
 
-Sin numpy como dependencia: el núcleo lee el búfer con `memoryview`. Sin cámara: QtMultimedia viene con PySide6, pero abrir cámaras es de `janelkit-vision`.
-
-## `janelkit-vision` (planeado, sin implementar)
-
-Lo que necesita una aplicación de visión y no hace falta en el núcleo. Depende de numpy; OpenCV opcional.
-
-| Pieza | Para qué |
-|---|---|
-| `cameras()` y `Camera(id, size=, fps=)` | Listar cámaras (con QtMultimedia, sin OpenCV), elegir resolución y fps, cambiar de cámara en caliente, aviso al conectar o desconectar. Entrega a un `Frames` |
-| Otras fuentes | `cv2.VideoCapture`, RTSP, archivos de vídeo, carpetas de imágenes, cámaras industriales (adaptadores) |
-| `pipeline(fuente, modelo)` | La tubería de la arquitectura en una línea: hilo de proceso, «el último gana», métricas (fps de captura y de proceso, latencia), pausa |
-| Coordenadas | Pasar de píxeles de la imagen a la capa de `<Video>` y al revés (región de interés dibujada con el ratón) |
-| Capturar y grabar | Guardar una imagen o un clip (con su marca de tiempo) |
-| Fuentes falsas para `inspect` | Una cámara que lee un vídeo o imágenes, para probar en CI y medir de forma reproducible |
-| Ejemplos | Rostros (OpenCV + YuNet, sin PyTorch), YOLO (ultralytics), pose (mediapipe), códigos QR |
-
-Se diseñará a partir de lo que el reto 5 demuestre que falta, como los demás paquetes.
+Sin numpy como dependencia: el núcleo lee el búfer con `memoryview`. Sin cámara: QtMultimedia viene con PySide6, pero abrir la cámara (con `cv2.VideoCapture` o QtMultimedia) lo hace la aplicación.
 
 ## Mediciones del núcleo
 
@@ -101,9 +79,3 @@ Se diseñará a partir de lo que el reto 5 demuestre que falta, como los demás 
 | 1920 × 1080 | 59,6 fps | 1,07 ms | 1,54 / 1,84 ms | 6,2 % |
 
 `push` copia y convierte la imagen a RGBX en el hilo que lo llama (~1 ms en 1080p), así que el de la interfaz solo entrega un `QVideoFrame` ya listo; Qt lo sube a la GPU en su hilo de dibujado. En el ejemplo, un modelo que tarda 200 ms procesa a ~5 fps y la vista sigue a 30.
-
-## Riesgos y preguntas abiertas
-
-- **Formatos de cámara**: muchas cámaras dan NV12 o MJPEG; convertir a RGB en Python cuesta. `janelkit-vision` podría pasar el `QVideoFrame` de Qt tal cual a `<Video>` y convertir solo lo que procesa el modelo.
-- **Empaquetado**: PyTorch y ultralytics pesan ~1 GB; ONNX Runtime u OpenCV DNN son la opción ligera.
-- **Varias cámaras**: un hilo de captura por cámara; medir el coste de varias `<Video>` a la vez.

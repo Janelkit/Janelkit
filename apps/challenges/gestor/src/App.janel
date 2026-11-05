@@ -1,5 +1,5 @@
 <script lang="python">
-# Reto 6: gestor de proyectos. Ver ../README.md y ../HALLAZGOS.md.
+# Reto 6: gestor de proyectos. Ver ../README.md.
 # GESTOR_FILE: archivo JSON de los datos (por defecto, datos.json junto a la app; si no
 # existe, se crean datos de ejemplo y se importa el tablero.json del reto 3).
 # GESTOR_DEMO=10x4x50x300: proyectos × columnas × tarjetas por columna × personas, sin

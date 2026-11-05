@@ -1,5 +1,5 @@
 <script lang="python">
-# Reto 4: cliente de chat por WebSocket. Ver ../HALLAZGOS.md.
+# Reto 4: cliente de chat por WebSocket. Ver ../README.md.
 import os
 import re
 import time

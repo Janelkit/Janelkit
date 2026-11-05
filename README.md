@@ -143,10 +143,9 @@ Las expresiones de la plantilla se evalúan en **Python**; cuando cambia un `sta
 - [docs/api.md](docs/api.md) — qué es API pública y política de versiones.
 - [docs/cambios.md](docs/cambios.md) — cambios entre versiones y cómo migrar.
 - [docs/empaquetado.md](docs/empaquetado.md) — crear un ejecutable con PyInstaller.
-- [docs/estado.md](docs/estado.md) — avance frente al plan, decisiones provisionales, rendimiento y limitaciones.
+- [docs/rendimiento.md](docs/rendimiento.md) — tiempos medidos y cómo reproducirlos.
 - [docs/alcance.md](docs/alcance.md) — qué es del núcleo, qué es del ecosistema y con qué criterio.
-- [docs/lanzamiento.md](docs/lanzamiento.md) — pendientes priorizados antes de la primera versión pública.
-- [spikes/qt_bridge_counter/NOTES.md](spikes/qt_bridge_counter/NOTES.md) — validación técnica del puente Python ↔ Qt Quick.
+- [docs/arquitectura.md](docs/arquitectura.md) — paquetes, capas del núcleo, de un `.janel` a la pantalla, versiones y publicación.
 
 ## Desarrollo de JanelKit
 

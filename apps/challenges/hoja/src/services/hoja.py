@@ -152,7 +152,7 @@ class Hoja:
         """Ordena las filas usadas (desde `desde`) por el valor de la columna `col`.
 
         Las vacías van al final. Las fórmulas se mueven tal cual: sus referencias no se
-        ajustan (ver HALLAZGOS.md)."""
+        ajustan."""
         filas_usadas, cols = self.usadas()
         if filas_usadas <= desde + 1:
             return

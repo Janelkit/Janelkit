@@ -1,17 +1,8 @@
-# Diseño de `<flex>`: el elemento base para construir componentes visuales
-
-> **Estado: las 6 fases hechas** (caja y disposición; estados y selectores; eventos y accesibilidad; herencia y variables; componentes como elementos; posición; ver [Fases](#fases-de-implementación)). Lo demás es diseño aprobado, sin implementar. Este documento fija qué es `<flex>`, qué hace y qué no, cómo se escribe y cómo se comprobará que cumple. Las decisiones tomadas están al final.
+# `<flex>`: el elemento base para construir componentes visuales
 
 ## Por qué
 
-Hoy, en JanelKit, se puede **componer** (componentes `.janel` con props, eventos y slots), pero no se puede **construir un control desde cero**. Un `Button` propio en `.janel` no puede:
-
-- cambiar de aspecto al pasar el ratón, al pulsarlo o con el foco (no hay `:hover`, `:pressed`, `:focus`);
-- reaccionar al puntero o al teclado más allá de `on:click`;
-- dar color y tipo de letra a su texto desde el contenedor (no hay herencia ni selectores de descendientes);
-- tener sombra, márgenes, posición absoluta o una rejilla que salte de línea.
-
-Por eso los controles integrados están escritos en QML y quedan cerrados: solo se personalizan con tokens del tema y con una lista corta de propiedades.
+Componer (componentes `.janel` con props, eventos y slots) no basta para construir un control desde cero: un botón propio necesita cambiar de aspecto al pasar el ratón, al pulsarlo o con el foco; reaccionar al puntero y al teclado; dar color y letra a su texto desde el contenedor; tener sombra, márgenes, posición absoluta o una rejilla que salte de línea.
 
 En el frontend web, todo eso se hace con una caja (`<div>`), CSS y eventos. **`<flex>` es esa caja para JanelKit**: un elemento con el que cualquier persona pueda escribir en `.janel` un botón, una tarjeta, un chip, un elemento de menú o una barra de herramientas, con el aspecto y el comportamiento que espera de la web, **sin escribir JavaScript ni QML**. La lógica va en el `<script>` de Python; el aspecto, en `<style>`.
 
@@ -21,12 +12,12 @@ En el frontend web, todo eso se hace con una caja (`<div>`), CSS y eventos. **`<
 
 ## Elementos base en minúscula
 
-Regla del lenguaje: **los elementos base se escriben en minúscula** (`<flex>`, y el futuro elemento base de entrada); **los componentes, en mayúscula** (`<Boton>`, `<Tarjeta>`). Es la misma convención de la web con React o Svelte: `<div>` es primitivo, `<Boton>` es algo construido.
+Regla del lenguaje: **los elementos base se escriben en minúscula** (`<flex>`); **los componentes, en mayúscula** (`<Boton>`, `<Tarjeta>`). Es la misma convención de la web con React o Svelte: `<div>` es primitivo, `<Boton>` es algo construido.
 
 - De un vistazo se distingue en una plantilla qué es primitivo y qué está construido encima.
 - Un componente nunca choca con un elemento base: `Flex.janel` sería un componente válido, distinto de `<flex>`.
 - Las etiquetas en minúscula quedan reservadas para JanelKit. Una desconocida da error con la lista de elementos base, nunca la pista de importar un componente.
-- Los controles integrados que existen hoy (`Column`, `Row`, `Text`, `Button`, `List`…) mantienen su nombre: no son elementos base, sino controles ya hechos o atajos (ver [`Column` y `Row`](#column-y-row)).
+- Los controles integrados (`Column`, `Row`, `Text`, `Button`, `List`…) mantienen su nombre: no son elementos base, sino controles ya hechos o atajos (ver [`Column` y `Row`](#column-y-row)).
 
 ## Qué es y qué no es
 
@@ -35,10 +26,10 @@ Regla del lenguaje: **los elementos base se escriben en minúscula** (`<flex>`, 
 | Familia | Elemento base | Para qué | Estado |
 |---|---|---|---|
 | **Cajas e interacción** | `<flex>` | Contenedores, tarjetas, botones, chips, menús, barras, rejillas, superposiciones | Este documento |
-| **Entrada de datos** | Otro elemento base en minúscula (nombre por decidir: `<field>`, `<input>`) | Edición de texto, cursor y selección, método de entrada (IME), valor con `bind:value`, validación, autocompletado. Sobre él se escribirían campos, selectores, deslizadores… | Diseño aparte, después de `<flex>` |
+| **Entrada de datos** | Controles integrados (`TextField`, `TextArea`, `Select`, `Slider`…) | Edición de texto, cursor y selección, método de entrada (IME), valor con `bind:value` | Existen; no se construyen con `<flex>` |
 | **Texto** | `<Text>` | Hoja: muestra texto (plano, Markdown, HTML). Hereda estilo de su `<flex>` contenedor | Existe |
 | **Colecciones grandes** | `<List>` | Virtualización de miles de filas. Cada fila puede ser un `<flex>` | Existe |
-| **Dibujo libre y gráficas** | Vía de escape QML / `janelkit-kit` | Gráficas, lienzos | Fuera del núcleo ([alcance.md](alcance.md)) |
+| **Dibujo libre y gráficas** | Un `.qml` propio importado como componente | Gráficas, lienzos | Fuera del núcleo ([lenguaje.md](lenguaje.md)) |
 
 Regla para decidir: si el comportamiento esencial es **editar un valor** (texto, número, fecha, selección de opciones con teclado de edición), pertenece a la familia de entrada, no a `<flex>`. Un interruptor o una casilla, que solo alternan, sí se pueden construir con `<flex>`; un campo de texto, no.
 
@@ -93,20 +84,20 @@ press = event()
 
 | Atributo | Valores | Qué hace |
 |---|---|---|
-| `class`, `class:x`, `class={expr}` | como hoy | Clases para `<style>`. |
+| `class`, `class:x`, `class={expr}` | como en los demás elementos | Clases para `<style>`. |
 | `style` | `style={{"background": color, "width": f"{pct}%"}}` o `style="gap: 4px"` | Estilos en línea, también calculados en Python. Ganan a las clases (como en la web). Acepta las mismas propiedades que `<style>`, no pseudo-clases. |
 | `as` | `"box"` (por defecto), `"button"`, `"link"`, `"checkbox"`, `"switch"`, `"tab"`, `"menuitem"`, `"dialog"`, `"listitem"`, `"heading"`… | Papel para la accesibilidad y comportamiento de teclado asociado (ver [Accesibilidad](#accesibilidad)). No cambia el aspecto. |
 | `disabled` | bool | Activa `:disabled`, deja de recibir eventos de puntero y teclado y sale del orden de Tab. |
 | `checked`, `selected`, `expanded` | bool | Estados que exponen `:checked`, `:selected`, `:expanded` a los estilos y a la accesibilidad. |
 | `draggable` | bool | La caja se puede arrastrar: ver [Arrastrar y soltar](#arrastrar-y-soltar). |
 | `tabindex` | `0` (entra en el orden de Tab), `-1` (enfocable solo por código) | Como en HTML. Por defecto, solo los papeles interactivos (`as="button"`…) son enfocables. |
-| `label` | texto | Nombre accesible (como hoy). |
+| `label` | texto | Nombre accesible . |
 | `title` | texto | Descripción emergente al dejar el ratón encima (tooltip del sistema). |
-| `id`, `ref` | como hoy | `ref` da `.focus()`, `.blur()`, `.scroll_to(...)` si desborda, `.rect` (posición y tamaño). |
+| `id`, `ref` | como en los demás elementos | `ref` da `.focus()`, `.blur()`, `.scroll_to(...)` si desborda, `.rect` (posición y tamaño). |
 | `on:...` | ver [Eventos](#eventos) | |
 | Disposición abreviada | `direction`, `gap`, `padding`, `wrap`, `align`, `justify`, `flex`, `width`, `height` | Atajos de las propiedades CSS equivalentes, para casos rápidos (`<flex direction="column" gap={8}>`). |
 
-Contenido: cualquier elemento, `{#if}`, `{#each}`, slots y texto suelto (que se convierte en `<Text>`, como hoy).
+Contenido: cualquier elemento, `{#if}`, `{#each}`, slots y texto suelto (que se convierte en `<Text>`).
 
 ### `Column` y `Row`
 
@@ -138,16 +129,16 @@ Diferencias deliberadas con CSS, documentadas:
 - No hay `display`: todo `<flex>` es un contenedor flex. Para ocultar, `visible={False}` o `{#if}`.
 - No hay flujo de texto en línea (`inline`): el texto vive en `<Text>`, que es un bloque.
 
-**Rejilla**: con `flex-wrap: wrap` y `flex-basis` (o `min-width`) se hacen rejillas que se recolocan al cambiar el ancho (la carencia 13 del [reto del panel](../apps/challenges/panel/HALLAZGOS.md)). Un `display: grid` completo queda fuera de esta versión.
+**Rejilla**: con `flex-wrap: wrap` y `flex-basis` (o `min-width`) se hacen rejillas que se recolocan al cambiar el ancho. No hay `display: grid`.
 
 ### Caja
 
 | Propiedad | Valores |
 |---|---|
-| `padding`, `padding-*` | como hoy |
+| `padding`, `padding-*` | como en los demás elementos |
 | `margin`, `margin-*` | px, `auto` (empuja, como en flexbox: `margin-left: auto`). Sin colapso de márgenes |
 | `background`, `background-color` | color, token; `linear-gradient(<ángulo>, <color>, <color>…)` |
-| `border`, `border-color`, `border-width`, `border-style` | como hoy; `border-style`: `solid`, `none` (`dashed` quizá más adelante) |
+| `border`, `border-color`, `border-width`, `border-style` | como en los demás elementos; `border-style`: `solid`, `none` |
 | `border-top`, `-right`, `-bottom`, `-left` | bordes por lado (separadores, pestañas) |
 | `border-radius` | 1 a 4 valores (radio por esquina) |
 | `box-shadow` | `0 2px 8px rgba(0,0,0,.15)`; varias sombras separadas por comas; `inset` no |
@@ -193,13 +184,13 @@ La herencia **atraviesa los componentes y los slots**: el texto que el padre pas
 
 - Se combinan con clases: `.boton.primary:hover`.
 - Las cambia JanelKit directamente en la vista: pasar el ratón por encima **no llama a Python**.
-- `transition` anima los cambios (incluidos `transform` y `box-shadow`, además de lo que ya anima hoy).
+- `transition` anima los cambios (también `transform` y `box-shadow`).
 
 ### Selectores
 
 | Selector | Ejemplo | Notas |
 |---|---|---|
-| Clase, elemento, varios | `.a`, `flex`, `.a, .b` | como hoy |
+| Clase, elemento, varios | `.a`, `flex`, `.a, .b` | como en los demás elementos |
 | Compuesto | `.boton.primary`, `flex.tarjeta` | |
 | Pseudo-clase | `.fila:hover` | |
 | Descendiente | `.tarjeta .titulo`, `.tarjeta:hover .acciones` | **Nuevo.** Dentro del mismo componente |
@@ -207,7 +198,7 @@ La herencia **atraviesa los componentes y los slots**: el texto que el padre pas
 
 **Alcance (como el CSS con ámbito de Vue o Svelte):** los estilos de un componente solo afectan a los elementos escritos en **su** plantilla, incluido el contenido que él pasa a los slots de sus hijos; nunca al interior de otro componente. Para personalizar el interior de un componente se usan sus props, sus clases en la etiqueta (`class` en la etiqueta va a su raíz) o sus variables (siguiente apartado). Así un componente de una biblioteca no se rompe por una regla de quien lo usa.
 
-**Precedencia como en CSS** (cambiado al implementar la fase 2; el diseño decía «sin especificidad»): gana la regla más específica y, a igualdad, la que aparece después. Sin especificidad, `.tarjeta:hover .acciones` perdía siempre contra un `.acciones` posterior, que es justo lo que escribe quien viene de la web. Con selectores de una sola clase todas empatan y decide el orden, como antes. Los estilos en línea (`style=`) ganarán a todas; las reglas que dependen de una clase condicional del propio elemento siguen ganando a las demás, como hoy.
+**Precedencia como en CSS:** gana la regla más específica y, a igualdad, la que aparece después. Sin especificidad, `.tarjeta:hover .acciones` perdía siempre contra un `.acciones` posterior, que es justo lo que escribe quien viene de la web. Con selectores de una sola clase todas empatan y decide el orden, como antes. Los estilos en línea (`style=`) ganarán a todas; las reglas que dependen de una clase condicional del propio elemento siguen ganando a las demás, como hoy.
 
 ### Variables propias
 
@@ -227,7 +218,7 @@ La herencia **atraviesa los componentes y los slots**: el texto que el padre pas
 
 ## Eventos
 
-Todos se escuchan con `on:` y el manejador está en Python (función o en línea, como hoy). Solo se envían a Python los eventos que tienen manejador.
+Todos se escuchan con `on:` y el manejador está en Python (función o en línea). Solo se envían a Python los eventos que tienen manejador.
 
 | Evento | Cuándo | `event` |
 |---|---|---|
@@ -313,20 +304,20 @@ Todos reciben un `DragEvent`: lo de `PointerEvent` más `.data` y `.dropped`. Mi
 
 ## Componentes construidos sobre `<flex>`
 
-Para que un componente se use **como un elemento más**, se añade lo siguiente a los componentes `.janel`:
+Un componente cuya raíz es un `<flex>` se usa **como un elemento más**:
 
 1. **Atributos que pasan a la raíz.** En un componente cuya raíz es un `<flex>`, lo que la etiqueta lleva y el componente no declara como prop pasa a esa raíz: `class` (se suma a la suya), `style` (se mezcla), `id`, `label`, `title`, `tabindex`, `disabled`, y los eventos nativos (`on:click`, `on:keydown`…). Así funciona `<Boton on:click={...}>` sin que `Boton` declare `click = event()`. Si el componente declara una prop o un evento con ese nombre, gana lo declarado. Se desactiva por componente con `inherit_attrs = False` en el script (como `inheritAttrs` de Vue); entonces el componente recibe esos atributos en `attrs` y decide dónde ponerlos.
-2. **`class` en la etiqueta va a la raíz.** Hoy envuelve al componente en una caja exterior; con `<flex>` como raíz, se aplica a la raíz directamente, y la caja exterior desaparece.
+2. **`class` en la etiqueta va a la raíz**, sin caja exterior.
 3. **`ref` en la etiqueta** apunta a la raíz (`.focus()` en un `<Boton>` enfoca su `<flex>`).
 4. Los **estilos de la raíz** pueden depender de los atributos recibidos: `disabled` en la etiqueta activa `:disabled` en la raíz.
 
-Con esto, una biblioteca de componentes (la futura `janelkit-kit`) puede escribirse en `.janel` puro, como se haría en Vue o Svelte.
+Con esto, una biblioteca de componentes puede escribirse en `.janel` puro, como se haría en Vue o Svelte.
 
 ## Cómo se comporta por dentro
 
 Esto no es API, pero condiciona el diseño:
 
-- **Motor de disposición propio** (hecho en la fase 1). Los `Layout` de Qt Quick no tienen salto de línea, márgenes, `space-between`, `order` ni posición absoluta dentro del flujo. `<flex>` usa un motor flexbox propio (un subconjunto del algoritmo de CSS, `Janel/flex.js`):
+- **Motor de disposición propio.** Los `Layout` de Qt Quick no tienen salto de línea, márgenes, `space-between`, `order` ni posición absoluta dentro del flujo. `<flex>` usa un motor flexbox propio (un subconjunto del algoritmo de CSS, `Janel/flex.js`):
   - Cada elemento avisa a su contenedor con un binding que depende de lo que afecta a su sitio (`Layout.*`, `flex`, márgenes…). El contenedor pasa a una cola.
   - La cola se vacía en la fase de *polish* de Qt Quick, justo antes de sincronizar el fotograma (`JkPolisher`, un `QQuickItem` de Python por ventana). Nunca se dibuja un fotograma a medio colocar, y muchos cambios seguidos cuestan una sola pasada.
   - Se coloca de fuera adentro: un contenedor coloca en la misma pasada los contenedores de dentro a los que cambia el tamaño. Lo leído de cada hijo se guarda hasta que el hijo avisa.
@@ -337,7 +328,7 @@ Esto no es API, pero condiciona el diseño:
 - **Herencia y variables.** Se resuelven en el compilador cuando el antecesor está en la misma plantilla, y en la vista cuando cruzan un componente o un slot.
 - **Selectores de descendientes.** Se resuelven en el compilador, porque los estilos tienen ámbito y la plantilla se conoce entera.
 - **Sombras.** Se dibujan con el efecto de sombra de Qt Quick (disponible desde Qt 6.5; JanelKit exige 6.8).
-- **Rendimiento.** Un `<flex>` sin estados, sombra ni eventos no debe costar más que el `Column` de hoy.
+- **Rendimiento.** Un `<flex>` sin estados, sombra ni eventos cuesta lo mismo que un `Column`.
 
 ## Vía rápida: layouts de Qt
 
@@ -380,57 +371,15 @@ Además: el aviso de cada hijo a su contenedor (`jkTouch`) solo se calcula si el
 
 Medido: una caja vacía, ~32 µs; un `<Text>`, ~30 µs; las 300 tarjetas en QML, de ~285 a ~205 ms al crear y de ~9 a ~6,5 ms al cambiar el ancho; desde `.janel` (con Python), de ~425 a ~325 ms al crear. En la lista de 1000 filas de `tools/bench.py`, donde manda Python, crear baja de ~470 a ~430 ms. Lo que queda por caja son sobre todo sus ~90 propiedades y los bindings del aspecto (color, borde, foco); escribir los `Layout.*` en línea en vez de llamar a `jk.js` no ahorra nada (medido). Pruebas: `packages/janelkit/tests/test_flex_lazy.py`.
 
-## Compatibilidad y versiones
+## Límites y diferencias con CSS
 
-- Todo es **sintaxis nueva**: los archivos actuales compilan igual y significan lo mismo. `FORMAT_VERSION` no cambia.
-- `Column` y `Row` se reimplementan sobre `<flex>` conservando sus valores por defecto (hecho). Las pruebas de comportamiento pasaron sin cambios; tres que comprobaban nombres internos del QML generado (`align`, `justify`) se actualizaron. Diferencia visible: los bordes ocupan sitio, como en CSS.
-- Los controles integrados (`Button`, `Checkbox`…) siguen existiendo. Los que no son de entrada (botón, casilla, interruptor) se reescribirán sobre `<flex>` cuando la paridad esté probada, sin cambiar su API.
-
-## Cómo se comprobará: construir otros elementos con `<flex>`
-
-La prueba de que `<flex>` cumple es poder escribir, **solo con `.janel`** (sin QML ni JavaScript), los elementos que una aplicación de escritorio necesita, con la calidad de la web. Vivirán en `apps/examples/flex/` con pruebas de `janelkit.inspect` y capturas en tema claro y oscuro.
-
-| Elemento | Qué demuestra | Criterio de aceptación |
-|---|---|---|
-| **Botón** (normal, primario, peligro, fantasma, solo icono, cargando) | estados, foco, papel, atributos que pasan a la raíz | Se usa como `<Boton on:click>`. Hover, pulsado, foco con teclado y deshabilitado se ven como en `Button`. Espacio/Intro lo activan. Al lector de pantalla llega como botón |
-| **Tarjeta** con cabecera, cuerpo y acciones que aparecen al pasar el ratón | descendientes con estado (`.tarjeta:hover .acciones`), sombra, `overflow: hidden` | Las acciones aparecen con transición. La imagen se recorta al radio |
-| **Chip / etiqueta** con botón de quitar | `margin-left: auto`, eventos anidados con `stop()` | Pulsar la ✕ no activa el chip |
-| **Insignia sobre un icono** | `position: absolute` | El contador queda en la esquina sin mover el icono |
-| **Interruptor** (como `Switch`) | `as="switch"`, `checked`, `transform`, transición | Se alterna con clic y Espacio; mismo aspecto que el integrado |
-| **Elemento de menú y menú contextual** | `on:contextmenu`, posición absoluta, `z-index`, flechas | Abre en la posición del clic, se cierra con Escape y se navega con flechas (programadas en el componente con `on:keydown` y `ref.focus()`) |
-| **Rejilla de tarjetas** | `flex-wrap`, `flex-basis`, `gap` | Pasa de 4 a 2 y a 1 columna al estrechar la ventana, sin código Python |
-| **Barra de herramientas** con separadores | `border-left` por lado, `:first-child`, `justify-content: space-between` | |
-| **Pestañas segmentadas** | `:selected`, variables propias (`--acento`) | El color de acento se cambia desde fuera con `style="--acento: …"` |
-| **Diálogo superpuesto** | superposición absoluta, `as="dialog"`, `on:keydown`, `prevent()`, `ref.focus()` | Un componente `Dialogo.janel` sobre `<flex>`, no una función de `<flex>`: retiene el foco (Tab y Mayús+Tab con `prevent()`), se cierra con Escape y devuelve el foco al elemento que lo abrió |
-| **Fila de tabla** con selección | herencia de `color` a los textos de la fila | El texto de la fila seleccionada cambia de color sin estilar cada `<Text>` |
-
-Además:
-
-- **Paridad:** el `Boton.janel` del ejemplo y el `Button` integrado se comparan en capturas y en el árbol de accesibilidad.
-- **Rendimiento:** con 1 000 `<flex>` en pantalla, crearlos no puede tardar más que con `Column` + 10 %. Pasar el ratón no llama a Python. Una rejilla de 200 tarjetas con `wrap` se recoloca al redimensionar en menos de 4 ms por fotograma (instrumentación de Qt, como en `apps/challenges/panel/bench.py`).
-- **Retos:** el Kanban (reto 3) está hecho sobre `<flex>` y trajo arrastrar y soltar ([hallazgos](../apps/challenges/kanban/HALLAZGOS.md)).
-
-## Fases de implementación
-
-1. **Caja y disposición:** `<flex>`, el motor flexbox (wrap, márgenes, `space-*`, `order`, `align-self`, `%`, mín./máx.), bordes por lado, radios por esquina, `overflow`. `Column`/`Row` pasan a ser atajos. Validación: rejilla y barra de herramientas. **Hecha** (`apps/examples/flex`). Pendiente de esta fase: `aspect-ratio` y `min-width: 0` explícito, y el objetivo de rendimiento de la rejilla de 200 tarjetas, que hoy cuesta 14 ms por fotograma frente a 4 ms; con la fase 5 desaparece un tercio de las cajas. `style={...}` en línea llega en la fase 4.
-2. **Estados y selectores:** pseudo-clases, selectores compuestos, de descendientes y de hijo, `transition` ampliada, `cursor`, `transform`, `box-shadow`, `outline`. Validación: tarjeta y botón (solo aspecto). **Hecha** (`apps/examples/flex`: `Boton.janel`, `Tarjeta.janel`). Diferencias con el diseño: una sola sombra por caja, sin `inset`; la caja recorta su sombra con `overflow: hidden`; `:first-child` cuenta los hermanos visibles; `pointer-events` y `visibility` pasan a la fase 3.
-3. **Eventos y accesibilidad:** eventos de puntero, teclado, rueda y foco con propagación, `prevent()`/`stop()`, `as`, `tabindex`, `title`. Validación: botón completo, chip, interruptor, menú. **Hecha** (`apps/examples/flex`: `Boton`, `Chip`, `Interruptor`, `Menu`). Cómo funciona: un filtro de eventos en cada ventana (`qt_backend/events.py`) ve el ratón, la rueda y el teclado antes que Qt Quick, busca los elementos afectados y llama a sus manejadores de dentro afuera; con `prevent()` se queda el evento. Diferencias con el diseño: `on:click` lo sigue entregando Qt (un `<Button>` dentro de una fila se queda el clic, como antes) y entre cajas sube con el ratón y con el teclado; `prevent()` no detiene los `<Shortcut>` (Qt los resuelve antes de la ventana); sin pulsación larga para `on:contextmenu`; `:focus-visible` en una caja es tener el foco (las cajas solo lo toman con Tab o por código); `as="switch"` se anuncia como casilla; `on:resize` llega una vez por vuelta del bucle de eventos. Medido: crear 1000 filas sin eventos, 478 ms (+3 % frente a la fase 2); con `on:click`, 488 ms.
-4. **Herencia y variables:** texto heredado y variables propias que atraviesan componentes, más `style={...}`. Validación: fila de tabla y pestañas segmentadas. **Hecha** (`apps/examples/flex`: `Tabla`, `Segmentado`; el `Boton` ya no estila su texto). Cómo funciona: una caja que fija texto heredable o variables crea un contexto de estilo (`JkContext.qml`) que enlaza con el de fuera; un `<Text>` con contexto recibe lo heredado (un `JkTextInherit.qml`, que es un `Binding`, por cada propiedad que alguna caja de fuera fija y él no; el contexto solo dice qué claves hay, `keys`, y el valor se busca subiendo por la cadena), y los que no tienen no pagan nada. Diferencias con el diseño: lo heredan los `<Text>`, no el texto de los controles de Qt; `var(--x)` sin valor por defecto es un token del tema salvo que el propio componente defina `--x` (los tokens se pueden ampliar al ejecutar, así que el compilador no sabe distinguirlos); `style={{...}}` admite una lista corta de propiedades (las que tienen un solo valor) y variables. Medido: crear 1000 filas sin texto heredado no cambia (484 ms).
-5. **Componentes como elementos:** atributos que pasan a la raíz (`inherit_attrs = False` para desactivarlo), `class` y `ref` en la raíz. Validación: todos los ejemplos usados como elementos. **Hecha** (`Boton` ya no declara `click`, `disabled` ni `variant`: se usa `<Boton class="primary" on:click=...>`; `packages/janelkit/tests/test_flex_components.py`). Cómo funciona: la etiqueta se convierte en un `JkRemote.qml` (el `Repeater` que crea el componente) con un `Binding` por propiedad sobre la raíz; los estados de la etiqueta se leen de la raíz; las clases llegan a la raíz en `jkInClass` para las reglas del propio componente; `flex.js` coloca la raíz donde está su `JkRemote`, también al reordenar filas. Diferencias con el diseño: con `inherit_attrs = False` no hay `attrs` para repartir a mano (los atributos van a una caja exterior, como antes); lo que la etiqueta fija gana siempre a los estilos propios del componente, sin comparar especificidad; transiciones, texto heredado y variables desde la etiqueta siguen usando una caja exterior. Medido: rejilla de 200 tarjetas del catálogo actual (cada una con dos `Boton`, unas 1100 cajas), 44 ms de mediana por paso al redimensionar (48 ms con la caja exterior); la tarjeta de la fase 1, 16 ms. **El objetivo de 4 ms no se cumple**: unos dos tercios del paso son el motor en JS (unas 1100 recolocaciones, ~27 µs cada una), y lo demás, Qt rehaciendo textos; ninguna de esas recolocaciones sobra (en la prueba los botones se encogen de verdad). Bajar de ahí pide otro enfoque (el motor en C++), fuera de lo que puede hacer un proyecto solo Python + QML.
-6. **Posición:** `position`, `inset`, `z-index`. Validación: insignia y diálogo superpuesto. **Hecha** (`apps/examples/flex`: insignia sobre el botón «Eliminar…», menú contextual abierto en el puntero, `Dialogo.janel`; `packages/janelkit/tests/test_flex_position.py`). Cómo funciona: `flex.js` saca del flujo a los hijos `absolute`/`fixed` y los coloca después de los demás, respecto a su bloque contenedor; `Jk.positionDeps` hace que se recoloquen cuando ese bloque cambia de tamaño o se mueve; un `JkBlocker.qml` (perezoso, solo en cajas `absolute`/`fixed`) impide que el puntero las atraviese. Diferencias con el diseño: también `position: fixed` (la necesitaba el diálogo); `z-index` ordena solo entre hermanos (en QML no hay contextos de apilamiento como en CSS: hay que subir también el `z-index` del contenedor); sin `top`/`left` un `absolute` va al principio del contenedor, no a su sitio en el flujo. `Ref.focused` (nuevo) permite al diálogo saber qué botón tiene el foco para retenerlo. Al validar salieron dos fallos del enrutador de eventos de la fase 3, corregidos: un elemento nuevo en la dirección de memoria de uno destruido heredaba sus manejadores, y pedir la ventana de un elemento desde Python en mitad de un evento invalidaba la ventana en `janelkit.inspect`.
-
-Cada fase termina con sus pruebas, la documentación en [lenguaje.md](lenguaje.md) y [estilos.md](estilos.md), y una entrada en [cambios.md](cambios.md).
-
-## Decisiones tomadas
-
-| # | Pregunta | Decisión |
-|---|---|---|
-| 1 | ¿`direction` por defecto `row` o `column`? | `row`, como en la web. `Column` queda como atajo |
-| 2 | Nombre y alcance del elemento base de entrada | Documento aparte tras la fase 3. Será un elemento base, en minúscula; candidatos: `<field>`, `<input>` |
-| 3 | Sintaxis para desactivar el paso de atributos a la raíz | `inherit_attrs = False` en el script, como `inheritAttrs` de Vue |
-| 4 | ¿`em`/`rem`? | No en esta versión |
-| 5 | Navegación con flechas en grupos (`tab`, `menuitem`) | No en esta versión. El componente la programa con `on:keydown` y `ref.focus()` |
-| 6 | Foco atrapado en diálogos | No es parte de `<flex>`: es un componente (`Dialogo.janel`) construido sobre él con eventos de teclado, `prevent()` y `ref.focus()`. Sirve además de prueba de que `<flex>` basta para construirlo |
-| 7 | ¿`display: grid`? | No en esta versión; revisar tras la hoja de cálculo (reto 2) |
-| 8 | ¿Reescribir los controles integrados sobre `<flex>`? | Sí, los que no son de entrada (botón, casilla, interruptor), cuando la paridad esté probada y sin cambiar su API |
-| — | Mayúsculas y minúsculas | Los elementos base van en minúscula (`<flex>`); los componentes y controles, en mayúscula (ver [Elementos base en minúscula](#elementos-base-en-minúscula)) |
+- `direction` es `row` por defecto, como en la web; `Column` es un atajo. `Column` y `Row` están hechos sobre `<flex>`, y sus bordes ocupan sitio, como en CSS.
+- Sin `em`/`rem`, sin `display: grid` y sin `aspect-ratio`.
+- Una sola sombra por caja, sin `inset`; con `overflow: hidden`, la caja recorta su sombra.
+- `:first-child` cuenta los hermanos visibles. `:focus-visible` en una caja es tener el foco (las cajas solo lo toman con Tab o por código).
+- `z-index` ordena solo entre hermanos: en QML no hay contextos de apilamiento como en CSS, así que hay que subir también el del contenedor. Un `absolute` sin `top`/`left` va al principio del contenedor, no a su sitio en el flujo.
+- `on:click` lo entrega Qt: un `<Button>` dentro de una fila se queda el clic. `prevent()` no detiene los `<Shortcut>` (Qt los resuelve antes que la ventana). Sin pulsación larga para `on:contextmenu`. `on:resize` llega una vez por vuelta del bucle de eventos.
+- `as="switch"` se anuncia como casilla. La navegación con flechas en grupos (`tab`, `menuitem`) la programa el componente, con `on:keydown` y `ref.focus()`.
+- El texto heredado llega a los `<Text>`, no al texto de los controles de Qt. `var(--x)` sin valor por defecto es un token del tema, salvo que el propio componente defina `--x`. `style={{...}}` admite las propiedades de un solo valor y variables.
+- Con `inherit_attrs = False`, los atributos de la etiqueta van a una caja exterior. Lo que la etiqueta fija gana siempre a los estilos propios del componente, sin comparar especificidad.
+- El motor de disposición está en JavaScript (~27 µs por recolocación). Los tiempos medidos están en [rendimiento.md](rendimiento.md#flex-y-rejillas).

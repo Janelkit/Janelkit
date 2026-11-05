@@ -1,5 +1,5 @@
 """Mediciones del reto 6: N proyectos de C columnas × T tarjetas y P personas
-(por defecto 10 × 4 × 50 y 300, los de «Hecho cuando» en docs/challenges_to_test.md).
+(por defecto 10 × 4 × 50 y 300, los del enunciado del reto en README.md).
 
     python bench.py
     python bench.py --proyectos 20 --tarjetas 100 --personas 1000

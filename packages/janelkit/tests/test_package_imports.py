@@ -1,4 +1,5 @@
 """Componentes (.janel) y elementos (.qml) que vienen en un paquete de Python instalado."""
+import sys
 from pathlib import Path
 
 import pytest
@@ -78,6 +79,23 @@ def test_an_unknown_name_in_a_package_is_still_a_normal_import(paquete):
     with pytest.raises(Exception) as exc:
         compile_file(paquete)
     assert "elemento desconocido <NoExiste>" in str(exc.value)
+
+
+def test_a_name_that_only_differs_in_case_from_a_component_is_a_normal_import(paquete):
+    # En Windows y macOS el disco no distingue mayúsculas: `medidor` no es `Medidor.qml`.
+    # Así se importa `sections` de janelkit_router, que también trae `Sections.qml`.
+    (paquete.parents[2] / "site" / "mi_ui" / "__init__.py").write_text("def medidor():\n    return 3\n", encoding="utf-8")
+    paquete.write_text("<script>\nfrom mi_ui import medidor, Medidor\n</script>\n"
+                       "<window><column><text>{medidor()}</text><Medidor value={1} /></column></window>", encoding="utf-8")
+    c = compile_file(paquete)
+    assert c.all_warnings == []
+    try:
+        with mount(paquete) as app:
+            assert app.find("text", text="3").visible
+            assert len(app.find_all("Medidor")) == 1
+    finally:  # mount() olvida los módulos de la app, no los del paquete: las demás pruebas usan otro mi_ui
+        for name in [m for m in sys.modules if m == "mi_ui" or m.startswith("mi_ui.")]:
+            del sys.modules[name]
 
 
 def test_janel_build_writes_package_components_apart(paquete):

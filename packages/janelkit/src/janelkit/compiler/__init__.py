@@ -12,6 +12,8 @@ resto de este paquete es interno.
 from __future__ import annotations
 
 import importlib.util
+import os
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -201,11 +203,18 @@ def _find_in(folder: Path, name: str, nested: bool) -> Path | None:
 
 
 def _exact(candidate: Path) -> Path | None:
-    """El archivo, si existe con esas mayúsculas (en Windows, `sections` no es `Sections.qml`)."""
+    """El archivo, si existe con esas mayúsculas: `sections` no es `Sections.qml`.
+
+    En Windows y en macOS el sistema de archivos no distingue mayúsculas, así que `is_file()`
+    no basta. `resolve()` tampoco: da las mayúsculas reales en Windows, pero no en macOS. Se
+    compara con el nombre que da el directorio (en NFC: en macOS puede venir en NFD)."""
     if not candidate.is_file():
         return None
-    real = candidate.resolve()
-    return real if real.name == candidate.name else None
+    try:
+        names = {unicodedata.normalize("NFC", n) for n in os.listdir(candidate.parent)}
+    except OSError:
+        return None
+    return candidate.resolve() if unicodedata.normalize("NFC", candidate.name) in names else None
 
 
 def _slot_names(nodes: list[Node]) -> set[str]:

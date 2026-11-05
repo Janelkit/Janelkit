@@ -110,7 +110,7 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 
 | Nombre | Descripción |
 |---|---|
-| `Frames` | Fotogramas a tiempo real para `<video source={frames}>`: `Frames(color="rgb")` (`"bgr"`, `"rgba"`, `"bgra"`); `push(img)` desde cualquier hilo (numpy, objeto con búfer o `QImage`; se copia y se saltan los que no da tiempo a mostrar); `async for img in frames` y `await frames.next()` dan el más reciente; `size` y `fps` reactivos; `latest()`, `clear()`. Ver [lenguaje.md](lenguaje.md#vídeo-video-y-frames). |
+| `Frames` | Fotogramas a tiempo real para `<video source={frames}>`: `Frames(color="rgb", stall_after=1.5)` (`"bgr"`, `"rgba"`, `"bgra"`); `push(img)` desde cualquier hilo (numpy, objeto con búfer o `QImage`; se copia y se saltan los que no da tiempo a mostrar); `async for img in frames` y `await frames.next()` dan el más reciente; `size`, `fps` y `stalled` reactivos (`stalled`: más de `stall_after` segundos sin fotogramas; `fps` baja a 0 a la vez); `latest()`, `clear()`. Ver [lenguaje.md](lenguaje.md#vídeo-video-y-frames). |
 
 ### Idioma de la interfaz
 

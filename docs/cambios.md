@@ -19,6 +19,7 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 - **Parar lo que no se ve:** `is_visible()` devuelve un `computed` que dice si el componente se ve (otra sección, una página de debajo, un `{#hidden}` o una fila de `<list>` fuera de la vista no se ven). `interval(ms, fn, when=…)` y `timeout(..., when=…)` solo cuentan mientras se cumple una condición reactiva: `@interval(33, when=is_visible())` sustituye a la comprobación a mano al empezar cada tic.
 - **Mover un `<scroll>` desde el código:** `follow`, `on:top`, `on:bottom` y `on:scroll`, como en `<list>`; con un `ref`, `scroll_to_start()`, `scroll_to_end()` y `scroll_to(ref)`, que lleva a la vista un elemento de dentro.
 - **Una sola ventana de cada:** `open_window(Ajustes, single=True)` trae al frente la ventana de `Ajustes` si ya está abierta (y la devuelve) en vez de abrir otra.
+- **Saber que una fuente de vídeo dejó de entregar:** `frames.stalled` es `True` tras `stall_after` segundos sin fotogramas (`Frames(stall_after=1.5)`) y vuelve a `False` con el siguiente. `fps` baja a 0 con el mismo umbral (antes, fijo en 1,5 s), y `clear()` pone `fps` a 0 al momento. Ver [lenguaje.md](lenguaje.md#vídeo-video-y-frames).
 - **Métricas para depurar:** `Timer.runs`, `.skipped` y `.last_duration`; `subscriber_count` de `state` y `computed`, ahora documentado; `repr` de `Effect` (función, fuentes, liberado o en espera) y de `Scope` (qué contiene).
 
 ### Corregido

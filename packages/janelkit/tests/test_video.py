@@ -208,6 +208,51 @@ def test_size_fps_and_clear(app_from):
     assert shown(app).isNull()
 
 
+STALL = """<script>
+from janelkit import Frames
+frames = Frames(stall_after=0.3)
+</script>
+<column>
+  <video source={frames} width={400} height={400} />
+  {#if frames.stalled}<text>Sin señal</text>{/if}
+</column>
+"""
+
+
+def test_stalled_after_stall_after_without_frames_and_back_with_the_next(app_from):
+    app = app_from(STALL)
+    frames = app.namespace["frames"]
+    app.wait(0.4)
+    assert frames.stalled is False  # antes del primer fotograma no hay fuente que se haya parado
+    frames.push(image(8, 8))
+    app.wait(0.02)
+    assert frames.stalled is False and "Sin señal" not in app.texts()
+    app.wait(until=lambda: frames.stalled, timeout=3)
+    assert frames.fps == 0 and "Sin señal" in app.texts()  # fps baja a la vez, con el mismo umbral
+    assert repr(frames) == "Frames(color='rgb', size=(8, 8), stalled=True)"
+    frames.push(image(8, 8))
+    app.wait(0.02)
+    assert frames.stalled is False and "Sin señal" not in app.texts()
+
+
+def test_clear_resets_stalled_and_fps_and_stops_watching(app_from):
+    app = app_from(STALL)
+    frames = app.namespace["frames"]
+    frames.push(image(8, 8))
+    app.wait(until=lambda: frames.stalled, timeout=3)
+    frames.clear()
+    assert (frames.stalled, frames.fps, frames.size) == (False, 0, None)
+    app.wait(0.5)  # más que stall_after: sin fotograma, no vuelve a «sin señal»
+    assert frames.stalled is False
+
+
+def test_stall_after_must_be_positive():
+    assert Frames(stall_after=2).stalled is False
+    for wrong in (0, -1, True, "1"):
+        with pytest.raises(ValueError, match="stall_after"):
+            Frames(stall_after=wrong)
+
+
 def test_a_video_that_goes_away_lets_go_of_its_surface(app_from):
     app = app_from("""<script>
 from janelkit import Frames, state

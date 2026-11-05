@@ -162,7 +162,7 @@ Comparte la serie con el núcleo: janelkit-router 0.2.x.x va con janelkit 0.2.x.
 
 ## Cambios
 
-### 0.2.0.0 (sin publicar)
+### 0.2.0.0 (2026-11-05)
 
 - Primera versión, en la serie 0.2. Antes era la navegación del núcleo (`janelkit.pages`): cambia `from janelkit import pages, navigation, sections` por `from janelkit_router import pages, navigation, sections` e importa los elementos que uses (`from janelkit_router import Pages, Sections`). El tipo de `sections()` pasa a llamarse `SectionSet`. `janel migrate` hace el cambio.
 

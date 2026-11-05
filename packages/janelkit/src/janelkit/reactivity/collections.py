@@ -33,6 +33,19 @@ def reactive(value: Any) -> Any:
     return value
 
 
+def adopt(value: Any, owner: Any) -> None:
+    """Marca `value` y las colecciones reactivas que contiene como de `owner` (writes.own)."""
+    pending = [value]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, (ReactiveList, ReactiveDict, ReactiveSet)) and item._jk_owner is not owner:
+            item._jk_owner = owner
+            if isinstance(item, ReactiveList):
+                pending.extend(list.__iter__(item))
+            elif isinstance(item, ReactiveDict):
+                pending.extend(dict.values(item))
+
+
 def to_plain(value: Any, track: bool = False) -> Any:
     """Copia profunda sin colecciones reactivas (para entregar valores a Qt).
 
@@ -96,6 +109,7 @@ def _writer(base: type, name: str):
 class _Mixin:
     __slots__ = ()
     _jk_src: Source
+    _jk_owner: Any  # de quién es (writes.own): lo insertado lo hereda
 
     def _jk_changed(self) -> None:
         with batch():
@@ -106,6 +120,12 @@ class _Mixin:
         if _writes.listener is not None:
             _writes.listener.collection(self)
 
+    def _jk_adopt(self, value: Any) -> Any:
+        """Lo que se inserta hereda el dueño de la colección."""
+        if self._jk_owner is not None:
+            adopt(value, self._jk_owner)
+        return value
+
 
 _LIST_READS = (
     "__getitem__", "__iter__", "__reversed__", "__len__", "__contains__", "__eq__", "__ne__",
@@ -115,18 +135,13 @@ _LIST_READS = (
 
 
 class ReactiveList(_Mixin, list):
-    __slots__ = ("_jk_src",)
+    __slots__ = ("_jk_src", "_jk_owner")
 
     def __init__(self, iterable: Iterable = ()):
         list.__init__(self, (reactive(v) for v in iterable))
         self._jk_src = Source()
+        self._jk_owner = None
 
-    def _jk_snapshot(self) -> list:
-        return list(list.__iter__(self))
-
-    def _jk_restore(self, content: list) -> None:
-        list.__setitem__(self, slice(None), content)
-        self._jk_changed()
 
     def __reduce_ex__(self, protocol):
         return (ReactiveList, (list(list.__iter__(self)),))
@@ -140,7 +155,7 @@ class ReactiveList(_Mixin, list):
             value = reactive(value)
             if _same(list.__getitem__(self, index), value):
                 return
-        list.__setitem__(self, index, value)
+        list.__setitem__(self, index, self._jk_adopt(value))
         self._jk_changed()
 
     def __iadd__(self, other):
@@ -157,19 +172,19 @@ class ReactiveList(_Mixin, list):
     def append(self, value):
         check_thread()
         self._jk_before()
-        list.append(self, reactive(value))
+        list.append(self, self._jk_adopt(reactive(value)))
         self._jk_changed()
 
     def extend(self, values):
         check_thread()
         self._jk_before()
-        list.extend(self, [reactive(v) for v in values])
+        list.extend(self, self._jk_adopt([reactive(v) for v in values]))
         self._jk_changed()
 
     def insert(self, index, value):
         check_thread()
         self._jk_before()
-        list.insert(self, index, reactive(value))
+        list.insert(self, index, self._jk_adopt(reactive(value)))
         self._jk_changed()
 
     __delitem__ = _writer(list, "__delitem__")
@@ -191,20 +206,14 @@ _DICT_READS = (
 
 
 class ReactiveDict(_Mixin, dict):
-    __slots__ = ("_jk_src",)
+    __slots__ = ("_jk_src", "_jk_owner")
 
     def __init__(self, *args, **kwargs):
         dict.__init__(self)
         self._jk_src = Source()
+        self._jk_owner = None
         dict.update(self, ((k, reactive(v)) for k, v in dict(*args, **kwargs).items()))
 
-    def _jk_snapshot(self) -> dict:
-        return dict(dict.items(self))
-
-    def _jk_restore(self, content: dict) -> None:
-        dict.clear(self)
-        dict.update(self, content)
-        self._jk_changed()
 
     def __reduce_ex__(self, protocol):
         return (ReactiveDict, (dict(dict.items(self)),))
@@ -215,7 +224,7 @@ class ReactiveDict(_Mixin, dict):
         value = reactive(value)
         if dict.__contains__(self, key) and _same(dict.__getitem__(self, key), value):
             return
-        dict.__setitem__(self, key, value)
+        dict.__setitem__(self, key, self._jk_adopt(value))
         self._jk_changed()
 
     def update(self, *args, **kwargs):
@@ -254,19 +263,13 @@ _SET_WRITES = (
 
 
 class ReactiveSet(_Mixin, set):
-    __slots__ = ("_jk_src",)
+    __slots__ = ("_jk_src", "_jk_owner")
 
     def __init__(self, iterable: Iterable = ()):
         set.__init__(self, iterable)
         self._jk_src = Source()
+        self._jk_owner = None
 
-    def _jk_snapshot(self) -> set:
-        return set(set.__iter__(self))
-
-    def _jk_restore(self, content: set) -> None:
-        set.clear(self)
-        set.update(self, content)
-        self._jk_changed()
 
     def __reduce_ex__(self, protocol):
         return (ReactiveSet, (set(set.__iter__(self)),))

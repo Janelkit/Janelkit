@@ -30,6 +30,8 @@ class State(Source, Generic[T]):
     objetos modificados en el sitio, llama a `notify()`.
     """
 
+    _jk_owner: Any = None  # de quién es (writes.own): lo que se le asigna hereda el dueño
+
     def __init__(self, initial: T):
         super().__init__()
         self._value = reactive(initial)
@@ -47,6 +49,10 @@ class State(Source, Generic[T]):
             return
         if _writes.listener is not None:
             _writes.listener.state(self, self._value)
+        if self._jk_owner is not None:
+            from .collections import adopt
+
+            adopt(new, self._jk_owner)
         self._value = new
         with batch():
             self._notify()

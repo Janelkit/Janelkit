@@ -415,14 +415,24 @@ class TemplateInstance:
         write = self._writes[binding_id]
         name = write.target.code.strip()
         root, *attrs = [part.strip() for part in name.split(".")]
+        owner: Any = None
         try:
             target = self.resolve(root)
             if attrs:  # como al leer: el nombre se desenvuelve, los atributos no
                 target = _unwrap(target)
             for attr in attrs:
-                target = getattr(target, attr)
+                owner, target = target, getattr(target, attr)
         except (NameError, AttributeError):
             target = None
+        # Un atributo gestionado por un descriptor de su clase que define __jk_bind__ (un campo
+        # de un store): la escritura pasa por él, que puede negarse.
+        hook = getattr(getattr(type(owner), attrs[-1], None), "__jk_bind__", None) if attrs and owner is not None else None
+        if hook is not None:
+            try:
+                hook(owner, value)
+            except Exception as exc:  # noqa: BLE001 - el descriptor explica por qué no
+                self.report(f"bind: '{name}': {exc}", write.loc)
+            return
         if isinstance(target, State):
             target.value = value
         elif isinstance(target, Prop):

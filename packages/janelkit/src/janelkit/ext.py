@@ -16,8 +16,12 @@ from .runtime.hosts import Child, Container, Host, is_component
 from .lifecycle import ask_to_leave
 from .session import Session
 from .reactivity.effects import Gate
+from .reactivity.writes import on_write, own
 
-__all__ = ["Child", "Container", "Gate", "Host", "Session", "app", "ask_to_leave", "inspector", "is_component", "session"]
+__all__ = [
+    "Child", "Container", "Gate", "Host", "Session", "app", "ask_to_leave", "inspector", "is_component", "on_write",
+    "own", "session",
+]  # fmt: skip
 
 
 def app() -> Any:

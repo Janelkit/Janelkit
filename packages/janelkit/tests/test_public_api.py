@@ -58,6 +58,6 @@ def test_every_public_name_is_documented_and_nothing_else():
 
 
 def test_check_source_reports_without_raising():
-    assert janelkit.compiler.check_source("<Text>hola</Text>") == []
-    diags = janelkit.compiler.check_source("<script>\nx = 1\n</script>\n<Text>{y}</Text>")
+    assert janelkit.compiler.check_source("<text>hola</text>") == []
+    diags = janelkit.compiler.check_source("<script>\nx = 1\n</script>\n<text>{y}</text>")
     assert len(diags) == 1 and diags[0].severity == "error" and "'y' no está definido" in diags[0].message

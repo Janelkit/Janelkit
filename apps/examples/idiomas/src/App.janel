@@ -21,28 +21,28 @@ def change_language(code):
     i18n.set(code)
 </script>
 
-<Window title="Idiomas" width={460} height={360}>
-  <Column class="page">
-    <Row class="top">
-      <Text class="title">{t("title")}</Text>
-      <Spacer />
-      <Text class="muted">{t("language")}</Text>
-      <Select value={language} options={LANGUAGES} on:change={change_language} />
-    </Row>
+<window title="Idiomas" width={460} height={360}>
+  <column class="page">
+    <row class="top">
+      <text class="title">{t("title")}</text>
+      <spacer />
+      <text class="muted">{t("language")}</text>
+      <select value={language} options={LANGUAGES} on:change={change_language} />
+    </row>
 
-    <TextField bind:value={name} placeholder={t("name")} />
-    <Text class="big">{t("hello", name=name) if name else t("nobody")}</Text>
+    <textfield bind:value={name} placeholder={t("name")} />
+    <text class="big">{t("hello", name=name) if name else t("nobody")}</text>
 
-    <Row class="counter">
-      <Button on:click={count -= 1} enabled={count > 0}>{t("remove")}</Button>
-      <Button variant="primary" on:click={count += 1}>{t("add")}</Button>
-      <Text>{t("files", n=count)}</Text>
-    </Row>
+    <row class="counter">
+      <button on:click={count -= 1} enabled={count > 0}>{t("remove")}</button>
+      <button variant="primary" on:click={count += 1}>{t("add")}</button>
+      <text>{t("files", n=count)}</text>
+    </row>
 
-    <Text>{t("total", amount=i18n.currency(1234.5 * count, "€"))}</Text>
-    <Text class="muted">{t("today", date=i18n.date(date.today(), "long"))}</Text>
-  </Column>
-</Window>
+    <text>{t("total", amount=i18n.currency(1234.5 * count, "€"))}</text>
+    <text class="muted">{t("today", date=i18n.date(date.today(), "long"))}</text>
+  </column>
+</window>
 
 <style>
 .page { padding: 24px; gap: 14px; }

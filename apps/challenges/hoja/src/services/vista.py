@@ -1,7 +1,7 @@
 """Lo que se ve de la hoja: celda activa, selección, columnas visibles, celdas congeladas
 y edición. Es Python normal (sin interfaz) para poder probarlo y medirlo aparte.
 
-Las filas las virtualiza `<List>`. Las columnas no (las filas ocupan el ancho de la
+Las filas las virtualiza `<list>`. Las columnas no (las filas ocupan el ancho de la
 lista), así que se virtualizan aquí: solo se muestran las `caben` columnas a partir de
 `inicio`, y el desplazamiento horizontal va de columna en columna, como en las hojas
 de cálculo.

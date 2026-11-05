@@ -100,12 +100,12 @@ def test_scrolling_to_the_top_loads_older_messages(chat):
 
 def test_sending_a_message(chat):
     app, srv = chat
-    app.find("TextField", id="draft").type("hola **mundo**")
-    app.find("Button", text="Enviar").click()
+    app.find("textfield", id="draft").type("hola **mundo**")
+    app.find("button", text="Enviar").click()
     general = room(app)
     app.wait(until=lambda: general.messages.value[-1]["text"] == "hola **mundo**")
     assert srv.server.messages["general"][-1]["author"] == "yo"
-    assert app.find("TextField", id="draft").value == ""
+    assert app.find("textfield", id="draft").value == ""
 
 
 def test_unread_counters_and_switching_rooms(chat):
@@ -115,7 +115,7 @@ def test_unread_counters_and_switching_rooms(chat):
     srv.say("python", "dos")
     app.wait(until=lambda: python.unread.value == 2)
     assert "2" in app.texts()
-    app.find("Row", label="Python").click()
+    app.find("row", label="Python").click()
     assert python.unread.value == 0
     assert app.get("current") == "python"
     app.wait(until=lambda: any("dos" in t for t in app.texts()))
@@ -128,7 +128,7 @@ def test_new_messages_while_reading_older_ones(chat):
     srv.say("general", "mientras leías")
     app.wait(until=lambda: app.get("new_below") == 1)
     assert room(app).unread.value == 1
-    app.find("Button", text="1 mensaje nuevo ↓").click()
+    app.find("button", text="1 mensaje nuevo ↓").click()
     app.wait(until=lambda: app.get("at_bottom"))
     assert app.get("new_below") == 0 and room(app).unread.value == 0
 
@@ -164,7 +164,7 @@ def test_arabic_mirrors_the_layout(chat):
     app, _ = chat
     from janelkit_i18n import i18n
 
-    app.find("Select").choose("العربية")
+    app.find("select").choose("العربية")
     assert i18n.rtl
     assert "دردشة" in app.texts()
     i18n.set("es")

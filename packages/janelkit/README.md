@@ -38,20 +38,20 @@ def add():
     draft.value = ""
 </script>
 
-<Window title="Tareas" width={480} height={400}>
-  <Column class="page">
-    <Text class="title">{pending} pendientes</Text>
-    <Row class="new">
-      <TextField bind:value={draft} on:submit={add} placeholder="Nueva tarea" flex={1} />
-      <Button variant="primary" on:click={add}>Añadir</Button>
-    </Row>
+<window title="Tareas" width={480} height={400}>
+  <column class="page">
+    <text class="title">{pending} pendientes</text>
+    <row class="new">
+      <textfield bind:value={draft} on:submit={add} placeholder="Nueva tarea" flex={1} />
+      <button variant="primary" on:click={add}>Añadir</button>
+    </row>
     {#each todos as todo (todo["id"])}
-      <Checkbox checked={todo["done"]} on:change={todo["done"] = event}>{todo["title"]}</Checkbox>
+      <checkbox checked={todo["done"]} on:change={todo["done"] = event}>{todo["title"]}</checkbox>
     {:else}
-      <Text>No hay tareas.</Text>
+      <text>No hay tareas.</text>
     {/each}
-  </Column>
-</Window>
+  </column>
+</window>
 
 <style>
 .page { padding: 24px; gap: 12px; }
@@ -65,7 +65,7 @@ Cuando cambia un `state`, solo se recalcula lo que lo leyó, y solo se actualiza
 ## Por qué JanelKit
 
 - **Python de principio a fin.** La lógica, los manejadores y las expresiones de la plantilla son Python: tus módulos, tus bibliotecas y tus pruebas de siempre.
-- **Rendimiento nativo.** Qt Quick dibuja; JanelKit solo avisa de lo que cambió. Una aplicación mediana arranca en menos de 300 ms y responde en menos de 70 ms. Una `<List>` virtualizada crea 10 000 filas en unos 40 ms.
+- **Rendimiento nativo.** Qt Quick dibuja; JanelKit solo avisa de lo que cambió. Una aplicación mediana arranca en menos de 300 ms y responde en menos de 70 ms. Una `<list>` virtualizada crea 10 000 filas en unos 40 ms.
 - **Errores que ayudan.** Cada error indica archivo, línea y columna, con sugerencias («¿quisiste decir `on:click`?»), también los que vienen de Qt o de la ejecución.
 - **Recarga al guardar.** `janel dev` recarga la vista y conserva el estado de los componentes cuyo script no cambió.
 - **Probado a fondo.** Una suite extensa de pruebas que la CI ejecuta en Windows, Linux y macOS, y cinco aplicaciones grandes de validación (chat, panel en tiempo real, Kanban, hoja de cálculo y gestor de proyectos) construidas sin tocar el framework.
@@ -79,8 +79,8 @@ Cuando cambia un `state`, solo se recalcula lo que lo leyó, y solo se actualiza
 | **Plantilla** | `{expr}` con formato (`{cpu:.1f}`), `on:evento`, `bind:value`, `class:x={cond}`, `{#if}`, `{#each}` con claves, `{#key}`, `{#hidden}`, transiciones |
 | **Componentes** | Importados como módulos Python, `prop()` con tipos, `event()`, slots, `on_mount`/`on_destroy`, `ref`, `provide`/`inject` |
 | **Asincronía** | Manejadores `async def`, `@task` con estados de carga y error, `background()` para trabajo bloqueante, temporizadores; todo se cancela al desmontar |
-| **Disposición y estilos** | Flexbox de CSS (`<flex>`, `Column`, `Row`), posición, pseudo-clases y selectores, tokens `var(--primary)`, temas claro y oscuro intercambiables en caliente |
-| **Controles** | Texto (también Markdown), botones, campos, casillas, `Select`, `Switch`, `Slider`, `RadioGroup`, `Tabs`, `Image`, `ProgressBar`, `<List>` virtualizada, `<Video>`, arrastrar y soltar |
+| **Disposición y estilos** | Flexbox de CSS (`<flex>`, `column`, `row`), posición, pseudo-clases y selectores, tokens `var(--primary)`, temas claro y oscuro intercambiables en caliente |
+| **Controles** | Texto (también Markdown), botones, campos, casillas, `select`, `switch`, `slider`, `radiogroup`, `tabs`, `image`, `progressbar`, `<list>` virtualizada, `<video>`, arrastrar y soltar |
 | **Ventanas y navegación** | Varias ventanas, pilas de páginas, secciones que conservan su estado, `before_leave` para cambios sin guardar, Alt+← |
 | **Accesibilidad** | Navegación con teclado, foco visible, nombres accesibles, derecha a izquierda |
 | **Interoperabilidad** | Importa un `.qml` propio como si fuera un componente |

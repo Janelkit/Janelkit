@@ -23,7 +23,7 @@ def tecla(event):
   {#each options as option}
     <flex as="tab" class="pestana" selected={option == value} tabindex={0 if option == value else -1}
           label={option} on:click={change.emit(option)}>
-      <Text>{option}</Text>
+      <text>{option}</text>
     </flex>
   {/each}
 </flex>

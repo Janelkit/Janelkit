@@ -19,7 +19,7 @@ python bench.py --cols 4 --cards 200
 
 ## Qué hace
 
-- Columnas con tarjetas que se **arrastran** entre columnas y dentro de una (se colocan delante de la tarjeta sobre la que se sueltan, o al final si se sueltan en el hueco). Cada columna es una `<List animate>`: las tarjetas se recolocan con animación y solo se crean las que se ven. Cerca del borde, la columna o el tablero se desplazan solos.
+- Columnas con tarjetas que se **arrastran** entre columnas y dentro de una (se colocan delante de la tarjeta sobre la que se sueltan, o al final si se sueltan en el hueco). Cada columna es una `<list animate>`: las tarjetas se recolocan con animación y solo se crean las que se ven. Cerca del borde, la columna o el tablero se desplazan solos.
 - Tarjetas con etiquetas de colores, responsable, fecha y una descripción que se despliega (estado local de la tarjeta, que se conserva al moverla, también a otra columna).
 - **Doble clic** (o Intro) abre el detalle para editar título, descripción, responsable, fecha y etiquetas; «Guardar» (Ctrl+Intro) lo aplica como un solo cambio.
 - **Clic derecho** (o Mayús+F10) abre el menú: mover a otra columna, abrir, duplicar, borrar. Todo tiene su tecla: Alt+←/→ (otra columna), Alt+↑/↓ (subir o bajar), Ctrl+D, Supr, Intro.
@@ -32,7 +32,7 @@ python bench.py --cols 4 --cards 200
 | Archivo | Contenido |
 |---|---|
 | `src/App.janel` | La ventana: barra (búsqueda, filtros, deshacer), tablero, detalle y menú contextual. |
-| `src/components/Columna.janel` | Una columna: cabecera arrastrable y renombrable, `<List animate>` de tarjetas, «Añadir tarjeta». |
+| `src/components/Columna.janel` | Una columna: cabecera arrastrable y renombrable, `<list animate>` de tarjetas, «Añadir tarjeta». |
 | `src/components/Tarjeta.janel` | Una tarjeta: arrastre, destino de otras tarjetas, teclas y descripción desplegable. |
 | `src/components/Detalle.janel` | Panel de detalle con borrador y «Guardar». |
 | `src/components/MenuContextual.janel` | Menú hecho con `<flex>` (foco, flechas, Escape, clic fuera). |

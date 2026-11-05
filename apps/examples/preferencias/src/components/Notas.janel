@@ -19,28 +19,28 @@ def tecla(event):
         borrador.value = ""
 </script>
 
-<Column class="notas">
-  <Row class="nueva">
-    <TextField label="Nueva nota" bind:value={borrador} placeholder="Escribe y pulsa Intro…" flex={1}
+<column class="notas">
+  <row class="nueva">
+    <textfield label="Nueva nota" bind:value={borrador} placeholder="Escribe y pulsa Intro…" flex={1}
                on:submit={anadir} on:keydown={tecla} />
-    <Button variant="primary" on:click={anadir} enabled={bool(borrador.strip())}>Añadir</Button>
-  </Row>
+    <button variant="primary" on:click={anadir} enabled={bool(borrador.strip())}>Añadir</button>
+  </row>
   {#each notas as nota (nota["id"])}
-    <Row class="nota">
-      <Checkbox label={nota["texto"]} checked={nota["hecha"]} on:change={nota["hecha"] = event} />
-      <Text class="texto" class:hecha={nota["hecha"]}>{nota["texto"]}</Text>
-      <Button variant="ghost" on:click={notas.remove(nota)}>Quitar</Button>
-    </Row>
+    <row class="nota">
+      <checkbox label={nota["texto"]} checked={nota["hecha"]} on:change={nota["hecha"] = event} />
+      <text class="texto" class:hecha={nota["hecha"]}>{nota["texto"]}</text>
+      <button variant="ghost" on:click={notas.remove(nota)}>Quitar</button>
+    </row>
   {:else}
-    <Text class="vacio">No hay notas. Las que escribas seguirán aquí al volver a abrir.</Text>
+    <text class="vacio">No hay notas. Las que escribas seguirán aquí al volver a abrir.</text>
   {/each}
-</Column>
+</column>
 
 <style>
 .notas { gap: 6px; }
 .nueva { gap: 8px; align-items: center; }
 .nota { gap: 8px; align-items: center; }
-.texto { flex: 1; }  /* hereda el tamaño de letra elegido; el texto de un Checkbox, no */
+.texto { flex: 1; }  /* hereda el tamaño de letra elegido; el texto de un <checkbox>, no */
 .hecha { color: var(--text-muted); }
 .vacio { color: var(--text-muted); }
 </style>

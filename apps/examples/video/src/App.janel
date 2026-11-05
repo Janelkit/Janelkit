@@ -54,24 +54,24 @@ def elegir(nombre):
     elegido.value = "" if elegido.value == nombre else nombre
 </script>
 
-<Window title="Vídeo" width={960} height={640}>
+<window title="Vídeo" width={960} height={640}>
   <flex class="raiz">
-    <Video source={frames} flex={1} label="Vídeo">
+    <video source={frames} flex={1} label="Vídeo">
       {#each objetos as o (o[4])}
         <flex class="caja" class:elegida={o[4] == elegido} label={o[4]} on:click={elegir(o[4])}
               style={{"left": pct(o[0], 0), "top": pct(o[1], 1), "width": pct(o[2], 0), "height": pct(o[3], 1)}}>
-          <Text class="etiqueta">{o[4]}</Text>
+          <text class="etiqueta">{o[4]}</text>
         </flex>
       {/each}
-    </Video>
+    </video>
     <flex class="panel">
-      <Text>Vista: {frames.fps:.0f} fps · Modelo: {fps_modelo:.1f} fps · {len(objetos)} objetos</Text>
-      <Text>Retardo del modelo: {retardo} ms</Text>
-      <Slider bind:value={retardo} min={0} max={500} step={10} label="Retardo del modelo" flex={1} />
-      <Text>{f"Elegido: {elegido}" if elegido else "Haz clic en un cuadrado"}</Text>
+      <text>Vista: {frames.fps:.0f} fps · Modelo: {fps_modelo:.1f} fps · {len(objetos)} objetos</text>
+      <text>Retardo del modelo: {retardo} ms</text>
+      <slider bind:value={retardo} min={0} max={500} step={10} label="Retardo del modelo" flex={1} />
+      <text>{f"Elegido: {elegido}" if elegido else "Haz clic en un cuadrado"}</text>
     </flex>
   </flex>
-</Window>
+</window>
 
 <style>
 .raiz { flex-direction: column; flex: 1; background: #111 }

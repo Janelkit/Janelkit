@@ -166,7 +166,7 @@ class TemplateInstance:
         self._ungated = ungated
         self.names = names
         self.row_key: Any = None  # clave de la fila de {#each} que crea esta plantilla (si la hay)
-        self.view_gate: Gate | None = None  # fila de <List>: abierta solo mientras se ve
+        self.view_gate: Gate | None = None  # fila de <list>: abierta solo mientras se ve
         self._views = 0
         self.parent = parent
         self.scope = scope if scope is not None else Scope()
@@ -292,7 +292,7 @@ class TemplateInstance:
         self._write(binding_id, value)
 
     def bridge_shown(self, shown: bool) -> None:
-        """Fila de <List>: abre su compuerta mientras tiene alguna vista (ver _LazyEachRegion)."""
+        """Fila de <list>: abre su compuerta mientras tiene alguna vista (ver _LazyEachRegion)."""
         if self.view_gate is None:
             return
         self._views += 1 if shown else -1
@@ -502,7 +502,7 @@ class _Row:
     bridge: QObject
     child: "ComponentInstance | None" = None  # si el fragmento es un único componente
     leave_ms: int = 0  # duración de su animación de salida (out:/transition:)
-    carried: "dict[int, ComponentInstance] | None" = None  # trasladados, esperando a que <List> cree la fila
+    carried: "dict[int, ComponentInstance] | None" = None  # trasladados, esperando a que <list> cree la fila
 
 
 class _Region:
@@ -767,7 +767,7 @@ class _EachRegion(_Region):
 
 
 class _LazyEachRegion(_EachRegion):
-    """`{#each}` dentro de `<List>`: la reconciliación por clave es la misma, pero
+    """`{#each}` dentro de `<list>`: la reconciliación por clave es la misma, pero
     cada fila se crea (script, bindings, puente) solo cuando el ListView la pide."""
 
     def new_model(self, model_id: str, fragment: Fragment | None) -> SlotModel:
@@ -877,7 +877,7 @@ class _LazyEachRegion(_EachRegion):
         _schedule_flush()
         return inst.bridge
 
-    LEAVE_MS = 220  # algo más que la animación de salida de <List animate> (JkList.jkAnimMs)
+    LEAVE_MS = 220  # algo más que la animación de salida de <list animate> (JkList.jkAnimMs)
 
     def unmount(self, model: SlotModel, position: int, row: _Row) -> None:
         if self.park(model, position, row):
@@ -959,7 +959,7 @@ class _KeyRegion(_Region):
 
 
 class _SlotRegion(_Region):
-    """`<Slot>`: muestra el contenido que pasó el componente padre, o la reserva."""
+    """`<slot>`: muestra el contenido que pasó el componente padre, o la reserva."""
 
     def __init__(self, owner: TemplateInstance, slot: SlotOutlet):
         super().__init__(owner)

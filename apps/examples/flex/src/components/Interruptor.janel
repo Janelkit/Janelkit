@@ -11,7 +11,7 @@ change = event()
 
 <flex as="switch" class="interruptor" checked={checked} label={text} on:click={change.emit(not checked)}>
   <flex class="pista"><flex class="pomo" /></flex>
-  <Text>{text}</Text>
+  <text>{text}</text>
 </flex>
 
 <style>

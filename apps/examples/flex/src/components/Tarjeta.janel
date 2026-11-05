@@ -12,10 +12,10 @@ action = event()
 
 <flex class="tarjeta">
   <flex class="cabecera">
-    <Text class="nombre">{title}</Text>
-    <Text class="etiqueta">{tag}</Text>
+    <text class="nombre">{title}</text>
+    <text class="etiqueta">{tag}</text>
   </flex>
-  <Text class="cuerpo">{body}</Text>
+  <text class="cuerpo">{body}</text>
   <flex class="acciones">
     <Boton text="Abrir" class="primary" on:click={action.emit(f"abrir {title}")} />
     <Boton text="Archivar" class="ghost" on:click={action.emit(f"archivar {title}")} />

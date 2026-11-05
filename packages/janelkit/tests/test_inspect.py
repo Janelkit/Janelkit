@@ -25,7 +25,7 @@ def test_counter_like_a_user():
         assert app.texts()[0] == "Hola, invitado"
         app.find(placeholder="Tu nombre").type("Ana")
         assert app.texts()[0] == "Hola, Ana"
-        plus = app.find("Button", text="Clicks: 0")
+        plus = app.find("button", text="Clicks: 0")
         for _ in range(5):
             plus.click()
         assert app.get("count") == 5 and plus.text == "Clicks: 5"
@@ -39,19 +39,19 @@ def test_todo_flow():
     with mount(EXAMPLES / "todo" / "src" / "App.janel") as app:
         field = app.find(placeholder="¿Qué hay que hacer?")
         field.type("Comprar pan").submit()
-        assert app.find("Checkbox", text="Comprar pan").value is False
-        app.find("Checkbox", text="Comprar pan").check()
+        assert app.find("checkbox", text="Comprar pan").value is False
+        app.find("checkbox", text="Comprar pan").check()
         assert app.get("todos")[-1]["done"] is True
-        app.find("Button", text="Pendientes").click()
+        app.find("button", text="Pendientes").click()
         app.wait(0.2)  # las filas del ejemplo salen con transition:fade
-        assert app.find_all("Checkbox", text="Comprar pan") == []
+        assert app.find_all("checkbox", text="Comprar pan") == []
         with pytest.raises(InspectError, match="hay 0"):
             app.find(text="no existe")
 
 
 def test_disabled_controls_cannot_be_used():
     with mount(EXAMPLES / "todo" / "src" / "App.janel") as app:
-        add = app.find("Button", text="Añadir")
+        add = app.find("button", text="Añadir")
         assert not add.enabled
         with pytest.raises(InspectError, match="desactivado"):
             add.click()
@@ -70,14 +70,14 @@ async def load(q):
     return q.upper()
 
 </script>
-<Column>
-  <Button on:click={load.run("hola")}>Cargar</Button>
-  <Select id="color" options={["rojo", {"label": "Verde", "value": "g"}]} />
-  <RadioGroup id="size" options={["S", "M"]} />
-  <Tabs id="tabs" options={["uno", "dos"]} />
-  <Slider id="vol" />
-  {#if load.loading}<Text>Cargando…</Text>{:else}<Text>{load.value}</Text>{/if}
-</Column>
+<column>
+  <button on:click={load.run("hola")}>Cargar</button>
+  <select id="color" options={["rojo", {"label": "Verde", "value": "g"}]} />
+  <radiogroup id="size" options={["S", "M"]} />
+  <tabs id="tabs" options={["uno", "dos"]} />
+  <slider id="vol" />
+  {#if load.loading}<text>Cargando…</text>{:else}<text>{load.value}</text>{/if}
+</column>
 """,
         encoding="utf-8",
     )
@@ -95,7 +95,7 @@ async def load(q):
 
 def test_unknown_option_is_reported(tmp_path):
     app_file = tmp_path / "App.janel"
-    app_file.write_text('<Select id="s" options={["a"]} />', encoding="utf-8")
+    app_file.write_text('<select id="s" options={["a"]} />', encoding="utf-8")
     with mount(app_file) as app:
         with pytest.raises(InspectError, match="no tiene la opción 'z'"):
             app.find(id="s").choose("z")
@@ -113,14 +113,14 @@ def test_tutorial_app(tmp_path, monkeypatch):
         app.find(placeholder="¿Qué falta?").type("Pan").submit()
         app.find(placeholder="¿Qué falta?").type("Leche").submit()
         assert app.find("Card").visible and "Pendientes: 2" in app.texts()
-        app.find("Checkbox", text="Pan").check()
+        app.find("checkbox", text="Pan").check()
         assert "Pendientes: 1" in app.texts()
-        app.find_all("Button", text="Quitar")[1].click()
+        app.find_all("button", text="Quitar")[1].click()
         app.wait(until=lambda: not app.get("save").loading)
         assert json.loads(file.read_text(encoding="utf-8")) == [{"id": 1, "name": "Pan", "done": True}]
     with mount(EXAMPLES / "compra" / "src" / "App.janel") as app:  # vuelve a cargar lo guardado
         app.wait(until=lambda: app.get("loaded"))
-        assert app.find("Checkbox", text="Pan").value is True
+        assert app.find("checkbox", text="Pan").value is True
 
 
 def test_apps_with_modules_of_the_same_name_do_not_mix(tmp_path):
@@ -128,7 +128,7 @@ def test_apps_with_modules_of_the_same_name_do_not_mix(tmp_path):
         (tmp_path / name / "services").mkdir(parents=True)
         (tmp_path / name / "services" / "datos.py").write_text(f"NOMBRE = {name!r}\n", encoding="utf-8")
         (tmp_path / name / "App.janel").write_text(
-            '<script lang="python">\nfrom services.datos import NOMBRE\n</script>\n<Window><Text>{NOMBRE}</Text></Window>\n',
+            '<script lang="python">\nfrom services.datos import NOMBRE\n</script>\n<window><text>{NOMBRE}</text></window>\n',
             encoding="utf-8",
         )
     for name in ("una", "otra", "una"):
@@ -136,12 +136,12 @@ def test_apps_with_modules_of_the_same_name_do_not_mix(tmp_path):
             assert app.texts() == [name]
 
 
-SHOT_APP = """<Window title="captura" width={200} height={120} background="#00ff00">
-  <Column class="page">
-    <Text id="t">hola</Text>
+SHOT_APP = """<window title="captura" width={200} height={120} background="#00ff00">
+  <column class="page">
+    <text id="t">hola</text>
     <flex id="box" class="box"></flex>
-  </Column>
-</Window>
+  </column>
+</window>
 <style>
 .page { padding: 10px; }
 .box { width: 40px; height: 30px; background: #ff0000; }
@@ -164,25 +164,25 @@ def test_screenshot_of_window_and_element(tmp_path):
 
 
 def test_component_whose_root_is_a_builtin_is_found_by_both_names(tmp_path):
-    (tmp_path / "Otra.janel").write_text("<Text>otra</Text>\n", encoding="utf-8")
+    (tmp_path / "Otra.janel").write_text("<text>otra</text>\n", encoding="utf-8")
     (tmp_path / "Boton.janel").write_text(
         "<script>\nfrom janelkit import state\nn = state(0)\n</script>\n"
-        "<Button on:click={n += 1}>pulsado {n}</Button>\n", encoding="utf-8")
+        "<button on:click={n += 1}>pulsado {n}</button>\n", encoding="utf-8")
     (tmp_path / "App.janel").write_text("""<script>
 from janelkit import sections
 from Otra import Otra
 s = sections(b=Otra)
 </script>
-<Window><Sections of={s} /></Window>
+<window><Sections of={s} /></window>
 """, encoding="utf-8")
     with mount(tmp_path / "App.janel") as app:
         assert app.texts() == ["otra"]
-        assert app.find("Otra").text == "otra" and app.find("Text").text == "otra"
+        assert app.find("Otra").text == "otra" and app.find("text").text == "otra"
 
-    (tmp_path / "App.janel").write_text("<script>\nfrom Boton import Boton\n</script>\n<Window><Boton /></Window>\n",
+    (tmp_path / "App.janel").write_text("<script>\nfrom Boton import Boton\n</script>\n<window><Boton /></window>\n",
                                         encoding="utf-8")
     with mount(tmp_path / "App.janel") as app:
-        app.find("Button").click()
+        app.find("button").click()
         assert app.find("Boton").text == "pulsado 1"
 
 
@@ -191,13 +191,13 @@ def test_fields_have_a_value_not_a_text(tmp_path):
 from janelkit import state
 nombre = state("Pan")
 </script>
-<Window><Column>
-  <TextField bind:value={nombre} placeholder="Nombre" />
-  <Text>Pan</Text>
-</Column></Window>
+<window><column>
+  <textfield bind:value={nombre} placeholder="Nombre" />
+  <text>Pan</text>
+</column></window>
 """, encoding="utf-8")
     with mount(tmp_path / "App.janel") as app:
         field = app.find(placeholder="Nombre")
         assert field.value == "Pan" and field.text is None
-        assert app.find(text="Pan").tag == "Text"  # el campo no cuenta como texto
+        assert app.find(text="Pan").tag == "text"  # el campo no cuenta como texto
         assert app.texts() == ["Pan"]

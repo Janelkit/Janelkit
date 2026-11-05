@@ -233,7 +233,7 @@ function cssVar(ctx, name, fallback, dflt) {
     return fallback === undefined ? dflt : fallback
 }
 
-// Fondo y borde de un <Text>, y la mano sobre sus enlaces: solo los que los usan (JkText.jkDecor).
+// Fondo y borde de un <text>, y la mano sobre sus enlaces: solo los que los usan (JkText.jkDecor).
 let textBoxComponent = null
 let textLinksComponent = null
 let textSelectComponent = null
@@ -254,7 +254,7 @@ function textDecorations(label) {
     }
 }
 
-// Texto heredable: clave de jkT_<clave> en las cajas -> propiedad del <Text>.
+// Texto heredable: clave de jkT_<clave> en las cajas -> propiedad del <text>.
 const TEXT_PROPS = {
     color: "jkColor", family: "font.family", size: "font.pixelSize", weight: "font.weight",
     italic: "font.italic", letterSpacing: "font.letterSpacing", capitalization: "font.capitalization",
@@ -283,7 +283,7 @@ function inherited(ctx, key) {
 }
 
 let inheritComponent = null
-// Un <Text> con contexto recibe un JkTextInherit (un Binding) por cada clave que alguna caja
+// Un <text> con contexto recibe un JkTextInherit (un Binding) por cada clave que alguna caja
 // de fuera fija y él no (jkOwn): los demás textos y las demás claves no pagan nada. Si el
 // texto cambia de sitio se añaden las que falten; las que ya no hay no aplican nada.
 function textInherit(label) {

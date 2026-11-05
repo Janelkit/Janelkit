@@ -25,7 +25,7 @@ ApplicationWindow {
     palette.dark: jktheme.text_muted
     palette.light: jktheme.surface_alt
 
-    // <Window screen={i} fullscreen={bool}>: en qué pantalla y si ocupa la pantalla entera.
+    // <window screen={i} fullscreen={bool}>: en qué pantalla y si ocupa la pantalla entera.
     // `screen` es el índice en `screens` o el nombre de la pantalla; si no existe (un proyector
     // desconectado), la ventana se queda donde está y vuelve a colocarse al conectarla.
     property var jkScreen: undefined

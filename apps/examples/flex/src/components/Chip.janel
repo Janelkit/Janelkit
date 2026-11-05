@@ -15,9 +15,9 @@ def quitar(event):
 </script>
 
 <flex as="button" class="chip" selected={selected} label={text} on:click={choose.emit()}>
-  <Text class="texto">{text}</Text>
+  <text class="texto">{text}</text>
   <flex as="button" class="quitar" label={f"Quitar {text}"} title="Quitar" on:click={quitar}>
-    <Text class="x">✕</Text>
+    <text class="x">✕</text>
   </flex>
 </flex>
 

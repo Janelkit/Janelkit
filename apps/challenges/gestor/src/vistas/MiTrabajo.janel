@@ -24,34 +24,34 @@ filas = computed(lambda: sorted(
 <flex class="pagina">
   <flex class="cabecera">
     <flex class="titulos">
-      <Text class="titulo">Mi trabajo</Text>
-      <Text class="subtitulo">{f"{cuenta(len(filas), 'tarjeta')} de {datos.nombre(quien)}" if quien else "Elige una persona"}</Text>
+      <text class="titulo">Mi trabajo</text>
+      <text class="subtitulo">{f"{cuenta(len(filas), 'tarjeta')} de {datos.nombre(quien)}" if quien else "Elige una persona"}</text>
     </flex>
-    <Spacer />
-    <Select options={personas_opc()} bind:value={quien} label="Persona" />
-    <Select options={ORDEN_OPC} bind:value={orden} label="Orden" />
+    <spacer />
+    <select options={personas_opc()} bind:value={quien} label="Persona" />
+    <select options={ORDEN_OPC} bind:value={orden} label="Orden" />
   </flex>
   <flex class="marco">
     <flex class="tabla">
       <flex class="encabezado">
-        <Text class="c-titulo">Tarjeta</Text>
-        <Text class="c-proyecto">Proyecto</Text>
-        <Text class="c-columna">Columna</Text>
-        <Text class="c-fecha">Fecha</Text>
+        <text class="c-titulo">Tarjeta</text>
+        <text class="c-proyecto">Proyecto</text>
+        <text class="c-columna">Columna</text>
+        <text class="c-fecha">Fecha</text>
       </flex>
-      <List class="lista" label="Tarjetas de la persona">
+      <list class="lista" label="Tarjetas de la persona">
         {#each filas as f (f[2]["id"])}
           <flex as="button" class="fila" label={f[2]["titulo"]} on:click={abrir_tarjeta(f[0]["id"], f[2]["id"])}>
-            <Text class="c-titulo t">{f[2]["titulo"]}</Text>
+            <text class="c-titulo t">{f[2]["titulo"]}</text>
             <flex class="c-proyecto">
               <flex class="color" style={{"background": f[0]["color"]}} />
-              <Text class="proyecto">{f[0]["nombre"]}</Text>
+              <text class="proyecto">{f[0]["nombre"]}</text>
             </flex>
-            <flex class="c-columna"><Text class="columna">{f[1]["nombre"]}</Text></flex>
-            <Text class="c-fecha dato">{f[2]["fecha"] or "sin fecha"}</Text>
+            <flex class="c-columna"><text class="columna">{f[1]["nombre"]}</text></flex>
+            <text class="c-fecha dato">{f[2]["fecha"] or "sin fecha"}</text>
           </flex>
         {/each}
-      </List>
+      </list>
     </flex>
   </flex>
 </flex>

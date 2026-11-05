@@ -98,12 +98,12 @@ def find_all(mounted, name: str):
 
 
 def texts(mounted):
-    """Textos visibles de los elementos <Text> (JkText), en orden."""
+    """Textos visibles de los elementos <text> (JkText), en orden."""
     return [i.property("text") for i in visual_items(mounted) if is_jk_text(i) and i.isVisible()]
 
 
 def is_jk_text(item) -> bool:
-    """Un JkText, también la raíz de un componente cuyo elemento exterior es un <Text>."""
+    """Un JkText, también la raíz de un componente cuyo elemento exterior es un <text>."""
     if not item.inherits("QQuickText"):
         return False
     meta = item.metaObject()

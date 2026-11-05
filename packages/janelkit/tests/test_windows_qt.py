@@ -18,13 +18,13 @@ session = inject("session", "sin sesión")
 def save():
     saved.emit(draft.value or user.value)
 </script>
-<Window title="Ajustes" width={300} height={200}>
-  <Column>
-    <Text id="who">{user}·{session}</Text>
-    <TextField id="name" bind:value={draft} />
-    <Button id="save" on:click={save}>Guardar</Button>
-  </Column>
-</Window>
+<window title="Ajustes" width={300} height={200}>
+  <column>
+    <text id="who">{user}·{session}</text>
+    <textfield id="name" bind:value={draft} />
+    <button id="save" on:click={save}>Guardar</button>
+  </column>
+</window>
 """
 
 APP = """<script>
@@ -38,7 +38,7 @@ provide("session", "S1")
 def open_settings(**extra):
     win.value = open_window(Settings, user=user, on_saved=saved.value.append, **extra)
 </script>
-<Column><Text>principal</Text></Column>
+<column><text>principal</text></column>
 """
 
 
@@ -108,10 +108,10 @@ def test_unknown_props_are_rejected(mount, project):
 
 
 def test_child_components_inside_a_themed_window_use_its_theme(mount, project, janel_app):
-    badge = '<Text id="badge" class="b">x</Text>\n<style>.b { color: var(--primary); }</style>'
+    badge = '<text id="badge" class="b">x</text>\n<style>.b { color: var(--primary); }</style>'
     settings = SETTINGS.replace(
         "from janelkit import prop, event, state, inject", "from janelkit import prop, event, state, inject\nfrom components.Badge import Badge"
-    ).replace('<Text id="who">', '<Badge />\n    <Text id="who">')
+    ).replace('<text id="who">', '<Badge />\n    <text id="who">')
     m = mount(project({"App.janel": APP, "components/Settings.janel": settings, "components/Badge.janel": badge}))
     window, mounted = open_settings(m, theme="dark")
     label = find(mounted, "badge")

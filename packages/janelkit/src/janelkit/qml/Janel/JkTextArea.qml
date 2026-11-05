@@ -1,4 +1,4 @@
-// Texto de varias líneas de JanelKit. Crece con el contenido; envuélvelo en <Scroll> si hace falta.
+// Texto de varias líneas de JanelKit. Crece con el contenido; envuélvelo en <scroll> si hace falta.
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts

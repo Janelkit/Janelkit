@@ -1,4 +1,4 @@
-"""Control del desplazamiento en <List>: follow, on:top/on:bottom, ref.scroll_to_*,
+"""Control del desplazamiento en <list>: follow, on:top/on:bottom, ref.scroll_to_*,
 y las piezas de un chat: texto con Markdown, on:link y eventos de activación de la ventana."""
 from janelkit.testing import is_jk_text, find, visual_items
 from PySide6.QtCore import Q_ARG, Q_RETURN_ARG, QCoreApplication, QMetaObject, QPointF
@@ -21,13 +21,13 @@ def append():
     last = msgs.value[-1]["id"] if msgs.value else 0
     msgs.value.append({"id": last + 1, "t": f"mensaje {last + 1}"})
 </script>
-<Window width={300} height={200}>
-  <List id="list" follow ref={lista} on:top={tops += 1} on:bottom={bottoms += 1} on:scroll={pos = event}>
+<window width={300} height={200}>
+  <list id="list" follow ref={lista} on:top={tops += 1} on:bottom={bottoms += 1} on:scroll={pos = event}>
     {#each msgs as m (m["id"])}
-      <Text>{m["t"]}</Text>
+      <text>{m["t"]}</text>
     {/each}
-  </List>
-</Window>
+  </list>
+</window>
 """
 
 
@@ -121,12 +121,12 @@ def test_markdown_text_and_links(mount):
 from janelkit import state
 opened = state("")
 </script>
-<Window>
-  <Column>
-    <Text id="md" format="markdown" on:link={opened = event}>**hola** [web](https://example.com)</Text>
-    <Text id="plain">**hola** [web](https://example.com)</Text>
-  </Column>
-</Window>"""
+<window>
+  <column>
+    <text id="md" format="markdown" on:link={opened = event}>**hola** [web](https://example.com)</text>
+    <text id="plain">**hola** [web](https://example.com)</text>
+  </column>
+</window>"""
     )
     md, plain = find(m, "md"), find(m, "plain")
     assert md.property("format") == "markdown"
@@ -150,7 +150,7 @@ def test_window_activation_events():
 from janelkit import state
 active = state(None)
 </script>
-<Window on:activate={active = True} on:deactivate={active = False}><Text>x</Text></Window>"""
+<window on:activate={active = True} on:deactivate={active = False}><text>x</text></window>"""
     )
     assert "onActiveChanged: { if (active) jk.invoke(" in compiled.qml
     assert "if (!active) jk.invoke(" in compiled.qml
@@ -158,7 +158,7 @@ active = state(None)
 
 def test_text_accepts_background_border_and_radius(mount):
     m = mount(
-        """<Window><Column><Text id="badge" class="badge">3</Text></Column></Window>
+        """<window><column><text id="badge" class="badge">3</text></column></window>
 <style>.badge { background: #ff0000; border: 1px solid #00ff00; border-radius: 9px; padding: 0 6px; }</style>"""
     )
     badge = find(m, "badge")
@@ -177,13 +177,13 @@ def shuffle():
     random.Random(1).shuffle(new)
     rows.value = new
 </script>
-<Window width={300} height={200}>
-  <List id="list">
+<window width={300} height={200}>
+  <list id="list">
     {#each rows as r (r["id"])}
-      <Text>fila {r["v"]}</Text>
+      <text>fila {r["v"]}</text>
     {/each}
-  </List>
-</Window>
+  </list>
+</window>
 """
 
 

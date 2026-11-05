@@ -59,14 +59,14 @@ Se llaman mientras se ejecuta el `<script>` de un componente; fuera de él lanza
 | `on_destroy` | `on_destroy(fn)` ejecuta `fn` al desmontar el componente. |
 | `before_leave` | `before_leave(fn)` (o como decorador): `fn()` se consulta antes de descartar la página que lo contiene o de cerrar su ventana con la X; si devuelve `False`, no se sale. Puede ser `async`. |
 | `provide` | `provide(clave, valor)` pone un valor a disposición de los descendientes. |
-| `is_visible` | `is_visible()` devuelve un `computed` que dice si el componente se ve: `False` en una página de debajo de la pila, en una sección que no es la actual, dentro de un `{#hidden}` que lo oculta o en una fila de `<List>` fuera de la vista. La raíz de una ventana siempre se ve (minimizarla no cuenta). Se llama en el script, como `on_mount`. |
+| `is_visible` | `is_visible()` devuelve un `computed` que dice si el componente se ve: `False` en una página de debajo de la pila, en una sección que no es la actual, dentro de un `{#hidden}` que lo oculta o en una fila de `<list>` fuera de la vista. La raíz de una ventana siempre se ve (minimizarla no cuenta). Se llama en el script, como `on_mount`. |
 | `inject` | `inject(clave, defecto)` lee el valor del antecesor más cercano que lo provee. Sin defecto y sin proveedor: `LookupError`. |
 | `ref` | `ref()` crea una referencia para `ref={nombre}` en la plantilla. |
-| `Ref` | Tipo de `ref`: `.value` (reactivo; el objeto Qt o `None`), `.exists`, `.focused` (¿tiene el foco él o algo de dentro?; no reactivo), `.focus()`, `.blur()`, `.select_all()`; en una `<List>` o un `<Scroll>`, `.scroll_to_start()`, `.scroll_to_end()` y `.scroll_to(...)` (el índice de una fila en `<List>`; el `ref` de un elemento de dentro en `<Scroll>`). |
+| `Ref` | Tipo de `ref`: `.value` (reactivo; el objeto Qt o `None`), `.exists`, `.focused` (¿tiene el foco él o algo de dentro?; no reactivo), `.focus()`, `.blur()`, `.select_all()`; en una `<list>` o un `<scroll>`, `.scroll_to_start()`, `.scroll_to_end()` y `.scroll_to(...)` (el índice de una fila en `<list>`; el `ref` de un elemento de dentro en `<scroll>`). |
 
 ### Eventos de las cajas
 
-Lo que recibe el manejador de un evento de `<flex>`, `Column` o `Row` ([lenguaje.md](lenguaje.md#eventos-de-las-cajas)). Todos tienen `.prevent()`, `.stop()` y `.type`.
+Lo que recibe el manejador de un evento de `<flex>`, `column` o `row` ([lenguaje.md](lenguaje.md#eventos-de-las-cajas)). Todos tienen `.prevent()`, `.stop()` y `.type`.
 
 | Nombre | Descripción |
 |---|---|
@@ -105,7 +105,7 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 | Nombre | Descripción |
 |---|---|
 | `open_window` | `open_window(Componente, modal=False, theme=None, single=False, **props_y_on_eventos)` abre un componente importado en otra ventana. Con `single=True`, si ya hay una abierta de ese componente, la trae al frente y la devuelve. Devuelve una ventana con `.is_open` (reactivo), `.close()`, `.focus()` e `.instance`. |
-| `screens` | Pantallas conectadas, reactivo y de solo lectura: `screens.value` es una lista de `Screen`. Cambia sola al conectar o desconectar una pantalla, al cambiar la principal o la resolución. Vacía hasta que la aplicación arranca. Con `<Window screen={i} fullscreen={bool}>` se elige dónde se abre la ventana. |
+| `screens` | Pantallas conectadas, reactivo y de solo lectura: `screens.value` es una lista de `Screen`. Cambia sola al conectar o desconectar una pantalla, al cambiar la principal o la resolución. Vacía hasta que la aplicación arranca. Con `<window screen={i} fullscreen={bool}>` se elige dónde se abre la ventana. |
 | `Screen` | Una pantalla de `screens`: `index`, `name`, `width`, `height`, `x`, `y` (píxeles lógicos del escritorio virtual), `primary`, `scale` (píxeles físicos por píxel lógico). |
 
 ### Navegación
@@ -122,7 +122,7 @@ Creados en el script de un componente (o en algo que se ejecuta dentro de él), 
 
 | Nombre | Descripción |
 |---|---|
-| `Frames` | Fotogramas a tiempo real para `<Video source={frames}>`: `Frames(color="rgb")` (`"bgr"`, `"rgba"`, `"bgra"`); `push(img)` desde cualquier hilo (numpy, objeto con búfer o `QImage`; se copia y se saltan los que no da tiempo a mostrar); `async for img in frames` y `await frames.next()` dan el más reciente; `size` y `fps` reactivos; `latest()`, `clear()`. Ver [lenguaje.md](lenguaje.md#vídeo-video-y-frames). |
+| `Frames` | Fotogramas a tiempo real para `<video source={frames}>`: `Frames(color="rgb")` (`"bgr"`, `"rgba"`, `"bgra"`); `push(img)` desde cualquier hilo (numpy, objeto con búfer o `QImage`; se copia y se saltan los que no da tiempo a mostrar); `async for img in frames` y `await frames.next()` dan el más reciente; `size` y `fps` reactivos; `latest()`, `clear()`. Ver [lenguaje.md](lenguaje.md#vídeo-video-y-frames). |
 
 ### Idioma de la interfaz
 

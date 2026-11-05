@@ -39,10 +39,10 @@ def seen():
 
 effect(seen)
 </script>
-<Column>
-  <Text>tics {ticks}</Text>
-  <Text>una vez {fired}</Text>
-</Column>
+<column>
+  <text>tics {ticks}</text>
+  <text>una vez {fired}</text>
+</column>
 """
 
 
@@ -107,7 +107,7 @@ async def poll():
     await asyncio.sleep(0.2)
     finished.value += 1
 </script>
-<Text>{started}</Text>
+<text>{started}</text>
 """
 
 

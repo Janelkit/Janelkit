@@ -70,11 +70,11 @@ def on_delete():
     last.set("eliminado")
 </script>
 
-<Window title="flex: catálogo" width={900} height={640}>
+<window title="flex: catálogo" width={900} height={640}>
   <flex direction="column" class="pagina">
     <Barra title="Catálogo de flex" on:action={on_action} />
     <flex class="contenido">
-      <Text class="estado">Última acción: {last}</Text>
+      <text class="estado">Última acción: {last}</text>
       <flex class="controles">
         <Boton text="Guardar" class="primary" on:click={on_action("guardar")} />
         <Boton text="Cancelar" on:click={on_action("cancelar")} />
@@ -82,7 +82,7 @@ def on_delete():
         <Boton text="Desactivado" disabled />
         <flex class="con-insignia">
           <Boton text="Eliminar…" ref={borrar} on:click={dialog_open = True} />
-          <flex class="insignia" label="3 avisos"><Text>3</Text></flex>
+          <flex class="insignia" label="3 avisos"><text>3</text></flex>
         </flex>
         <Interruptor text="Compacto" checked={compact} on:change={compact = event} />
       </flex>
@@ -92,7 +92,7 @@ def on_delete():
         {/each}
       </flex>
       <flex class="zona" label="Zona con menú contextual" on:contextmenu={open_menu}>
-        <Text class="pista">Clic derecho (o la tecla de menú) aquí para abrir un menú</Text>
+        <text class="pista">Clic derecho (o la tecla de menú) aquí para abrir un menú</text>
         {#if menu_open}
           <Menu class="emergente" style={{"left": menu_at[0], "top": menu_at[1]}}
                 items={["Copiar", "Pegar", "Renombrar", "Eliminar"]} on:choose={on_menu} on:close={menu_open = False} />
@@ -113,7 +113,7 @@ def on_delete():
                opener={borrar} on:accept={on_delete()} on:close={dialog_open = False} />
     {/if}
   </flex>
-</Window>
+</window>
 
 <style>
 .pagina { background: var(--bg); }

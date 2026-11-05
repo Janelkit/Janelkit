@@ -16,23 +16,23 @@ def decrement():
     count.value -= 1
 </script>
 
-<Window title="Mi aplicación" width={640} height={400}>
-  <Column class="page">
-    <Text class="heading">{greeting}</Text>
-    <TextField bind:value={name} placeholder="Tu nombre" width={320} />
-    <Row class="actions">
-      <Button on:click={decrement} enabled={count > 0}>−</Button>
-      <Button on:click={increment}>Clicks: {count}</Button>
-    </Row>
+<window title="Mi aplicación" width={640} height={400}>
+  <column class="page">
+    <text class="heading">{greeting}</text>
+    <textfield bind:value={name} placeholder="Tu nombre" width={320} />
+    <row class="actions">
+      <button on:click={decrement} enabled={count > 0}>−</button>
+      <button on:click={increment}>Clicks: {count}</button>
+    </row>
     <Meter value={count} max={5} on:picked={count = event} width={320} />
 
     {#if count >= 5}
-      <Text class="success">Has llegado a cinco clicks.</Text>
+      <text class="success">Has llegado a cinco clicks.</text>
     {:else}
-      <Text class="muted">Faltan {5 - count} clicks para llegar a cinco.</Text>
+      <text class="muted">Faltan {5 - count} clicks para llegar a cinco.</text>
     {/if}
-  </Column>
-</Window>
+  </column>
+</window>
 
 <style>
 .page { padding: 24px; gap: 16px; }

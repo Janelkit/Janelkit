@@ -11,7 +11,7 @@ text = prop("")
 </script>
 
 <flex as="button" class="boton" label={text}>
-  <Text>{text}</Text>
+  <text>{text}</text>
 </flex>
 
 <style>

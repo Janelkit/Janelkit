@@ -1,4 +1,4 @@
-r"""`<Text format="markdown">` no interpreta HTML: el texto de otras personas (un chat) se
+r"""`<text format="markdown">` no interpreta HTML: el texto de otras personas (un chat) se
 muestra tal cual, sin escaparlo a mano. Para HTML, `format="html"`.
 
 La garantía se comprueba con el propio md4c de Qt: el texto que se le pasa se ve igual con
@@ -58,14 +58,14 @@ from janelkit import state
 msg = state("**hola** <b>no</b>")
 fmt = state("markdown")
 </script>
-<Column>
-  <Text id="content" format="markdown">{msg}</Text>
-  <Text id="attr" format="markdown" text={msg} />
-  <Text id="fixed" format="markdown" text="fijo <i>x</i>" />
-  <Text id="dynamic" format={fmt}>{msg}</Text>
-  <Text id="html" format="html">{msg}</Text>
-  <Text id="plain">{msg}</Text>
-</Column>
+<column>
+  <text id="content" format="markdown">{msg}</text>
+  <text id="attr" format="markdown" text={msg} />
+  <text id="fixed" format="markdown" text="fijo <i>x</i>" />
+  <text id="dynamic" format={fmt}>{msg}</text>
+  <text id="html" format="html">{msg}</text>
+  <text id="plain">{msg}</text>
+</column>
 """)
     for element_id in ("content", "attr", "dynamic"):
         assert shown(m, element_id) == r"**hola** \<b>no\</b>", element_id

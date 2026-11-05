@@ -1,22 +1,22 @@
 """Qué cajas se pueden disponer con un layout de Qt (la vía rápida) y cuáles necesitan
 el motor de <flex> (flex.js).
 
-Column, Row y `<flex direction="column">` se generan como `JkColumn`/`JkRow`/`JkQtBox`
+<column>, <row> y `<flex direction="column">` se generan como `JkColumn`/`JkRow`/`JkQtBox`
 (un GridLayout de Qt, en C++) si la caja y sus hijos solo usan lo que ese layout hace
 igual que flex.js; si no, como `JkFlexColumn`/`JkFlexRow`/`JkFlex`. Se decide al
 compilar, mirando todas las propiedades que pueden llegar a tener (también las de los
 estados y las clases condicionales), así que el resultado es el mismo con las dos.
 
 Lo que obliga a usar el motor de <flex>:
-- en la caja: wrap, justify-content, overflow: auto/scroll, direction (en Column/Row, o
+- en la caja: wrap, justify-content, overflow: auto/scroll, direction (en <column>/<row>, o
   distinta de column en <flex>), align-items: baseline, y ser una caja implícita o la
   caja exterior de un componente;
 - en los hijos: order, flex-shrink, flex-basis, márgenes auto, tamaños en %, position,
-  align-self: baseline, :first-child/:last-child, contenido de un <Slot /> (no se sabe
+  align-self: baseline, :first-child/:last-child, contenido de un <slot /> (no se sabe
   qué es) y componentes con atributos en su etiqueta dentro de un {#each} (al reordenar
   filas, Qt no mueve su raíz);
 - más de un hijo con flex (Qt no reparte en proporción como `flex: N 1 0`), salvo que
-  todos sean <Spacer>; en <flex>, cualquier hijo con flex (encoge distinto).
+  todos sean <spacer>; en <flex>, cualquier hijo con flex (encoge distinto).
 """
 from __future__ import annotations
 
@@ -133,7 +133,7 @@ def why_flex(box: IRElement, roots: RootLookup) -> str | None:
     for child in box.children:
         feats = _features(child, roots)
         if feats is None:
-            return "un hijo que no se conoce al compilar (<Slot />, componente)"
+            return "un hijo que no se conoce al compilar (<slot />, componente)"
         if COMPLEX in feats:
             return "un hijo con order, margin: auto, %, position, flex-shrink/basis o :first-child"
         n = 2 if isinstance(child, IRRepeater) and child.many else 1
@@ -154,7 +154,7 @@ FAST_LAYOUTS = True
 
 # Colocan a sus hijos con el motor de <flex>. JkScroll también (un JkFlexColumn dentro),
 # pero no cuenta: su contenido suele ser una columna grande, y como layout de Qt cambia
-# de ancho antes (300 tarjetas en un <Scroll>: 8,7 ms por paso; con el motor, 25).
+# de ancho antes (300 tarjetas en un <scroll>: 8,7 ms por paso; con el motor, 25).
 _ENGINE = ("JkFlex", "JkFlexColumn", "JkFlexRow")
 
 
@@ -227,11 +227,11 @@ def root_features(sfc: SFC) -> frozenset[str] | None:
         return None
     root = roots[0]
     spec = CONTROLS.get(root.tag)
-    if spec is None or root.tag in ("Window", "Slot"):
+    if spec is None or root.tag in ("window", "slot"):
         return None  # otro componente o un elemento propio: no se sabe
     # Una raíz caja puede recibir clases de la etiqueta (<Boton class="primary"> activa
     # .boton.primary): cuentan las reglas que nombran su etiqueta o alguna de sus clases.
-    passed = root.tag in ("flex", "Column", "Row")
+    passed = root.tag in ("flex", "column", "row")
     static: set[str] = set()
     toggles: set[str] = set()
     dynamic = False

@@ -17,22 +17,22 @@ def found():
     return [n for n in notes.value if matches(n, query.value)]
 </script>
 
-<Column class="sidebar">
-  <Row class="head">
-    <Text class="brand">Notas</Text>
-    <Spacer />
-    <Button variant="primary" on:click={created.emit}>Nueva</Button>
-  </Row>
-  <TextField bind:value={query} placeholder="Buscar en las notas" />
-  <Scroll class="list">
+<column class="sidebar">
+  <row class="head">
+    <text class="brand">Notas</text>
+    <spacer />
+    <button variant="primary" on:click={created.emit}>Nueva</button>
+  </row>
+  <textfield bind:value={query} placeholder="Buscar en las notas" />
+  <scroll class="list">
     {#each found as note (note["id"])}
       <NoteCard note={note} active={note["id"] == selected} on:chosen={chosen.emit} />
     {:else}
-      <Text class="empty">{"Sin resultados para «" + query + "»" if query else "Todavía no hay notas"}</Text>
+      <text class="empty">{"Sin resultados para «" + query + "»" if query else "Todavía no hay notas"}</text>
     {/each}
-  </Scroll>
-  <Text class="count">{len(found)} de {len(notes)} notas</Text>
-</Column>
+  </scroll>
+  <text class="count">{len(found)} de {len(notes)} notas</text>
+</column>
 
 <style>
 .sidebar { width: 280px; padding: 16px; gap: 12px; background: var(--surface-alt); align-self: stretch; }

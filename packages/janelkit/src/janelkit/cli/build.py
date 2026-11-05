@@ -75,10 +75,10 @@ def build_project(target: Path, out_dir: Path | None = None) -> BuildResult:
 
 
 def _is_window(session: CompileSession, path: Path) -> bool:
-    """El archivo tiene <Window> como raíz (se abrirá con open_window)."""
+    """El archivo tiene <window> como raíz (se abrirá con open_window)."""
     try:
         sfc, _ = session.load(path)
     except JanelError:
         return False
     roots = sfc.root_elements
-    return bool(roots) and getattr(roots[0], "tag", None) == "Window"
+    return bool(roots) and getattr(roots[0], "tag", None) == "window"

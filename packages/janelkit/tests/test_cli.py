@@ -69,16 +69,16 @@ def test_cli_new_reports_conflict_with_exit_code(tmp_path, capsys):
 
 def test_cli_parse_and_compile(tmp_path, capsys):
     app = tmp_path / "App.janel"
-    app.write_text("<Window title=\"x\">\n  <Text>{1 + 1}</Text>\n</Window>\n", encoding="utf-8")
+    app.write_text("<window title=\"x\">\n  <text>{1 + 1}</text>\n</window>\n", encoding="utf-8")
     assert main(["parse", str(app)]) == 0
-    assert "<Window title=\"x\"> @1:1" in capsys.readouterr().out
+    assert "<window title=\"x\"> @1:1" in capsys.readouterr().out
     assert main(["compile", str(app)]) == 0
     assert "JkWindow {" in capsys.readouterr().out
 
 
 def test_cli_parse_error_exit_code(tmp_path, capsys):
     app = tmp_path / "App.janel"
-    app.write_text("<Window>\n  <Column>\n</Window>\n", encoding="utf-8")
+    app.write_text("<window>\n  <column>\n</window>\n", encoding="utf-8")
     assert main(["parse", str(app)]) == 1
     assert "App.janel:3:1: error" in capsys.readouterr().err
 

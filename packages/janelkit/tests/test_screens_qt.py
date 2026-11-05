@@ -1,4 +1,4 @@
-"""Pantallas: `screens` reactivo y `<Window screen= fullscreen=>`.
+"""Pantallas: `screens` reactivo y `<window screen= fullscreen=>`.
 
 Caso del primer usuario externo: una ventana de proyección a pantalla completa en otra
 pantalla. Para probar varias pantallas, un proceso hijo arranca Qt con la plataforma
@@ -17,11 +17,11 @@ from janelkit import state, screens
 target = state(1)
 full = state(True)
 </script>
-<Window title="Proyección" width={400} height={300} screen={target} fullscreen={full}>
-  <Column>
-    {#each screens as s}<Text>{s.name} {s.width}x{s.height}</Text>{/each}
-  </Column>
-</Window>
+<window title="Proyección" width={400} height={300} screen={target} fullscreen={full}>
+  <column>
+    {#each screens as s}<text>{s.name} {s.width}x{s.height}</text>{/each}
+  </column>
+</window>
 """
 
 CHILD = textwrap.dedent("""

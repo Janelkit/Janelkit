@@ -20,13 +20,13 @@ def data(tmp_path, monkeypatch):
 def test_preferences_and_notes_survive_a_restart(data):
     with mount(APP) as app:
         assert app.texts()[:2] == ["Hola", "Has abierto esta aplicación 1 vez."]
-        app.find("TextField", label="Nombre").type("Ana")
-        app.find("RadioGroup").choose("Oscuro")
-        app.find("Slider").slide(18)
-        nueva = app.find("TextField", label="Nueva nota")
+        app.find("textfield", label="Nombre").type("Ana")
+        app.find("radiogroup").choose("Oscuro")
+        app.find("slider").slide(18)
+        nueva = app.find("textfield", label="Nueva nota")
         nueva.type("Comprar pan").submit()
         nueva.type("Llamar a Luis").submit()
-        app.find("Checkbox", label="Comprar pan").check()
+        app.find("checkbox", label="Comprar pan").check()
         nueva.type("a medias").key("Escape")  # Escape vacía el campo (on:keydown)
         assert nueva.item.property("text") == ""
         assert theme.name == "dark"
@@ -37,12 +37,12 @@ def test_preferences_and_notes_survive_a_restart(data):
     with mount(APP) as app:  # otra sesión
         assert app.texts()[:2] == ["Hola, Ana", "Has abierto esta aplicación 2 veces."]
         assert theme.name == "dark"
-        assert app.find("Slider").item.property("value") == 18
-        notas = [c.label for c in app.find_all("Checkbox")]
+        assert app.find("slider").item.property("value") == 18
+        notas = [c.label for c in app.find_all("checkbox")]
         assert notas == ["Comprar pan", "Llamar a Luis"]
-        assert app.find("Checkbox", label="Comprar pan").item.property("checked") is True
-        app.find("Button", text="Restablecer").click()
-        assert theme.name == "light" and app.find_all("Checkbox") == []
+        assert app.find("checkbox", label="Comprar pan").item.property("checked") is True
+        app.find("button", text="Restablecer").click()
+        assert theme.name == "light" and app.find_all("checkbox") == []
 
     with mount(APP) as app:
         assert app.texts()[:2] == ["Hola", "Has abierto esta aplicación 3 veces."]

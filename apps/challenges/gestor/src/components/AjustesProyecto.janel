@@ -41,12 +41,12 @@ async def borrar():
 
 <flex class="ajustes">
   <flex class="panel general">
-    <Text class="panel-titulo">General</Text>
-    <Text class="rotulo">Nombre</Text>
-    <TextField bind:value={nombre} label="Nombre del proyecto" />
-    <Text class="rotulo">Descripción</Text>
-    <TextArea class="descripcion" bind:value={descripcion} label="Descripción del proyecto" />
-    <Text class="rotulo">Color</Text>
+    <text class="panel-titulo">General</text>
+    <text class="rotulo">Nombre</text>
+    <textfield bind:value={nombre} label="Nombre del proyecto" />
+    <text class="rotulo">Descripción</text>
+    <textarea class="descripcion" bind:value={descripcion} label="Descripción del proyecto" />
+    <text class="rotulo">Color</text>
     <flex class="colores">
       {#each COLORES as c (c)}
         <flex as="button" class="muestra" class:elegido={color == c} style={{"background": c}} label={f"Color {c}"}
@@ -54,28 +54,28 @@ async def borrar():
       {/each}
     </flex>
     <flex class="botones">
-      {#if cambios()}<Text class="aviso">Cambios sin guardar</Text>{/if}
-      <Spacer />
-      <Button text="Descartar" enabled={bool(cambios())} on:click={descartar()} />
-      <Button text="Guardar" variant="primary" enabled={bool(cambios())} on:click={guardar()} />
+      {#if cambios()}<text class="aviso">Cambios sin guardar</text>{/if}
+      <spacer />
+      <button text="Descartar" enabled={bool(cambios())} on:click={descartar()} />
+      <button text="Guardar" variant="primary" enabled={bool(cambios())} on:click={guardar()} />
     </flex>
   </flex>
   <flex class="lateral">
     <flex class="panel">
-      <Text class="panel-titulo">Resumen</Text>
-      <flex class="dato-fila"><Text>Tarjetas</Text><Spacer /><Text class="cifra">{datos.resumen(proyecto)["total"]}</Text></flex>
-      <flex class="dato-fila"><Text>Columnas</Text><Spacer /><Text class="cifra">{len(proyecto["columnas"])}</Text></flex>
-      <flex class="dato-fila"><Text>Miembros</Text><Spacer /><Text class="cifra">{len(proyecto["miembros"])}</Text></flex>
-      <flex class="dato-fila"><Text>Hecho</Text><Spacer /><Text class="cifra">{f"{round(datos.resumen(proyecto)['progreso'] * 100)} %"}</Text></flex>
-      <ProgressBar value={datos.resumen(proyecto)["progreso"]} max={1} />
+      <text class="panel-titulo">Resumen</text>
+      <flex class="dato-fila"><text>Tarjetas</text><spacer /><text class="cifra">{datos.resumen(proyecto)["total"]}</text></flex>
+      <flex class="dato-fila"><text>Columnas</text><spacer /><text class="cifra">{len(proyecto["columnas"])}</text></flex>
+      <flex class="dato-fila"><text>Miembros</text><spacer /><text class="cifra">{len(proyecto["miembros"])}</text></flex>
+      <flex class="dato-fila"><text>Hecho</text><spacer /><text class="cifra">{f"{round(datos.resumen(proyecto)['progreso'] * 100)} %"}</text></flex>
+      <progressbar value={datos.resumen(proyecto)["progreso"]} max={1} />
     </flex>
     <flex class="panel peligro">
-      <Text class="panel-titulo">Zona peligrosa</Text>
-      <Text class="explica">{"Recuperarlo lo devuelve a la lista de proyectos activos." if proyecto["archivado"] else "Archivarlo lo quita de la lista sin borrar nada."}</Text>
-      <Button text={"Recuperar" if proyecto["archivado"] else "Archivar"}
+      <text class="panel-titulo">Zona peligrosa</text>
+      <text class="explica">{"Recuperarlo lo devuelve a la lista de proyectos activos." if proyecto["archivado"] else "Archivarlo lo quita de la lista sin borrar nada."}</text>
+      <button text={"Recuperar" if proyecto["archivado"] else "Archivar"}
               on:click={datos.editar_proyecto(pid, archivado=not proyecto["archivado"])} />
-      <Text class="explica">Borrarlo quita también todas sus tarjetas (se puede deshacer con Ctrl+Z).</Text>
-      <Button class="borrar" text="Borrar proyecto" on:click={borrar()} />
+      <text class="explica">Borrarlo quita también todas sus tarjetas (se puede deshacer con Ctrl+Z).</text>
+      <button class="borrar" text="Borrar proyecto" on:click={borrar()} />
     </flex>
   </flex>
 </flex>

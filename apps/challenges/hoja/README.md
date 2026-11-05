@@ -33,8 +33,8 @@ Limitaciones de la aplicación (no del framework): al copiar o mover fórmulas s
 
 | Archivo | Contenido |
 |---|---|
-| `src/App.janel` | La ventana: barra, barra de fórmulas, cabecera de columnas, filas (`<List>`), resumen; teclado y portapapeles. |
-| `src/components/Fila.janel` | Una fila: número y celdas visibles (un `<Text>` cada una), puntero y editor. |
+| `src/App.janel` | La ventana: barra, barra de fórmulas, cabecera de columnas, filas (`<list>`), resumen; teclado y portapapeles. |
+| `src/components/Fila.janel` | Una fila: número y celdas visibles (un `<text>` cada una), puntero y editor. |
 | `src/components/Editor.janel` | El campo que edita una celda en el sitio. |
 | `src/services/hoja.py` | Lo escrito, celdas reactivas perezosas, deshacer/rehacer, portapapeles, ordenar y CSV. |
 | `src/services/deshacer.py` | El historial de pasos (pares deshacer/rehacer), con la API pública de JanelKit. |

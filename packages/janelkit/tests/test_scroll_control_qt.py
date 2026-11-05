@@ -1,4 +1,4 @@
-"""Control del desplazamiento en <Scroll>: follow, on:top/on:bottom/on:scroll y ref.scroll_to_*."""
+"""Control del desplazamiento en <scroll>: follow, on:top/on:bottom/on:scroll y ref.scroll_to_*."""
 import pytest
 from PySide6.QtCore import QCoreApplication
 
@@ -14,18 +14,18 @@ zona = ref()
 marca = ref()
 otro = ref()
 </script>
-<Window width={300} height={200}>
-  <Scroll %s ref={zona} on:top={tops += 1} on:bottom={bottoms += 1} on:scroll={pos = event}>
+<window width={300} height={200}>
+  <scroll %s ref={zona} on:top={tops += 1} on:bottom={bottoms += 1} on:scroll={pos = event}>
     {#each lines as l}
-      <Text>{l}</Text>
+      <text>{l}</text>
     {/each}
-    <Text ref={marca}>marca</Text>
+    <text ref={marca}>marca</text>
     {#each lines as l}
-      <Text>{l}</Text>
+      <text>{l}</text>
     {/each}
-  </Scroll>
-  <Text ref={otro}>fuera</Text>
-</Window>
+  </scroll>
+  <text ref={otro}>fuera</text>
+</window>
 """
 
 

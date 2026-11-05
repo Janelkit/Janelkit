@@ -35,10 +35,10 @@ i18n.set("es")
 Y se usan en la plantilla:
 
 ```html
-<Text>{t("hello", name=name)}</Text>
-<Text>{t("files", n=len(files))}</Text>
-<Text>{i18n.number(total, 2)} · {i18n.currency(price, "€")} · {i18n.date(today, "long")}</Text>
-<Button on:click={i18n.set("ar")}>العربية</Button>
+<text>{t("hello", name=name)}</text>
+<text>{t("files", n=len(files))}</text>
+<text>{i18n.number(total, 2)} · {i18n.currency(price, "€")} · {i18n.date(today, "long")}</text>
+<button on:click={i18n.set("ar")}>العربية</button>
 ```
 
 Al llamar a `i18n.set()`, todos los textos se actualizan sin reiniciar la aplicación. En árabe, hebreo o persa, la interfaz entera se refleja.

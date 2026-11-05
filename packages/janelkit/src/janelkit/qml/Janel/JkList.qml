@@ -1,5 +1,5 @@
 // Lista virtualizada de JanelKit: solo existen las filas visibles (más un margen).
-// La genera <List>{#each ...}{/each}</List>. Por defecto ocupa el espacio libre (flex: 1).
+// La genera <list>{#each ...}{/each}</list>. Por defecto ocupa el espacio libre (flex: 1).
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
@@ -23,12 +23,12 @@ Item {
     property real jkBorderWidth: 0
     property int jkFlex: 1
     readonly property bool jkScrollable: true
-    // <List animate>: las filas aparecen, desaparecen y se recolocan con animación.
+    // <list animate>: las filas aparecen, desaparecen y se recolocan con animación.
     property bool animate: false
     readonly property int jkAnimMs: 180
     property string jkSelfAlign: ""
     property bool jkSelfStretch: false
-    // <List follow>: empieza abajo, sigue a las filas nuevas si ya se estaba abajo y,
+    // <list follow>: empieza abajo, sigue a las filas nuevas si ya se estaba abajo y,
     // al insertar arriba (historial), mantiene en su sitio lo que se está viendo.
     property bool follow: false
     signal reachedTop()

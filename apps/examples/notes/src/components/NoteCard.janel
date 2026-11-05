@@ -7,14 +7,14 @@ active = prop(False)
 chosen = event()
 </script>
 
-<Column class="card" class:active={active} on:click={lambda: chosen.emit(note["id"])}>
-  <Row class="top">
-    <Text class="title">{note["title"] or "Sin título"}</Text>
-    <Text class="tag">{note["tag"]}</Text>
-  </Row>
-  <Text class="excerpt">{excerpt(note["body"]) or "Nota vacía"}</Text>
-  <Text class="date">{when(note["updated"])}</Text>
-</Column>
+<column class="card" class:active={active} on:click={lambda: chosen.emit(note["id"])}>
+  <row class="top">
+    <text class="title">{note["title"] or "Sin título"}</text>
+    <text class="tag">{note["tag"]}</text>
+  </row>
+  <text class="excerpt">{excerpt(note["body"]) or "Nota vacía"}</text>
+  <text class="date">{when(note["updated"])}</text>
+</column>
 
 <style>
 .card { padding: 12px; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }

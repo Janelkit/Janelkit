@@ -7,7 +7,7 @@ from janelkit import state, inject
 clicks = state(0)
 session = inject("session", "-")
 </script>
-<Column><Text>Inicio {clicks} {session}</Text></Column>
+<column><text>Inicio {clicks} {session}</text></column>
 """
 
 DETAIL = """<script>
@@ -17,7 +17,7 @@ item = prop()
 done = event()
 on_destroy(lambda: log.EVENTS.append(("destroy", item.value)))
 </script>
-<Column><Text>Detalle {item}</Text></Column>
+<column><text>Detalle {item}</text></column>
 """
 
 APP = """<script>
@@ -28,12 +28,12 @@ provide("session", "S1")
 nav = pages(Home)
 finished = state([])
 </script>
-<Window width={400} height={300}>
-  <Column>
-    <Text>{nav.current} ({nav.depth})</Text>
+<window width={400} height={300}>
+  <column>
+    <text>{nav.current} ({nav.depth})</text>
     <Pages id="pages" stack={nav} />
-  </Column>
-</Window>
+  </column>
+</window>
 """
 
 

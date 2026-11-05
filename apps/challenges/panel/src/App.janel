@@ -131,91 +131,91 @@ def color_of(series):
     return COLORS[monitor.main.index(series) % len(COLORS)] if series in monitor.main else COLORS[0]
 </script>
 
-<Window title="Panel del sistema" width={1280} height={800} minWidth={900} minHeight={560}
+<window title="Panel del sistema" width={1280} height={800} minWidth={900} minHeight={560}
         on:activate={active = True} on:deactivate={active = False}>
-  <Column class="app">
-    <Row class="toolbar">
-      <Text class="brand">Panel del sistema</Text>
-      <Text class="muted">{len(monitor.cores)} núcleos · {source.total_memory:.0f} GB</Text>
-      <Spacer />
-      <Text class="muted">Muestreo</Text>
-      <Select value={rate} options={RATES} on:change={set_rate} width={150} />
-      <Switch checked={paused} on:change={set_paused} text="Pausa" />
-      <Button variant="ghost" on:click={theme.toggle()}>{"☀" if theme.name == "dark" else "☾"}</Button>
-    </Row>
+  <column class="app">
+    <row class="toolbar">
+      <text class="brand">Panel del sistema</text>
+      <text class="muted">{len(monitor.cores)} núcleos · {source.total_memory:.0f} GB</text>
+      <spacer />
+      <text class="muted">Muestreo</text>
+      <select value={rate} options={RATES} on:change={set_rate} width={150} />
+      <switch checked={paused} on:change={set_paused} text="Pausa" />
+      <button variant="ghost" on:click={theme.toggle()}>{"☀" if theme.name == "dark" else "☾"}</button>
+    </row>
 
     {#if alerts}
-      <Row class="banner" transition:fade>
-        <Text class="banner-text">⚠ Por encima del umbral: {", ".join(s.label + " " + s.text() for s in alerts)}</Text>
-      </Row>
+      <row class="banner" transition:fade>
+        <text class="banner-text">⚠ Por encima del umbral: {", ".join(s.label + " " + s.text() for s in alerts)}</text>
+      </row>
     {/if}
 
-    <Row class="body">
-      <Scroll class="left">
+    <row class="body">
+      <scroll class="left">
         {#each card_rows as row}
-          <Row class="cards">
+          <row class="cards">
             {#each row as s (s.id)}
               <Card series={s} color={color_of(s)} on:expand={open_chart} flex={1} />
             {/each}
-          </Row>
+          </row>
         {/each}
 
-        <Text class="section">CPU por núcleo</Text>
+        <text class="section">CPU por núcleo</text>
         {#each core_rows as row}
-          <Row class="cores">
+          <row class="cores">
             {#each row as c (c.id)}
-              <Column class="core" class:hot={c.value.value >= 90} flex={1} label={c.label}>
-                <Row>
-                  <Text class="muted" flex={1}>{c.id[4:]}</Text>
-                  <Text class="core-value">{c.value.value:.0f}%</Text>
-                </Row>
-                <ProgressBar value={c.value.value} max={100} />
-              </Column>
+              <column class="core" class:hot={c.value.value >= 90} flex={1} label={c.label}>
+                <row>
+                  <text class="muted" flex={1}>{c.id[4:]}</text>
+                  <text class="core-value">{c.value.value:.0f}%</text>
+                </row>
+                <progressbar value={c.value.value} max={100} />
+              </column>
             {/each}
-          </Row>
+          </row>
         {/each}
-      </Scroll>
+      </scroll>
 
-      <Column class="right">
-        <Row class="filter">
-          <TextField id="query" bind:value={query} placeholder="Filtrar por nombre o PID" flex={1} />
-          <Text class="muted">{len(rows)} procesos</Text>
-        </Row>
-        <Row class="thead">
+      <column class="right">
+        <row class="filter">
+          <textfield id="query" bind:value={query} placeholder="Filtrar por nombre o PID" flex={1} />
+          <text class="muted">{len(rows)} procesos</text>
+        </row>
+        <row class="thead">
           {#each COLUMNS as col (col["key"])}
             {#if col["width"]}
-              <Button variant="ghost" class="th" on:click={sort_by(col["key"])} width={col["width"]}>{heading(col)}</Button>
+              <button variant="ghost" class="th" on:click={sort_by(col["key"])} width={col["width"]}>{heading(col)}</button>
             {:else}
-              <Button variant="ghost" class="th" on:click={sort_by(col["key"])} flex={1}>{heading(col)}</Button>
+              <button variant="ghost" class="th" on:click={sort_by(col["key"])} flex={1}>{heading(col)}</button>
             {/if}
           {/each}
-        </Row>
-        <List id="procs" class="procs">
+        </row>
+        <list id="procs" class="procs">
           {#each rows as p (p["pid"])}
-            <Row class="tr" class:sel={p["pid"] == selected} on:click={selected = p["pid"]} label={p["name"]}>
-              <Text class="td" flex={1}>{p["name"]}</Text>
-              <Text class="td num" width={64}>{p["pid"]}</Text>
-              <Text class="td num" width={72}>{cell(p, "cpu")}</Text>
-              <Text class="td num" width={84}>{cell(p, "mem")}</Text>
-              <Text class="td num" width={56}>{p["threads"]}</Text>
-            </Row>
+            <row class="tr" class:sel={p["pid"] == selected} on:click={selected = p["pid"]} label={p["name"]}>
+              <text class="td" flex={1}>{p["name"]}</text>
+              <text class="td num" width={64}>{p["pid"]}</text>
+              <text class="td num" width={72}>{cell(p, "cpu")}</text>
+              <text class="td num" width={84}>{cell(p, "mem")}</text>
+              <text class="td num" width={56}>{p["threads"]}</text>
+            </row>
           {/each}
-        </List>
-        <Column class="details">
+        </list>
+        <column class="details">
           {#if current is not None}
-            <Text class="detail-title">{current["name"]}</Text>
-            <Text class="muted">PID {current["pid"]} · {current["user"] or "—"} · {current["threads"]} hilos</Text>
-            <Text>CPU {cell(current, "cpu")} · Memoria {cell(current, "mem")}</Text>
+            <text class="detail-title">{current["name"]}</text>
+            <text class="muted">PID {current["pid"]} · {current["user"] or "—"} · {current["threads"]} hilos</text>
+            <text>CPU {cell(current, "cpu")} · Memoria {cell(current, "mem")}</text>
           {:else if selected is not None}
-            <Text class="muted">El proceso {selected} ha terminado.</Text>
+            <text class="muted">El proceso {selected} ha terminado.</text>
           {:else}
-            <Text class="muted">Selecciona un proceso para ver sus detalles.</Text>
+            <text class="muted">Selecciona un proceso para ver sus detalles.</text>
           {/if}
-        </Column>
-      </Column>
-    </Row>
-  </Column>
-</Window>
+        </column>
+      </column>
+    </row>
+  </column>
+</window>
 
 <style>
 .app { gap: 0; }

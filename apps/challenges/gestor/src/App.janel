@@ -51,35 +51,35 @@ provide("secciones", secciones)
 provide("abrir_tarjeta", abrir_tarjeta)
 </script>
 
-<Window title="Gestor de proyectos" width={1280} height={800} minWidth={760} minHeight={480}>
-  <Shortcut keys="Ctrl+Z" on:activate={historial.deshacer()} />
-  <Shortcut keys="Ctrl+Y" on:activate={historial.rehacer()} />
-  <Shortcut keys="Ctrl+Shift+Z" on:activate={historial.rehacer()} />
-  <Shortcut keys="Ctrl+1" on:activate={secciones.show("proyectos")} />
-  <Shortcut keys="Ctrl+2" on:activate={secciones.show("personas")} />
-  <Shortcut keys="Ctrl+3" on:activate={secciones.show("trabajo")} />
+<window title="Gestor de proyectos" width={1280} height={800} minWidth={760} minHeight={480}>
+  <shortcut keys="Ctrl+Z" on:activate={historial.deshacer()} />
+  <shortcut keys="Ctrl+Y" on:activate={historial.rehacer()} />
+  <shortcut keys="Ctrl+Shift+Z" on:activate={historial.rehacer()} />
+  <shortcut keys="Ctrl+1" on:activate={secciones.show("proyectos")} />
+  <shortcut keys="Ctrl+2" on:activate={secciones.show("personas")} />
+  <shortcut keys="Ctrl+3" on:activate={secciones.show("trabajo")} />
   <flex class="app">
     <flex as="region" class="cabecera" label="Secciones">
       <flex class="marca">
-        <flex class="logo"><Text>G</Text></flex>
-        <Text class="nombre">Gestor</Text>
+        <flex class="logo"><text>G</text></flex>
+        <text class="nombre">Gestor</text>
       </flex>
       <flex class="secciones">
         {#each SECCIONES as s, i (s[0])}
           <flex as="button" class="seccion" class:activa={secciones.current == s[0]} label={s[1]}
                 title={f"{s[1]} (Ctrl+{i + 1})"} on:click={secciones.show(s[0])}>
-            <Text>{s[1]}</Text>
+            <text>{s[1]}</text>
           </flex>
         {/each}
       </flex>
-      <Spacer />
-      {#if deshacer}<Text class="ultimo">{f"Último cambio: {deshacer}"}</Text>{/if}
-      <Button text="Deshacer" variant="ghost" enabled={bool(deshacer)} label={f"Deshacer: {deshacer} (Ctrl+Z)"} on:click={historial.deshacer()} />
-      <Button text="Rehacer" variant="ghost" enabled={bool(rehacer)} label={f"Rehacer: {rehacer} (Ctrl+Y)"} on:click={historial.rehacer()} />
+      <spacer />
+      {#if deshacer}<text class="ultimo">{f"Último cambio: {deshacer}"}</text>{/if}
+      <button text="Deshacer" variant="ghost" enabled={bool(deshacer)} label={f"Deshacer: {deshacer} (Ctrl+Z)"} on:click={historial.deshacer()} />
+      <button text="Rehacer" variant="ghost" enabled={bool(rehacer)} label={f"Rehacer: {rehacer} (Ctrl+Y)"} on:click={historial.rehacer()} />
     </flex>
     <Sections of={secciones} transition:fade={120} />
   </flex>
-</Window>
+</window>
 
 <style>
 .app { flex: 1; direction: column; background: var(--bg); }

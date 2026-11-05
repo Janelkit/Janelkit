@@ -5,7 +5,7 @@ ejecuta (su *preparación*):
 
     from janelkit import on_mount, on_destroy, provide, inject, ref
 
-    campo = ref()                      # <TextField ref={campo} />
+    campo = ref()                      # <textfield ref={campo} />
 
     @on_mount
     def enfocar():
@@ -119,7 +119,7 @@ class ElementHost:
 
 
 class Ref:
-    """Referencia a un elemento de la plantilla: `campo = ref()` y `<TextField ref={campo} />`.
+    """Referencia a un elemento de la plantilla: `campo = ref()` y `<textfield ref={campo} />`.
 
     `.value` es reactivo: vale `None` hasta que el elemento existe y vuelve a
     `None` cuando se destruye. Los métodos no hacen nada si el elemento no existe.
@@ -180,34 +180,34 @@ class Ref:
             item.setFocus(False)
 
     def select_all(self) -> None:
-        """Selecciona todo el texto (TextField, TextArea)."""
+        """Selecciona todo el texto (<textfield>, <textarea>)."""
         self._call("selectAll")
 
     def scroll_to_start(self) -> None:
-        """Lleva una `<List>` o un `<Scroll>` al principio."""
+        """Lleva una `<list>` o un `<scroll>` al principio."""
         self._call("scrollToStart")
 
     def scroll_to_end(self) -> None:
-        """Lleva una `<List>` o un `<Scroll>` al final (con `follow`, vuelve a seguir lo nuevo)."""
+        """Lleva una `<list>` o un `<scroll>` al final (con `follow`, vuelve a seguir lo nuevo)."""
         self._call("scrollToEnd")
 
     def scroll_to(self, target: "int | Ref") -> None:
-        """Desplaza lo justo para que se vea: en una `<List>`, la fila `target` (un índice);
-        en un `<Scroll>`, el elemento de dentro cuyo `ref` es `target`."""
+        """Desplaza lo justo para que se vea: en una `<list>`, la fila `target` (un índice);
+        en un `<scroll>`, el elemento de dentro cuyo `ref` es `target`."""
         item = self._live()
         if item is None:
             return
         if isinstance(target, Ref):
             if not item.inherits("QQuickScrollView"):
-                raise TypeError("scroll_to(ref) es para <Scroll>; en una <List>, pasa el índice de la fila")
+                raise TypeError("scroll_to(ref) es para <scroll>; en una <list>, pasa el índice de la fila")
             inner = target._live()
             if inner is None:
                 return
             if not item.isAncestorOf(inner):
-                raise ValueError("scroll_to(): el elemento no está dentro de este <Scroll>")
+                raise ValueError("scroll_to(): el elemento no está dentro de este <scroll>")
             target = inner
         elif item.inherits("QQuickScrollView"):
-            raise TypeError("scroll_to() de un <Scroll> recibe el ref de un elemento de dentro")
+            raise TypeError("scroll_to() de un <scroll> recibe el ref de un elemento de dentro")
         self._call("scrollTo", target)
 
     def _call(self, method: str, *args: Any) -> None:
@@ -228,7 +228,7 @@ def is_visible() -> Computed[bool]:
     """Reactivo: si el componente se ve ahora mismo.
 
     Es False mientras está en una página de debajo de la pila, en una sección que no es la
-    actual, dentro de un `{#hidden}` que lo oculta o en una fila de `<List>` fuera de la vista.
+    actual, dentro de un `{#hidden}` que lo oculta o en una fila de `<list>` fuera de la vista.
     Lo que muestra la plantilla ya se aplaza solo; esto sirve para parar a propósito lo que
     hace el script (un muestreo, una cámara):
 

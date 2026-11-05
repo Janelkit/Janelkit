@@ -22,8 +22,8 @@ async def elegir():
     elegido.value = await nav.push(Detalle, item="x")
 </script>
 <flex direction="column">
-  <Text>{f"lista {q} {elegido}"}</Text>
-  <flex label="abrir" on:click={elegir()}><Text>abrir</Text></flex>
+  <text>{f"lista {q} {elegido}"}</text>
+  <flex label="abrir" on:click={elegir()}><text>abrir</text></flex>
 </flex>
 """
 
@@ -52,8 +52,8 @@ async def responder():
     return permitir.value
 </script>
 <flex label="detalle" tabindex={0} direction="column">
-  <Text>{f"detalle {item}"}</Text>
-  <flex label="elegir" on:click={nav.back("rojo")}><Text>elegir</Text></flex>
+  <text>{f"detalle {item}"}</text>
+  <flex label="elegir" on:click={nav.back("rojo")}><text>elegir</text></flex>
 </flex>
 """
 
@@ -61,7 +61,7 @@ PERSONAS = """<script>
 from janelkit import on_mount, state
 creada = state(True)
 </script>
-<flex><Text>personas</Text></flex>
+<flex><text>personas</text></flex>
 """
 
 APP = """<script>
@@ -71,12 +71,12 @@ from Personas import Personas
 
 s = sections(lista=Lista, personas=Personas)
 </script>
-<Window width={400} height={300}>
+<window width={400} height={300}>
   <flex direction="column">
-    <Text>{f"seccion {s.current}"}</Text>
+    <text>{f"seccion {s.current}"}</text>
     <Sections of={s} />
   </flex>
-</Window>
+</window>
 """
 
 
@@ -205,7 +205,7 @@ log = inject("log")
 on_mount(lambda: log.append("mount"))
 on_destroy(lambda: log.append("destroy"))
 </script>
-<flex label="campo" on:click={n += 1}><Text>{f"n={n}"}</Text></flex>
+<flex label="campo" on:click={n += 1}><text>{f"n={n}"}</text></flex>
 """
 
 OCULTO = """<script>
@@ -215,13 +215,13 @@ oculto = state(True)
 log = state([])
 provide("log", log.value)
 </script>
-<Window width={300} height={200}>
+<window width={300} height={200}>
   <flex direction="column">
     {#hidden oculto}<Campo />{/hidden}
-    {#hidden oculto}<Text visible={True}>con visible propio</Text>{/hidden}
-    <Text>fin</Text>
+    {#hidden oculto}<text visible={True}>con visible propio</text>{/hidden}
+    <text>fin</text>
   </flex>
-</Window>
+</window>
 """
 
 
@@ -251,7 +251,7 @@ def test_hidden_content_is_created_when_first_shown_and_then_only_hidden(oculto)
 
 def test_unclosed_hidden_block_is_reported():
     with pytest.raises(JanelError, match=r"antes de cerrar el bloque \{#hidden\}"):
-        compile_source("<script>\nx = True\n</script>\n<flex>{#hidden x}<Text>a</Text></flex>\n")
+        compile_source("<script>\nx = True\n</script>\n<flex>{#hidden x}<text>a</text></flex>\n")
 
 
 ELSE = """<script>
@@ -262,15 +262,15 @@ log = state([])
 from janelkit import provide
 provide("log", log.value)
 </script>
-<Window width={300} height={200}>
+<window width={300} height={200}>
   <flex direction="column">
     {#hidden oculto}
       <Campo />
     {:else}
-      <flex transition:fade={50}><Text>{"vacío"}</Text></flex>
+      <flex transition:fade={50}><text>{"vacío"}</text></flex>
     {/hidden}
   </flex>
-</Window>
+</window>
 """
 
 
@@ -295,7 +295,7 @@ def test_hidden_else_is_also_kept_and_transitions_finish_hidden():
 
 def test_else_is_not_allowed_in_key():
     with pytest.raises(JanelError, match=r"\{:else\} inesperada dentro de \{#key\}"):
-        compile_source("<script>\nx = 1\n</script>\n<flex>{#key x}<Text>a</Text>{:else}<Text>b</Text>{/key}</flex>\n")
+        compile_source("<script>\nx = 1\n</script>\n<flex>{#key x}<text>a</text>{:else}<text>b</text>{/key}</flex>\n")
 
 
 def test_pages_transition_animates_the_entering_page(app):
@@ -347,9 +347,9 @@ def test_a_page_fits_its_window_and_its_scrolling_grid_wraps(tmp_path):
     """La página de <Sections> se estrecha con la ventana (su mínimo es el de su contenido,
     no su ancho natural) y una rejilla con wrap y overflow: auto reparte en filas."""
     (tmp_path / "Rejilla.janel").write_text("""<flex class="pagina">
-  <flex class="barra"><Text>Título</Text><Spacer /><Button text="Nuevo" /></flex>
+  <flex class="barra"><text>Título</text><spacer /><button text="Nuevo" /></flex>
   <flex class="rejilla" label="rejilla">
-    {#each list(range(12)) as i (i)}<flex class="ficha"><Text>{f"ficha {i}"}</Text></flex>{/each}
+    {#each list(range(12)) as i (i)}<flex class="ficha"><text>{f"ficha {i}"}</text></flex>{/each}
   </flex>
 </flex>
 <style>
@@ -363,9 +363,9 @@ from janelkit import sections
 from Rejilla import Rejilla
 s = sections(a=Rejilla)
 </script>
-<Window width={800} height={600}>
+<window width={800} height={600}>
   <flex class="app"><flex class="lateral" /><Sections of={s} /></flex>
-</Window>
+</window>
 <style>
 .app { flex: 1; }
 .lateral { width: 200px; }
@@ -374,12 +374,12 @@ s = sections(a=Rejilla)
     with mount(tmp_path / "App.janel") as app:
         app.window.resize(800, 600)
         app.wait(0.1)
-        boton = app.find("Button", text="Nuevo").item
+        boton = app.find("button", text="Nuevo").item
         derecha = boton.mapToScene(boton.boundingRect().topRight()).x()
         assert derecha <= 800  # antes: la página medía lo que la rejilla en una sola fila
         rejilla = app.find("flex", label="rejilla").item
         assert rejilla.width() == pytest.approx(600)  # 800 - la lateral
-        fila = [app.find("Text", text=f"ficha {i}").item for i in (0, 1, 2)]
+        fila = [app.find("text", text=f"ficha {i}").item for i in (0, 1, 2)]
         y = [t.mapToScene(t.boundingRect().topLeft()).y() for t in fila]
         assert y[0] == y[1] and y[2] > y[0]  # caben 2 por fila (200 + 10 + 200 + 10 + 200 > 600)
 
@@ -392,7 +392,7 @@ s = sections(a=Rejilla)
     ("margin: 50px;", (250, 50, 500, 500)),
 ])  # fmt: skip
 def test_the_root_of_a_page_adjusts_its_place_with_css(tmp_path, css, esperado):
-    (tmp_path / "Pag.janel").write_text(f"""<flex class="pag"><Text>hola</Text></flex>
+    (tmp_path / "Pag.janel").write_text(f"""<flex class="pag"><text>hola</text></flex>
 <style>
 .pag {{ direction: column; {css} }}
 </style>
@@ -402,9 +402,9 @@ from janelkit import sections
 from Pag import Pag
 s = sections(a=Pag)
 </script>
-<Window width={800} height={600}>
+<window width={800} height={600}>
   <flex class="app"><flex class="lateral" /><Sections of={s} /></flex>
-</Window>
+</window>
 <style>
 .app { flex: 1; }
 .lateral { width: 200px; }
@@ -413,6 +413,6 @@ s = sections(a=Pag)
     with mount(tmp_path / "App.janel") as app:
         app.window.resize(800, 600)
         app.wait(0.1)
-        pag = app.find("Text", text="hola").item.parentItem().parentItem()  # el lay y su caja
+        pag = app.find("text", text="hola").item.parentItem().parentItem()  # el lay y su caja
         pos = pag.mapToScene(pag.boundingRect().topLeft())
         assert (pos.x(), pos.y(), pag.width(), pag.height()) == esperado

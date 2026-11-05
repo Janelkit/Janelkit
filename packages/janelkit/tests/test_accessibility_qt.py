@@ -7,13 +7,13 @@ APP = """<script>
 from janelkit import state
 opened = state(0)
 </script>
-<Column>
-  <TextField id="field" placeholder="Nombre" label="Nombre completo" />
-  <Row id="card" on:click={opened += 1} label="Abrir la nota"><Text>Nota</Text></Row>
-  <Row id="plain"><Text>Sin clic</Text></Row>
-  <Button id="ok">Aceptar</Button>
-  <Image id="logo" src="" alt="Logotipo" />
-</Column>
+<column>
+  <textfield id="field" placeholder="Nombre" label="Nombre completo" />
+  <row id="card" on:click={opened += 1} label="Abrir la nota"><text>Nota</text></row>
+  <row id="plain"><text>Sin clic</text></row>
+  <button id="ok">Aceptar</button>
+  <image id="logo" src="" alt="Logotipo" />
+</column>
 """
 
 

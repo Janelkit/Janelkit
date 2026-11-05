@@ -1,4 +1,4 @@
-r"""Markdown sin HTML para `<Text format="markdown">`.
+r"""Markdown sin HTML para `<text format="markdown">`.
 
 El Markdown de Qt (md4c, dialecto GitHub) también interpreta HTML: un mensaje de chat con
 `<img src=…>` o `<span style=…>` cambiaría la interfaz. Qt no deja quitarlo desde QML,

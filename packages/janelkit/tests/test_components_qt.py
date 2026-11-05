@@ -25,11 +25,11 @@ def remove():
 def bump():
     clicks.value += 1
 </script>
-<Row>
-  <Text>{prefix}{todo["t"]}#{clicks}</Text>
-  <Button id="bump" on:click={bump}>+</Button>
-  <Button id="remove" on:click={remove}>x</Button>
-</Row>
+<row>
+  <text>{prefix}{todo["t"]}#{clicks}</text>
+  <button id="bump" on:click={bump}>+</button>
+  <button id="remove" on:click={remove}>x</button>
+</row>
 """
 
 APP = """<script>
@@ -42,11 +42,11 @@ def on_removed(todo_id):
     log.value = [*log.value, todo_id]
     todos.value = [t for t in todos.value if t["id"] != todo_id]
 </script>
-<Column>
+<column>
   {#each todos as todo (todo["id"])}
     <Item todo={todo} prefix={prefix} on:removed={on_removed} />
   {/each}
-</Column>
+</column>
 """
 
 
@@ -109,10 +109,10 @@ def test_component_instances_are_independent(mount, project):
     app = """<script>
 from components.Item import Item
 </script>
-<Column>
+<column>
   <Item todo={{"id": 1, "t": "x"}} />
   <Item todo={{"id": 2, "t": "y"}} prefix="+" />
-</Column>"""
+</column>"""
     m = mount(project({"App.janel": app, "components/Item.janel": ITEM}))
     click(find_all(m, "bump")[1])
     assert texts(m) == ["-x#0", "+y#1"]
@@ -125,8 +125,8 @@ v = prop(1)
 def change():
     v.value = 2
 </script>
-<Button id="b" on:click={change}>{v}</Button>"""
-    m = mount(project({"App.janel": "<script>\nfrom C import C\n</script>\n<Column><C /></Column>", "C.janel": child}))
+<button id="b" on:click={change}>{v}</button>"""
+    m = mount(project({"App.janel": "<script>\nfrom C import C\n</script>\n<column><C /></column>", "C.janel": child}))
     with caplog.at_level(logging.ERROR, logger="janelkit"):
         click(find(m, "b"))
     assert "solo lectura" in caplog.text
@@ -137,7 +137,7 @@ def test_unconnected_event_is_a_noop(mount, project):
 from janelkit import event
 done = event()
 </script>
-<Button id="b" on:click={lambda: done.emit(1)}>ok</Button>"""
+<button id="b" on:click={lambda: done.emit(1)}>ok</button>"""
     m = mount(project({"App.janel": "<script>\nfrom C import C\n</script>\n<C />", "C.janel": child}))
     click(find(m, "b"))
 
@@ -148,7 +148,7 @@ from janelkit import state
 from components.Item import Item
 show = state(True)
 </script>
-<Column>{#if show}<Item todo={{"id": 1, "t": "x"}} />{:else}<Text>oculto</Text>{/if}</Column>"""
+<column>{#if show}<Item todo={{"id": 1, "t": "x"}} />{:else}<text>oculto</text>{/if}</column>"""
     m = mount(project({"App.janel": app, "components/Item.janel": ITEM}))
     assert texts(m) == ["-x#0"]
     m.instance.namespace["show"].value = False
@@ -163,18 +163,18 @@ from janelkit import prop
 from Tree import Tree
 node = prop()
 </script>
-<Column>
-  <Text>{node["n"]}</Text>
+<column>
+  <text>{node["n"]}</text>
   {#each node.get("kids", []) as k (k["n"])}<Tree node={k} />{/each}
-</Column>"""
+</column>"""
     app = '<script>\nfrom Tree import Tree\n</script>\n<Tree node={{"n": "r", "kids": [{"n": "a", "kids": [{"n": "a1"}]}, {"n": "b"}]}} />'
     m = mount(project({"App.janel": app, "Tree.janel": tree}))
     assert texts(m) == ["r", "a", "a1", "b"]
 
 
 def test_error_in_child_script_is_reported_and_row_skipped(mount, project, caplog):
-    child = "<script>\nfrom janelkit import prop\nv = prop()\nif v.value == 2:\n    raise ValueError('dos')\n</script>\n<Text>{v}</Text>"
-    app = "<script>\nfrom C import C\n</script>\n<Column>{#each [1, 2, 3] as v (v)}<C v={v} />{/each}</Column>"
+    child = "<script>\nfrom janelkit import prop\nv = prop()\nif v.value == 2:\n    raise ValueError('dos')\n</script>\n<text>{v}</text>"
+    app = "<script>\nfrom C import C\n</script>\n<column>{#each [1, 2, 3] as v (v)}<C v={v} />{/each}</column>"
     with caplog.at_level(logging.ERROR, logger="janelkit"):
         m = mount(project({"App.janel": app, "C.janel": child}))
     assert "ValueError: dos" in caplog.text
@@ -183,7 +183,7 @@ def test_error_in_child_script_is_reported_and_row_skipped(mount, project, caplo
 
 def test_compile_errors_in_children_point_to_the_child_file(project):
     with pytest.raises(JanelError) as info:
-        compile_file(project({"App.janel": "<script>\nfrom C import C\n</script>\n<C />", "C.janel": "<Text>{nada}</Text>"}))
+        compile_file(project({"App.janel": "<script>\nfrom C import C\n</script>\n<C />", "C.janel": "<text>{nada}</text>"}))
     assert info.value.first.location.file.endswith("C.janel")
 
 
@@ -191,7 +191,7 @@ def test_compile_errors_in_children_point_to_the_child_file(project):
 
 
 def test_theme_switch_updates_tokens_in_qml(mount, janel_app):
-    m = mount('<Column class="c"><Text id="t" class="t">x</Text></Column>\n<style>.c { background: var(--surface); }\n.t { color: var(--primary); }</style>')
+    m = mount('<column class="c"><text id="t" class="t">x</text></column>\n<style>.c { background: var(--surface); }\n.t { color: var(--primary); }</style>')
     label = find(m, "t")
     assert label.property("color") == QColor(theme.tokens["primary"])
     assert m.root.property("color") == QColor("#f5f6f8")
@@ -204,7 +204,7 @@ def test_theme_switch_updates_tokens_in_qml(mount, janel_app):
 
 def test_custom_theme_and_reactive_name(mount):
     theme.define("sepia", base="light", bg="#f4ecd8")
-    m = mount("<script>\nfrom janelkit import theme\n</script>\n<Text id=\"t\">{theme.name}</Text>")
+    m = mount("<script>\nfrom janelkit import theme\n</script>\n<text id=\"t\">{theme.name}</text>")
     assert find(m, "t").property("text") == "light"
     theme.set("sepia")
     assert find(m, "t").property("text") == "sepia"
@@ -212,7 +212,7 @@ def test_custom_theme_and_reactive_name(mount):
 
 
 def test_unknown_token_is_a_warning_at_mount(janel_app, project):
-    compiled = compile_file(project({"App.janel": '<Text class="t">x</Text>\n<style>.t { color: var(--brnad); }</style>'}))
+    compiled = compile_file(project({"App.janel": '<text class="t">x</text>\n<style>.t { color: var(--brnad); }</style>'}))
     warnings = janel_app.check_tokens(compiled)
     assert len(warnings) == 1 and "--brnad" in warnings[0].message
     theme.extend(brnad="#000")
@@ -237,7 +237,7 @@ note: Optional[str] = prop(None)
 tags: list[str] = prop([])
 anything = prop(None)
 </script>
-<Text>{label}:{count}:{ratio}:{note}:{len(tags)}</Text>
+<text>{label}:{count}:{ratio}:{note}:{len(tags)}</text>
 """
 
 
@@ -247,7 +247,7 @@ def test_literal_props_are_checked_against_annotations(project):
         ("<Typed label={5} />", "espera str y recibe int (5)", "label: str = prop(...)"),
         ("<Typed tags={3} />", "espera list[str] y recibe int (3)", "tags: list[str] = prop(...)"),
     ]:
-        app = f"<script>\nfrom components.Typed import Typed\n</script>\n<Column>{usage}</Column>"
+        app = f"<script>\nfrom components.Typed import Typed\n</script>\n<column>{usage}</column>"
         with pytest.raises(JanelError) as info:
             compile_file(project({"App.janel": app, "components/Typed.janel": TYPED}))
         assert message in info.value.first.message
@@ -257,7 +257,7 @@ def test_literal_props_are_checked_against_annotations(project):
 def test_compatible_literals_compile(project):
     app = (
         "<script>\nfrom components.Typed import Typed\n</script>\n"
-        '<Column><Typed count={True} ratio={2} note={None} label="x" tags={["a"]} anything={3} /></Column>'
+        '<column><Typed count={True} ratio={2} note={None} label="x" tags={["a"]} anything={3} /></column>'
     )
     compile_file(project({"App.janel": app, "components/Typed.janel": TYPED}))
 
@@ -268,7 +268,7 @@ from janelkit import state
 from components.Typed import Typed
 n = state(1)
 </script>
-<Column><Typed count={n} /></Column>
+<column><Typed count={n} /></column>
 """
     m = mount(project({"App.janel": app, "components/Typed.janel": TYPED}))
     assert texts(m) == [":1:1.0::0"]  # None se muestra vacío

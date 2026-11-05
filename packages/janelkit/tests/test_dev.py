@@ -16,8 +16,8 @@ def test_reload_replaces_view_and_keeps_last_good_version_on_error(tmp_path, jan
 
     app = tmp_path / "App.janel"
     child = tmp_path / "Saludo.janel"
-    child.write_text("<Text>hola</Text>", encoding="utf-8")
-    app.write_text("<script>\nfrom Saludo import Saludo\n</script>\n<Column><Text>v1</Text><Saludo /></Column>", encoding="utf-8")
+    child.write_text("<text>hola</text>", encoding="utf-8")
+    app.write_text("<script>\nfrom Saludo import Saludo\n</script>\n<column><text>v1</text><Saludo /></column>", encoding="utf-8")
     compiled = compile_file(app)
     mounted = janel_app.mount(compiled)
     reloader = DevReloader(janel_app, app, mounted, compiled.files)
@@ -33,13 +33,13 @@ def test_reload_replaces_view_and_keeps_last_good_version_on_error(tmp_path, jan
         assert texts(new) == ["v2", "hola"]
         assert new.root.geometry().width() == 333  # conserva el tamaño de la ventana
 
-        child.write_text("<Text>{sin_definir}</Text>", encoding="utf-8")
+        child.write_text("<text>{sin_definir}</text>", encoding="utf-8")
         reloader.reload()
         assert reloader.mounted is new  # la versión correcta sigue montada
         assert reloader._error_window.property("visible") is True
         assert "sin_definir" in reloader._error_window.property("message")
 
-        child.write_text("<Text>adiós</Text>", encoding="utf-8")
+        child.write_text("<text>adiós</text>", encoding="utf-8")
         reloader.reload()
         assert texts(reloader.mounted) == ["v2", "adiós"]
         assert reloader._error_window.property("visible") is False
@@ -81,7 +81,7 @@ def test_dev_requires_a_project(tmp_path, capsys):
 
 def test_build_writes_qml_for_all_components(tmp_path, capsys):
     root = create_project("b", tmp_path).root
-    (root / "src" / "components" / "Suelto.janel").write_text("<Text>sin usar</Text>", encoding="utf-8")
+    (root / "src" / "components" / "Suelto.janel").write_text("<text>sin usar</text>", encoding="utf-8")
     assert main(["build", str(root)]) == 0
     out = root / "build" / "qml"
     assert (out / "App.qml").is_file()
@@ -91,7 +91,7 @@ def test_build_writes_qml_for_all_components(tmp_path, capsys):
 
 def test_build_reports_errors_in_unused_components(tmp_path):
     root = create_project("b2", tmp_path).root
-    (root / "src" / "components" / "Roto.janel").write_text("<Text>{nada}</Text>", encoding="utf-8")
+    (root / "src" / "components" / "Roto.janel").write_text("<text>{nada}</text>", encoding="utf-8")
     result = build_project(root)
     assert not result.ok
     assert len(result.errors) == 1 and result.errors[0].location.file.endswith("Roto.janel")
@@ -99,7 +99,7 @@ def test_build_reports_errors_in_unused_components(tmp_path):
 
 def test_build_accepts_window_components_opened_with_open_window(tmp_path):
     root = create_project("b3", tmp_path).root
-    (root / "src" / "components" / "Ventana.janel").write_text('<Window title="otra"><Text>hola</Text></Window>', encoding="utf-8")
+    (root / "src" / "components" / "Ventana.janel").write_text('<window title="otra"><text>hola</text></window>', encoding="utf-8")
     result = build_project(root)
     assert result.ok, [d.format() for d in result.errors]
 
@@ -114,7 +114,7 @@ def test_qml_files_restart_the_process_instead_of_reloading(tmp_path, janel_app)
     widget.write_text('import QtQuick\nRectangle { objectName: "box"; property real size: 1; width: 10 }', encoding="utf-8")
     (tmp_path / "main.py").write_text("", encoding="utf-8")
     app = tmp_path / "App.janel"
-    app.write_text("<script>\nfrom widgets.Box import Box\n</script>\n<Column><Box size={3} /></Column>", encoding="utf-8")
+    app.write_text("<script>\nfrom widgets.Box import Box\n</script>\n<column><Box size={3} /></column>", encoding="utf-8")
     compiled = compile_file(app)
     assert str(widget) in compiled.files
     reloader = DevReloader(janel_app, app, janel_app.mount(compiled), compiled.files)
@@ -133,12 +133,12 @@ def test_reload_keeps_state_unless_the_script_changed(tmp_path, janel_app, capsy
     child = tmp_path / "components" / "Counter.janel"
     child.parent.mkdir()
     child.write_text(
-        "<script>\nfrom janelkit import state\nclicks = state(0)\n</script>\n<Text>clicks {clicks}</Text>", encoding="utf-8"
+        "<script>\nfrom janelkit import state\nclicks = state(0)\n</script>\n<text>clicks {clicks}</text>", encoding="utf-8"
     )
     app = tmp_path / "App.janel"
     app.write_text(
         "<script>\nfrom janelkit import state\nfrom components.Counter import Counter\nname = state('')\nrows = state(['a', 'b'])\n</script>\n"
-        "<Column><TextField bind:value={name} /><Counter />{#each rows as r (r)}<Counter />{/each}</Column>\n"
+        "<column><textfield bind:value={name} /><Counter />{#each rows as r (r)}<Counter />{/each}</column>\n"
         "<style></style>",
         encoding="utf-8",
     )
@@ -158,7 +158,7 @@ def test_reload_keeps_state_unless_the_script_changed(tmp_path, janel_app, capsy
 
         # Cambiar solo estilo y plantilla del raíz: se conserva todo.
         app.write_text(app.read_text(encoding="utf-8").replace("<style></style>", "<style>.x { gap: 4px; }</style>")
-                       .replace("<Column>", "<Column>\n  <Text>nuevo</Text>"), encoding="utf-8")  # fmt: skip
+                       .replace("<column>", "<column>\n  <text>nuevo</text>"), encoding="utf-8")  # fmt: skip
         reloader.reload()
         ns = reloader.mounted.instance.namespace
         assert ns["name"].value == "Ana" and list(ns["rows"].value) == ["b", "a"]

@@ -35,8 +35,8 @@ n = state(0)
 </script>
 <flex direction="column">
   {{#hidden oculto}}
-    <Text>{{f"n={{visto(n)}}"}}</Text>
-    {{#each list(range(n)) as i (i)}}<Text>{{f"fila {{i}}"}}</Text>{{/each}}
+    <text>{{f"n={{visto(n)}}"}}</text>
+    {{#each list(range(n)) as i (i)}}<text>{{f"fila {{i}}"}}</text>{{/each}}
   {{/hidden}}
 </flex>
 """})
@@ -65,7 +65,7 @@ n = state(0)
 </script>
 <flex direction="column">
   {{#hidden fuera}}
-    {{#hidden dentro}}<Text>{{f"a{{visto(n)}}"}}</Text>{{:else}}<Text>{{f"b{{visto(-n)}}"}}</Text>{{/hidden}}
+    {{#hidden dentro}}<text>{{f"a{{visto(n)}}"}}</text>{{:else}}<text>{{f"b{{visto(-n)}}"}}</text>{{/hidden}}
   {{/hidden}}
 </flex>
 """})
@@ -98,7 +98,7 @@ vistos = inject("vistos")
 effect(lambda: vistos.append(n.value))
 interval(20, lambda: ticks.set(ticks.peek() + 1))
 </script>
-<Text>{n}</Text>
+<text>{n}</text>
 """,
         "App.janel": """<script>
 from janelkit import provide, state
@@ -129,9 +129,9 @@ PAGINAS = {
 from janelkit import inject
 n = inject("n")
 </script>
-<flex><Text>{{f"inicio {{visto(n)}}"}}</Text></flex>
+<flex><text>{{f"inicio {{visto(n)}}"}}</text></flex>
 """,
-    "Otra.janel": "<Text>otra</Text>\n",
+    "Otra.janel": "<text>otra</text>\n",
 }
 
 
@@ -144,7 +144,7 @@ n = state(0)
 provide("n", n)
 s = sections(a=Inicio, b=Otra)
 </script>
-<Window><Sections of={s} /></Window>
+<window><Sections of={s} /></window>
 """})
     with mount(app_file) as app:
         s, n = app.get("s"), app.namespace["n"]

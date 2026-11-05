@@ -47,32 +47,32 @@ def autosave():
 effect(autosave)
 </script>
 
-<Window title="Lista de la compra" width={420} height={520}>
-  <Column class="page">
-    <Row class="header">
-      <Text class="title">La compra</Text>
-      <Spacer />
-      <Button variant="ghost" on:click={theme.toggle()}>{"Oscuro" if theme.name == "light" else "Claro"}</Button>
-    </Row>
+<window title="Lista de la compra" width={420} height={520}>
+  <column class="page">
+    <row class="header">
+      <text class="title">La compra</text>
+      <spacer />
+      <button variant="ghost" on:click={theme.toggle()}>{"Oscuro" if theme.name == "light" else "Claro"}</button>
+    </row>
 
-    <Row class="new">
-      <TextField bind:value={draft} on:submit={add} placeholder="¿Qué falta?" flex={1} />
-      <Button variant="primary" on:click={add} enabled={bool(draft.strip())}>Añadir</Button>
-    </Row>
+    <row class="new">
+      <textfield bind:value={draft} on:submit={add} placeholder="¿Qué falta?" flex={1} />
+      <button variant="primary" on:click={add} enabled={bool(draft.strip())}>Añadir</button>
+    </row>
 
     <Card title={f"Pendientes: {pending}"}>
       {#each items as item (item["id"])}
         <ItemRow item={item} on:toggled={item["done"] = event} on:removed={items.remove(item)} />
       {:else}
-        <Text class="muted">La lista está vacía.</Text>
+        <text class="muted">La lista está vacía.</text>
       {/each}
     </Card>
 
     {#if save.error}
-      <Text class="error">No se pudo guardar: {save.error}</Text>
+      <text class="error">No se pudo guardar: {save.error}</text>
     {/if}
-  </Column>
-</Window>
+  </column>
+</window>
 
 <style>
 .page { padding: 24px; gap: 16px; }

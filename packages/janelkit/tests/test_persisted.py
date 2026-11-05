@@ -71,16 +71,16 @@ def test_in_an_app_writes_are_grouped_and_mount_uses_a_temporary_folder(monkeypa
 from janelkit import persisted
 n = persisted("n", 0)
 </script>
-<Column><Button text={f"n={n}"} on:click={n += 1} /></Column>""", encoding="utf-8")
+<column><button text={f"n={n}"} on:click={n += 1} /></column>""", encoding="utf-8")
     with mount(d / "App.janel") as app:
         folder = storage.data_folder()
         assert folder.name.startswith("janelkit-data-")  # no la carpeta real del usuario
         for _ in range(3):
-            app.find("Button").click()
+            app.find("button").click()
         assert not (folder / "n.json").exists()  # agrupado: todavía no se ha escrito
         app.wait(0.4)
         assert saved(folder, "n") == 3
-        assert app.find("Button").item.property("text") == "n=3"
+        assert app.find("button").item.property("text") == "n=3"
     assert not folder.exists()  # se borra al desmontar
 
 

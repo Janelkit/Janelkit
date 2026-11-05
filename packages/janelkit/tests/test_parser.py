@@ -9,12 +9,12 @@ from janelkit import state
 count = state(0)
 </script>
 
-<Window title="Mi app" width={640}>
-  <Column class="page">
-    <Text>Hola</Text>
-    <Button on:click={increment}>Clicks: {count}</Button>
-  </Column>
-</Window>
+<window title="Mi app" width={640}>
+  <column class="page">
+    <text>Hola</text>
+    <button on:click={increment}>Clicks: {count}</button>
+  </column>
+</window>
 
 <style>
 .page { padding: 24px; }
@@ -43,7 +43,7 @@ def test_extracts_sections_with_locations():
 def test_template_keeps_original_line_numbers():
     sfc = parse_sfc(APP, "App.janel")
     window = sfc.root_elements[0]
-    assert isinstance(window, Element) and window.tag == "Window"
+    assert isinstance(window, Element) and window.tag == "window"
     assert (window.loc.line, window.loc.column) == (6, 1)
     column = [c for c in window.children if isinstance(c, Element)][0]
     assert (column.loc.line, column.loc.column) == (7, 3)
@@ -58,23 +58,23 @@ def test_crlf_is_normalized():
 
 
 def test_unclosed_script_reports_opening_tag():
-    err = parse_error("<script>\nx = 1\n<Window />")
+    err = parse_error("<script>\nx = 1\n<window />")
     assert "no está cerrada" in err.first.message
     assert err.first.location.line == 1
 
 
 def test_duplicate_script_is_an_error():
-    err = parse_error("<script>a=1</script>\n<script>b=2</script>\n<Window />")
+    err = parse_error("<script>a=1</script>\n<script>b=2</script>\n<window />")
     assert err.first.location.line == 2
 
 
 def test_non_python_script_is_rejected():
-    err = parse_error('<script lang="js">x</script><Window />')
+    err = parse_error('<script lang="js">x</script><window />')
     assert "no soportado" in err.first.message
 
 
 def test_script_inside_comment_is_ignored():
-    sfc = parse_sfc("<!-- <script> -->\n<Window />", "App.janel")
+    sfc = parse_sfc("<!-- <script> -->\n<window />", "App.janel")
     assert sfc.script is None
 
 
@@ -82,7 +82,7 @@ def test_script_inside_comment_is_ignored():
 
 
 def test_attributes_literal_expression_boolean_and_shorthand():
-    sfc = parse_sfc('<Button text="Hola" width={1 + 2} flat {enabled} on:click={go} />', "App.janel")
+    sfc = parse_sfc('<button text="Hola" width={1 + 2} flat {enabled} on:click={go} />', "App.janel")
     attrs = {a.name: a.value for a in sfc.root_elements[0].attributes}
     assert attrs["text"] == "Hola"
     assert isinstance(attrs["width"], Expression) and attrs["width"].code == "1 + 2"
@@ -92,21 +92,21 @@ def test_attributes_literal_expression_boolean_and_shorthand():
 
 
 def test_expressions_may_contain_braces_inside_strings_and_dicts():
-    sfc = parse_sfc('<Text>{ {"a": "}"}["a"] }</Text>', "App.janel")
+    sfc = parse_sfc('<text>{ {"a": "}"}["a"] }</text>', "App.janel")
     interp = sfc.root_elements[0].children[0]
     assert isinstance(interp, Interpolation)
     assert interp.expression.code.strip() == '{"a": "}"}["a"]'
 
 
 def test_mixed_text_and_interpolations():
-    sfc = parse_sfc("<Button>Clicks: {count}!</Button>", "App.janel")
+    sfc = parse_sfc("<button>Clicks: {count}!</button>", "App.janel")
     kinds = [type(c) for c in sfc.root_elements[0].children]
     assert kinds == [Text, Interpolation, Text]
 
 
 def test_if_else_blocks():
     sfc = parse_sfc(
-        "<Column>\n{#if a}\n<Text>A</Text>\n{:else if b}\n<Text>B</Text>\n{:else}\n<Text>C</Text>\n{/if}\n</Column>",
+        "<column>\n{#if a}\n<text>A</text>\n{:else if b}\n<text>B</text>\n{:else}\n<text>C</text>\n{/if}\n</column>",
         "App.janel",
     )
     block = [c for c in sfc.root_elements[0].children if isinstance(c, IfBlock)][0]
@@ -115,20 +115,20 @@ def test_if_else_blocks():
 
 
 def test_each_block_with_index_and_key():
-    sfc = parse_sfc("<Column>{#each items as item, i (item.id)}<Text>{item}</Text>{/each}</Column>", "App.janel")
+    sfc = parse_sfc("<column>{#each items as item, i (item.id)}<text>{item}</text>{/each}</column>", "App.janel")
     block = sfc.root_elements[0].children[0]
     assert isinstance(block, EachBlock)
     assert (block.iterable.code, block.item, block.index, block.key.code) == ("items", "item", "i", "item.id")
 
 
 def test_comments_are_skipped():
-    sfc = parse_sfc("<Column><!-- <Nope> --><Text /></Column>", "App.janel")
-    assert [c.tag for c in sfc.root_elements[0].children if isinstance(c, Element)] == ["Text"]
+    sfc = parse_sfc("<column><!-- <Nope> --><text /></column>", "App.janel")
+    assert [c.tag for c in sfc.root_elements[0].children if isinstance(c, Element)] == ["text"]
 
 
 def test_dump_lists_nodes_with_positions():
     out = dump(parse_sfc(APP, "App.janel"))
-    assert "<Window title=\"Mi app\" width={640}> @6:1" in out
+    assert "<window title=\"Mi app\" width={640}> @6:1" in out
     assert "{count} @9:" in out
 
 
@@ -136,21 +136,21 @@ def test_dump_lists_nodes_with_positions():
 
 
 def test_mismatched_closing_tag():
-    err = parse_error("<Window>\n  <Column>\n</Window>")
+    err = parse_error("<window>\n  <column>\n</window>")
     d = err.first
-    assert "se esperaba </Column>" in d.message
+    assert "se esperaba </column>" in d.message
     assert (d.location.line, d.location.column) == (3, 1)
     assert "línea 2" in d.hint
 
 
 def test_unclosed_element_points_to_opening_tag():
-    err = parse_error("<Window>\n  <Column>\n    <Text />\n")
-    assert "<Window> no está cerrado" in err.first.message or "<Column> no está cerrado" in err.first.message
+    err = parse_error("<window>\n  <column>\n    <text />\n")
+    assert "<window> no está cerrado" in err.first.message or "<column> no está cerrado" in err.first.message
     assert err.first.location.line in (1, 2)
 
 
 def test_invalid_expression_location():
-    err = parse_error("<Window>\n  <Text>{count +}</Text>\n</Window>")
+    err = parse_error("<window>\n  <text>{count +}</text>\n</window>")
     d = err.first
     assert "expresión Python no válida" in d.message
     assert d.location.line == 2
@@ -158,40 +158,40 @@ def test_invalid_expression_location():
 
 
 def test_statements_are_not_expressions():
-    err = parse_error("<Window>\n  {#if x = 3}\n  {/if}\n</Window>")
+    err = parse_error("<window>\n  {#if x = 3}\n  {/if}\n</window>")
     assert err.first.location.line == 2
 
 
 def test_empty_expression():
-    err = parse_error("<Text>{ }</Text>")
+    err = parse_error("<text>{ }</text>")
     assert "vacía" in err.first.message
 
 
 def test_unclosed_if_block():
-    err = parse_error("<Window>\n{#if x}\n<Text/>\n</Window>")
+    err = parse_error("<window>\n{#if x}\n<text/>\n</window>")
     assert "antes de cerrar el bloque {#if}" in err.first.message
     assert err.first.location.line == 4
 
 
 def test_block_closed_inside_element():
-    err = parse_error("<Column>\n{#if x}\n<Row>\n{/if}\n</Row>\n</Column>")
-    assert "dentro de <Row>" in err.first.message
+    err = parse_error("<column>\n{#if x}\n<row>\n{/if}\n</row>\n</column>")
+    assert "dentro de <row>" in err.first.message
     assert err.first.location.line == 4
 
 
 def test_unknown_block():
-    err = parse_error("<Column>{#for x}{/for}</Column>")
+    err = parse_error("<column>{#for x}{/for}</column>")
     assert "bloque desconocido" in err.first.message
 
 
 def test_duplicate_attribute():
-    err = parse_error('<Text a="1" a="2" />')
+    err = parse_error('<text a="1" a="2" />')
     assert "duplicado" in err.first.message
 
 
 def test_diagnostic_format_shows_source_line_and_caret():
-    err = parse_error("<Window>\n  <Column>\n</Window>")
+    err = parse_error("<window>\n  <column>\n</window>")
     text = str(err)
     assert text.startswith("App.janel:3:1: error:")
-    assert "   3 | </Window>" in text
+    assert "   3 | </window>" in text
     assert "^" in text

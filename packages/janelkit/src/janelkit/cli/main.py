@@ -92,6 +92,12 @@ def _cmd_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_migrate(args: argparse.Namespace) -> int:
+    from .migrate import run
+
+    return run(Path(args.path), write=args.write, tests=args.tests)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="janel",
@@ -132,6 +138,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_build.add_argument("path", nargs="?", default=".", help="carpeta del proyecto (por defecto, la actual)")
     p_build.add_argument("-o", "--output", help="carpeta de salida (por defecto, build/qml)")
     p_build.set_defaults(func=_cmd_build)
+
+    p_migrate = sub.add_parser(
+        "migrate",
+        help="actualiza un proyecto a esta versión de JanelKit (muestra los cambios; --write los aplica)",
+        description="Actualiza los .janel de un proyecto a lo que pide esta versión: por ejemplo, los elementos "
+        "del núcleo en minúscula (<Text> pasa a <text>). Sin --write solo muestra los cambios. Lista aparte "
+        "lo que hay que revisar a mano.",
+    )
+    p_migrate.add_argument("path", nargs="?", default=".", help="carpeta o archivo (por defecto, la carpeta actual)")
+    p_migrate.add_argument("--write", action="store_true", help="aplica los cambios")
+    p_migrate.add_argument(
+        "--tests", action="store_true", help='también las pruebas .py: plantillas dentro de cadenas y find("Text")'
+    )
+    p_migrate.set_defaults(func=_cmd_migrate)
 
     _add_plugin_commands(sub)
     return parser

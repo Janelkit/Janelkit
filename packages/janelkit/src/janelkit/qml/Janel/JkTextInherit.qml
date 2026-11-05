@@ -1,6 +1,6 @@
-// Un valor de texto heredado (color, tamaño…) aplicado a un <Text>: el de la caja más
+// Un valor de texto heredado (color, tamaño…) aplicado a un <text>: el de la caja más
 // cercana que lo fija (JkContext). Jk.textInherit crea uno por clave que alguna caja de
-// fuera declara; mientras ninguna lo fije, el <Text> conserva el suyo.
+// fuera declara; mientras ninguna lo fije, el <text> conserva el suyo.
 import QtQuick
 import "jk.js" as Jk
 

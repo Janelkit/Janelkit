@@ -28,7 +28,7 @@ def watch():
 
 effect(watch)
 </script>
-<Text>{name}:{theme}:{depth}</Text>
+<text>{name}:{theme}:{depth}</text>
 """
 
 APP = """<script>
@@ -42,11 +42,11 @@ provide("tema", "oscuro")
 def mounted():
     log.EVENTS.append(("mount", "app"))
 </script>
-<Column>
+<column>
   {#each items as it (it)}
     <Child name={it} />
   {/each}
-</Column>
+</column>
 """
 
 
@@ -111,7 +111,7 @@ from components.Child import Child
 provide("profundidad", inject("profundidad", 0) + 1)
 provide("tema", "sepia")
 </script>
-<Column><Child name="m" /></Column>
+<column><Child name="m" /></column>
 """
     app = APP.replace("<Child name={it} />", "<Child name={it} />\n    <Middle />").replace(
         "from components.Child import Child", "from components.Child import Child\nfrom components.Middle import Middle"
@@ -129,12 +129,12 @@ def test_lifecycle_functions_outside_a_component_explain_themselves():
 
 def test_missing_provider_without_default_is_an_error(mount, caplog):
     with pytest.raises(LookupError, match="ningún componente antecesor provee 'sesion'"):
-        mount("<script>\nfrom janelkit import inject\ns = inject('sesion')\n</script>\n<Text>x</Text>")
+        mount("<script>\nfrom janelkit import inject\ns = inject('sesion')\n</script>\n<text>x</text>")
 
 
 def test_error_in_on_mount_is_reported(mount, caplog):
     with caplog.at_level(logging.ERROR, logger="janelkit"):
-        mount("<script>\nfrom janelkit import on_mount\n@on_mount\ndef boom():\n    raise ValueError('mal')\n</script>\n<Text>x</Text>")
+        mount("<script>\nfrom janelkit import on_mount\n@on_mount\ndef boom():\n    raise ValueError('mal')\n</script>\n<text>x</text>")
     assert "error en on_mount (boom): ValueError: mal" in caplog.text
 
 
@@ -166,12 +166,12 @@ def start():
     field.focus()
     focused.value = True
 </script>
-<Column>
-  <TextField id="f" ref={field} value="hola" />
+<column>
+  <textfield id="f" ref={field} value="hola" />
   {#if show}
-    <Text id="t" ref={row_ref}>x</Text>
+    <text id="t" ref={row_ref}>x</text>
   {/if}
-</Column>
+</column>
 """
 
 
@@ -210,12 +210,12 @@ def test_ref_must_name_a_script_ref():
     from janelkit.diagnostics import JanelError
 
     with pytest.raises(JanelError, match="ref necesita el nombre"):
-        compile_source("<Text ref={1}>x</Text>")
+        compile_source("<text ref={1}>x</text>")
     with pytest.raises(JanelError, match="variable de \\{#each\\}"):
-        compile_source("<script>\nxs = [1]\n</script>\n<Column>{#each xs as x}<Text ref={x}>x</Text>{/each}</Column>")
+        compile_source("<script>\nxs = [1]\n</script>\n<column>{#each xs as x}<text ref={x}>x</text>{/each}</column>")
 
 
 def test_ref_to_something_else_is_reported(mount, caplog):
     with caplog.at_level(logging.ERROR, logger="janelkit"):
-        mount("<script>\nr = 3\n</script>\n<Text ref={r}>x</Text>")
+        mount("<script>\nr = 3\n</script>\n<text ref={r}>x</text>")
     assert "ref: 'r' es int; declara r = ref()" in caplog.text

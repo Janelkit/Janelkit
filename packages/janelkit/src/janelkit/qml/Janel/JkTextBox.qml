@@ -1,4 +1,4 @@
-// Fondo y borde de un <Text> (etiquetas, contadores). Lo crea Jk.textDecorations solo si
+// Fondo y borde de un <text> (etiquetas, contadores). Lo crea Jk.textDecorations solo si
 // el texto tiene background o border.
 import QtQuick
 

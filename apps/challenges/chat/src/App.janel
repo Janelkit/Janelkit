@@ -98,69 +98,69 @@ def change_language(code):
     i18n.set(code)
 </script>
 
-<Window title={t("title")} width={900} height={640} minWidth={560} minHeight={400}
+<window title={t("title")} width={900} height={640} minWidth={560} minHeight={400}
         on:activate={on_activate} on:deactivate={active = False}>
-  <Row class="app">
-    <Column class="sidebar">
-      <Text class="brand">{t("title")}</Text>
+  <row class="app">
+    <column class="sidebar">
+      <text class="brand">{t("title")}</text>
       {#each client.room_list.value as r (r.id)}
-        <Row class={"room selected" if r.id == current else "room"} on:click={select(r.id)} label={r.name}>
-          <Text flex={1}># {r.name}</Text>
+        <row class={"room selected" if r.id == current else "room"} on:click={select(r.id)} label={r.name}>
+          <text flex={1}># {r.name}</text>
           {#if r.unread.value}
-            <Text class="badge">{r.unread.value}</Text>
+            <text class="badge">{r.unread.value}</text>
           {/if}
-        </Row>
+        </row>
       {/each}
-      <Spacer />
-      <Select value={language} options={LANGUAGES} on:change={change_language} />
-    </Column>
+      <spacer />
+      <select value={language} options={LANGUAGES} on:change={change_language} />
+    </column>
 
-    <Column class="main">
+    <column class="main">
       {#if client.status.value != "online"}
-        <Row class="banner" transition:fade>
-          <Text>{t("connecting") if client.status.value == "connecting" else t("offline")}</Text>
-        </Row>
+        <row class="banner" transition:fade>
+          <text>{t("connecting") if client.status.value == "connecting" else t("offline")}</text>
+        </row>
       {/if}
 
       {#if room is not None}
-        <Row class="header">
-          <Text class="room-title"># {room.name}</Text>
-          <Spacer />
+        <row class="header">
+          <text class="room-title"># {room.name}</text>
+          <spacer />
           {#if room.loading.value}
-            <Text class="muted">{t("loading")}</Text>
+            <text class="muted">{t("loading")}</text>
           {:else if room.complete.value}
-            <Text class="muted">{t("start")}</Text>
+            <text class="muted">{t("start")}</text>
           {/if}
-        </Row>
+        </row>
 
         {#key current}
-          <List id="messages" follow ref={messages} class="messages"
+          <list id="messages" follow ref={messages} class="messages"
                 on:top={client.load_history(room)} on:scroll={on_scroll}>
             {#each room.messages.value as m (m["id"])}
               <Message msg={m} mine={m["author"] == client.user} base={BASE}
                        on:react={lambda id, e: client.react(room, id, e)} />
             {/each}
-          </List>
+          </list>
         {/key}
 
         {#if new_below}
-          <Row class="jump">
-            <Spacer />
-            <Button variant="primary" on:click={to_bottom}>{t("new", n=new_below)} ↓</Button>
-            <Spacer />
-          </Row>
+          <row class="jump">
+            <spacer />
+            <button variant="primary" on:click={to_bottom}>{t("new", n=new_below)} ↓</button>
+            <spacer />
+          </row>
         {/if}
 
-        <Text class="typing">{t("typing", user=room.typing.value) if room.typing.value else " "}</Text>
-        <Row class="composer">
-          <TextField id="draft" bind:value={draft} placeholder={t("placeholder")} flex={1}
+        <text class="typing">{t("typing", user=room.typing.value) if room.typing.value else " "}</text>
+        <row class="composer">
+          <textfield id="draft" bind:value={draft} placeholder={t("placeholder")} flex={1}
                      on:submit={send} on:input={client.typing(room)} />
-          <Button variant="primary" on:click={send} enabled={bool(draft.strip())}>{t("send")}</Button>
-        </Row>
+          <button variant="primary" on:click={send} enabled={bool(draft.strip())}>{t("send")}</button>
+        </row>
       {/if}
-    </Column>
-  </Row>
-</Window>
+    </column>
+  </row>
+</window>
 
 <style>
 .app { gap: 0; }

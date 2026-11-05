@@ -92,7 +92,7 @@ def main() -> None:
                 app.wait(10)
                 tick += 1
                 if tick % 3 == 0:  # el usuario cambia de sala de vez en cuando
-                    app.find("Row", label=client.rooms[rooms[tick // 3 % 4]].name).click()
+                    app.find("row", label=client.rooms[rooms[tick // 3 % 4]].name).click()
                 now, cpu = time.perf_counter(), time.process_time()
                 kept = "/".join(str(len(client.rooms[r].messages.value)) for r in rooms)
                 window = sorted(lags)

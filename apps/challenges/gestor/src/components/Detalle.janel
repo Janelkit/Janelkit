@@ -57,24 +57,24 @@ def tecla(event):
 </script>
 
 <flex as="dialog" class="detalle" label="Detalle de la tarjeta" on:keydown={tecla}>
-  <Text class="titulo-panel">Tarjeta</Text>
-  <Text class="rotulo">Título</Text>
-  <TextField ref={campo} bind:value={titulo} label="Título" />
-  <Text class="rotulo">Descripción</Text>
-  <TextArea class="descripcion" bind:value={descripcion} label="Descripción" />
-  <Text class="rotulo">Responsable</Text>
-  <Select options={PERSONAS_OPC} bind:value={responsable} label="Responsable" />
-  <Text class="rotulo">Fecha (AAAA-MM-DD)</Text>
-  <TextField bind:value={fecha} placeholder="2026-11-03" label="Fecha" />
-  <Text class="rotulo">Etiquetas</Text>
+  <text class="titulo-panel">Tarjeta</text>
+  <text class="rotulo">Título</text>
+  <textfield ref={campo} bind:value={titulo} label="Título" />
+  <text class="rotulo">Descripción</text>
+  <textarea class="descripcion" bind:value={descripcion} label="Descripción" />
+  <text class="rotulo">Responsable</text>
+  <select options={PERSONAS_OPC} bind:value={responsable} label="Responsable" />
+  <text class="rotulo">Fecha (AAAA-MM-DD)</text>
+  <textfield bind:value={fecha} placeholder="2026-11-03" label="Fecha" />
+  <text class="rotulo">Etiquetas</text>
   <flex class="etiquetas">
     {#each list(ETIQUETAS) as e (e)}
-      <Checkbox text={e} checked={e in etiquetas} on:change={marcar(e, event)} />
+      <checkbox text={e} checked={e in etiquetas} on:change={marcar(e, event)} />
     {/each}
   </flex>
   <flex class="botones">
-    <Button text="Cerrar" on:click={cerrar.emit()} />
-    <Button text="Guardar" variant="primary" on:click={guardar()} />
+    <button text="Cerrar" on:click={cerrar.emit()} />
+    <button text="Guardar" variant="primary" on:click={guardar()} />
   </flex>
 </flex>
 

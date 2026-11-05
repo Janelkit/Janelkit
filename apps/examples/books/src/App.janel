@@ -19,43 +19,43 @@ def submit():
         results.run(q)  # cancela la búsqueda anterior si seguía en curso
 </script>
 
-<Window title="Buscar libros" width={560} height={600} minWidth={380}>
-  <Column class="page">
-    <Text class="title">Buscar libros</Text>
-    <Text class="muted">Consulta Open Library sin bloquear la ventana.</Text>
+<window title="Buscar libros" width={560} height={600} minWidth={380}>
+  <column class="page">
+    <text class="title">Buscar libros</text>
+    <text class="muted">Consulta Open Library sin bloquear la ventana.</text>
 
-    <Row class="search">
-      <TextField bind:value={query} on:submit={submit} placeholder="Título o autor…" flex={1} />
-      <Button variant="primary" on:click={submit} enabled={bool(query.strip())}>Buscar</Button>
+    <row class="search">
+      <textfield bind:value={query} on:submit={submit} placeholder="Título o autor…" flex={1} />
+      <button variant="primary" on:click={submit} enabled={bool(query.strip())}>Buscar</button>
       {#if results.loading}
-        <Button variant="ghost" on:click={results.cancel()}>Cancelar</Button>
+        <button variant="ghost" on:click={results.cancel()}>Cancelar</button>
       {/if}
-    </Row>
+    </row>
 
-    <Scroll class="list" flex={1}>
+    <scroll class="list" flex={1}>
       {#if results.loading}
-        <Text class="muted">Buscando «{last}»…</Text>
+        <text class="muted">Buscando «{last}»…</text>
       {:else if results.error}
-        <Column class="error">
-          <Text class="error-title">No se pudo completar la búsqueda</Text>
-          <Text class="muted">{results.error}</Text>
-          <Button on:click={results.run(last)}>Reintentar</Button>
-        </Column>
+        <column class="error">
+          <text class="error-title">No se pudo completar la búsqueda</text>
+          <text class="muted">{results.error}</text>
+          <button on:click={results.run(last)}>Reintentar</button>
+        </column>
       {:else if results.value is None}
-        <Text class="muted">Escribe algo y pulsa Intro.</Text>
+        <text class="muted">Escribe algo y pulsa Intro.</text>
       {:else}
         {#each results.value as book (book["key"])}
-          <Column class="book">
-            <Text class="book-title">{book["title"]}</Text>
-            <Text class="muted">{book["author"]}{f" · {book['year']}" if book["year"] else ""}</Text>
-          </Column>
+          <column class="book">
+            <text class="book-title">{book["title"]}</text>
+            <text class="muted">{book["author"]}{f" · {book['year']}" if book["year"] else ""}</text>
+          </column>
         {:else}
-          <Text class="muted">Sin resultados para «{last}».</Text>
+          <text class="muted">Sin resultados para «{last}».</text>
         {/each}
       {/if}
-    </Scroll>
-  </Column>
-</Window>
+    </scroll>
+  </column>
+</window>
 
 <style>
 .page { padding: 24px; gap: 12px; }

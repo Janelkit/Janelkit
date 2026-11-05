@@ -1,7 +1,7 @@
 """Ventanas secundarias: abrir otro componente `.janel` en su propia ventana.
 
     from janelkit import open_window
-    from components.Settings import Settings     # un .janel con <Window> (o sin ella)
+    from components.Settings import Settings     # un .janel con <window> (o sin ella)
 
     def ajustes():
         open_window(Settings, user=usuario, on_saved=guardar, modal=True)

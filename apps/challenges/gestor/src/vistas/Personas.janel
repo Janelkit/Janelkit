@@ -23,34 +23,34 @@ def nueva():
 <flex class="pagina">
   <flex class="cabecera">
     <flex class="titulos">
-      <Text class="titulo">Personas</Text>
-      <Text class="subtitulo">{f"{len(visibles)} de {len(datos.personas.value)}"}</Text>
+      <text class="titulo">Personas</text>
+      <text class="subtitulo">{f"{len(visibles)} de {len(datos.personas.value)}"}</text>
     </flex>
-    <Spacer />
-    <TextField class="buscar" bind:value={buscar} placeholder="Buscar por nombre o correo…" label="Buscar personas" />
-    <Button text="+ Persona" variant="primary" on:click={nueva()} />
+    <spacer />
+    <textfield class="buscar" bind:value={buscar} placeholder="Buscar por nombre o correo…" label="Buscar personas" />
+    <button text="+ Persona" variant="primary" on:click={nueva()} />
   </flex>
   <flex class="marco">
     <flex class="tabla">
       <flex class="encabezado">
-        <Text class="c-nombre">Nombre</Text>
-        <Text class="c-correo">Correo</Text>
-        <Text class="c-rol">Rol</Text>
-        <Text class="c-tarjetas">Tarjetas</Text>
+        <text class="c-nombre">Nombre</text>
+        <text class="c-correo">Correo</text>
+        <text class="c-rol">Rol</text>
+        <text class="c-tarjetas">Tarjetas</text>
       </flex>
-      <List class="lista" label="Directorio">
+      <list class="lista" label="Directorio">
         {#each visibles as p (p["id"])}
           <flex as="button" class="fila" label={p["nombre"]} on:click={nav.push(Persona, ident=p["id"])}>
             <flex class="c-nombre">
-              <flex class="avatar" style={{"background": p["color"]}}><Text>{datos.iniciales(p["id"])}</Text></flex>
-              <Text class="nombre">{p["nombre"]}</Text>
+              <flex class="avatar" style={{"background": p["color"]}}><text>{datos.iniciales(p["id"])}</text></flex>
+              <text class="nombre">{p["nombre"]}</text>
             </flex>
-            <Text class="c-correo correo">{p["correo"] or "—"}</Text>
-            <flex class="c-rol"><Text class="rol">{p["rol"] or "Sin rol"}</Text></flex>
-            <Text class="c-tarjetas dato">{cuenta(cuentas.get(p["id"], 0), "tarjeta")}</Text>
+            <text class="c-correo correo">{p["correo"] or "—"}</text>
+            <flex class="c-rol"><text class="rol">{p["rol"] or "Sin rol"}</text></flex>
+            <text class="c-tarjetas dato">{cuenta(cuentas.get(p["id"], 0), "tarjeta")}</text>
           </flex>
         {/each}
-      </List>
+      </list>
     </flex>
   </flex>
 </flex>

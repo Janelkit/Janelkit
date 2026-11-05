@@ -25,7 +25,7 @@ def panel(monkeypatch):
 
 
 def list_view(app):
-    item = app.find("List", id="procs").item
+    item = app.find("list", id="procs").item
     return next(c for c in item.childItems() if c.inherits("QQuickListView"))
 
 
@@ -41,7 +41,7 @@ def test_cards_cores_and_history(panel):
     for label in ("CPU", "Memoria"):
         app.find("Card", label=label)
     for label in ("Núcleo 0", "Núcleo 7"):
-        app.find("Column", label=label)
+        app.find("column", label=label)
     cpu = monitor.series["cpu"]
     app.wait(until=lambda: len(cpu.history.value) == 20)
     samples = monitor.samples
@@ -74,12 +74,12 @@ def test_sorting_and_filtering_keep_the_selection_and_the_scroll(panel):
     cpus = [p["cpu"] for p in rows()]
     assert cpus == sorted(cpus, reverse=True)  # por defecto, más CPU arriba
 
-    app.find("Button", text="PID").click()
+    app.find("button", text="PID").click()
     assert [p["pid"] for p in rows()][:3] == [1299, 1298, 1297]
-    app.find("Button", text="PID ▼").click()  # segundo clic: invierte
+    app.find("button", text="PID ▼").click()  # segundo clic: invierte
     assert [p["pid"] for p in rows()][:3] == [1000, 1001, 1002]
 
-    app.find("Row", label=rows()[2]["name"]).click()
+    app.find("row", label=rows()[2]["name"]).click()
     assert app.get("selected") == 1002
     assert "PID 1002 · " in " ".join(app.texts())
 
@@ -88,23 +88,23 @@ def test_sorting_and_filtering_keep_the_selection_and_the_scroll(panel):
     app.wait(0.05)
     top = top_row(view)
     assert top > 20
-    app.find("Button", text="CPU").click()  # reordenar mueve casi todas las filas
+    app.find("button", text="CPU").click()  # reordenar mueve casi todas las filas
     reads = app.get("monitor").process_reads
     app.wait(until=lambda: app.get("monitor").process_reads >= reads + 2)  # y el refresco también
     assert top_row(view) == top
     assert app.get("selected") == 1002
 
-    app.find("TextField", id="query").type("python")
+    app.find("textfield", id="query").type("python")
     assert rows() and all("python" in p["name"] for p in rows())
     assert f"{len(rows())} procesos" in app.texts()
-    app.find("TextField", id="query").type("1002")
+    app.find("textfield", id="query").type("1002")
     assert [p["pid"] for p in rows()] == [1002]
 
 
 def test_chart_in_its_own_window_shares_the_same_state(panel, janel_app):
     app = panel
     cpu = app.get("monitor").series["cpu"]
-    app.find("Button", label="Abrir CPU").click()
+    app.find("button", label="Abrir CPU").click()
     window = app.get("windows")["cpu"]
     assert window.is_open
     (chart,) = app.windows()
@@ -115,7 +115,7 @@ def test_chart_in_its_own_window_shares_the_same_state(panel, janel_app):
     app.wait(until=lambda: app.get("monitor").samples > samples + 2)
     assert cpu.text() in texts()  # se actualiza con la principal
 
-    app.find("Button", label="Abrir CPU").click()  # otra vez: no abre una segunda
+    app.find("button", label="Abrir CPU").click()  # otra vez: no abre una segunda
     assert app.get("windows")["cpu"] is window
     window.close()
     assert not window.is_open and app.windows() == []
@@ -124,14 +124,14 @@ def test_chart_in_its_own_window_shares_the_same_state(panel, janel_app):
 def test_pause_and_sampling_rate(panel):
     app = panel
     monitor = app.get("monitor")
-    app.find("Switch", text="Pausa").click()
+    app.find("switch", text="Pausa").click()
     assert not app.get("sampler").active
     samples = monitor.samples
     app.wait(0.2)
     assert monitor.samples == samples
-    app.find("Switch", text="Pausa").click()
+    app.find("switch", text="Pausa").click()
     app.wait(until=lambda: monitor.samples > samples)
 
-    app.find("Select").choose(1000)
+    app.find("select").choose(1000)
     assert app.get("sampler").ms == 1000
     assert app.get("rate") == 1000

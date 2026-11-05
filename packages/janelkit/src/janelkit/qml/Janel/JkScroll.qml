@@ -55,7 +55,7 @@ ScrollView {
         jkSizedW: true
     }
 
-    // Desplazamiento desde el código y avisos, como en <List>.
+    // Desplazamiento desde el código y avisos, como en <list>.
     // follow: empieza abajo y, si el usuario está abajo, se queda abajo aunque crezca el contenido.
     property bool follow: false
     signal reachedTop()

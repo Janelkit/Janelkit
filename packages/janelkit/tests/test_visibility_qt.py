@@ -38,19 +38,19 @@ ticks = state(0)
 def muestrear():
     ticks.value += 1
 </script>
-<flex><Text>panel {visible}</Text></flex>
+<flex><text>panel {visible}</text></flex>
 """
 
 
 def test_sections_and_pages_below_are_not_visible_and_their_timers_wait(project):
-    app_file = project({"Panel.janel": PANEL, "Otra.janel": "<Text>otra</Text>\n", "App.janel": """<script>
+    app_file = project({"Panel.janel": PANEL, "Otra.janel": "<text>otra</text>\n", "App.janel": """<script>
 from janelkit import is_visible, sections
 from Panel import Panel
 from Otra import Otra
 raiz = is_visible()
 s = sections(a=Panel, b=Otra)
 </script>
-<Window><Sections of={s} /></Window>
+<window><Sections of={s} /></window>
 """})
     with mount(app_file) as app:
         s = app.get("s")

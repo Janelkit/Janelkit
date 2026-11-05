@@ -45,7 +45,7 @@ def teclas(app, *combinaciones):
 
 
 def editor(app):
-    return app.find("TextField", label="Editar celda")
+    return app.find("textfield", label="Editar celda")
 
 
 def escrito(app, celda):
@@ -75,7 +75,7 @@ def test_typing_edits_in_place_and_dependents_update(app):
     assert escrito(app, "B2") == "3"
     assert texto(app, "D2") == "12" and texto(app, "D5") == "22.5"
     assert "22.5" in app.texts()
-    assert not app.find_all("TextField", label="Editar celda")
+    assert not app.find_all("textfield", label="Editar celda")
     assert app.get("titulo").startswith("• ")
 
 
@@ -85,7 +85,7 @@ def test_f2_edits_the_formula_and_escape_cancels(app):
     editor(app).type("=1")
     editor(app).key("Escape")
     assert escrito(app, "D2") == "=B2*C2"
-    assert not app.find_all("TextField", label="Editar celda")
+    assert not app.find_all("textfield", label="Editar celda")
     teclas(app, "F2")
     editor(app).type("=B2*C2*2")
     editor(app).key("Tab")  # confirma y pasa a la derecha
@@ -127,15 +127,15 @@ def test_cut_delete_undo_and_redo(app):
     assert texto(app, "D5") == "16.5"
     teclas(app, "Ctrl+X")
     assert clipboard.paste() == "1.5\n1\n" and escrito(app, "B2") == ""
-    app.find("Button", text="Deshacer").click()
+    app.find("button", text="Deshacer").click()
     assert escrito(app, "B2") == "1.5"
-    assert app.find("Button", text="Rehacer").enabled
+    assert app.find("button", text="Rehacer").enabled
 
 
 def test_sort_keeps_the_frozen_header_and_puts_empty_last(app):
-    app.find("Checkbox", text="Congelar fila 1").check()
+    app.find("checkbox", text="Congelar fila 1").check()
     teclas(app, "Down", "Right")  # columna B
-    app.find("Button", text="Ordenar Z→A").click()
+    app.find("button", text="Ordenar Z→A").click()
     hoja = app.get("hoja")
     assert [hoja.escrito(r, 0) for r in range(5)] == ["Producto", "Huevos", "Pan", "Leche", "Total"]
     teclas(app, "Ctrl+Z")
@@ -150,7 +150,7 @@ def test_columns_scroll_horizontally_and_column_a_can_be_frozen(app):
         teclas(app, "Right")
     assert vista.cursor.value == (0, caben + 2)
     assert vista.visibles.value[-1] == caben + 2  # la columna activa se ve
-    app.find("Checkbox", text="Congelar columna A").check()
+    app.find("checkbox", text="Congelar columna A").check()
     assert vista.visibles.value[0] == 0 and vista.visibles.value[-1] == caben + 2
     teclas(app, "Home")
     assert vista.visibles.value[:2] == [0, 1]
@@ -167,9 +167,9 @@ def test_page_down_scrolls_the_list_to_the_active_row(app):
 
 
 def test_mouse_selects_and_double_click_edits(app):
-    app.find("Text", text="Leche").press().release()
+    app.find("text", text="Leche").press().release()
     assert app.get("vista").cursor.value == (2, 0)
-    app.find("Text", text="Huevos").double_click()
+    app.find("text", text="Huevos").double_click()
     assert editor(app).value == "Huevos"
     editor(app).type("Huevos camperos")
     rejilla(app).focus()  # perder el foco confirma sin moverse
@@ -178,7 +178,7 @@ def test_mouse_selects_and_double_click_edits(app):
 
 def test_formula_bar_shows_and_edits_the_active_cell(app):
     teclas(app, "Down", "End")
-    barra = app.find("TextField", label="Contenido de la celda")
+    barra = app.find("textfield", label="Contenido de la celda")
     assert barra.value == "=B2*C2"
     barra.type("=B2+C2").submit()
     assert texto(app, "D2") == "5.5"
@@ -187,7 +187,7 @@ def test_formula_bar_shows_and_edits_the_active_cell(app):
 def test_save_writes_the_same_csv_format(app, archivo):
     teclas(app, "Down", "Right", "2")
     editor(app).key("Enter")
-    app.find("Button", text="Guardar").click()
+    app.find("button", text="Guardar").click()
     app.wait(until=lambda: not app.get("historial").modified)
     assert archivo.read_text(encoding="utf-8").splitlines()[1] == "Pan,2,4,=B2*C2"
     assert app.get("titulo") == "compra.csv — Hoja"

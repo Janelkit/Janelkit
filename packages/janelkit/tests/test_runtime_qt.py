@@ -23,18 +23,18 @@ def increment():
     count.value += 1
 </script>
 
-<Window title="Contador">
-  <Column>
-    <Text id="greeting">{greeting}</Text>
-    <TextField id="name" bind:value={name} placeholder="Tu nombre" />
-    <Button id="inc" on:click={increment} enabled={count < 3}>Clicks: {count}</Button>
+<window title="Contador">
+  <column>
+    <text id="greeting">{greeting}</text>
+    <textfield id="name" bind:value={name} placeholder="Tu nombre" />
+    <button id="inc" on:click={increment} enabled={count < 3}>Clicks: {count}</button>
     {#if count >= 2}
-      <Text id="many">Muchos</Text>
+      <text id="many">Muchos</text>
     {:else}
-      <Text id="few">Pocos: {2 - count}</Text>
+      <text id="few">Pocos: {2 - count}</text>
     {/if}
-  </Column>
-</Window>
+  </column>
+</window>
 """
 
 
@@ -108,12 +108,12 @@ from types import SimpleNamespace
 from janelkit import state
 prefs = SimpleNamespace(nombre=state("Ana"), ajustes=SimpleNamespace(tema=state("claro")), fijo="x")
 </script>
-<Column>
-  <TextField id="nombre" bind:value={prefs.nombre} />
-  <TextField id="tema" bind:value={prefs.ajustes.tema} />
-  <TextField id="fijo" bind:value={prefs.fijo} />
-  <Text id="saludo">{f"Hola, {prefs.nombre.value}"}</Text>
-</Column>""")
+<column>
+  <textfield id="nombre" bind:value={prefs.nombre} />
+  <textfield id="tema" bind:value={prefs.ajustes.tema} />
+  <textfield id="fijo" bind:value={prefs.fijo} />
+  <text id="saludo">{f"Hola, {prefs.nombre.value}"}</text>
+</column>""")
     prefs = m.instance.namespace["prefs"]
     nombre, tema = find(m, "nombre"), find(m, "tema")
     assert nombre.property("text") == "Ana" and tema.property("text") == "claro"  # se lee el valor, no el state
@@ -135,11 +135,11 @@ from types import SimpleNamespace
 from janelkit import state
 tareas = state([SimpleNamespace(id=i, hecha=state(False)) for i in range(2)])
 </script>
-<Column>
+<column>
   {#each tareas as t (t.id)}
-    <Checkbox bind:checked={t.hecha} />
+    <checkbox bind:checked={t.hecha} />
   {/each}
-</Column>""")
+</column>""")
     tareas = m.instance.namespace["tareas"].value
     casillas = [i for i in visual_items(m) if "JkCheckBox" in i.metaObject().className()]
     press(casillas[1])
@@ -186,10 +186,10 @@ last = state("")
 def submitted(text):
     last.value = text
 </script>
-<Column>
-  <TextField id="f" on:submit={submitted} />
-  <Text id="out">{last}</Text>
-</Column>"""
+<column>
+  <textfield id="f" on:submit={submitted} />
+  <text id="out">{last}</text>
+</column>"""
     )
     field = find(m, "f")
     field.setProperty("text", "hola")
@@ -204,11 +204,11 @@ from janelkit import state
 done = state(False)
 notes = state("a")
 </script>
-<Column>
-  <Checkbox id="c" bind:checked={done}>Hecho</Checkbox>
-  <TextArea id="t" bind:value={notes} />
-  <Text id="out">{"sí" if done else "no"} {len(notes)}</Text>
-</Column>"""
+<column>
+  <checkbox id="c" bind:checked={done}>Hecho</checkbox>
+  <textarea id="t" bind:value={notes} />
+  <text id="out">{"sí" if done else "no"} {len(notes)}</text>
+</column>"""
     )
     box = find(m, "c")
     box.setProperty("checked", True)
@@ -228,9 +228,9 @@ def test_runtime_error_in_binding_is_reported_with_location(mount, caplog):
 from janelkit import state
 d = state(0)
 </script>
-<Column>
-  <Text id="t">{10 // d}</Text>
-</Column>""",
+<column>
+  <text id="t">{10 // d}</text>
+</column>""",
             "Div.janel",
         )
     assert "Div.janel:6:" in caplog.text and "ZeroDivisionError" in caplog.text
@@ -244,7 +244,7 @@ def test_handler_error_does_not_crash(mount, caplog):
 def boom():
     raise ValueError("fallo")
 </script>
-<Button id="b" on:click={boom}>x</Button>"""
+<button id="b" on:click={boom}>x</button>"""
     )
     with caplog.at_level(logging.ERROR, logger="janelkit"):
         click(find(m, "b"))
@@ -252,21 +252,21 @@ def boom():
 
 
 def test_handler_must_be_callable(mount, caplog):
-    m = mount("<script>\nx = 3\n</script>\n<Button id=\"b\" on:click={x}>x</Button>")
+    m = mount("<script>\nx = 3\n</script>\n<button id=\"b\" on:click={x}>x</button>")
     with caplog.at_level(logging.ERROR, logger="janelkit"):
         click(find(m, "b"))
     assert "debe recibir una función" in caplog.text
 
 
 def test_mutating_unwrapped_state_in_template_gives_a_hint(mount, caplog):
-    m = mount("<script>\nfrom janelkit import state\nn = state(0)\n</script>\n<Button id=\"b\" on:click={lambda: n.set(1)}>x</Button>")
+    m = mount("<script>\nfrom janelkit import state\nn = state(0)\n</script>\n<button id=\"b\" on:click={lambda: n.set(1)}>x</button>")
     with caplog.at_level(logging.ERROR, logger="janelkit"):
         click(find(m, "b"))
     assert "desenvueltos" in caplog.text
 
 
 def test_qt_rejection_is_mapped_to_janel_location(janel_app):
-    c = compile_source("<Window>\n  <Column>\n    <Text>x</Text>\n  </Column>\n</Window>", "Bad.janel")
+    c = compile_source("<window>\n  <column>\n    <text>x</text>\n  </column>\n</window>", "Bad.janel")
     # Simular un fallo de Qt corrompiendo el QML del texto.
     c.qml = c.qml.replace("JkText {", "JkText { noExiste: 1;")
     with pytest.raises(JanelError) as info:
@@ -286,16 +286,16 @@ def remove(i):
     removed.value = [*removed.value, i]
     todos.value = [t for t in todos.value if t["id"] != i]
 </script>
-<Column>
+<column>
   {#each todos as todo, i (todo["id"])}
-    <Row id="row">
-      <Text>{i}:{todo["t"]}</Text>
-      <Button id="del" on:click={lambda: remove(todo["id"])}>x</Button>
-    </Row>
+    <row id="row">
+      <text>{i}:{todo["t"]}</text>
+      <button id="del" on:click={lambda: remove(todo["id"])}>x</button>
+    </row>
   {:else}
-    <Text id="empty">Sin tareas</Text>
+    <text id="empty">Sin tareas</text>
   {/each}
-</Column>"""
+</column>"""
 
 
 def test_each_renders_inserts_updates_and_removes(mount):
@@ -340,7 +340,7 @@ from janelkit import state
 items = state([1, 2, 3])
 suffix = state("!")
 </script>
-<Column>{#each items as x (x)}<Text>{x}{suffix}</Text>{/each}</Column>"""
+<column>{#each items as x (x)}<text>{x}{suffix}</text>{/each}</column>"""
     )
     suffix, items = m.instance.namespace["suffix"], m.instance.namespace["items"]
     assert suffix.subscriber_count == 3
@@ -357,7 +357,7 @@ def test_duplicate_keys_are_reported_and_still_render(mount, caplog):
 from janelkit import state
 items = state([1, 1, 2])
 </script>
-<Column>{#each items as x (x)}<Text>{x}</Text>{/each}</Column>""",
+<column>{#each items as x (x)}<text>{x}</text>{/each}</column>""",
             "Dup.janel",
         )
     assert "clave repetida" in caplog.text and "Dup.janel:5:" in caplog.text
@@ -371,16 +371,16 @@ from janelkit import state
 groups = state([{"n": "A", "xs": [1, 2]}, {"n": "B", "xs": []}])
 show = state(True)
 </script>
-<Column>
+<column>
   {#each groups as g (g["n"])}
-    <Column>
-      <Text>{g["n"]}</Text>
+    <column>
+      <text>{g["n"]}</text>
       {#if show}
-        {#each g["xs"] as x (x)}<Text>{g["n"]}{x}</Text>{:else}<Text>{g["n"]} vacío</Text>{/each}
+        {#each g["xs"] as x (x)}<text>{g["n"]}{x}</text>{:else}<text>{g["n"]} vacío</text>{/each}
       {/if}
-    </Column>
+    </column>
   {/each}
-</Column>"""
+</column>"""
     )
     assert texts(m) == ["A", "A1", "A2", "B", "B vacío"]
     m.instance.namespace["show"].value = False
@@ -393,7 +393,7 @@ show = state(True)
 
 def test_each_over_non_iterable_reports_error(mount, caplog):
     with caplog.at_level(logging.ERROR, logger="janelkit"):
-        mount("<script>\nfrom janelkit import state\nn = state(3)\n</script>\n<Column>{#each n as x}<Text>{x}</Text>{/each}</Column>")
+        mount("<script>\nfrom janelkit import state\nn = state(3)\n</script>\n<column>{#each n as x}<text>{x}</text>{/each}</column>")
     assert "error en {#each}" in caplog.text and "TypeError" in caplog.text
 
 
@@ -419,7 +419,7 @@ def test_conditional_class_toggles_style(mount):
 from janelkit import state
 sel = state(False)
 </script>
-<Column><Text id="t" class="base" class:sel={sel}>x</Text></Column>
+<column><text id="t" class="base" class:sel={sel}>x</text></column>
 <style>.base { color: #00ff00; }\n.sel { color: #ff0000; font-size: 30px; }</style>"""
     )
     t = find(m, "t")
@@ -437,7 +437,7 @@ from janelkit import state
 k = state(1)
 other = state("a")
 </script>
-<Column>{#key k}<TextField id="f" value={other} />{/key}</Column>"""
+<column>{#key k}<textfield id="f" value={other} />{/key}</column>"""
     )
     first = find(m, "f")
     first.setProperty("text", "escrito a mano")
@@ -470,16 +470,16 @@ last = state("")
 todos = state([{"id": 1, "done": False}])
 plain = 5
 </script>
-<Column>
-  <Button id="inc" on:click={n += 1}>{n}</Button>
-  <Button id="reset" on:click={n = 0; last = "reset"}>reset</Button>
-  <TextField id="field" on:input={last = event} />
-  <Button id="plain" on:click={plain = 1}>x</Button>
+<column>
+  <button id="inc" on:click={n += 1}>{n}</button>
+  <button id="reset" on:click={n = 0; last = "reset"}>reset</button>
+  <textfield id="field" on:input={last = event} />
+  <button id="plain" on:click={plain = 1}>x</button>
   {#each todos as todo (todo["id"])}
-    <Checkbox id="check" checked={todo["done"]} on:change={todo["done"] = event}>{todo["done"]}</Checkbox>
-    <Button id="add" on:click={todos.append({"id": len(todos) + 1, "done": False})}>+</Button>
+    <checkbox id="check" checked={todo["done"]} on:change={todo["done"] = event}>{todo["done"]}</checkbox>
+    <button id="add" on:click={todos.append({"id": len(todos) + 1, "done": False})}>+</button>
   {/each}
-</Column>"""
+</column>"""
 
 
 def test_inline_handlers_assign_state(mount, caplog):
@@ -510,7 +510,7 @@ def test_inline_handlers_mutate_collections(mount):
 
 def test_unmount_releases_bindings_of_a_script_without_effects(mount, janel_app):
     # Regresión: un ámbito vacío es falso (len 0) y la raíz creaba otro ámbito sin registrar.
-    m = mount("<script>\nfrom janelkit import state\nn = state(1)\n</script>\n<Text>{n}</Text>")
+    m = mount("<script>\nfrom janelkit import state\nn = state(1)\n</script>\n<text>{n}</text>")
     n = m.instance.namespace["n"]
     assert n.subscriber_count == 1
     janel_app.unmount(m)
@@ -519,17 +519,17 @@ def test_unmount_releases_bindings_of_a_script_without_effects(mount, janel_app)
 
 def test_flex_splits_free_space_in_proportion(mount, caplog):
     m = mount(
-        """<Window width={900} height={300}>
-  <Column>
-    <Row id="r" flex={1}>
-      <Column id="a" flex={2}><Text>corto</Text></Column>
-      <Column id="b" flex={1}><Text>un texto bastante más largo que el otro para ver el reparto</Text></Column>
-      <Button id="c">fijo</Button>
-    </Row>
-    <Column id="d" flex={1}><Text>abajo</Text></Column>
-    <Column id="e" flex={3}><Text>abajo</Text></Column>
-  </Column>
-</Window>"""
+        """<window width={900} height={300}>
+  <column>
+    <row id="r" flex={1}>
+      <column id="a" flex={2}><text>corto</text></column>
+      <column id="b" flex={1}><text>un texto bastante más largo que el otro para ver el reparto</text></column>
+      <button id="c">fijo</button>
+    </row>
+    <column id="d" flex={1}><text>abajo</text></column>
+    <column id="e" flex={3}><text>abajo</text></column>
+  </column>
+</window>"""
     )
     a, b, c = (find(m, n).property("width") for n in "abc")
     assert a == 2 * b and a + b + c == 900  # como flex: 2 / flex: 1 en CSS, sin importar el contenido
@@ -547,7 +547,7 @@ from janelkit import state
 kind = state("info")
 big = state(False)
 </script>
-<Column><Text id="t" class={["base", kind, {"big": big}]} class:alert={kind == "error"}>x</Text></Column>
+<column><text id="t" class={["base", kind, {"big": big}]} class:alert={kind == "error"}>x</text></column>
 <style>
 .base { color: #000000; }
 .info { color: #0000ff; }
@@ -579,12 +579,12 @@ name = state("ana")
 items = state([1, 2, 3, 4])
 nada = state(None)
 </script>
-<Column>
-  <Text id="a">CPU {cpu:.1f} %</Text>
-  <Text id="b">{name!r} {name:>5}|</Text>
-  <Text id="c">{items[1:3]} {"a:b"} {{"k": 1}["k"]}</Text>
-  <Text id="d">[{nada:.2f}] {cpu * 100:,.0f}</Text>
-</Column>""")
+<column>
+  <text id="a">CPU {cpu:.1f} %</text>
+  <text id="b">{name!r} {name:>5}|</text>
+  <text id="c">{items[1:3]} {"a:b"} {{"k": 1}["k"]}</text>
+  <text id="d">[{nada:.2f}] {cpu * 100:,.0f}</text>
+</column>""")
     assert find(m, "a").property("text") == "CPU 12.3 %"
     assert find(m, "b").property("text") == "'ana'   ana|"
     assert find(m, "c").property("text") == "[2, 3] a:b 1"

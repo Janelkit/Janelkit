@@ -74,7 +74,7 @@ App.janel ──► sfc_parser ──► template_parser / script_analysis ─�
 
 - Lo que lee un `Effect` o un `Computed` queda registrado; al cambiar, el efecto se vuelve a ejecutar al terminar el `batch` en curso. Si solo lo avisaron `Computed`, primero se recalculan y solo se ejecuta si alguno cambió de valor.
 - Cada instancia de componente tiene un `Scope`: lo que se crea mientras su script, un manejador o un tic se ejecutan (efectos, `computed`, temporizadores, tareas) queda en él y se libera al desmontar. El ámbito activo es una variable de contexto (`contextvars`), así que una corrutina lo conserva tras cada `await`.
-- Una `Gate` (compuerta de visibilidad) aplaza los efectos de la plantilla de lo que no se ve (`{#hidden}`, otra sección, la página de debajo, una fila de `<List>` fuera de la vista). Lo del script sigue funcionando; `is_visible()` expone la compuerta como `computed`.
+- Una `Gate` (compuerta de visibilidad) aplaza los efectos de la plantilla de lo que no se ve (`{#hidden}`, otra sección, la página de debajo, una fila de `<list>` fuera de la vista). Lo del script sigue funcionando; `is_visible()` expone la compuerta como `computed`.
 - El estado reactivo solo se modifica desde el hilo de la interfaz. `background()` ejecuta en otro hilo y devuelve el valor por `await`.
 
 ### Disposición: motor de `<flex>` y layouts de Qt
@@ -87,12 +87,12 @@ Los `Layout` de Qt Quick no tienen salto de línea, márgenes, `space-between`, 
 
 El motor es unas 5 veces más lento que un layout de Qt al cambiar el ancho. Por eso `compiler/layout_choice.py` elige, caja por caja:
 
-- **Layout de Qt** (`JkColumn`, `JkRow`, `JkQtBox`) para `Column`, `Row` y `<flex direction="column">` que solo usan dirección, `gap`, `padding`, bordes, `align-items`/`align-self` (sin `baseline`), márgenes fijos, tamaños en px, mínimos y máximos, y un solo hijo con `flex`.
-- **Motor** (`JkFlex`, `JkFlexColumn`, `JkFlexRow`) en todo lo demás: `wrap`, `justify-content`, `overflow: auto`, `order`, `margin: auto`, `%`, `position`, `flex-shrink`/`flex-basis`, `:first-child`/`:last-child`, varios hijos con `flex`, contenido de un `<Slot />`, cajas implícitas de `{#if}`/`{#each}`, cajas exteriores de componentes y `<flex>` en fila. También dentro de una caja con el motor (el motor lee al momento el tamaño de cada hijo; un layout de Qt lo calcula más tarde). Si aun así queda un layout dentro del motor, `flex.js` lo coloca al momento con `ensurePolished()`.
+- **Layout de Qt** (`JkColumn`, `JkRow`, `JkQtBox`) para `column`, `row` y `<flex direction="column">` que solo usan dirección, `gap`, `padding`, bordes, `align-items`/`align-self` (sin `baseline`), márgenes fijos, tamaños en px, mínimos y máximos, y un solo hijo con `flex`.
+- **Motor** (`JkFlex`, `JkFlexColumn`, `JkFlexRow`) en todo lo demás: `wrap`, `justify-content`, `overflow: auto`, `order`, `margin: auto`, `%`, `position`, `flex-shrink`/`flex-basis`, `:first-child`/`:last-child`, varios hijos con `flex`, contenido de un `<slot />`, cajas implícitas de `{#if}`/`{#each}`, cajas exteriores de componentes y `<flex>` en fila. También dentro de una caja con el motor (el motor lee al momento el tamaño de cada hijo; un layout de Qt lo calcula más tarde). Si aun así queda un layout dentro del motor, `flex.js` lo coloca al momento con `ensurePolished()`.
 
 Se decide al compilar con todo lo que la caja y sus hijos pueden llegar a tener, también en estados y clases condicionales. Las dos vías comparten `JkBox.qml` (aspecto, estados, eventos, accesibilidad) y colocan igual: lo comprueba `packages/janelkit/tests/test_layout_choice.py`, que monta las mismas páginas de las dos formas.
 
-Cada pieza de una caja o de un `<Text>` se crea solo si se usa (`jk.js`, `flexDecorations` y `textDecorations`; prueba: `test_flex_lazy.py`):
+Cada pieza de una caja o de un `<text>` se crea solo si se usa (`jk.js`, `flexDecorations` y `textDecorations`; prueba: `test_flex_lazy.py`):
 
 | Pieza | Se crea si… |
 |---|---|
@@ -100,7 +100,7 @@ Cada pieza de una caja o de un `<Text>` se crea solo si se usa (`jk.js`, `flexDe
 | `JkTap.qml` | `on:click` o una regla `:pressed` |
 | `JkRole.qml` (lector de pantalla, Espacio/Intro) | un papel distinto de `box` |
 | `JkTranslate.qml` | `transform: translate(...)` distinto de cero |
-| `JkTextBox.qml` | `background` o `border` en un `<Text>` |
+| `JkTextBox.qml` | `background` o `border` en un `<text>` |
 | `JkTextLinks.qml` | `format="markdown"` o `"html"` |
 
 ## Versiones y publicación
@@ -129,7 +129,7 @@ Tiempos indicativos (Windows 11, `offscreen` salvo que se diga), para saber qué
 
 **Listas** (`python tools/bench.py`; filas con casilla, texto y botón):
 
-| Operación | `<Scroll>`, 1000 filas | `<List>`, 1000 filas | `<List>`, 10 000 filas |
+| Operación | `<scroll>`, 1000 filas | `<list>`, 1000 filas | `<list>`, 10 000 filas |
 |---|---|---|---|
 | Crear | 430 ms | 9 ms | 39 ms |
 | Insertar una fila en medio (`insert`) | 5 ms | 2 ms | 16 ms |
@@ -139,7 +139,7 @@ Tiempos indicativos (Windows 11, `offscreen` salvo que se diga), para saber qué
 
 **Arranque** (`python tools/bench_app.py`): 260–290 ms en frío para cualquier ejemplo de `apps/examples`. Casi todo es importar PySide6; compilar cuesta menos de 10 ms, así que no hay caché de compilación.
 
-**Disposición** (`python apps/examples/flex/bench.py`, ventana real): rejilla de 200 tarjetas, 17 ms por fotograma; 300 tarjetas en un `<Scroll>`, 8,7 ms por paso al cambiar el ancho. Una caja vacía cuesta ~32 µs al crearse y un `<Text>`, ~30 µs.
+**Disposición** (`python apps/examples/flex/bench.py`, ventana real): rejilla de 200 tarjetas, 17 ms por fotograma; 300 tarjetas en un `<scroll>`, 8,7 ms por paso al cambiar el ancho. Una caja vacía cuesta ~32 µs al crearse y un `<text>`, ~30 µs.
 
 **Vídeo** (`python apps/examples/video/bench.py --ventana`; un hilo empuja fotogramas a 60 fps):
 

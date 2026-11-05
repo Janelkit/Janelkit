@@ -27,18 +27,21 @@ import shutil
 import sys
 import tempfile
 import time
+import warnings
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
+from .compiler.legacy import LEGACY_TAGS
+
 # Tipos QML de JanelKit -> nombre del elemento en la plantilla.
 _TAGS = {
-    "JkWindow": "Window", "JkColumn": "Column", "JkRow": "Row", "JkScroll": "Scroll", "JkList": "List",
-    "JkText": "Text", "JkButton": "Button", "JkTextField": "TextField", "JkTextArea": "TextArea",
-    "JkCheckBox": "Checkbox", "JkSwitch": "Switch", "JkSlider": "Slider", "JkSelect": "Select",
-    "JkRadioGroup": "RadioGroup", "JkTabs": "Tabs", "JkImage": "Image", "JkProgressBar": "ProgressBar",
-    "JkShortcut": "Shortcut", "JkSpacer": "Spacer", "JkFlex": "flex",
-    "JkFlexColumn": "Column", "JkFlexRow": "Row", "JkQtBox": "flex",
+    "JkWindow": "window", "JkColumn": "column", "JkRow": "row", "JkScroll": "scroll", "JkList": "list",
+    "JkText": "text", "JkButton": "button", "JkTextField": "textfield", "JkTextArea": "textarea",
+    "JkCheckBox": "checkbox", "JkSwitch": "switch", "JkSlider": "slider", "JkSelect": "select",
+    "JkRadioGroup": "radiogroup", "JkTabs": "tabs", "JkImage": "image", "JkProgressBar": "progressbar",
+    "JkShortcut": "shortcut", "JkSpacer": "spacer", "JkFlex": "flex",
+    "JkFlexColumn": "column", "JkFlexRow": "row", "JkQtBox": "flex",
 }  # fmt: skip
 # Piezas internas de JanelKit que no son elementos de la plantilla.
 _INTERNAL = (
@@ -61,7 +64,7 @@ _KEY_NAMES = {
 
 
 def _send_keys(window: Any, keys: str) -> None:
-    """Pulsa y suelta una combinación como en <Shortcut>: "Ctrl+D", "Alt+Right", "Delete".
+    """Pulsa y suelta una combinación como en <shortcut>: "Ctrl+D", "Alt+Right", "Delete".
     También acepta los nombres de `event.key` ("ArrowRight", "PageDown")."""
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QKeySequence
@@ -92,7 +95,7 @@ def _tag(item: Any) -> str:
 
 def _kind(item: Any) -> str:
     """El elemento integrado que es `item`, aunque sea la raíz de un componente
-    (un `Otra.janel` cuya raíz es `<Text>` es un Text); si no lo es, su `_tag`."""
+    (un `Otra.janel` cuya raíz es `<text>` es un <text>); si no lo es, su `_tag`."""
     meta = item.metaObject()
     while meta is not None:
         name = meta.className()
@@ -117,7 +120,7 @@ class Element:
     # -- lectura ------------------------------------------------------------
     @property
     def tag(self) -> str:
-        """Nombre del elemento en la plantilla (`Button`, `Text`…) o del tipo QML propio."""
+        """Nombre del elemento en la plantilla (`button`, `text`…) o del tipo QML propio."""
         return _tag(self.item)
 
     @property
@@ -130,9 +133,9 @@ class Element:
 
     @property
     def text(self) -> str | None:
-        """Texto que muestra el elemento (un `<Text>`, un botón, una casilla). Los campos no tienen:
-        lo escrito en un `TextField` o `TextArea` es su `value`."""
-        if self._kind in ("TextField", "TextArea"):
+        """Texto que muestra el elemento (un `<text>`, un botón, una casilla). Los campos no tienen:
+        lo escrito en un `<textfield>` o `<textarea>` es su `value`."""
+        if self._kind in ("textfield", "textarea"):
             return None
         value = self.item.property("text")
         return value if isinstance(value, str) else None
@@ -152,15 +155,15 @@ class Element:
     def value(self) -> Any:
         """Valor actual de un control (texto, marcado, número u opción elegida)."""
         tag = self._kind
-        if tag in ("TextField", "TextArea"):
+        if tag in ("textfield", "textarea"):
             return self.item.property("text")
-        if tag in ("Checkbox", "Switch"):
+        if tag in ("checkbox", "switch"):
             return self.item.property("checked")
-        if tag == "Select":
+        if tag == "select":
             return self.item.property("currentValue")
-        if tag == "RadioGroup":
+        if tag == "radiogroup":
             return self.item.property("jkCurrent")
-        if tag == "Tabs":
+        if tag == "tabs":
             return self._tab_value()
         return self.item.property("value")
 
@@ -181,11 +184,11 @@ class Element:
         """Pulsa un botón, una casilla/interruptor (la alterna) o una caja con on:click."""
         tag = self._kind
         self._require_enabled("click")
-        if tag in ("Checkbox", "Switch"):
+        if tag in ("checkbox", "switch"):
             return self.check(not self.item.property("checked"))
-        if tag == "Button":
+        if tag == "button":
             press(self.item)
-        elif tag == "Shortcut":
+        elif tag == "shortcut":
             self._invoke("activated")
         else:
             # Como un clic real: lo recibe el contenedor más cercano con on:click (una fila, una tarjeta).
@@ -198,23 +201,23 @@ class Element:
         return self._settle()
 
     def type(self, text: str) -> "Element":
-        """Sustituye el texto de un TextField o TextArea como si lo escribiera el usuario."""
-        self._require(("TextField", "TextArea"), "type")
+        """Sustituye el texto de un <textfield> o <textarea> como si lo escribiera el usuario."""
+        self._require(("textfield", "textarea"), "type")
         self._require_enabled("type")
         self.item.setProperty("text", text)
-        if self._kind == "TextField":
+        if self._kind == "textfield":
             self._invoke("textEdited")
         return self._settle()
 
     def submit(self) -> "Element":
-        """Pulsa Intro en un TextField (on:submit)."""
-        self._require(("TextField",), "submit")
+        """Pulsa Intro en un <textfield> (on:submit)."""
+        self._require(("textfield",), "submit")
         self._invoke("accepted")
         return self._settle()
 
     def check(self, checked: bool = True) -> "Element":
         """Marca o desmarca una casilla o interruptor."""
-        self._require(("Checkbox", "Switch"), "check")
+        self._require(("checkbox", "switch"), "check")
         self._require_enabled("check")
         if bool(self.item.property("checked")) != checked:
             self._invoke("toggle")
@@ -222,17 +225,17 @@ class Element:
         return self._settle()
 
     def slide(self, value: float) -> "Element":
-        """Mueve un Slider a `value`."""
-        self._require(("Slider",), "slide")
+        """Mueve un <slider> a `value`."""
+        self._require(("slider",), "slide")
         self.item.setProperty("value", value)
         self._invoke("moved")
         return self._settle()
 
     def choose(self, option: Any) -> "Element":
-        """Elige una opción (por valor o por texto) en Select, RadioGroup o Tabs."""
-        tag = self._require(("Select", "RadioGroup", "Tabs"), "choose")
+        """Elige una opción (por valor o por texto) en <select>, <radiogroup> o <tabs>."""
+        tag = self._require(("select", "radiogroup", "tabs"), "choose")
         self._require_enabled("choose")
-        if tag == "Select":
+        if tag == "select":
             from PySide6.QtCore import Q_ARG
 
             for i, (label, value) in enumerate(_options(self.item.property("options"))):
@@ -241,7 +244,7 @@ class Element:
                     self._invoke("activated", Q_ARG(int, i))
                     return self._settle()
         else:
-            kind = "QQuickRadioButton" if tag == "RadioGroup" else "QQuickTabButton"
+            kind = "QQuickRadioButton" if tag == "radiogroup" else "QQuickTabButton"
             for button in self._app._walk(self.item):
                 data = button.property("modelData") if button.inherits(kind) else None
                 if hasattr(data, "toVariant"):  # QJSValue (según la versión de PySide6)
@@ -489,13 +492,22 @@ class MountedApp:
         """Elementos que cumplen todos los criterios dados.
 
         `tag` acepta el nombre de un componente o el elemento integrado que es su raíz:
-        la raíz `<Text>` de `Otra.janel` aparece con `find("Otra")` y con `find("Text")`.
+        la raíz `<text>` de `Otra.janel` aparece con `find("Otra")` y con `find("text")`.
+        Los nombres de 0.1 (`find("Text")`) aún valen, con un `DeprecationWarning`.
         """
+        tags = (tag,)
+        if tag in LEGACY_TAGS:
+            warnings.warn(
+                f'find("{tag}"): los elementos del núcleo se escriben en minúscula desde 0.2: find("{LEGACY_TAGS[tag]}")',
+                DeprecationWarning,
+                stacklevel=3 if sys._getframe(1).f_code.co_name == "find" else 2,
+            )
+            tags = (tag, LEGACY_TAGS[tag])
         out = []
         for el in self.elements():
             if visible_only and not el.visible:
                 continue
-            if tag is not None and tag not in (el.tag, el._kind):
+            if tag is not None and el.tag not in tags and el._kind not in tags:
                 continue
             if text is not None and el.text != text:
                 continue
@@ -517,16 +529,16 @@ class MountedApp:
         return found[0]
 
     def texts(self) -> list[str]:
-        """Textos visibles de los elementos <Text>, en orden de lectura (de arriba abajo)."""
+        """Textos visibles de los elementos <text>, en orden de lectura (de arriba abajo)."""
         from PySide6.QtCore import QPointF
 
-        labels = [el.item for el in self.find_all("Text")]
+        labels = [el.item for el in self.find_all("text")]
         labels.sort(key=lambda i: (round(i.mapToScene(QPointF(0, 0)).y()), i.mapToScene(QPointF(0, 0)).x()))
         return [i.property("text") for i in labels]
 
     def key(self, keys: str) -> None:
         """Pulsa una combinación de teclas en la ventana, sobre lo que tenga el foco
-        (atajos de <Shortcut>: "Ctrl+Z", "Ctrl+Shift+Z", "F5")."""
+        (atajos de <shortcut>: "Ctrl+Z", "Ctrl+Shift+Z", "F5")."""
         _send_keys(self.window, keys)
         self.process()
 
@@ -589,7 +601,7 @@ class MountedApp:
             children = item.childItems()
             parent = item.parentItem()
             if parent is not None and parent.inherits("QQuickListView") and item is parent.property("contentItem"):
-                # Filas de <List animate> que salen: ya no cuentan (índice -1), aunque se vean un momento.
+                # Filas de <list animate> que salen: ya no cuentan (índice -1), aunque se vean un momento.
                 children = [c for c in children if (ctx := qmlContext(c)) is None or ctx.contextProperty("index") != -1]
             stack.extend(reversed(children))
         return out

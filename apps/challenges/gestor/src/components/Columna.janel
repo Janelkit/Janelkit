@@ -1,6 +1,6 @@
 <script lang="python">
 # Una columna: cabecera (se arrastra para reordenar columnas; doble clic renombra) y
-# sus tarjetas en una <List animate> (solo crea las que se ven: 200 por columna).
+# sus tarjetas en una <list animate> (solo crea las que se ven: 200 por columna).
 # Soltar una tarjeta en el hueco de la columna la pone al final.
 from janelkit import effect, inject, prop, ref, state
 from components.Tarjeta import Tarjeta
@@ -61,22 +61,22 @@ def soltar(event):
         on:dblclick={empezar_a_renombrar()} title="Arrastra para mover la columna; doble clic para renombrar">
     {#if editando}
       <flex class="nombre-campo" on:keydown={tecla_nombre}>
-        <TextField ref={campo} bind:value={nombre} on:submit={renombrar()} label="Nombre de la columna" flex={1} />
+        <textfield ref={campo} bind:value={nombre} on:submit={renombrar()} label="Nombre de la columna" flex={1} />
       </flex>
     {:else}
-      <Text class="nombre">{columna["nombre"]}</Text>
-      <Text class="cuenta">{len(columna["tarjetas"])}</Text>
+      <text class="nombre">{columna["nombre"]}</text>
+      <text class="cuenta">{len(columna["tarjetas"])}</text>
       <flex as="button" class="accion" label={f"Borrar la columna {columna['nombre']}"}
-            on:click={tablero.borrar_columna(columna["id"])}><Text>✕</Text></flex>
+            on:click={tablero.borrar_columna(columna["id"])}><text>✕</text></flex>
     {/if}
   </flex>
-  <List class="tarjetas" animate>
+  <list class="tarjetas" animate>
     {#each columna["tarjetas"] as t (t["id"])}
       <Tarjeta t={t} atenuada={ui.filtro.value is not None and not coincide(t, *ui.filtro.value)} />
     {/each}
-  </List>
+  </list>
   <flex as="button" class="nueva" label="Añadir tarjeta" on:click={ui.enfocar.set(tablero.nueva(columna["id"]))}>
-    <Text>+ Añadir tarjeta</Text>
+    <text>+ Añadir tarjeta</text>
   </flex>
 </flex>
 

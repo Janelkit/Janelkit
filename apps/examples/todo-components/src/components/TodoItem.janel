@@ -30,19 +30,19 @@ def cancel():
     editing.value = False
 </script>
 
-<Row class="item">
+<row class="item">
   {#if editing}
-    <TextField bind:value={draft} on:submit={save} flex={1} />
-    <Button variant="primary" on:click={save}>Guardar</Button>
-    <Button variant="ghost" on:click={cancel}>Cancelar</Button>
+    <textfield bind:value={draft} on:submit={save} flex={1} />
+    <button variant="primary" on:click={save}>Guardar</button>
+    <button variant="ghost" on:click={cancel}>Cancelar</button>
   {:else}
-    <Checkbox checked={todo["done"]} on:change={lambda done: toggled.emit(todo["id"], done)} flex={1}>
+    <checkbox checked={todo["done"]} on:change={lambda done: toggled.emit(todo["id"], done)} flex={1}>
       {todo["title"]}
-    </Checkbox>
-    <Button variant="ghost" on:click={start_edit}>Editar</Button>
-    <Button variant="ghost" on:click={lambda: removed.emit(todo["id"])}>Eliminar</Button>
+    </checkbox>
+    <button variant="ghost" on:click={start_edit}>Editar</button>
+    <button variant="ghost" on:click={lambda: removed.emit(todo["id"])}>Eliminar</button>
   {/if}
-</Row>
+</row>
 
 <style>
 .item { padding: 4px 8px; gap: 6px; background: var(--surface); border-radius: var(--radius-sm); }

@@ -1,4 +1,4 @@
-// Mano sobre los enlaces de un <Text format="markdown"> o "html" (el texto en sí no
+// Mano sobre los enlaces de un <text format="markdown"> o "html" (el texto en sí no
 // captura el ratón). La crea Jk.textDecorations solo para esos textos.
 import QtQuick
 

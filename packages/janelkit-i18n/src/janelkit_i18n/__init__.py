@@ -6,7 +6,7 @@
     i18n.load(Path(__file__).parent / "locales")   # locales/es.json, locales/en.json…
     i18n.set("es")
 
-En la plantilla: `<Text>{t("saludo", nombre=nombre)}</Text>`. Como `t` lee el
+En la plantilla: `<text>{t("saludo", nombre=nombre)}</text>`. Como `t` lee el
 idioma actual, al llamar a `i18n.set("en")` se actualiza todo lo que traduce.
 
 Catálogo (JSON): `{"saludo": "Hola, {nombre}", "tareas": {"one": "{n} tarea", "other": "{n} tareas"}}`.

@@ -18,6 +18,7 @@ from ..diagnostics import Diagnostic, JanelError, SourceLocation
 from .ast_nodes import SFC, EachBlock, Element, IfBlock, KeyBlock, Node
 from .ir import IRComponent
 from .layout_choice import root_features
+from .legacy import normalize as normalize_legacy
 from .lowering import ComponentInterface, lower
 from .qml_generator import SourceMap, generate_qml, lookup
 from .script_analysis import ScriptInfo, analyze_script
@@ -25,7 +26,7 @@ from .sfc_parser import parse_file, parse_sfc
 
 # Versión del formato .janel que entiende este compilador. Cambia solo cuando
 # un archivo válido deja de compilar o cambia de significado (ver docs/api.md).
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 
 
 @dataclass
@@ -108,6 +109,7 @@ class CompileSession:
     def compile_source(self, source: str, file: str, as_window: bool = True) -> CompiledComponent:
         sfc = parse_sfc(source, file)
         info = analyze_script(sfc.script, file, sfc.source, self._resolver(Path(file)))
+        sfc.notices = normalize_legacy(sfc, info.components)
         return self._compile_loaded(file, sfc, info, as_window)
 
     def _compile_loaded(self, key: str, sfc: SFC, info: ScriptInfo, as_window: bool) -> CompiledComponent:
@@ -129,6 +131,7 @@ class CompileSession:
         if key not in self._loaded:
             sfc = parse_file(path)
             info = analyze_script(sfc.script, sfc.file, sfc.source, self._resolver(Path(path)))
+            sfc.notices = normalize_legacy(sfc, info.components)
             self._loaded[key] = (sfc, info)
         return self._loaded[key]
 
@@ -141,7 +144,7 @@ class CompileSession:
             self._roots[key] = root_features(sfc)
         return ComponentInterface(
             dict(info.props), dict(info.events), frozenset(_slot_names(sfc.template)),
-            root_box=root in ("flex", "Column", "Row") and info.inherit_attrs, inherit_attrs=info.inherit_attrs,
+            root_box=root in ("flex", "column", "row") and info.inherit_attrs, inherit_attrs=info.inherit_attrs,
             root_items=self._roots[key],
         )  # fmt: skip
 
@@ -175,12 +178,12 @@ class CompileSession:
 
 
 def _slot_names(nodes: list[Node]) -> set[str]:
-    """Nombres de los <Slot> de una plantilla ("default" para el que no tiene nombre)."""
+    """Nombres de los <slot> de una plantilla ("default" para el que no tiene nombre)."""
     names: set[str] = set()
     for node in nodes:
         children: list[Node] = []
         if isinstance(node, Element):
-            if node.tag == "Slot":
+            if node.tag == "slot":
                 attr = node.attribute("name")
                 names.add(attr.value if attr is not None and isinstance(attr.value, str) else "default")
             children = node.children

@@ -16,10 +16,10 @@ from janelkit import state
 mx = state(30)
 abierto = state(False)
 </script>
-<Column>
+<column>
   <flex class="icono" label="icono">
-    <Text>✉</Text>
-    <flex class="insignia" label="insignia"><Text>3</Text></flex>
+    <text>✉</text>
+    <flex class="insignia" label="insignia"><text>3</text></flex>
   </flex>
   <flex class="fila">
     <flex class="c" label="c1" />
@@ -31,11 +31,11 @@ abierto = state(False)
       <flex class="pop" label="pop" style={{"left": mx, "top": "10px"}} />
     </flex>
   </flex>
-  <Button text="abrir" on:click={abierto = True} />
+  <button text="abrir" on:click={abierto = True} />
   {#if abierto}
-    <flex class="velo" label="velo"><flex class="dialogo" label="dialogo"><Text>hola</Text></flex></flex>
+    <flex class="velo" label="velo"><flex class="dialogo" label="dialogo"><text>hola</text></flex></flex>
   {/if}
-</Column>
+</column>
 <style>
 .icono { position: relative; width: 40px; height: 40px; background: #dddddd; }
 .insignia { position: absolute; top: -4px; right: -4px; padding: 0 4px; background: #ff0000; z-index: 2; }
@@ -93,7 +93,7 @@ def test_absolute_uses_nearest_positioned_ancestor_and_percent(app):
 
 
 def test_fixed_covers_window_and_follows_resize(app):
-    app.find("Button").click()
+    app.find("button").click()
     app.wait(0.05)
     assert rect(app, "velo") == (0, 0, 400, 400)
     app.window.resize(600, 500)
@@ -104,11 +104,11 @@ def test_fixed_covers_window_and_follows_resize(app):
 
 
 def test_position_compiles_and_validates():
-    qml = compile_source("""<Column><Text class="t">x</Text></Column>
+    qml = compile_source("""<column><text class="t">x</text></column>
 <style>.t { position: absolute; inset: 0 10px; z-index: 3; }</style>""").qml
     assert 'property string jkPosition: "absolute"' in qml and "z: 3" in qml
     assert "property var jkLeft: 10" in qml and "Jk.positionDeps(" in qml
-    c = compile_source('<Column class="c" />\n<style>.c { position: sticky; }</style>')
+    c = compile_source('<column class="c" />\n<style>.c { position: sticky; }</style>')
     assert any("position" in w.message for w in c.warnings)
 
 
@@ -164,9 +164,9 @@ def test_catalog_dialog_menu_and_badge():
 def test_absolute_child_at_100_percent_takes_the_whole_containing_block():
     """`width: 100%` llega como fillWidth (para los layouts de Qt); fuera del flujo valía 0."""
     d = Path(tempfile.mkdtemp())
-    (d / "App.janel").write_text("""<Column>
+    (d / "App.janel").write_text("""<column>
   <flex class="capa"><flex class="alto" label="alto" /><flex class="ancho" label="ancho" /></flex>
-</Column>
+</column>
 <style>
 .capa { position: relative; width: 400px; height: 225px }
 .alto { position: absolute; left: 50%; top: 0; width: 25%; height: 100% }

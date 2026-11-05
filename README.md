@@ -29,20 +29,20 @@ def remove(todo_id):
     todos.value = [t for t in todos.value if t["id"] != todo_id]
 </script>
 
-<Window title="Tareas" width={480} height={400}>
-  <Column class="page">
-    <Text class="title">{pending} pendientes</Text>
-    <Row class="new">
-      <TextField bind:value={draft} on:submit={add} placeholder="Nueva tarea" flex={1} />
-      <Button variant="primary" on:click={add}>Añadir</Button>
-    </Row>
+<window title="Tareas" width={480} height={400}>
+  <column class="page">
+    <text class="title">{pending} pendientes</text>
+    <row class="new">
+      <textfield bind:value={draft} on:submit={add} placeholder="Nueva tarea" flex={1} />
+      <button variant="primary" on:click={add}>Añadir</button>
+    </row>
     {#each todos as todo (todo["id"])}
       <TodoItem todo={todo} on:removed={remove} />
     {:else}
-      <Text>No hay tareas.</Text>
+      <text>No hay tareas.</text>
     {/each}
-  </Column>
-</Window>
+  </column>
+</window>
 
 <style>
 .page { padding: 24px; gap: 12px; }
@@ -108,7 +108,7 @@ Ejemplos incluidos (cada uno se ejecuta con `python apps/examples/<nombre>/main.
 | `books` | búsqueda en una API real sin bloquear la ventana: `@task`, `background`, cargando y errores |
 | `compra` | la aplicación del [tutorial](docs/tutorial.md): componentes, slot, guardado en segundo plano y pruebas |
 | `idiomas` | cambio de idioma en caliente, plurales, formatos según el idioma y árabe (derecha a izquierda), con `janelkit-i18n` |
-| `files` | explorador de archivos: `<List>` virtualizada, slots, `provide`/`inject`, `ref`, atajos, diálogos (`janelkit-desktop`) y vista previa en segundo plano |
+| `files` | explorador de archivos: `<list>` virtualizada, slots, `provide`/`inject`, `ref`, atajos, diálogos (`janelkit-desktop`) y vista previa en segundo plano |
 
 ## Comandos
 

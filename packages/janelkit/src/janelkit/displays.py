@@ -4,8 +4,8 @@
 
     screens.value          # [Screen(index=0, name="DELL U2720Q", width=2560, height=1440, primary=True, …), …]
 
-    <Window title="Proyección" screen={1 if len(screens) > 1 else 0} fullscreen={True}>
-    {#each screens as s}<Text>{s.name}: {s.width}×{s.height}</Text>{/each}
+    <window title="Proyección" screen={1 if len(screens) > 1 else 0} fullscreen={True}>
+    {#each screens as s}<text>{s.name}: {s.width}×{s.height}</text>{/each}
 
 - Cambia sola al conectar o desconectar una pantalla, al cambiar la principal o la resolución.
 - Está vacía hasta que la aplicación arranca (`janelkit.run` o `janelkit.inspect.mount`).

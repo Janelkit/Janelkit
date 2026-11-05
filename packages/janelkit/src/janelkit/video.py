@@ -1,4 +1,4 @@
-"""Fotogramas a tiempo real: `Frames` y el elemento `<Video>`.
+"""Fotogramas a tiempo real: `Frames` y el elemento `<video>`.
 
     frames = Frames(color="bgr")          # el orden de OpenCV; por defecto "rgb"
 
@@ -11,11 +11,11 @@
         async for img in frames:          # el más reciente; se saltan los que no dio tiempo
             detecciones.value = await background(modelo, img)
 
-    <Video source={frames} />
+    <video source={frames} />
 
 Los fotogramas no pasan por la reactividad: `push()` (desde cualquier hilo)
 convierte la imagen a un `QVideoFrame` en el hilo que llama y avisa al de la
-interfaz, que entrega a cada `<Video>` el más reciente. Si llegan más deprisa de
+interfaz, que entrega a cada `<video>` el más reciente. Si llegan más deprisa de
 lo que se entregan, se saltan: nunca se encolan. Lo reactivo es `size` y `fps`.
 
 Sin numpy como dependencia: la imagen se lee con `memoryview` (alto × ancho de
@@ -74,7 +74,7 @@ def _to_frame(image: Any, color: str) -> QVideoFrame:
 
 
 class _Hub(QObject):
-    """La parte Qt de un `Frames`: vive en el hilo de la interfaz y entrega a los `<Video>`."""
+    """La parte Qt de un `Frames`: vive en el hilo de la interfaz y entrega a los `<video>`."""
 
     _ready = Signal()
 
@@ -114,7 +114,7 @@ class _Hub(QObject):
 
 
 class Frames:
-    """Canal del último fotograma, para mostrarlo con `<Video source=…>` y procesarlo.
+    """Canal del último fotograma, para mostrarlo con `<video source=…>` y procesarlo.
 
     - `push(imagen)` desde cualquier hilo. Copia la imagen.
     - `async for imagen in frames` o `await frames.next()`: el más reciente que llegue
@@ -142,7 +142,7 @@ class Frames:
 
     # -- desde cualquier hilo -------------------------------------------------------
     def push(self, image: Any) -> None:
-        """Muestra `image` en los `<Video>` y la entrega a quien espera. Desde cualquier hilo."""
+        """Muestra `image` en los `<video>` y la entrega a quien espera. Desde cualquier hilo."""
         frame = _to_frame(image, self.color)
         with self._lock:
             idle = self._pending is None

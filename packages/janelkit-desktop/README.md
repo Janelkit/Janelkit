@@ -31,8 +31,8 @@ def copiar():
 ```
 
 ```html
-<Button on:click={abrir}>Abrir…</Button>
-<Text>En el portapapeles: {clipboard.paste()}</Text>
+<button on:click={abrir}>Abrir…</button>
+<text>En el portapapeles: {clipboard.paste()}</text>
 ```
 
 ## Características

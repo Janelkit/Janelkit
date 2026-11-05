@@ -32,9 +32,9 @@ def test_an_extension_adds_methods_to_mounted_app():
 
 
 # -- janelkit.locale: la dirección de escritura es del núcleo --------------------------------
-APP = """<Window width={300} height={100}>
-  <Row id="row"><Text id="a">uno</Text><Spacer /><Text>dos</Text></Row>
-</Window>
+APP = """<window width={300} height={100}>
+  <row id="row"><text id="a">uno</text><spacer /><text>dos</text></row>
+</window>
 """
 
 

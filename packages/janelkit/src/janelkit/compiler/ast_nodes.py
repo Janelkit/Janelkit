@@ -126,6 +126,7 @@ class SFC:
     script: ScriptBlock | None
     style: StyleBlock | None
     template: list[Node] = field(default_factory=list)
+    notices: list = field(default_factory=list)  # avisos al cargarlo (nombres antiguos, legacy.py)
 
     @property
     def root_elements(self) -> list[Element]:

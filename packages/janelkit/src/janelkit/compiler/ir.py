@@ -46,7 +46,7 @@ class ExprBinding:
     expression: Expression
     loc: SourceLocation
     classes: bool = False  # class={expr}: el runtime lo convierte en " a b " (nombres de clase)
-    markdown: "bool | str" = False  # texto de <Text format="markdown"> (ver TextBinding)
+    markdown: "bool | str" = False  # texto de <text format="markdown"> (ver TextBinding)
 
 
 @dataclass
@@ -56,7 +56,7 @@ class TextBinding:
     id: str
     parts: list[Union[str, Expression]]
     loc: SourceLocation
-    # Texto de <Text format="markdown">: el runtime escapa el HTML (runtime/markdown.py).
+    # Texto de <text format="markdown">: el runtime escapa el HTML (runtime/markdown.py).
     # True si el formato es fijo; el id del binding de `format` si cambia.
     markdown: "bool | str" = False
 
@@ -102,7 +102,7 @@ class IRElement:
     children: list["IRNode"] = field(default_factory=list)
     # class:nombre={cond}: (propiedad QML, valor, condición QML) -> `Binding on ... { when }`
     conditional: list[tuple[str, str, str]] = field(default_factory=list)
-    delegate: "IRElement | None" = None  # <List>: la fila que repite su ListView
+    delegate: "IRElement | None" = None  # <list>: la fila que repite su ListView
     behaviors: dict[str, str] = field(default_factory=dict)  # propiedad QML -> animación (transition en CSS)
     # transition:/in:/out: -> {"in": (tipo, ms), "out": (tipo, ms)}
     transitions: dict[str, tuple[str, int]] = field(default_factory=dict)
@@ -123,7 +123,7 @@ class IRRepeater:
     # Para elegir el layout de la caja que lo contiene (layout_choice.py):
     component: str | None = None  # el delegado es la raíz de este componente
     many: bool = False  # {#each}: puede repetir el delegado
-    opaque: bool = False  # contenido de un <Slot />: no se sabe qué es
+    opaque: bool = False  # contenido de un <slot />: no se sabe qué es
 
 
 IRNode = Union[IRElement, IRRepeater]
@@ -177,8 +177,8 @@ class EachSlot:
     loc: SourceLocation
     empty_model_id: str | None = None  # rama {:else} (lista vacía)
     empty_fragment: Fragment | None = None
-    lazy: bool = False  # dentro de <List>: cada fila se crea cuando Qt la pide (al hacerse visible)
-    animated: bool = False  # <List animate>: al quitar una fila, su vista se anima antes de liberarla
+    lazy: bool = False  # dentro de <list>: cada fila se crea cuando Qt la pide (al hacerse visible)
+    animated: bool = False  # <list animate>: al quitar una fila, su vista se anima antes de liberarla
 
 
 @dataclass
@@ -215,9 +215,9 @@ class ComponentSlot:
 
 @dataclass
 class SlotOutlet:
-    """`<Slot name="x">reserva</Slot>` en un componente hijo: aquí va el contenido que pasa el padre."""
+    """`<slot name="x">reserva</slot>` en un componente hijo: aquí va el contenido que pasa el padre."""
 
-    name: str  # "default" para <Slot />
+    name: str  # "default" para <slot />
     model_id: str  # contenido del padre (delegado definido por el padre)
     fallback: Fragment | None  # contenido de reserva si el padre no pasa nada
     loc: SourceLocation

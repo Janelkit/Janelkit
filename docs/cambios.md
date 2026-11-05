@@ -8,24 +8,26 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 
 ### Nuevo
 
-- **Ventanas en otra pantalla y a pantalla completa:** `<Window screen={i} fullscreen={bool}>` (por índice o por nombre de pantalla) y `screens`, la lista reactiva de pantallas (`Screen`), que cambia al conectar o desconectar una. Cambiar de pantalla estando a pantalla completa sale de ella, mueve la ventana y vuelve a entrar. Si la pantalla no existe, la ventana se queda donde está.
-- **Parar lo que no se ve:** `is_visible()` devuelve un `computed` que dice si el componente se ve (otra sección, una página de debajo, un `{#hidden}` o una fila de `<List>` fuera de la vista no se ven). `interval(ms, fn, when=…)` y `timeout(..., when=…)` solo cuentan mientras se cumple una condición reactiva: `@interval(33, when=is_visible())` sustituye a la comprobación a mano al empezar cada tic.
-- **Mover un `<Scroll>` desde el código:** `follow`, `on:top`, `on:bottom` y `on:scroll`, como en `<List>`; con un `ref`, `scroll_to_start()`, `scroll_to_end()` y `scroll_to(ref)`, que lleva a la vista un elemento de dentro.
+- **`janel migrate`:** actualiza un proyecto a esta versión. Muestra los cambios como un diff y los aplica con `--write`; con `--tests`, también las pruebas. Ver [desarrollo.md](desarrollo.md#comandos).
+- **Ventanas en otra pantalla y a pantalla completa:** `<window screen={i} fullscreen={bool}>` (por índice o por nombre de pantalla) y `screens`, la lista reactiva de pantallas (`Screen`), que cambia al conectar o desconectar una. Cambiar de pantalla estando a pantalla completa sale de ella, mueve la ventana y vuelve a entrar. Si la pantalla no existe, la ventana se queda donde está.
+- **Parar lo que no se ve:** `is_visible()` devuelve un `computed` que dice si el componente se ve (otra sección, una página de debajo, un `{#hidden}` o una fila de `<list>` fuera de la vista no se ven). `interval(ms, fn, when=…)` y `timeout(..., when=…)` solo cuentan mientras se cumple una condición reactiva: `@interval(33, when=is_visible())` sustituye a la comprobación a mano al empezar cada tic.
+- **Mover un `<scroll>` desde el código:** `follow`, `on:top`, `on:bottom` y `on:scroll`, como en `<list>`; con un `ref`, `scroll_to_start()`, `scroll_to_end()` y `scroll_to(ref)`, que lleva a la vista un elemento de dentro.
 - **Una sola ventana de cada:** `open_window(Ajustes, single=True)` trae al frente la ventana de `Ajustes` si ya está abierta (y la devuelve) en vez de abrir otra.
 - **Métricas para depurar:** `Timer.runs`, `.skipped` y `.last_duration`; `subscriber_count` de `state` y `computed`, ahora documentado; `repr` de `Effect` (función, fuentes, liberado o en espera) y de `Scope` (qué contiene).
 
 ### Corregido
 
-- **`janelkit.inspect` y los componentes cuya raíz es un elemento integrado:** una página `Otra.janel` que es solo `<Text>otra</Text>` no salía en `app.texts()` ni en `find("Text")`, y `click()` o `value` no funcionaban sobre un componente cuya raíz es un `<Button>` o un `<TextField>`. Ahora el elemento se encuentra por los dos nombres (`find("Otra")` y `find("Text")`) y se maneja como el control que es.
+- **`janelkit.inspect` y los componentes cuya raíz es un elemento integrado:** una página `Otra.janel` que es solo `<text>otra</text>` no salía en `app.texts()` ni en `find("text")`, y `click()` o `value` no funcionaban sobre un componente cuya raíz es un `<button>` o un `<textfield>`. Ahora el elemento se encuentra por los dos nombres (`find("Otra")` y `find("text")`) y se maneja como el control que es.
 
 ### Cambia (puede requerir ajustes)
 
 | Antes | Ahora | Cómo migrar |
 |---|---|---|
+| `<Text>`, `<Button>`, `<Column>`…: los elementos del núcleo en mayúscula, igual que los componentes. Un componente propio llamado `Button` tapaba a `<Button>`. | Se escriben en minúscula, como en HTML: `<text>`, `<button>`, `<column>`, `<textfield>`… (el mismo nombre). La mayúscula es solo para componentes importados. `FORMAT_VERSION` pasa a 2. | `janel migrate --write` (con `--tests`, también las pruebas). Mientras, los nombres antiguos compilan con un aviso (también `Text { … }` en `<style>` y `find("Text")` en `inspect`, con un `DeprecationWarning`); dejan de valer en 0.3. |
 | `from janelkit import History`: deshacer y rehacer con `step()` y `add()`. | Se quitó: el núcleo no incluye deshacer y rehacer. Importarlo da un `ImportError` que lo explica. | Anota cada paso como un par de funciones (deshacer, rehacer) en una clase propia. Los challenges `kanban` y `hoja` traen una de unas 100 líneas (`src/services/deshacer.py`) que solo usa la API pública. |
-| `<TextField></TextField>` (abierto y cerrado, vacío) compilaba; igual con los demás campos y elementos sin contenido. | Es un error: se escriben con cierre automático. | `<TextField ... />`. Con texto dentro ya era un error. |
-| En `janelkit.inspect`, `.text` de un `TextField` o `TextArea` era lo escrito, y `find(text=...)` encontraba el campo. | `.text` es `None` en los campos y `find(text=...)` no los encuentra. | Lee lo escrito con `.value`; busca el campo por `placeholder`, `label` o `id`. |
-| `<Text format="markdown">` aplicaba el HTML del texto (`<b>`, `<img>`, `<span style=…>`): el texto de otras personas había que escaparlo a mano, y el escape se veía dentro del código (`a &lt; b`). | No interpreta HTML: se muestra tal cual, y el código se ve como se escribió. | Para usar HTML, `format="html"`. El escape a mano con `&lt;` sigue funcionando; se puede quitar. |
+| `<textfield></textfield>` (abierto y cerrado, vacío) compilaba; igual con los demás campos y elementos sin contenido. | Es un error: se escriben con cierre automático. | `<textfield ... />`. Con texto dentro ya era un error. |
+| En `janelkit.inspect`, `.text` de un `textfield` o `textarea` era lo escrito, y `find(text=...)` encontraba el campo. | `.text` es `None` en los campos y `find(text=...)` no los encuentra. | Lee lo escrito con `.value`; busca el campo por `placeholder`, `label` o `id`. |
+| `<text format="markdown">` aplicaba el HTML del texto (`<b>`, `<img>`, `<span style=…>`): el texto de otras personas había que escaparlo a mano, y el escape se veía dentro del código (`a &lt; b`). | No interpreta HTML: se muestra tal cual, y el código se ve como se escribió. | Para usar HTML, `format="html"`. El escape a mano con `&lt;` sigue funcionando; se puede quitar. |
 
 ## 0.1.1 (2026-11-04)
 

@@ -11,7 +11,7 @@ Los manejadores se ejecutan en el momento, en el hilo de la interfaz: por eso
 `prevent()` y `stop()` funcionan sin JavaScript.
 
 `on:click` no pasa por el filtro: lo emite el propio `<flex>` (JkBox.qml), con lo
-que un control de Qt que se queda el clic (un `<Button>` dentro de una fila) sigue
+que un control de Qt que se queda el clic (un `<button>` dentro de una fila) sigue
 impidiendo el clic de la fila, como hasta ahora.
 
 Arrastrar y soltar también va por el filtro: al pulsar sobre un `<flex draggable>` y
@@ -19,7 +19,7 @@ moverse más que la distancia de arrastre del sistema, el arrastre empieza (on:d
 y Qt Quick deja de recibir ese puntero (no hay clic al soltar). Una copia de la caja
 sigue al puntero; la caja con on:drop que hay debajo se marca (:drag-over) y recibe
 on:dragover y, al soltar, on:drop. Escape lo cancela. Cerca del borde de una zona con
-desplazamiento (<List>, <Scroll>, overflow: auto), esta se desplaza sola. Todo dentro
+desplazamiento (<list>, <scroll>, overflow: auto), esta se desplaza sola. Todo dentro
 de una ventana.
 """
 from __future__ import annotations
@@ -492,7 +492,7 @@ class EventRouter(QObject):
 
         Si ningún hijo contiene el punto, vale uno cuyo contenido se sale de él y lo
         contiene (como en Qt, sin `clip` un hijo fuera de su padre recibe el puntero): una
-        fila de <List animate> que aún se desliza fuera del alto nuevo de la lista."""
+        fila de <list animate> que aún se desliza fuera del alto nuevo de la lista."""
         children = [c for c in item.childItems() if c.isVisible() and c.property("jkDecoration") is not True]
         found = None
         for child in children:

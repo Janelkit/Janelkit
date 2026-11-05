@@ -31,7 +31,7 @@ def tecla(event):
   {#each items as item, i}
     <flex as="menuitem" class="opcion" selected={i == active} label={item}
           on:pointerenter={active = i} on:click={choose.emit(item)}>
-      <Text>{item}</Text>
+      <text>{item}</text>
     </flex>
   {/each}
 </flex>

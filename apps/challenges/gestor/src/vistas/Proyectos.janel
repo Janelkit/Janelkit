@@ -33,13 +33,13 @@ def nuevo():
 <flex class="pagina">
   <flex class="cabecera">
     <flex class="titulos">
-      <Text class="titulo">{"Proyectos archivados" if archivados else "Proyectos"}</Text>
-      <Text class="subtitulo">{resumen_general()}</Text>
+      <text class="titulo">{"Proyectos archivados" if archivados else "Proyectos"}</text>
+      <text class="subtitulo">{resumen_general()}</text>
     </flex>
-    <Spacer />
-    <TextField class="buscar" bind:value={buscar} placeholder="Buscar proyectos…" label="Buscar proyectos" />
-    <Checkbox text="Ver archivados" bind:checked={archivados} />
-    <Button text="+ Proyecto" variant="primary" on:click={nuevo()} />
+    <spacer />
+    <textfield class="buscar" bind:value={buscar} placeholder="Buscar proyectos…" label="Buscar proyectos" />
+    <checkbox text="Ver archivados" bind:checked={archivados} />
+    <button text="+ Proyecto" variant="primary" on:click={nuevo()} />
   </flex>
   <flex class="rejilla" label="Lista de proyectos">
     {#each visibles as p (p["id"])}
@@ -47,33 +47,33 @@ def nuevo():
         <flex class="franja" style={{"background": p["color"]}} />
         <flex class="contenido">
           <flex class="fila-nombre">
-            <Text class="nombre">{p["nombre"]}</Text>
-            {#if p["archivado"]}<Text class="insignia">Archivado</Text>{/if}
+            <text class="nombre">{p["nombre"]}</text>
+            {#if p["archivado"]}<text class="insignia">Archivado</text>{/if}
           </flex>
-          <Text class="descripcion">{p["descripcion"] or "Sin descripción"}</Text>
+          <text class="descripcion">{p["descripcion"] or "Sin descripción"}</text>
           <flex class="progreso">
-            <ProgressBar value={datos.resumen(p)["progreso"]} max={1} flex={1} />
-            <Text class="porcentaje">{f"{round(datos.resumen(p)['progreso'] * 100)} %"}</Text>
+            <progressbar value={datos.resumen(p)["progreso"]} max={1} flex={1} />
+            <text class="porcentaje">{f"{round(datos.resumen(p)['progreso'] * 100)} %"}</text>
           </flex>
           <flex class="pie">
-            <Text class="dato">{f"{cuenta(datos.resumen(p)['total'], 'tarjeta')} · {cuenta(len(p['miembros']), 'miembro')}"}</Text>
-            <Spacer />
+            <text class="dato">{f"{cuenta(datos.resumen(p)['total'], 'tarjeta')} · {cuenta(len(p['miembros']), 'miembro')}"}</text>
+            <spacer />
             <flex class="caras">
               {#each p["miembros"][:5] as m (m["persona"])}
                 <flex class="avatar" style={{"background": (datos.persona(m["persona"]) or {}).get("color", "#868e96")}}
                       title={datos.nombre(m["persona"])}>
-                  <Text>{datos.iniciales(m["persona"])}</Text>
+                  <text>{datos.iniciales(m["persona"])}</text>
                 </flex>
               {/each}
-              {#if len(p["miembros"]) > 5}<Text class="mas">{f"+{len(p['miembros']) - 5}"}</Text>{/if}
+              {#if len(p["miembros"]) > 5}<text class="mas">{f"+{len(p['miembros']) - 5}"}</text>{/if}
             </flex>
           </flex>
         </flex>
       </flex>
     {:else}
       <flex class="vacio">
-        <Text class="vacio-titulo">{"No hay proyectos archivados" if archivados else "No hay proyectos que coincidan"}</Text>
-        <Text class="dato">{"Los proyectos archivados aparecen aquí." if archivados else "Prueba con otra búsqueda o crea uno nuevo."}</Text>
+        <text class="vacio-titulo">{"No hay proyectos archivados" if archivados else "No hay proyectos que coincidan"}</text>
+        <text class="dato">{"Los proyectos archivados aparecen aquí." if archivados else "Prueba con otra búsqueda o crea uno nuevo."}</text>
       </flex>
     {/each}
   </flex>

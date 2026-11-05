@@ -11,16 +11,16 @@ select = event()
 
 <flex class="tabla">
   <flex class="fila cabecera">
-    <Text class="nombre">Nombre</Text>
-    <Text class="estado">Estado</Text>
-    <Text class="cpu">CPU</Text>
+    <text class="nombre">Nombre</text>
+    <text class="estado">Estado</text>
+    <text class="cpu">CPU</text>
   </flex>
   {#each rows as row (row["id"])}
     <flex as="option" class={["fila", row["estado"]]} selected={row["id"] == selected}
           label={row["nombre"]} on:click={select.emit(row["id"])}>
-      <Text class="nombre">{row["nombre"]}</Text>
-      <Text class="estado">● {row["estado"]}</Text>
-      <Text class="cpu">{row["cpu"]} %</Text>
+      <text class="nombre">{row["nombre"]}</text>
+      <text class="estado">● {row["estado"]}</text>
+      <text class="cpu">{row["cpu"]} %</text>
     </flex>
   {/each}
 </flex>

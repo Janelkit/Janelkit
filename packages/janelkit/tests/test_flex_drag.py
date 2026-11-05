@@ -36,21 +36,21 @@ def terminar(event):
 def bloquear(event):
     event.prevent()
 </script>
-<Window width={500} height={300}>
+<window width={500} height={300}>
   <flex class="tablero">
     {#each ["a", "b"] as z (z)}
       <flex class="zona" label={z} on:drop={soltar(event, z)} on:dragover={sobre(event, z)}>
         {#each zonas[z] as n (n)}
           <flex class="ficha" label={n} draggable on:dragstart={empezar(event, n)} on:dragend={terminar}
                 on:click={log.append(f"click {n}")}>
-            <Text>{n}</Text>
+            <text>{n}</text>
           </flex>
         {/each}
       </flex>
     {/each}
-    <flex class="fija" label="fija" draggable on:dragstart={bloquear}><Text>fija</Text></flex>
+    <flex class="fija" label="fija" draggable on:dragstart={bloquear}><text>fija</text></flex>
   </flex>
-</Window>
+</window>
 <style>
 .tablero { gap: 10px; padding: 10px; }
 .zona { direction: column; width: 150px; height: 200px; gap: 4px; padding: 4px; border: 1px solid #888888; }
@@ -129,13 +129,13 @@ from janelkit import state
 filas = state([f"f{i}" for i in range(60)])
 soltada = state("")
 </script>
-<Window width={300} height={240}>
-  <List>
+<window width={300} height={240}>
+  <list>
     {#each filas as f (f)}
-      <flex class="fila" label={f} draggable on:dragstart={event.data = f} on:drop={soltada = f}><Text>{f}</Text></flex>
+      <flex class="fila" label={f} draggable on:dragstart={event.data = f} on:drop={soltada = f}><text>{f}</text></flex>
     {/each}
-  </List>
-</Window>
+  </list>
+</window>
 <style>.fila { height: 30px; }</style>""", encoding="utf-8")
     from PySide6.QtCore import QPoint, Qt
     from PySide6.QtTest import QTest

@@ -35,34 +35,34 @@ def test_files_example_validation_app(tmp_path, monkeypatch):
         names = lambda: [e["name"] for e in app.get("visible")]  # noqa: E731
         assert names() == ["docs", "a.py", "b.txt", "foto.png"]  # carpetas primero, sin ocultos
 
-        app.find("Switch", text="Ocultos").check()
+        app.find("switch", text="Ocultos").check()
         app.wait(until=lambda: ".oculto" in names())
-        app.find("Switch", text="Ocultos").check(False)
+        app.find("switch", text="Ocultos").check(False)
         app.wait(until=lambda: ".oculto" not in names())
 
-        app.find("Select").choose("Tamaño")
+        app.find("select").choose("Tamaño")
         assert names()[1] == "b.txt"  # el archivo más grande, tras las carpetas
         app.find(placeholder="Filtrar por nombre (Ctrl+F)").type(".py")
         assert names() == ["a.py"]
         app.find(placeholder="Filtrar por nombre (Ctrl+F)").type("")
 
-        app.find("Text", text="b.txt").click()  # el clic llega a la fila (FileRow)
+        app.find("text", text="b.txt").click()  # el clic llega a la fila (FileRow)
         app.wait(until=lambda: not app.get("preview").loading)
         assert any(t.startswith("contenido de b") for t in app.texts())
-        assert app.find("Text", text="1.4 KB").visible
-        app.find("Switch", text="Tamaños exactos").check()  # llega a cada FileRow por provide/inject
-        assert app.find("Text", text="1.400 B").visible
-        app.find("Text", text="foto.png").click()
+        assert app.find("text", text="1.4 KB").visible
+        app.find("switch", text="Tamaños exactos").check()  # llega a cada FileRow por provide/inject
+        assert app.find("text", text="1.400 B").visible
+        app.find("text", text="foto.png").click()
         app.wait(until=lambda: not app.get("preview").loading)
         assert "Sin vista previa para archivos .png." in app.texts()
 
-        app.find("Text", text="docs").click()  # entrar en la carpeta
+        app.find("text", text="docs").click()  # entrar en la carpeta
         app.wait(until=lambda: names() == ["guia.md"])
         assert app.get("selected") is None
-        app.find("Button", text="↑ Subir").click()
+        app.find("button", text="↑ Subir").click()
         app.wait(until=lambda: "docs" in names())
 
-        app.find("Button", text="Abrir carpeta…").click()
+        app.find("button", text="Abrir carpeta…").click()
         app.wait(0.02)
         app.answer_dialog(tmp_path / "docs")
         app.wait(until=lambda: names() == ["guia.md"])

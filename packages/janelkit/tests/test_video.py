@@ -1,4 +1,4 @@
-"""<Video> y Frames: fotogramas de cualquier hilo, el último gana, capa sobre la imagen."""
+"""<video> y Frames: fotogramas de cualquier hilo, el último gana, capa sobre la imagen."""
 from __future__ import annotations
 
 import tempfile
@@ -69,12 +69,12 @@ def emitir(imagenes):
     t.start()
     t.join()
 </script>
-<Column>
-  <Video source={frames} width={400} height={400} label="Cámara">
+<column>
+  <video source={frames} width={400} height={400} label="Cámara">
     <flex class="caja" label="caja" />
-  </Video>
-  <Text>{frames.size}</Text>
-</Column>
+  </video>
+  <text>{frames.size}</text>
+</column>
 <style>
 .caja { position: absolute; left: 50%; top: 0; width: 25%; height: 100% }
 </style>
@@ -117,7 +117,7 @@ def test_the_overlay_covers_exactly_the_visible_image():
 
 
 def test_fit_cover_crops_and_the_overlay_follows(app_from):
-    app = app_from(APP.replace("<Video source={frames}", '<Video source={frames} fit="cover"'))
+    app = app_from(APP.replace("<video source={frames}", '<video source={frames} fit="cover"'))
     app.namespace["emitir"]([image(800, 400)])  # 2:1 recortada a 400 × 400: la imagen mide 800 × 400
     app.wait(0.05)
     assert box(app, "caja") == (200, 0, 200, 400)
@@ -183,9 +183,9 @@ from janelkit import Frames, state
 frames = Frames()
 ver = state(True)
 </script>
-<Column>
-  {#if ver}<Video source={frames} />{/if}
-</Column>""")
+<column>
+  {#if ver}<video source={frames} />{/if}
+</column>""")
     frames = app.namespace["frames"]
     assert len(frames._hub._sinks) == 1
     app.namespace["ver"].value = False
@@ -208,14 +208,14 @@ def pct(valor, eje):              # de píxeles de la imagen a % de la capa
     tamaño = frames.size or (1, 1)
     return f"{100 * valor / tamaño[eje]}%"
 </script>
-<Column>
-  <Video source={frames} width={400} height={400} label="Cámara">
+<column>
+  <video source={frames} width={400} height={400} label="Cámara">
     {#each caras as c}
       <flex class="cara" label="cara" style={{"left": pct(c[0], 0), "top": pct(c[1], 1), "width": pct(c[2], 0), "height": pct(c[3], 1)}} />
     {/each}
-  </Video>
-  <Text>{frames.fps:.0f} fps</Text>
-</Column>
+  </video>
+  <text>{frames.fps:.0f} fps</text>
+</column>
 <style>
 .cara { position: absolute; border: 2px solid red }
 </style>""")

@@ -29,11 +29,11 @@ Se quedan en el núcleo los controles con los que se escribe un formulario (`<ch
 
 | Paquete | Qué es | Depende de |
 |---|---|---|
-| `packages/janelkit` | El núcleo: lenguaje, compilador, reactividad, runtime, controles, CLI, inspección | PySide6, qasync |
+| `packages/janelkit` | El núcleo: lenguaje, compilador, reactividad, runtime, controles, CLI, inspección | PySide6-Essentials, qasync |
 | `packages/janelkit-router` | Navegación: pilas de páginas, secciones, `<Pages>`, `<Sections>` | `janelkit`, solo su API pública |
 | `packages/janelkit-store` | Stores: datos compartidos con acciones, modo estricto, seguimiento de cambios y persistencia; `persisted` | `janelkit`, solo su API pública |
 | `packages/janelkit-i18n` | Traducciones: catálogos, plurales, formatos | `janelkit`, solo su API pública |
-| `packages/janelkit-desktop` | Diálogos, portapapeles, notificaciones | `janelkit`, solo su API pública |
+| `packages/janelkit-desktop` | Diálogos y portapapeles | `janelkit`, solo su API pública |
 | `packages/janelkit-vscode` | Resaltado de `.janel` en VS Code | — |
 | `apps/examples` | Ejemplos pequeños, uno por tema, con pruebas | `janelkit` y extensiones |
 | `apps/challenges` | Aplicaciones grandes que ponen a prueba el núcleo, con pruebas | `janelkit` y extensiones |
@@ -169,7 +169,7 @@ Tiempos indicativos (Windows 11, `offscreen` salvo que se diga), para saber qué
 | 1280 × 720 | 60,1 fps | 0,62 ms | 0,94 / 1,29 ms | 2,6 % |
 | 1920 × 1080 | 59,6 fps | 1,07 ms | 1,54 / 1,84 ms | 6,2 % |
 
-`push` copia y convierte la imagen en el hilo que lo llama, así que el de la interfaz solo entrega un `QVideoFrame` ya listo.
+`push` copia y convierte la imagen en el hilo que lo llama, así que el de la interfaz solo entrega un `QImage` ya listo, que `JkVideoSurface` sube como textura de Qt Quick (sin QtMultimedia, que está en PySide6-Addons). Medido en la 0.2 contra el `VideoOutput` de antes, alternando ejecuciones con ventana: los mismos fotogramas entregados y la misma CPU dentro del ruido de la medición.
 
 ## Herramientas
 

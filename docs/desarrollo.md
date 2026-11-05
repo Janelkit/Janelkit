@@ -137,7 +137,7 @@ Si falta un `.janel`, un módulo o un tipo QML, el ejecutable termina con códig
 
 ### Tamaño
 
-La carpeta incluye Qt completo: con `apps/examples/files` ocupa 341 MB sin comprimir y 146 MB en un .zip. Se puede reducir excluyendo módulos de Qt que la aplicación no usa (`--exclude-module PySide6.QtWebEngineCore`, `QtMultimedia`, `Qt3D*`…). Comprueba siempre el resultado tras excluir.
+La carpeta incluye los módulos de Qt instalados: con `apps/examples/files` y PySide6 completo ocupaba 341 MB sin comprimir y 146 MB en un .zip. Desde la 0.2, JanelKit instala solo PySide6-Essentials, sin los Addons. Se puede reducir excluyendo módulos de Qt que la aplicación no usa (`--exclude-module PySide6.QtWebEngineCore`, `QtMultimedia`, `Qt3D*`…). Comprueba siempre el resultado tras excluir.
 
 ### Límites
 

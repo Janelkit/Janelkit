@@ -111,7 +111,7 @@ _REMOVED = {
 
 
 def __getattr__(name: str):
-    # Importación diferida: Frames carga QtMultimedia, que solo necesitan las apps con vídeo.
+    # Importación diferida: Frames carga QtGui, que `from janelkit import state` no necesita.
     if name == "Frames":
         from .video import Frames
 

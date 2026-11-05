@@ -6,11 +6,11 @@ import threading
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QObject
 from PySide6.QtGui import QImage
 
 from janelkit import Frames
 from janelkit.inspect import mount
+from janelkit.qt_backend.video_surface import JkVideoSurface
 
 
 @pytest.fixture
@@ -37,12 +37,12 @@ def image(w: int, h: int, pixel: bytes = b"\x00\x00\x00") -> memoryview:
     return memoryview(bytearray(pixel * (w * h))).cast("B", (h, w, len(pixel)))
 
 
-def outputs(app) -> list[QObject]:
-    return [o for o in app.window.findChildren(QObject) if o.metaObject().className() == "QQuickVideoOutput"]
+def surfaces(app) -> list[JkVideoSurface]:
+    return app.window.findChildren(JkVideoSurface)
 
 
 def shown(app, i: int = 0) -> QImage:
-    return outputs(app)[i].property("videoSink").videoFrame().toImage()
+    return surfaces(app)[i].image()
 
 
 def box(app, label: str) -> tuple[float, float, float, float]:
@@ -116,6 +116,37 @@ def test_the_overlay_covers_exactly_the_visible_image():
         assert box(app, "caja") == (200, 0, 50, 400)
 
 
+def test_the_frame_is_drawn_only_where_the_image_is(app_from):
+    app = app_from('<script>\nfrom janelkit import Frames\nframes = Frames()\n</script>\n'
+                   '<video source={frames} width={400} height={400} />')
+    frames = app.namespace["frames"]
+    behind = app.screenshot().pixelColor(200, 40).name()  # el fondo de la ventana
+    frames.push(image(640, 360, b"\xff\x00\x00"))  # rojo, 16:9: bandas arriba y abajo
+    app.wait(0.05)
+    shot = app.screenshot()
+    assert shot.pixelColor(200, 200).name() == "#ff0000"
+    assert shot.pixelColor(200, 40).name() == behind  # banda
+    frames.push(image(640, 360, b"\x00\x00\xff"))
+    app.wait(0.05)
+    assert app.screenshot().pixelColor(200, 200).name() == "#0000ff"  # el nuevo fotograma sustituye al anterior
+    frames.clear()
+    app.wait(0.05)
+    assert app.screenshot().pixelColor(200, 200).name() != "#0000ff"
+
+
+def test_transparent_frames_show_what_is_behind(app_from):
+    app = app_from('<script>\nfrom janelkit import Frames\nframes = Frames(color="rgba")\n</script>\n'
+                   '<video source={frames} width={400} height={400} />')
+    frames = app.namespace["frames"]
+    behind = app.screenshot().pixelColor(200, 200).name()  # el fondo de la ventana
+    frames.push(image(4, 4, b"\xff\x00\x00\x00"))  # rojo del todo transparente
+    app.wait(0.05)
+    assert app.screenshot().pixelColor(200, 200).name() == behind != "#ff0000"
+    frames.push(image(4, 4, b"\xff\x00\x00\xff"))  # rojo opaco
+    app.wait(0.05)
+    assert app.screenshot().pixelColor(200, 200).name() == "#ff0000"
+
+
 def test_fit_cover_crops_and_the_overlay_follows(app_from):
     app = app_from(APP.replace("<video source={frames}", '<video source={frames} fit="cover"'))
     app.namespace["emitir"]([image(800, 400)])  # 2:1 recortada a 400 × 400: la imagen mide 800 × 400
@@ -174,10 +205,10 @@ def test_size_fps_and_clear(app_from):
     frames.clear()
     app.wait(0.02)
     assert frames.size is None and frames.latest() is None
-    assert not outputs(app)[0].property("videoSink").videoFrame().isValid()
+    assert shown(app).isNull()
 
 
-def test_a_video_that_goes_away_lets_go_of_its_sink(app_from):
+def test_a_video_that_goes_away_lets_go_of_its_surface(app_from):
     app = app_from("""<script>
 from janelkit import Frames, state
 frames = Frames()
@@ -195,7 +226,7 @@ ver = state(True)
     app.namespace["ver"].value = True
     app.wait(0.05)
     assert len(frames._hub._sinks) == 1
-    assert frames._hub._sinks[0].videoFrame().isValid()  # muestra el último al engancharse
+    assert not frames._hub._sinks[0].image().isNull()  # muestra el último al engancharse
 
 
 def test_the_documented_example_runs(app_from):

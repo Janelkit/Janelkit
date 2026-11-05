@@ -14,8 +14,9 @@
     <video source={frames} />
 
 Los fotogramas no pasan por la reactividad: `push()` (desde cualquier hilo)
-convierte la imagen a un `QVideoFrame` en el hilo que llama y avisa al de la
-interfaz, que entrega a cada `<video>` el más reciente. Si llegan más deprisa de
+copia y convierte la imagen a un `QImage` listo para subir a la GPU en el hilo que
+llama y avisa al de la interfaz, que entrega a cada `<video>` el más reciente
+(qt_backend/video_surface.py, sin QtMultimedia). Si llegan más deprisa de
 lo que se entregan, se saltan: nunca se encolan. Lo reactivo es `size` y `fps`.
 
 Sin numpy como dependencia: la imagen se lee con `memoryview` (alto × ancho de
@@ -30,7 +31,6 @@ from typing import Any
 
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from PySide6.QtGui import QImage
-from PySide6.QtMultimedia import QVideoFrame
 
 from .reactivity import State, batch
 from .reactivity.effects import check_thread
@@ -44,8 +44,8 @@ _FORMATS = {
 _CHANNELS = {"rgb": 3, "bgr": 3, "rgba": 4, "bgra": 4}
 
 
-def _to_frame(image: Any, color: str) -> QVideoFrame:
-    """Copia `image` a un `QVideoFrame` en un formato que Qt muestra sin convertir."""
+def _to_frame(image: Any, color: str) -> tuple[QImage, bool]:
+    """Copia `image` a un `QImage` que Qt Quick sube a la GPU sin convertir; y si es opaca."""
     if isinstance(image, QImage):
         qimage = image
     else:
@@ -66,11 +66,13 @@ def _to_frame(image: Any, color: str) -> QVideoFrame:
         if not view.c_contiguous:  # p. ej. un recorte de un array de numpy
             view = memoryview(view.tobytes()).cast("B", view.shape)
         qimage = QImage(view, width, height, width * channels, fmt)
-    has_alpha = qimage.hasAlphaChannel()
+    opaque = not qimage.hasAlphaChannel()
+    # RGBA premultiplicado es el formato en que Qt Quick sube las texturas: convertir aquí, en el
+    # hilo que llama, evita que lo haga el de la interfaz (unos 3 ms por fotograma de 1080p).
     # convertToFormat copia (también cuando el formato ya es el bueno): el búfer se puede reutilizar.
-    target = QImage.Format.Format_RGBA8888 if has_alpha else QImage.Format.Format_RGBX8888
+    target = QImage.Format.Format_RGBA8888_Premultiplied
     qimage = qimage.convertToFormat(target) if qimage.format() != target else qimage.copy()
-    return QVideoFrame(qimage)
+    return qimage, opaque
 
 
 class _Hub(QObject):
@@ -90,11 +92,11 @@ class _Hub(QObject):
 
     @Slot(QObject)
     def attach(self, sink: QObject) -> None:
+        """Engancha una superficie de `<video>` (JkVideoSurface) y le da el último fotograma."""
         if sink is not None and sink not in self._sinks:
             self._sinks.append(sink)
-            frame = self._frames._shown
-            if frame is not None:
-                sink.setVideoFrame(frame)
+            if self._frames._shown is not None:
+                sink.setImage(*self._frames._shown)
 
     @Slot(QObject)
     def detach(self, sink: QObject) -> None:
@@ -105,10 +107,10 @@ class _Hub(QObject):
     def _deliver(self) -> None:
         self._frames._deliver()
 
-    def show(self, frame: QVideoFrame) -> None:
+    def show(self, frame: QImage, opaque: bool = True) -> None:
         for sink in list(self._sinks):
             try:
-                sink.setVideoFrame(frame)
+                sink.setImage(frame, opaque)
             except RuntimeError:  # la vista ya no existe
                 self._sinks.remove(sink)
 
@@ -128,9 +130,9 @@ class Frames:
         check_thread()
         self.color = color
         self._lock = threading.Lock()
-        self._pending: tuple[Any, QVideoFrame] | None = None
+        self._pending: tuple[Any, tuple[QImage, bool]] | None = None
         self._latest: Any = None
-        self._shown: QVideoFrame | None = None
+        self._shown: tuple[QImage, bool] | None = None  # (fotograma, opaco)
         self._shown_image: Any = None  # el objeto que se pasó a push() con el fotograma mostrado
         self._seq = 0
         self._waiters: list[asyncio.Future] = []
@@ -165,11 +167,11 @@ class Frames:
         image, frame = pending
         self._seq += 1
         self._shown, self._shown_image = frame, image
-        self._hub.show(frame)
+        self._hub.show(*frame)
         self._count += 1
         now = time.perf_counter()
         with batch():
-            size = frame.size()
+            size = frame[0].size()
             self._size.value = (size.width(), size.height())
             if now - self._since >= 1.0:
                 self._fps.value = round(self._count / (now - self._since), 1)
@@ -191,7 +193,7 @@ class Frames:
             self._pending = None
             self._latest = None
         self._shown = self._shown_image = None
-        self._hub.show(QVideoFrame())
+        self._hub.show(QImage())
         self._size.value = None
 
     def next(self) -> "asyncio.Future[Any]":

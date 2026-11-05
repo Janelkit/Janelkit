@@ -1,11 +1,11 @@
 # Versiones mínimas que admite JanelKit (packages/janelkit/pyproject.toml), con las que también pasa
-# la suite: Python 3.10 y PySide6 6.8 (LTS de Qt). Sirve para comprobar que no se
+# la suite: Python 3.10 y PySide6-Essentials 6.8 (LTS de Qt). Sirve para comprobar que no se
 # usa nada más nuevo de lo declarado.
 #
 #   py -3.10 -m venv .venv310
 #   .venv310\Scripts\python -m pip install -r requirements-min.txt
 
-PySide6==6.8.3
+PySide6-Essentials==6.8.3
 qasync==0.28.0
 
 -e packages/janelkit

@@ -535,7 +535,7 @@ def pct(valor, eje):               # de píxeles de la imagen a % de la capa (ej
 - `async for img in frames` da el objeto que se pasó a `push`. Con `background()`, el modelo corre en otro hilo y la vista previa no espera por él. `await frames.next()` espera al próximo.
 - `frames.size` (`(ancho, alto)` o `None`) y `frames.fps` son reactivos. `frames.latest()` es el último fotograma; `frames.clear()` deja la vista en blanco.
 - Los hijos de `<video>` van en una caja con `position: relative` del tamaño exacto de la imagen que se ve, así que los porcentajes son de la imagen, también con `fit="contain"` (bandas) o `"cover"` (recortada). Para un espejo (cámara frontal), voltea la imagen antes de `push` (`cv2.flip(img, 1)`): así las coordenadas siguen coincidiendo.
-- Abrir cámaras no es del núcleo: con OpenCV (`cv2.VideoCapture`) o QtMultimedia, en un hilo propio.
+- Abrir cámaras no es del núcleo: con OpenCV (`cv2.VideoCapture`) o QtMultimedia, en un hilo propio. QtMultimedia está en PySide6-Addons, que JanelKit no instala: `pip install PySide6-Addons`.
 
 ## Listas grandes: `<list>`
 
@@ -811,7 +811,7 @@ Propiedades comunes a todos salvo `window`: `width`, `height`, `flex`, `visible`
 | `tabs` | `TabBar` | `options`, `value` | `on:change(valor)` | `bind:value` |
 | `progressbar` | `ProgressBar` | `value`, `max` (1), `indeterminate` | — | — |
 | `image` | `Image` | `src`, `fit` (`contain`, `cover`, `fill`, `none`), `alt` | — | — |
-| `video` | `VideoOutput` | `source` (un `Frames`), `fit` (`contain`, `cover`, `fill`) | — | — |
+| `video` | `JkVideoSurface` (una textura de Qt Quick) | `source` (un `Frames`), `fit` (`contain`, `cover`, `fill`) | — | — |
 | `shortcut` | `Shortcut` | `keys` | `on:activate` | — |
 | `spacer` | `Item` | — | — | — |
 

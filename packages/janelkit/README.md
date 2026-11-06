@@ -3,30 +3,34 @@
 [![PyPI](https://img.shields.io/pypi/v/janelkit)](https://pypi.org/project/janelkit/)
 [![Python](https://img.shields.io/pypi/pyversions/janelkit)](https://pypi.org/project/janelkit/)
 [![CI](https://github.com/janelkit/janelkit/actions/workflows/ci.yml/badge.svg)](https://github.com/janelkit/janelkit/actions/workflows/ci.yml)
-[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue)](https://github.com/janelkit/janelkit/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/janelkit/janelkit/blob/main/LICENSE)
 
-**Aplicaciones de escritorio con componentes de archivo único, escritas en Python.**
+**A new window for Python.** Desktop apps written entirely in Python, one file per component, rendered with Qt Quick.
 
-Cada componente `.janel` reúne en un archivo la lógica en Python, una plantilla declarativa y reactiva, y sus estilos en CSS. JanelKit lo compila a Qt Quick (PySide6): interfaces nativas y aceleradas por GPU en Windows, macOS y Linux, sin escribir JavaScript ni QML.
+[Leer en español](https://github.com/janelkit/janelkit/blob/main/README.es.md)
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/janelkit/janelkit/main/docs/img/kanban.png" alt="A Kanban board built with JanelKit: four columns of cards with colored tags, people and dates, a search field and filters" width="820">
+  <br>
+  <sub>A Kanban board built with JanelKit: 842 lines of <code>.janel</code> and Python, and 12 tests that run without a screen. <a href="https://github.com/janelkit/janelkit/tree/main/apps/challenges/kanban">Source</a></sub>
+</p>
 
 ```bash
 pip install janelkit
-janel new mi-app
-cd mi-app
+janel new my-app
+cd my-app
 python main.py
 ```
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/janelkit/janelkit/main/docs/img/tutorial.png" alt="La aplicación del tutorial: una lista de la compra con un campo, un botón Añadir y tres productos con casillas" width="360">
-</p>
+## One file per component
 
-## Un componente
+A `.janel` file holds a component's logic, template and styles. Everything between `{` and `}` is Python, and the interface follows your state: when a value changes, only what depends on it is updated.
 
 ```html
 <script lang="python">
 from janelkit import state, computed
 
-todos = state([{"id": 1, "title": "Probar JanelKit", "done": False}])
+todos = state([{"id": 1, "title": "Try JanelKit", "done": False}])
 draft = state("")
 
 @computed
@@ -38,17 +42,15 @@ def add():
     draft.value = ""
 </script>
 
-<window title="Tareas" width={480} height={400}>
+<window title="Tasks" width={420} height={360}>
   <column class="page">
-    <text class="title">{pending} pendientes</text>
+    <text class="title">{pending} pending</text>
     <row class="new">
-      <textfield bind:value={draft} on:submit={add} placeholder="Nueva tarea" flex={1} />
-      <button variant="primary" on:click={add}>Añadir</button>
+      <textfield bind:value={draft} on:submit={add} placeholder="New task" flex={1} />
+      <button variant="primary" on:click={add}>Add</button>
     </row>
     {#each todos as todo (todo["id"])}
       <checkbox checked={todo["done"]} on:change={todo["done"] = event}>{todo["title"]}</checkbox>
-    {:else}
-      <text>No hay tareas.</text>
     {/each}
   </column>
 </window>
@@ -60,84 +62,79 @@ def add():
 </style>
 ```
 
-Cuando cambia un `state`, solo se recalcula lo que lo leyó, y solo se actualiza en pantalla lo afectado. Las listas y diccionarios son reactivos también al modificarlos en el sitio (`append`, `todo["done"] = True`).
+<p align="center"><img src="https://raw.githubusercontent.com/janelkit/janelkit/main/docs/img/example.png" alt="The window this component opens: '2 pending', a text field with an Add button and three tasks with checkboxes" width="320"></p>
 
-## Por qué JanelKit
-
-- **Python de principio a fin.** La lógica, los manejadores y las expresiones de la plantilla son Python: tus módulos, tus bibliotecas y tus pruebas de siempre.
-- **Rendimiento nativo.** Qt Quick dibuja; JanelKit solo avisa de lo que cambió. Una aplicación mediana arranca en menos de 300 ms y responde en menos de 70 ms. Una `<list>` virtualizada crea 10 000 filas en unos 40 ms.
-- **Errores que ayudan.** Cada error indica archivo, línea y columna, con sugerencias («¿quisiste decir `on:click`?»), también los que vienen de Qt o de la ejecución.
-- **Recarga al guardar.** `janel dev` recarga la vista y conserva el estado de los componentes cuyo script no cambió.
-- **Probado a fondo.** Una suite extensa de pruebas que la CI ejecuta en Windows, Linux y macOS, y cinco aplicaciones grandes de validación (chat, panel en tiempo real, Kanban, hoja de cálculo y gestor de proyectos) construidas sin tocar el framework.
-- **API pública explícita.** Qué es público está documentado y protegido por pruebas, con una [política de versiones](https://github.com/janelkit/janelkit/blob/main/docs/api.md#política-de-versiones) clara.
-
-## Qué incluye
-
-| Área | Contenido |
-|---|---|
-| **Reactividad** | `state`, `@computed` (también en métodos), `effect`, `batch`, colecciones reactivas. Los stores y `persisted` están en [`janelkit-store`](https://pypi.org/project/janelkit-store/) |
-| **Plantilla** | `{expr}` con formato (`{cpu:.1f}`), `on:evento`, `bind:value`, `class:x={cond}`, `{#if}`, `{#each}` con claves, `{#key}`, `{#hidden}`, transiciones |
-| **Componentes** | Importados como módulos Python, `prop()` con tipos, `event()`, slots, `on_mount`/`on_destroy`, `ref`, `provide`/`inject` |
-| **Asincronía** | Manejadores `async def`, `@task` con estados de carga y error, `background()` para trabajo bloqueante, temporizadores; todo se cancela al desmontar |
-| **Disposición y estilos** | Flexbox de CSS (`<flex>`, `column`, `row`), posición, pseudo-clases y selectores, tokens `var(--primary)`, temas claro y oscuro intercambiables en caliente |
-| **Controles** | Texto (también Markdown), botones, campos, casillas, `select`, `switch`, `slider`, `radiogroup`, `tabs`, `image`, `progressbar`, `<list>` virtualizada, `<video>`, arrastrar y soltar |
-| **Ventanas** | Varias ventanas, en otra pantalla y a pantalla completa, `before_leave` para cambios sin guardar. La navegación entre pantallas está en [`janelkit-router`](https://pypi.org/project/janelkit-router/) |
-| **Accesibilidad** | Navegación con teclado, foco visible, nombres accesibles, derecha a izquierda |
-| **Interoperabilidad** | Importa un `.qml` propio como si fuera un componente |
-| **Pruebas** | `janelkit.inspect`: monta sin ventana, busca elementos, simula clics y teclas, lee el estado |
-
-## Comandos
-
-| Comando | Qué hace |
-|---|---|
-| `janel new <nombre>` | Crea un proyecto con `main.py` y `src/App.janel`. |
-| `janel dev [carpeta]` | Ejecuta la aplicación y la recarga al guardar. |
-| `janel build [carpeta]` | Valida todos los componentes y guarda el QML generado. |
-| `janel compile <archivo>` | Muestra el QML generado de un componente. |
-| `janel parse <archivo>` | Muestra el árbol sintáctico o los errores con línea y columna. |
-
-## Probar una aplicación
+Its test drives the app the way a user would, without opening a window:
 
 ```python
-from janelkit import inspect
+from janelkit.inspect import mount
 
-def test_add(tmp_path):
-    with inspect.mount("src/App.janel") as app:
-        app.find(placeholder="Nueva tarea").type("Pan")
-        app.find(text="Añadir").click()
-        assert app.find(text="1 pendientes")
+def test_add_a_task():
+    with mount("src/App.janel") as app:
+        app.find(placeholder="New task").type("Buy milk").submit()
+        app.find("checkbox", text="Buy milk").check()
+        assert "1 pending" in app.texts()
 ```
 
-## Ecosistema
+Lowercase tags come with JanelKit (`<text>`, `<button>`, `<column>`). Capitalized tags are components you import like any Python module (`from components.TodoItem import TodoItem`).
 
-| Paquete | Qué añade |
+## Why JanelKit
+
+- **One language.** Logic, template expressions and tests are Python. You never write JavaScript or QML: the compiler generates the QML.
+- **Your libraries in the same process.** A NumPy array, an OpenCV frame or a model's result goes straight to the interface, with no server in between and nothing to serialize. `<video>` shows frames pushed from any thread: at 1080p they reach the screen in 17 ms (median) on a 2013 laptop. [Figures and limits](https://github.com/janelkit/janelkit/blob/main/docs/patrones.md#qué-latencia-esperar-y-para-qué-no-sirve)
+- **Errors that point at your code.** `janel build` checks every component before anything runs. Errors, including those raised by Qt or at run time, come back with the `.janel` file, line and column, and a suggestion when there is one.
+- **Save and see it.** `janel dev` reloads the window when you save, and keeps the state of every component whose script didn't change.
+- **Tests without a screen.** `janelkit.inspect` mounts the app headless and drives it like a user. JanelKit's own suite runs this way on Windows, macOS and Linux.
+- **A small core.** Navigation, shared data, native dialogs and translations are separate packages that you add when you need them.
+
+## Is it for you?
+
+**A good fit:** desktop tools that work with live data, cameras or models (inspection, labeling, lab and machine dashboards), internal tools, and any app whose logic is already in Python.
+
+**Not covered today:**
+
+- Web and mobile apps: JanelKit is for the desktop.
+- Installers and code signing: there is a [PyInstaller recipe](https://github.com/janelkit/janelkit/blob/main/docs/desarrollo.md#distribuir-un-ejecutable-con-pyinstaller); MSI, DMG and AppImage are up to you.
+- Video that needs less than one display refresh of latency, hard deadlines or audio: see [what it is not for](https://github.com/janelkit/janelkit/blob/main/docs/patrones.md#qué-latencia-esperar-y-para-qué-no-sirve).
+- English documentation: the guides and the compiler messages are in Spanish for now.
+
+## Learn
+
+The guides are in Spanish:
+
+| Guide | What's in it |
 |---|---|
-| [`janelkit-router`](https://pypi.org/project/janelkit-router/) | Navegación entre pantallas: pilas de páginas y secciones. |
-| [`janelkit-store`](https://pypi.org/project/janelkit-store/) | Datos compartidos: stores con acciones, escritura controlada y seguimiento de cambios; `persisted`. |
-| [`janelkit-i18n`](https://pypi.org/project/janelkit-i18n/) | Traducciones, plurales, formatos según el idioma y cambio de idioma en caliente. |
-| [`janelkit-desktop`](https://pypi.org/project/janelkit-desktop/) | Diálogos nativos (archivos, carpeta, mensaje, confirmación) y portapapeles. |
-| [Resaltado para VS Code](https://github.com/janelkit/janelkit/tree/main/packages/janelkit-vscode) | Sintaxis de `.janel`: Python, plantilla y CSS. |
+| [Tutorial](https://github.com/janelkit/janelkit/blob/main/docs/tutorial.md) | **Start here:** a complete app, step by step |
+| [Language](https://github.com/janelkit/janelkit/blob/main/docs/lenguaje.md) | The `.janel` format: expressions, blocks, components, built-in elements |
+| [Styles](https://github.com/janelkit/janelkit/blob/main/docs/estilos.md) | Supported CSS, flex layout, tokens, light and dark themes |
+| [Real-time patterns](https://github.com/janelkit/janelkit/blob/main/docs/patrones.md) | Cameras, models and data acquisition: loops, frames, latency |
+| [Development](https://github.com/janelkit/janelkit/blob/main/docs/desarrollo.md) | `janel dev`, `janel build`, errors, tests, executables |
+| [Public API](https://github.com/janelkit/janelkit/blob/main/docs/api.md) · [Changes](https://github.com/janelkit/janelkit/blob/main/docs/cambios.md) | What is public, the versioning policy and how to migrate |
 
-## Requisitos
+[Examples](https://github.com/janelkit/janelkit/tree/main/apps/examples): small apps, one topic each. [Challenges](https://github.com/janelkit/janelkit/tree/main/apps/challenges): large apps that put the framework to the test, including a chat client, a project manager, the Kanban board above, a 10 000 × 26 spreadsheet and a live system monitor.
 
-- Python 3.10 o posterior.
-- PySide6-Essentials 6.8 o posterior, salvo la 6.12.0: los módulos básicos de Qt, sin los Addons (se instala solo).
-- Windows, macOS o Linux.
+## Packages
 
-## Estado
+`pip install janelkit` is all a one-screen app needs. Add the rest when you need it:
 
-JanelKit está en **alfa** (serie 0.x). Lo público está [documentado](https://github.com/janelkit/janelkit/blob/main/docs/api.md). Cada serie (0.1, 0.2…) es un cambio de paradigma que puede romperlo; dentro de una serie (0.2.0.0, 0.2.1.0…), lo que se rompa o se retire sigue funcionando con un aviso cuando es viable. Todo cambio se anuncia en las [notas de la versión](https://github.com/janelkit/janelkit/blob/main/docs/cambios.md) con cómo migrar.
+| You need | Install |
+|---|---|
+| Several screens: page stacks, a sidebar with sections | [`janelkit-router`](https://pypi.org/project/janelkit-router/) |
+| Data shared by several views or windows, remembered between sessions | [`janelkit-store`](https://pypi.org/project/janelkit-store/) |
+| Native file and system dialogs, clipboard | [`janelkit-desktop`](https://pypi.org/project/janelkit-desktop/) |
+| Translations | [`janelkit-i18n`](https://pypi.org/project/janelkit-i18n/) |
+| `.janel` syntax highlighting in VS Code | [`janelkit-vscode`](https://github.com/janelkit/janelkit/tree/main/packages/janelkit-vscode) |
 
-## Documentación
+## Requirements
 
-- [Tutorial](https://github.com/janelkit/janelkit/blob/main/docs/tutorial.md): una aplicación completa paso a paso. **Empieza aquí.**
-- [El lenguaje `.janel`](https://github.com/janelkit/janelkit/blob/main/docs/lenguaje.md): expresiones, bloques, componentes y elementos.
-- [Estilos y disposición](https://github.com/janelkit/janelkit/blob/main/docs/estilos.md): CSS soportado, flexbox, tokens y temas.
-- [Desarrollo](https://github.com/janelkit/janelkit/blob/main/docs/desarrollo.md): `janel dev`, `janel build`, errores y editor.
-- [API pública](https://github.com/janelkit/janelkit/blob/main/docs/api.md) y [cambios entre versiones](https://github.com/janelkit/janelkit/blob/main/docs/cambios.md).
-- [Crear un ejecutable](https://github.com/janelkit/janelkit/blob/main/docs/desarrollo.md#distribuir-un-ejecutable-con-pyinstaller) con PyInstaller.
-- [Ejemplos](https://github.com/janelkit/janelkit/tree/main/apps/examples): contador, tareas, notas, explorador de archivos, cliente de una API, idiomas, vídeo…
+- Python 3.10 or later.
+- PySide6-Essentials 6.8 or later, except 6.12.0: Qt's essential modules, without the Add-ons. It is installed automatically.
+- Windows, macOS or Linux.
 
-## Licencia
+## Status
 
-[MIT](https://github.com/janelkit/janelkit/blob/main/LICENSE). JanelKit usa [PySide6](https://pypi.org/project/PySide6/) (Qt for Python), que se distribuye bajo LGPL-3.0: si empaquetas tu aplicación con Qt incluido, revisa sus [condiciones](https://doc.qt.io/qtforpython-6/licenses.html).
+**Alpha (0.2).** The public API is documented in [api.md](https://github.com/janelkit/janelkit/blob/main/docs/api.md) and protected by tests. Each series (0.1, 0.2…) may break it, always with migration notes in [cambios.md](https://github.com/janelkit/janelkit/blob/main/docs/cambios.md) and `janel migrate`.
+
+## License
+
+[MIT](https://github.com/janelkit/janelkit/blob/main/LICENSE). JanelKit uses [PySide6](https://pypi.org/project/PySide6/) (Qt for Python), distributed under LGPL-3.0: if you ship an app that bundles Qt, review its [terms](https://doc.qt.io/qtforpython-6/licenses.html).

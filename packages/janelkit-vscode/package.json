@@ -1,8 +1,8 @@
 {
   "name": "janelkit-janel",
   "displayName": "JanelKit (.janel)",
-  "description": "Resaltado de sintaxis para componentes .janel de JanelKit: Python en <script> y {expresiones}, CSS en <style>.",
-  "version": "0.1.0",
+  "description": "Componentes .janel de JanelKit: resaltado de sintaxis (Python en <script> y {expresiones}, CSS en <style>) y los errores del compilador mientras escribes.",
+  "version": "0.2.0",
   "publisher": "janelkit",
   "license": "MIT",
   "author": {
@@ -30,7 +30,12 @@
     "vscode": "^1.80.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Linters"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:janel"
   ],
   "contributes": {
     "languages": [
@@ -56,6 +61,27 @@
           "meta.embedded.expression.janel": "python",
           "source.css.embedded.janel": "css"
         }
+      }
+    ],
+    "configuration": {
+      "title": "JanelKit",
+      "properties": {
+        "janelkit.diagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Muestra los errores y avisos del compilador en los .janel mientras escribes (necesita janelkit 0.2.1 o posterior en el entorno de Python del proyecto)."
+        },
+        "janelkit.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Intérprete de Python que tiene janelkit instalado. Vacío: el de .venv o venv en la carpeta del proyecto; si no hay, el de la extensión de Python; si no, python."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "janelkit.restartServer",
+        "title": "JanelKit: reiniciar la comprobación de errores"
       }
     ]
   }

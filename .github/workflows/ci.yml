@@ -111,15 +111,18 @@ jobs:
         run: python -m pytest -q
 
   vscode:
-    name: janelkit-vscode (gramática)
+    name: janelkit-vscode (gramática y cliente de janel lsp)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: python -m pip install pytest
-      - name: Pruebas de la gramática
+      - name: Bibliotecas del sistema para Qt
+        run: sudo apt-get update && sudo apt-get install -y $QT_LINUX_LIBS
+      # El cliente se prueba contra el servidor de verdad: hace falta el núcleo (Node.js ya viene en el runner).
+      - run: python -m pip install pytest -e packages/janelkit
+      - name: Pruebas de la gramática y del cliente
         working-directory: packages/janelkit-vscode
         run: python -m pytest -q tests
 

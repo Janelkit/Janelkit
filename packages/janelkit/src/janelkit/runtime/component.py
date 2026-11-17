@@ -19,6 +19,7 @@ import builtins
 import inspect
 import itertools
 import logging
+import pickle
 import sys
 import types
 import typing
@@ -1082,11 +1083,47 @@ class HotReload:
     script no cambió, sus `state` recuperan el valor que tenían.
     """
 
-    def __init__(self, root: "ComponentInstance"):
+    def __init__(self, root: "ComponentInstance | None" = None):
         self.saved: dict[tuple, tuple[str, dict[str, Any]]] = {}
         self.restored = 0
         self.reset_files: set[str] = set()
-        self._collect(root)
+        if root is not None:
+            self._collect(root)
+
+    def dump(self) -> bytes:
+        """El estado guardado, para recuperarlo en otro proceso (janel dev reinicia al cambiar un `.py`).
+
+        Cada valor va por separado: uno que no se puede guardar (un objeto con un archivo abierto,
+        una clase definida en el script de un componente) se queda fuera sin afectar a los demás.
+        """
+        kept: dict[bytes, tuple[str, dict[str, bytes]]] = {}
+        for path, (script, values) in self.saved.items():
+            try:
+                key = pickle.dumps(path)
+            except Exception:  # noqa: BLE001 - la clave de una fila puede ser cualquier objeto
+                continue
+            good: dict[str, bytes] = {}
+            for name, value in values.items():
+                try:
+                    good[name] = pickle.dumps(value)
+                except Exception:  # noqa: BLE001
+                    continue
+            kept[key] = (script, good)
+        return pickle.dumps(kept)
+
+    @classmethod
+    def load(cls, data: bytes) -> "HotReload":
+        """Lo que guardó `dump`. Los valores que este proceso no sabe reconstruir se descartan."""
+        snapshot = cls()
+        for key, (script, values) in pickle.loads(data).items():
+            good: dict[str, Any] = {}
+            for name, value in values.items():
+                try:
+                    good[name] = pickle.loads(value)
+                except Exception:  # noqa: BLE001 - p. ej. una clase que ya no existe tras editar el .py
+                    continue
+            snapshot.saved[pickle.loads(key)] = (script, good)
+        return snapshot
 
     def _collect(self, instance: "ComponentInstance") -> None:
         if instance.disposed:

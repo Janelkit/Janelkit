@@ -6,6 +6,7 @@ import atexit
 import itertools
 import logging
 import os
+import pickle
 import sys
 import time
 import traceback
@@ -39,6 +40,10 @@ QML_DIR = Path(__file__).resolve().parent.parent / "qml"  # módulo interno `Jan
 DEFAULT_STYLE = "Basic"
 EXIT_AFTER_ENV = "JANELKIT_EXIT_AFTER_MS"  # para pruebas de humo: cierra la app tras N ms
 DEV_ENV = "JANELKIT_DEV"  # modo desarrollo: recarga al guardar (lo activa `janel dev`)
+# Archivo donde la aplicación deja su estado antes de que `janel dev` la reinicie (cambió un `.py`)
+# y de donde lo recupera al arrancar. El supervisor lo pide creando ese mismo nombre con `.save`.
+DEV_STATE_ENV = "JANELKIT_DEV_STATE"
+DEV_STATE_REQUEST = ".save"
 
 _memory_ids = itertools.count(1)
 
@@ -378,9 +383,13 @@ class Application:
 class DevReloader:
     """Modo desarrollo: recompila y vuelve a montar la vista al guardar un `.janel`.
 
-    Es una recarga completa (el estado se reinicia). Si el archivo tiene
-    errores, se muestran en la consola y en una ventana de error, y la última
-    versión correcta sigue abierta.
+    Cada componente cuyo script no cambió conserva el valor de sus `state`. Si
+    el archivo tiene errores, se muestran en la consola y en una ventana de
+    error, y la última versión correcta sigue abierta.
+
+    Cuando cambia un `.py`, el supervisor de `janel dev` reinicia el proceso:
+    antes lo pide (`DEV_STATE_REQUEST`), y `save_state` deja el estado en el
+    archivo de `DEV_STATE_ENV` para que el proceso nuevo lo recupere en `run()`.
     """
 
     def __init__(self, app: Application, entry: Path, mounted: MountedComponent | None, files: list[str]):
@@ -398,6 +407,47 @@ class DevReloader:
         self._error_component: QQmlComponent | None = None
         self._snapshot: dict[str, bytes | None] = {}
         self.watch(files)
+        self.state_file = os.environ.get(DEV_STATE_ENV) or None
+        self._request_timer = QTimer()
+        self._request_timer.setInterval(100)
+        self._request_timer.timeout.connect(self._check_request)
+        if self.state_file:
+            self._request_timer.start()
+
+    def _check_request(self) -> None:
+        request = Path(self.state_file + DEV_STATE_REQUEST)
+        if not request.exists():
+            return
+        self._request_timer.stop()
+        self.save_state()
+        try:
+            request.unlink()
+        except OSError:
+            pass
+        self.app.qt_app.quit()
+
+    def save_state(self) -> bool:
+        """Deja en `state_file` el estado de la vista y la geometría de la ventana.
+
+        Sin vista montada (la aplicación no llegó a arrancar) no escribe nada: el archivo
+        de un arranque anterior, si lo hay, sigue valiendo para el siguiente.
+        """
+        if not self.state_file or self.mounted is None:
+            return False
+        from ..runtime import component as runtime
+
+        geometry = None
+        root = self.mounted.root
+        if Shiboken.isValid(root) and hasattr(root, "geometry"):
+            g = root.geometry()
+            geometry = (g.x(), g.y(), g.width(), g.height())
+        try:
+            data = pickle.dumps({"state": runtime.HotReload(self.mounted.instance).dump(), "geometry": geometry})
+            Path(self.state_file).write_bytes(data)
+        except Exception:  # noqa: BLE001 - no poder guardar no debe impedir el reinicio
+            log.warning("no se pudo guardar el estado antes de reiniciar", exc_info=True)
+            return False
+        return True
 
     def watch(self, files: list[str]) -> None:
         # Solo .janel: los .qml propios los vigila el supervisor de `janel dev`, que reinicia el proceso.
@@ -486,6 +536,21 @@ def _contents(path: str) -> bytes | None:
         return None
 
 
+def _load_dev_state() -> tuple[Any, tuple[int, int, int, int] | None] | None:
+    """(estado, geometría) que dejó el proceso anterior de `janel dev`, si lo dejó."""
+    name = os.environ.get(DEV_STATE_ENV)
+    if not name or not Path(name).is_file():
+        return None
+    from ..runtime import component as runtime
+
+    try:
+        saved = pickle.loads(Path(name).read_bytes())
+        return runtime.HotReload.load(saved["state"]), saved.get("geometry")
+    except Exception:  # noqa: BLE001 - un archivo a medias o de otra versión: se arranca de cero
+        log.warning("no se pudo leer el estado guardado antes de reiniciar", exc_info=True)
+        return None
+
+
 def _print_diagnostics(diags: list[Diagnostic]) -> None:
     for d in diags:
         print(d.format(), file=sys.stderr)
@@ -517,8 +582,12 @@ def run(entry: str | os.PathLike[str], argv: list[str] | None = None) -> int:
 
     app = Application(argv)
     mounted = None
+    previous = _load_dev_state() if dev else None
     if compiled is not None:
         _print_diagnostics(compiled.all_warnings + app.check_tokens(compiled))
+        from ..runtime import component as runtime
+
+        runtime.hot_reload = previous[0] if previous else None
         try:
             mounted = app.mount(compiled)
         except JanelError as exc:
@@ -529,6 +598,21 @@ def run(entry: str | os.PathLike[str], argv: list[str] | None = None) -> int:
             traceback.print_exc()
             if not dev:
                 return 1
+        finally:
+            runtime.hot_reload = None
+    if previous is not None and mounted is not None:
+        # Recuperado: el archivo ya no hace falta. Si no se pudo montar, se queda para el siguiente arranque.
+        snapshot, geometry = previous
+        try:
+            os.unlink(os.environ[DEV_STATE_ENV])
+        except OSError:
+            pass
+        if geometry is not None and hasattr(mounted.root, "setGeometry"):
+            mounted.root.setGeometry(*geometry)
+        detail = f"estado conservado en {snapshot.restored} componente(s)"
+        if snapshot.reset_files:
+            detail += f"; script cambiado, estado reiniciado: {', '.join(sorted(snapshot.reset_files))}"
+        print(f"[janel dev] reiniciado; {detail}", file=sys.stderr, flush=True)
 
     if dev:
         reloader = DevReloader(app, path, mounted, compiled.files if compiled else [str(path)])

@@ -175,3 +175,100 @@ def test_reload_keeps_state_unless_the_script_changed(tmp_path, janel_app, capsy
     finally:
         if reloader.mounted in janel_app.mounted:
             janel_app.unmount(reloader.mounted)
+
+
+def test_state_survives_a_restart_through_the_state_file(tmp_path, janel_app, monkeypatch):
+    """Lo que deja `save_state` lo recupera otro proceso: aquí, una segunda vista montada con lo leído del archivo."""
+    from janelkit.qt_backend import application
+    from janelkit.runtime import component as runtime
+
+    app = tmp_path / "App.janel"
+    child = tmp_path / "Campo.janel"
+    child.write_text('<script>\nfrom janelkit import state\ntexto = state("")\nabierto = state(open)\n</script>\n<text>{texto}</text>', encoding="utf-8")
+    app.write_text(
+        "<script>\nfrom janelkit import state\nfrom Campo import Campo\nn = state(0)\nfilas = state([])\n</script>\n"
+        "<column><text>n={n} filas={len(filas)}</text><Campo /></column>",
+        encoding="utf-8",
+    )
+    state_file = tmp_path / "state.pickle"
+    monkeypatch.setenv(application.DEV_STATE_ENV, str(state_file))
+    compiled = compile_file(app)
+    mounted = janel_app.mount(compiled)
+    reloader = application.DevReloader(janel_app, app, mounted, compiled.files)
+    try:
+        mounted.instance.namespace["n"].value = 7
+        mounted.instance.namespace["filas"].value = [{"id": 1}, {"id": 2}]
+        mounted.instance.children[0].namespace["texto"].value = "escrito"
+        mounted.root.setGeometry(40, 50, 333, 222)
+        assert reloader.save_state() is True
+    finally:
+        reloader._request_timer.stop()
+        janel_app.unmount(mounted)
+
+    # El script de Campo cambia entre un proceso y otro: su estado empieza de cero, el de App se conserva.
+    child.write_text(child.read_text(encoding="utf-8").replace('state("")', 'state("nuevo")'), encoding="utf-8")
+    snapshot, geometry = application._load_dev_state()
+    assert geometry == (40, 50, 333, 222)
+    runtime.hot_reload = snapshot
+    try:
+        again = janel_app.mount(compile_file(app))
+    finally:
+        runtime.hot_reload = None
+    try:
+        janel_app.qt_app.processEvents()
+        assert texts(again) == ["n=7 filas=2", "nuevo"]
+        assert snapshot.restored == 1 and snapshot.reset_files == {"Campo.janel"}
+    finally:
+        janel_app.unmount(again)
+
+
+def test_unpicklable_state_is_left_out_without_losing_the_rest(tmp_path, janel_app):
+    from janelkit.runtime.component import HotReload
+
+    app = tmp_path / "App.janel"
+    app.write_text("<script>\nfrom janelkit import state\nn = state(3)\nfn = state(lambda: 1)\n</script>\n<text>{n}</text>", encoding="utf-8")
+    mounted = janel_app.mount(compile_file(app))
+    try:
+        loaded = HotReload.load(HotReload(mounted.instance).dump())
+    finally:
+        janel_app.unmount(mounted)
+    (script, values), = loaded.saved.values()
+    assert values == {"n": 3}
+
+
+def test_janel_dev_keeps_state_when_a_py_file_changes(tmp_path):
+    """De punta a punta: cambia un .py, el supervisor reinicia y el proceso nuevo sigue con el estado del anterior."""
+    import time
+
+    root = create_project("estado", tmp_path).root
+    log = root / "ticks.txt"
+    service = root / "src" / "services" / "users.py"
+    (root / "src" / "App.janel").write_text(
+        "<script>\nimport os\nfrom janelkit import state, interval\nn = state(0)\n\n@interval(50)\ndef tick():\n    n.value += 1\n"
+        f"    with open({str(log)!r}, 'a') as f:\n        print(os.getpid(), n.value, file=f)\n</script>\n"
+        '<window title="t"><text>{n}</text></window>',
+        encoding="utf-8",
+    )
+    env = {**os.environ, "QT_QPA_PLATFORM": "offscreen", "JANELKIT_EXIT_AFTER_MS": "6000"}
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "janelkit.cli.main", "dev", str(root)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env
+    )
+    try:
+        deadline = time.monotonic() + 30
+        while not (log.is_file() and len(log.read_text().splitlines()) >= 5):
+            assert time.monotonic() < deadline and proc.poll() is None, "la aplicación no llegó a arrancar"
+            time.sleep(0.05)
+        service.write_text(service.read_text(encoding="utf-8") + "\n# cambio\n", encoding="utf-8")
+        out, err = proc.communicate(timeout=60)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+    assert proc.returncode == 0, err
+    ticks = [tuple(map(int, line.split())) for line in log.read_text().splitlines()]
+    first_pid = ticks[0][0]
+    before = [n for pid, n in ticks if pid == first_pid]
+    after = [n for pid, n in ticks if pid != first_pid]
+    assert after, err
+    # Sigue donde iba (un tic puede colarse entre guardar y salir), no desde cero.
+    assert before[-1] <= after[0] <= before[-1] + 1 and after[0] > 4, (before[-3:], after[:3])
+    assert "estado conservado en 1 componente(s)" in err

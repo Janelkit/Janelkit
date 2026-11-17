@@ -717,7 +717,7 @@ from widgets.Meter import Meter
 - Props: las propiedades que no son `readonly`, con su tipo (`string`, `int`, `real`, `bool`, `color`; el resto acepta cualquier valor). Además, las comunes: `width`, `height`, `flex`, `visible`, `enabled`, `opacity`, y `id`, `class`, `ref`.
 - Eventos: cada `signal`. El manejador recibe sus parámetros (`def elegido(step):`; en línea, `event`).
 - `bind:prop={estado}` funciona con cualquier propiedad escribible: los cambios que haga el QML (también por asignación, `root.value = 3`) vuelven al `state`. Los números de QML (`real`) llegan como `float`.
-- `janel dev` reinicia la aplicación al guardar el `.qml` (Qt no siempre vuelve a leer en el mismo proceso un `.qml` ya cargado).
+- `janel dev` reinicia la aplicación al guardar el `.qml` (Qt no siempre vuelve a leer en el mismo proceso un `.qml` ya cargado) y [conserva el estado](desarrollo.md#janel-dev).
 - Las `property` y `signal` cuyo nombre empieza por `jk` son internas: no se pueden pasar ni escuchar desde la plantilla.
 - **Montar componentes desde Python.** Un elemento cuya raíz es `JkDeck` (`import Janel`) es un mazo: muestra uno de sus hijos, que ocupa todo el sitio; crece solo (`flex: 1`) y admite `transition:`. Si además declara `property JkHost nombre`, `<Elemento nombre={objeto} />` le pasa el elemento a `objeto`, un `janelkit.ext.Host`, que monta componentes dentro con `container.mount(...)`. Así están hechos `<Pages>` y `<Sections>` de `janelkit-router` ([api.md](api.md#janelkitext-extensiones)).
 - El QML es **interfaz de Qt, no de JanelKit**: su contenido no está cubierto por la política de versiones, y sus errores se muestran tal como los da Qt. Son de JanelKit `jktheme`, `JkDeck` (su `currentIndex` y las propiedades de `transition:`) y `JkHost`.

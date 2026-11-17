@@ -30,7 +30,7 @@ Un solo repositorio con el núcleo y los paquetes del ecosistema, que se publica
 | [`packages/janelkit-store`](packages/janelkit-store/README.md) | `janelkit-store` | Datos compartidos: stores con acciones, escritura controlada y seguimiento de cambios, una instancia por aplicación; `persisted`. |
 | [`packages/janelkit-i18n`](packages/janelkit-i18n/README.md) | `janelkit-i18n` | Traducciones (`t`, `i18n`): catálogos, plurales y formatos según el idioma. |
 | [`packages/janelkit-desktop`](packages/janelkit-desktop/README.md) | `janelkit-desktop` | Servicios del sistema: diálogos nativos (archivos, carpeta, mensaje, confirmación) y portapapeles (`dialogs`, `clipboard`). |
-| [`packages/janelkit-vscode`](packages/janelkit-vscode/README.md) | — | Resaltado de `.janel` para VS Code. |
+| [`packages/janelkit-vscode`](packages/janelkit-vscode/README.md) | — | Resaltado de `.janel` y errores del compilador en VS Code. |
 | [`apps/examples`](apps/examples/README.md) | — | Ejemplos pequeños, uno por tema. |
 | `apps/challenges` | — | Aplicaciones grandes que ponen a prueba el framework (chat, gestor, hoja, kanban, panel). |
 

@@ -34,7 +34,7 @@ Se quedan en el núcleo los controles con los que se escribe un formulario (`<ch
 | `packages/janelkit-store` | Stores: datos compartidos con acciones, modo estricto, seguimiento de cambios y persistencia; `persisted` | `janelkit`, solo su API pública |
 | `packages/janelkit-i18n` | Traducciones: catálogos, plurales, formatos | `janelkit`, solo su API pública |
 | `packages/janelkit-desktop` | Diálogos y portapapeles | `janelkit`, solo su API pública |
-| `packages/janelkit-vscode` | Resaltado de `.janel` en VS Code | — |
+| `packages/janelkit-vscode` | Resaltado de `.janel` y errores del compilador en VS Code | `janel lsp` del núcleo, al ejecutarse |
 | `apps/examples` | Ejemplos pequeños, uno por tema, con pruebas | `janelkit` y extensiones |
 | `apps/challenges` | Aplicaciones grandes que ponen a prueba el núcleo, con pruebas | `janelkit` y extensiones |
 
@@ -48,7 +48,7 @@ Cada paquete tiene versión propia y se prueba por separado. Los paquetes de Pyt
 | Inspección | `janelkit.inspect`: montar sin ventana, recorrer, disparar eventos, leer el estado. Las extensiones le añaden métodos con `janelkit.ext.inspector` |
 | Acceso a la aplicación | `janelkit.ext.app()`: motor QML, `QApplication` y ventana principal |
 | Plugins de la CLI | Subcomandos de `janel` desde otros paquetes (entry points `janelkit.commands`) |
-| Compilador para herramientas | `check_source`/`check_file`: diagnósticos sin ejecutar el script. La estructura (props, eventos, nombres) no es pública |
+| Compilador para herramientas | `check_source`/`check_file`: diagnósticos sin ejecutar el script. La estructura (props, eventos, nombres) no es pública. `janel lsp` los publica a los editores |
 | Elementos propios | Un `.qml` importado como componente; el compilador lee sus `property` y `signal` |
 | Anfitriones | `janelkit.ext.Host`: un objeto del script monta componentes dentro de un elemento `.qml` (raíz `JkDeck`, propiedad `JkHost`) con `Container.mount`, con su compuerta de visibilidad y su contexto. Es lo que usa `janelkit-router` |
 | Sesión | `janelkit.ext.session()`: lo que dura una aplicación (una por `run()` y por cada `inspect.mount()`), con su carpeta de datos y un aviso al terminar |

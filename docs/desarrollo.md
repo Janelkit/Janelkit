@@ -10,6 +10,8 @@
 | `janel build [carpeta] [-o DIR]` | Compila **todos** los `.janel` del proyecto (también los que aún no se usan) y escribe el QML generado en `build/qml`. Termina con código 1 si hay errores. |
 | `janel compile <archivo.janel> [-o salida.qml]` | Muestra el QML generado para un componente. |
 | `janel parse <archivo.janel>` | Muestra el AST o los errores con línea y columna. |
+| `janel lsp` | Servidor para editores (Language Server Protocol, por la entrada y la salida estándar): publica los errores y avisos de cada `.janel` abierto mientras se escribe. Lo lanza la extensión de VS Code; ver [El editor](#el-editor). |
+| `janel lsp` | Servidor para editores (Language Server Protocol, por la entrada y la salida estándar): publica los errores y avisos de cada `.janel` abierto mientras se escribe. Lo lanza la extensión de VS Code; ver [El editor](#el-editor). |
 | `janel migrate [carpeta] [--write] [--tests]` | Actualiza un proyecto a esta versión de JanelKit. Sin `--write` solo muestra los cambios (un diff); con `--write` los aplica. Con `--tests`, también las plantillas dentro de las pruebas `.py` y `find("Text")`. Lista aparte lo que hay que revisar a mano. En 0.2: los elementos del núcleo en minúscula (`<Text>` → `<text>`, también al cerrar y en los selectores de `<style>`), sin tocar las etiquetas de componentes importados; los imports de la navegación pasan a `janelkit_router` y los de `persisted`, a `janelkit_store` (y se añaden `Pages`/`Sections` si la plantilla los usa). |
 
 Todos admiten `--help`.
@@ -24,7 +26,14 @@ Todos admiten `--help`.
 
   Añadir líneas o estilos no pierde el estado. No se conservan el foco, la selección de texto ni las ventanas abiertas con `open_window`.
 - **Si el archivo tiene errores**, se muestran en la consola y en una ventana de errores, con archivo, línea y columna; la última versión correcta sigue abierta. Al corregir y guardar, la ventana de errores se cierra sola.
-- **Al guardar un `.py` o un `.qml` propio del proyecto** (por ejemplo, `src/services/…` o `src/widgets/…`), se reinicia el proceso: los módulos Python no se pueden recargar de forma fiable dentro del mismo proceso, y Qt no siempre vuelve a leer un `.qml` ya cargado.
+- **Al guardar un `.py` o un `.qml` propio del proyecto** (por ejemplo, `src/services/…` o `src/widgets/…`), se reinicia el proceso: los módulos Python no se pueden recargar de forma fiable dentro del mismo proceso, y Qt no siempre vuelve a leer un `.qml` ya cargado. **El estado también se conserva:** antes de reiniciar, la aplicación guarda los `state` de cada componente y la posición y el tamaño de la ventana, y el proceso nuevo los recupera con la misma regla que al recargar un `.janel`:
+
+  ```
+  [janel dev] cambió users.py: reiniciando
+  [janel dev] reiniciado; estado conservado en 4 componente(s)
+  ```
+
+  Lo que no se recupera tras un reinicio: el estado que vive en tus `.py` (un `state` en un servicio, un store sin `persist=`), porque ese código es justo el que cambió; los valores que no se pueden guardar con `pickle` (una función, un archivo abierto, una clase definida en el script de un componente), que empiezan con su valor inicial; y el estado de componentes que aún no existen al arrancar (por ejemplo, dentro de un `{#if}` que se abre después). Si la aplicación no responde en 3 segundos (está ocupada en el hilo de la interfaz), se reinicia sin estado.
 - Si la aplicación termina con error, `janel dev` espera a que cambie un `.py` y vuelve a arrancarla. Si se cierra la ventana normalmente, `janel dev` termina.
 
 `janel dev` lanza `python main.py` con la variable `JANELKIT_DEV=1`; lo que funciona con `janel dev` funciona igual con `python main.py`.
@@ -43,9 +52,24 @@ import logging
 logging.getLogger("janelkit").setLevel(logging.DEBUG)
 ```
 
-## Resaltado en el editor
+## El editor
 
-`packages/janelkit-vscode/` contiene una extensión mínima de VS Code con resaltado de sintaxis para `.janel` (Python en `<script>` y en las expresiones, CSS en `<style>`). Ver su [README](../packages/janelkit-vscode/README.md) para instalarla. No tiene autocompletado ni diagnósticos: los errores los muestran `janel dev` y `janel build`.
+`packages/janelkit-vscode/` contiene la extensión de VS Code para `.janel`. Ver su [README](../packages/janelkit-vscode/README.md) para instalarla. Hace dos cosas:
+
+- **Resaltado de sintaxis:** Python en `<script>` y en las expresiones, CSS en `<style>`.
+- **Los errores del compilador mientras escribes:** los mismos que dan `janel dev` y `janel build`, subrayados en su línea y columna y listados en el panel de problemas, con la sugerencia cuando la hay. Se comprueba el texto del editor, guardado o no, sin ejecutar el script. Un error en un componente importado aparece en la línea que lo importa, con el archivo y la línea donde está.
+
+Los errores los calcula `janel lsp`, que la extensión lanza con el Python del proyecto (el de `.venv`, o el del ajuste `janelkit.pythonPath`). Es un servidor del Language Server Protocol: cualquier editor con cliente LSP puede usarlo con el comando `janel lsp` para los archivos `.janel`. Por ejemplo, en Neovim:
+
+```lua
+vim.filetype.add({ extension = { janel = "janel" } })
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "janel",
+  callback = function() vim.lsp.start({ name = "janel", cmd = { "janel", "lsp" } }) end,
+})
+```
+
+Todavía no hay autocompletado ni comprobación de tipos del Python de `<script>` y de las expresiones: es lo siguiente.
 
 ## Pruebas automáticas de una aplicación
 

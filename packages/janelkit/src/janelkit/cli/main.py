@@ -98,6 +98,12 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
     return run(Path(args.path), write=args.write, tests=args.tests)
 
 
+def _cmd_lsp(args: argparse.Namespace) -> int:
+    from .lsp import run_lsp
+
+    return run_lsp()
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="janel",
@@ -124,7 +130,8 @@ def build_parser() -> argparse.ArgumentParser:
         "dev",
         help="ejecuta main.py y recarga la vista al guardar (.janel) o reinicia (.py)",
         description="Ejecuta la aplicación en modo desarrollo. Al guardar un .janel la vista se recompila "
-        "y se vuelve a montar (el estado se reinicia); al guardar un .py se reinicia el proceso.",
+        "y se vuelve a montar; al guardar un .py se reinicia el proceso. En los dos casos se conserva el estado "
+        "de los componentes cuyo script no cambió.",
     )
     p_dev.add_argument("path", nargs="?", default=".", help="carpeta del proyecto o ruta de main.py (por defecto, la actual)")
     p_dev.set_defaults(func=_cmd_dev)
@@ -152,6 +159,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--tests", action="store_true", help='también las pruebas .py: plantillas dentro de cadenas y find("Text")'
     )
     p_migrate.set_defaults(func=_cmd_migrate)
+
+    p_lsp = sub.add_parser(
+        "lsp",
+        help="servidor para editores: los errores de los .janel mientras se escribe",
+        description="Servidor del Language Server Protocol por la entrada y la salida estándar. Compila cada "
+        ".janel abierto en el editor (sin ejecutar su script) y publica sus errores y avisos. Lo lanza la "
+        "extensión de VS Code; sirve a cualquier editor con cliente LSP.",
+    )
+    p_lsp.set_defaults(func=_cmd_lsp)
 
     _add_plugin_commands(sub)
     return parser

@@ -182,3 +182,75 @@ def test_rows_off_screen_wait_until_they_are_shown_again(mount, janel_app):
     QMetaObject.invokeMethod(view, "positionViewAtBeginning")
     janel_app.qt_app.processEvents()
     assert visible_texts(m)[:3] == ["0:", "1:*", "2:"]  # al volver, con el valor de ahora
+
+
+RENAMED = """<script>
+from janelkit import state
+items = state([])
+</script>
+<window width={300} height={200}>
+  <list id="list" animate>
+    {#each items as it, i (it["k"])}
+      <row><text>{i}:{it["t"]}</text></row>
+    {/each}
+  </list>
+</window>
+"""
+
+
+def test_animated_list_does_not_draw_stale_rows_when_keys_change_and_rows_go(mount, janel_app, seed=31):
+    """Una fila que cambia de clave es quitar una y añadir otra en el mismo sitio. Con otras filas
+    que se van en el mismo cambio, ListView (con sus animaciones) se quedaba con delegados de filas
+    ya quitadas en el sitio de otras: los datos estaban bien y la lista dibujaba filas repetidas.
+
+    Cambios al azar (con semilla): filas con clave provisional, claves que pasan a la definitiva y
+    filas que se quitan, en lotes seguidos, a veces sin dejar que Qt dibuje entre uno y otro."""
+    import random
+
+    from janelkit import batch
+    from PySide6.QtCore import QPointF
+
+    def spin(seconds):
+        end = time.time() + seconds
+        while time.time() < end:
+            janel_app.qt_app.processEvents()
+
+    rnd = random.Random(seed)
+    rnd.choice([200, 600])
+    m = mount(RENAMED)
+    items = m.instance.namespace["items"]
+    n = 0
+    for _ in range(40):
+        with batch():
+            for _ in range(rnd.randint(1, 4)):
+                op = rnd.choice(["add", "add", "rename", "rename", "delete", "same"])
+                data = items.value
+                if op == "add" or not data:
+                    for _ in range(rnd.randint(1, 4)):
+                        n += 1
+                        data.append({"k": f"tmp{n}", "t": f"f{n}"})
+                elif op == "rename":
+                    i = rnd.randrange(len(data))
+                    data[i] = {"k": f"real-{data[i]['t']}", "t": data[i]["t"]}
+                elif op == "delete":
+                    del data[rnd.randrange(len(data))]
+                else:
+                    items.value = list(data)
+        r = rnd.random()
+        if r < 0.4:
+            janel_app.qt_app.processEvents()
+        elif r < 0.6:
+            spin(0.25)
+    spin(0.6)  # las animaciones terminan
+
+    view = next(i for i in visual_items(m) if i.inherits("QQuickListView"))
+    QMetaObject.invokeMethod(view, "forceLayout")
+    janel_app.qt_app.processEvents()
+    shown = []
+    for item in visual_items(m):
+        if is_jk_text(item) and item.isVisible() and ":" in item.property("text"):
+            y = item.mapToItem(view, QPointF(0, 0)).y()
+            if -1 <= y < view.height() - 4:  # dentro de la vista: las de fuera no se ponen al día
+                shown.append((y, item.property("text")))
+    shown = [text for _, text in sorted(shown)]
+    assert shown and shown == [f"{i}:{d['t']}" for i, d in enumerate(items.value)][: len(shown)]

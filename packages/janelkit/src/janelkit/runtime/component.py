@@ -823,8 +823,13 @@ class _LazyEachRegion(_EachRegion):
         moves = len(survivors) - _longest_increasing(survivors)  # filas que hay que mover
         if not removed and not moves:
             return self.insert_runs(keys, items, old)
-        changes = sum(k not in old for k in keys) + removed + moves
-        if changes <= self.BULK:
+        added = sum(k not in old for k in keys)
+        changes = added + removed + moves
+        # Con animación, quitar y añadir filas en un mismo cambio (una fila que cambia de clave
+        # es eso) deja a ListView con delegados de filas ya quitadas en el sitio de otras: los
+        # datos están bien y la lista dibuja filas repetidas. Ese cambio se aplica de una vez.
+        mixed = self.slot.animated and removed and added
+        if changes <= self.BULK and not mixed:
             return self.apply_reconcile(keys, items)
         # Muchos cambios: un solo reinicio del modelo. Las filas que siguen conservan
         # su instancia; Qt solo vuelve a crear los delegados visibles.

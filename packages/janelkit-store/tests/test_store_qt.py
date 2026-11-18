@@ -188,3 +188,33 @@ class Reloj:
         app.wait(0.05)
         assert r.tics > 0 and type(r).timer.active
     assert not type(r).timer.active  # era del store: se para al terminar la sesión
+
+
+def test_work_spawned_inside_a_store_method_outlives_the_view_that_asked_for_it(tmp_path):
+    """Leer varios archivos mientras se cambia de página: el trabajo es del store, no del componente."""
+    from janelkit.inspect import mount as mount_app
+
+    (tmp_path / "trabajo.py").write_text(
+        "import asyncio\nfrom janelkit import spawn\nfrom janelkit_store import store, use\n\n"
+        "@store\nclass Trabajo:\n    directo: int = 0\n    lanzado: int = 0\n\n"
+        "    async def esperar(self):\n        await asyncio.sleep(0.1)\n        self.directo += 1\n\n"
+        "    def lanzar(self):\n        spawn(self._largo())\n\n"
+        "    async def _largo(self):\n        await asyncio.sleep(0.1)\n        self.lanzado += 1\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "Hijo.janel").write_text(
+        "<script>\nfrom trabajo import Trabajo, use\nt = use(Trabajo)\n</script>\n"
+        "<column><button on:click={t.esperar()}>directo</button><button on:click={t.lanzar()}>lanzar</button></column>",
+        encoding="utf-8",
+    )
+    (tmp_path / "App.janel").write_text(
+        "<script>\nfrom janelkit import state\nfrom trabajo import Trabajo, use\nfrom Hijo import Hijo\nt = use(Trabajo)\nver = state(True)\n</script>\n"
+        "<column>{#if ver}<Hijo />{/if}<text>{t.directo} {t.lanzado}</text></column>",
+        encoding="utf-8",
+    )
+    with mount_app(tmp_path / "App.janel") as app:
+        app.find(text="directo").click()
+        app.find(text="lanzar").click()
+        app.namespace["ver"].value = False  # la vista que lo pidió desaparece
+        app.wait(0.4)
+        assert app.texts() == ["0 1"]  # lo del componente se canceló; lo del store terminó

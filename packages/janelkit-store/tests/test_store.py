@@ -144,3 +144,60 @@ def test_declaration_errors_are_explained():
 
     with pytest.raises(TypeError, match="no es un store"):
         use(dict)
+
+
+class _Seleccion:
+    """Un mixin sin decorar: campos y métodos que comparten varios stores."""
+
+    elegidos: list[str] = []
+
+    @computed
+    def cuantos(self) -> int:
+        return len(self.elegidos)
+
+    def alternar(self, ident):
+        if ident in self.elegidos:
+            self.elegidos.remove(ident)
+        else:
+            self.elegidos.append(ident)
+
+
+@store(strict=True)
+class Facturas(_Seleccion):
+    filas: list[dict] = []
+
+    def cargar(self, filas):
+        self.filas = list(filas)
+
+
+@store(strict=True)
+class FacturasConNotas(Facturas):
+    nota: str = ""
+
+    def anotar(self, texto):
+        self.nota = texto
+        self.alternar("n")
+
+
+def test_inherited_methods_are_actions_and_inherited_fields_count():
+    f = Facturas()
+    log = []
+    subscribe(f, log.append)
+    f.alternar("a")  # heredado de un mixin: en un store estricto solo escribe una acción
+    f.cargar([{"id": 1}])
+    assert f.elegidos == ["a"] and f.cuantos == 1 and f.filas == [{"id": 1}]
+    assert [m.action for m in log] == ["alternar", "cargar"]
+    with pytest.raises(StoreError, match="solo se escribe dentro de sus métodos"):
+        f.elegidos.append("b")
+    assert Facturas(elegidos=["x"]).cuantos == 1
+
+
+def test_a_store_can_extend_another_store():
+    g = FacturasConNotas()
+    log = []
+    subscribe(g, log.append)
+    g.anotar("hola")
+    g.cargar([{"id": 2}])
+    assert (g.nota, g.elegidos, g.filas, g.cuantos) == ("hola", ["n"], [{"id": 2}], 1)
+    assert [m.action for m in log] == ["anotar", "cargar"]  # alternar, dentro de anotar, es la misma acción
+    assert Facturas().elegidos == []  # cada clase y cada instancia, sus datos

@@ -180,23 +180,36 @@ def _make_store(cls: Any, strict: bool, persist: str | None) -> Any:
         raise StoreError(f"{cls.__name__}: un store no define __init__; prepara lo que haga falta en setup(self)")
     fields: dict[str, _Field] = {}
     private: dict[str, Any] = {}
-    for name in cls.__dict__.get("__annotations__", {}):
+    # Lo que define la clase y lo que hereda (una clase base, un mixin): gana lo más derivado.
+    # Así los métodos heredados también son acciones, y los campos y @computed heredados cuentan.
+    bases = [k for k in cls.__mro__ if k is not object]
+    members: dict[str, Any] = {}
+    for klass in bases:
+        for name, value in klass.__dict__.items():
+            members.setdefault(name, value)
+    annotated: dict[str, None] = {}
+    for klass in reversed(bases):  # los campos de la base, antes que los propios
+        annotated.update(dict.fromkeys(klass.__dict__.get("__annotations__", {})))
+    for name in annotated:
         if name.startswith("__"):
             continue
-        value = cls.__dict__.get(name, _MISSING)
+        value = members.get(name, _MISSING)
+        if isinstance(value, _Field):  # heredado de otro store
+            value = _FieldSpec(value.default, value.bind, value.persist)
         spec = value if isinstance(value, _FieldSpec) else _FieldSpec(None if value is _MISSING else value, False, True)
         if name.startswith("_"):
             private[name] = spec.default
             continue
         fields[name] = _Field(name, spec.default, spec.bind, spec.persist)
         setattr(cls, name, fields[name])
-    for name, value in list(cls.__dict__.items()):
+    for name, value in members.items():
         if isinstance(value, Computed):
             setattr(cls, name, _Derived(name, value))
         elif inspect.isfunction(value) and not (name.startswith("__") and name.endswith("__")) and name not in _HOOKS:
             if name in fields:
                 raise StoreError(f"{cls.__name__}.{name} es a la vez un campo y un método")
-            setattr(cls, name, _action(value, name))
+            if not getattr(value, "__jk_action__", False):  # la de un store base ya lo es
+                setattr(cls, name, _action(value, name))
     cls.__jk_store__ = _Meta(cls, fields, private, strict, persist)
 
     def __init__(self: Any, **values: Any) -> None:
@@ -391,6 +404,7 @@ def _action(fn: Callable[..., Any], name: str) -> Callable[..., Any]:
             with _acting(self, name):  # contextvars: la acción sigue siendo esta tras cada await
                 return await fn(self, *args, **kwargs)
 
+        run_async.__jk_action__ = True  # type: ignore[attr-defined]
         return run_async
 
     @functools.wraps(fn)
@@ -399,6 +413,7 @@ def _action(fn: Callable[..., Any], name: str) -> Callable[..., Any]:
             with batch():
                 return fn(self, *args, **kwargs)
 
+    run.__jk_action__ = True  # type: ignore[attr-defined]
     return run
 
 

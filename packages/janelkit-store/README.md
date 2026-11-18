@@ -60,6 +60,8 @@ carrito = use(Carrito)        # la misma instancia en todas las vistas y ventana
 - **Campos:** cada anotación de la clase es un campo reactivo, con su valor por defecto (copiado para cada instancia). Se leen y escriben como atributos normales, sin `.value`, en Python y en la plantilla. Lo anidado (una tarjeta dentro de una lista) es del campo que lo contiene.
 - **Derivados:** `@computed` sobre un método da un valor en caché que se lee sin `.value` y no se asigna.
 - **Acciones:** cada método es una acción, salvo `setup`, `teardown` y los `__dunder__`. Agrupa sus cambios en un `batch` (lo que depende de ellos se recalcula una vez) y se anota como una `Mutation`. Una acción dentro de otra del mismo store se suma a ella. En un método `async`, lo que cambia tras un `await` sigue siendo de esa acción. Lo que crea una acción (un `effect`, un `timeout`, una tarea) es del store y vive lo que él.
+- **Herencia:** un store puede heredar de una clase sin decorar (un mixin con campos, `@computed` y métodos que comparten varios stores) o de otro store. Los métodos heredados también son acciones y los campos heredados, campos; lo que define la clase gana a lo heredado.
+- **Trabajo largo:** lo que un método lanza con `spawn` es del store y sigue aunque se desmonte la vista que lo pidió: `def importar(self, rutas): spawn(self._leer(rutas))`. Un método `async` llamado desde `on:click` es trabajo del componente y se cancela con él.
 - **`setup(self)`** (o `setup(self, key)`) se ejecuta al crearse la instancia, y **`teardown(self)`** al liberarse. No son acciones: lo que cambian no se anota.
 - Un store no define `__init__`: los valores iniciales son los de la clase, y `setup` prepara lo demás.
 

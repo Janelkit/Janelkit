@@ -97,7 +97,7 @@ def enviar():
 | `spawn(corrutina)` | Lanzar una corrutina sin esperarla, por ejemplo desde `on_mount`. |
 | `interval(ms, fn)`, `timeout(ms, fn)` | Repetir algo cada cierto tiempo, o hacerlo una vez más tarde. Ver [Temporizadores](#temporizadores). |
 
-- Lo lanzado desde un componente (manejadores, `@task`, `spawn`, `on_mount` asíncrono) se **cancela al desmontarlo**: una corrutina nunca actualiza una vista que ya no existe. Una fila de `{#each}` cancela lo suyo al eliminarse.
+- Lo lanzado desde un componente (manejadores, `@task`, `spawn`, `on_mount` asíncrono) se **cancela al desmontarlo**: una corrutina nunca actualiza una vista que ya no existe. Una fila de `{#each}` cancela lo suyo al eliminarse. Un trabajo que debe terminar aunque su vista desaparezca (procesar varios archivos mientras se cambia de página) no es del componente: lánzalo con `spawn` dentro de un método de un store ([`janelkit-store`](../packages/janelkit-store/README.md)), que vive lo que vive la aplicación: `def importar(self, rutas): spawn(self._leer(rutas))`. Lo que cuenta es dónde se llama a `spawn`: un método `async` del store llamado desde `on:click` sigue siendo trabajo del componente que lo pulsó, y se cancela con él.
 - Una corrutina lanzada desde un componente sigue perteneciéndole **después de cada `await`**: un `timeout`, `interval`, `effect` o `spawn` creado tras `await` se libera al desmontar, igual que si se hubiera creado antes. El patrón «guardar, esperar y mostrar un aviso que se va solo» funciona sin guardar el temporizador:
 
   ```python
@@ -580,7 +580,7 @@ def pct(valor, eje):               # de píxeles de la imagen a % de la capa (ej
       return seleccion.value == fila.value["id"]
   ```
 - Las filas ocupan el ancho de la lista. Admite `gap`, `padding`, fondo, borde y radio desde `<style>`; por defecto ocupa el espacio libre (`flex: 1`).
-- Añadir filas (al final, al principio o en medio, en cualquier cantidad) se aplica por bloques y la vista conserva su posición. Borrar o mover pocas filas se aplica una a una (con `animate`, animado). A partir de 64 borrados o movimientos a la vez (ordenar, invertir, sustituir la lista) se aplican de golpe: las filas visibles se vuelven a crear y la vista conserva su posición (la fila que estaba arriba, por su número, sigue arriba), como al reordenar una tabla.
+- Añadir filas (al final, al principio o en medio, en cualquier cantidad) se aplica por bloques y la vista conserva su posición. Borrar o mover pocas filas se aplica una a una (con `animate`, animado). Con `animate`, un cambio que a la vez quita y añade filas (una fila que cambia de clave es eso) se aplica de golpe, sin animación. A partir de 64 borrados o movimientos a la vez (ordenar, invertir, sustituir la lista) se aplican de golpe: las filas visibles se vuelven a crear y la vista conserva su posición (la fila que estaba arriba, por su número, sigue arriba), como al reordenar una tabla.
 - `{:else}` no está disponible dentro de `<list>`: muestra el estado vacío con un `{#if}` fuera.
 
 ### Desplazamiento
@@ -818,7 +818,7 @@ Propiedades comunes a todos salvo `window`: `width`, `height`, `flex`, `visible`
 | `scroll` | `ScrollView` + columna | `gap`, `padding`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
 | `list` | `ListView` | `gap`, `padding`, `animate`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
 | `text` | `Label` | `text`, `color`, `format` (`plain`, `markdown`, `html`), `selectable` | `on:link(url)` | — |
-| `button` | `Button` | `text`, `variant` (`default`, `primary`, `danger`, `ghost`), `flat` | `on:click` | — |
+| `button` | `Button` | `text`, `variant` (`default`, `primary`, `danger`, `ghost`), `flat`, `title` (descripción emergente), `disabled` (lo contrario de `enabled`) | `on:click` | — |
 | `textfield` | `TextField` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:submit(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
 | `textarea` | `TextArea` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
 | `checkbox` | `CheckBox` | `checked`, `text` | `on:change(marcado)` | `bind:checked` |

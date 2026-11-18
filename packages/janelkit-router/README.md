@@ -47,7 +47,7 @@ def abrir(item):
   .pagina { margin: 24px; }                        /* llena, con margen alrededor */
   ```
 - Las palabras clave son props y eventos (`on_...`) de la página, como en `open_window`. Las páginas heredan el contexto (`inject`) del componente que declara la pila.
-- `nav.current` (nombre de la página visible), `nav.depth` y `nav.can_go_back` son reactivos; `nav.page` da la instancia visible.
+- `nav.current` (nombre de la página visible), `nav.depth` y `nav.can_go_back` son reactivos; `nav.page` da la instancia visible. El nombre es el que tiene el componente en el script: con `from pages.Bandeja import Bandeja as PaginaBandeja`, `nav.current` vale `"PaginaBandeja"`.
 - **Transiciones:** `<Pages stack={nav} transition:slide />` anima la página que entra: al avanzar llega desde la derecha y al volver desde la izquierda. También `fade` y `scale`, y la duración: `transition:fade={150}`. En `<Sections>`, la transición se aplica al cambiar de sección y a las páginas de cada una.
 - **Atrás con el teclado y el ratón:** Alt+← y el botón «atrás» del ratón vuelven a la página anterior, en la pila visible más interna. Alt+← actúa cuando el foco está dentro de la pila (si está, por ejemplo, en un botón de la barra lateral, no hace nada); el ratón, al pulsar sobre ella. Si un elemento de la página ya usa Alt+← (por ejemplo, para mover una tarjeta), gana el elemento.
 

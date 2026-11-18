@@ -93,12 +93,13 @@ def test_búsqueda_asíncrona():
         assert "Sin resultados" not in app.texts()
 ```
 
+- Una pestaña de `<tabs>` o una opción de `<radiogroup>` se pulsa por su texto (`app.find(text="Totales").click()`) o se elige desde el control (`app.find("tabs").choose("Totales")`).
 - `find` exige que haya **exactamente un** elemento que cumpla los criterios (etiqueta, `text`, `id`, `placeholder`); `find_all` devuelve todos. Solo se consideran los visibles.
 - Las acciones (`click`, `type`, `check`, `choose`, `slide`, `submit`) emiten las mismas señales que el usuario: pasan por los manejadores y los `bind:` reales. Sobre un control desactivado fallan, como fallaría el usuario.
 - `app.texts()` devuelve los textos visibles en orden de lectura.
 - `app.wait(segundos)` o `app.wait(until=condición)` deja correr las tareas asíncronas y los temporizadores.
 - Diálogos de `janelkit-desktop`: `app.dialogs()`, `app.answer_dialog(...)` (ver su [README](../packages/janelkit-desktop/README.md#en-pruebas)).
-- Capturas: `app.screenshot("pantalla.png")` o `elemento.screenshot(...)` devuelven un `QImage` (y lo guardan si se da una ruta). Con `headless=True` (por defecto) en Windows la captura sale sin fuentes ni vídeo; para revisarla a ojo, `mount(..., headless=False)`.
+- Capturas: `app.screenshot("pantalla.png")` o `elemento.screenshot(...)` devuelven un `QImage` (y lo guardan si se da una ruta). Con `headless=True` (por defecto) la captura no tiene vídeo, y los emojis de color pueden salir como recuadros; para revisarla a ojo, `mount(..., headless=False)`. En Windows, `mount` y las fixtures de `janelkit.testing` usan las fuentes del sistema (fijan `QT_QPA_FONTDIR` si no lo está).
 
 Ver la referencia en [api.md](api.md#janelkitinspect-pruebas-y-herramientas).
 

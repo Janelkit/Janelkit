@@ -78,6 +78,16 @@ def _send_keys(window: Any, keys: str) -> None:
     QTest.keyClick(window, combo.key(), combo.keyboardModifiers())
 
 
+def _use_system_fonts() -> None:
+    """En Windows, la plataforma `offscreen` no busca las fuentes del sistema: sin esto, el texto
+    de las capturas sale como recuadros y se mide con una fuente de reserva."""
+    if sys.platform != "win32" or os.environ.get("QT_QPA_FONTDIR"):
+        return
+    fonts = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
+    if fonts.is_dir():
+        os.environ["QT_QPA_FONTDIR"] = str(fonts)
+
+
 class InspectError(AssertionError):
     """Un elemento no se encontró o no admite la acción pedida."""
 
@@ -181,7 +191,8 @@ class Element:
 
     # -- acciones -----------------------------------------------------------
     def click(self, x: float | None = None, y: float | None = None) -> "Element":
-        """Pulsa un botón, una casilla/interruptor (la alterna) o una caja con on:click.
+        """Pulsa un botón, una casilla/interruptor (la alterna), una pestaña, una opción de <radiogroup>
+        o una caja con on:click.
 
         Con `x` o `y` (respecto al elemento; el que falte, en el centro) es un clic real del
         ratón en ese punto: lo recibe lo que haya allí, y on:click llega con esa posición (en
@@ -200,6 +211,8 @@ class Element:
             press(self.item)
         elif tag == "shortcut":
             self._invoke("activated")
+        elif self.item.inherits("QQuickTabButton") or self.item.inherits("QQuickRadioButton"):
+            press(self.item)  # una pestaña de <tabs> o una opción de <radiogroup>, encontrada por su texto
         else:
             # Como un clic real: lo recibe el contenedor más cercano con on:click (una fila, una tarjeta).
             target = self.item
@@ -577,7 +590,7 @@ class MountedApp:
         """Captura la ventana como `QImage` y, si se da `path`, la guarda (el formato sale de la extensión).
 
         Con `headless=True` (plataforma `offscreen`) la imagen tiene la disposición y los colores,
-        pero en Windows puede salir sin fuentes ni vídeo: para revisar a ojo usa `headless=False`.
+        pero sin vídeo, y los emojis de color pueden salir como recuadros: para revisar a ojo usa `headless=False`.
         """
         self.process()
         root = self.window
@@ -638,6 +651,7 @@ def mount(entry: str | os.PathLike[str], headless: bool = True) -> Iterator[Moun
 
     if headless and QGuiApplication.instance() is None:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        _use_system_fonts()
     from . import session
     from .compiler import compile_file
     from .qt_backend.application import Application

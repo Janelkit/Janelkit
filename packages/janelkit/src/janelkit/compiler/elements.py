@@ -183,6 +183,8 @@ CONTROLS: dict[str, ControlSpec] = {
             "text": PropSpec("text", "string"),
             "flat": PropSpec("flat", "bool"),
             "variant": PropSpec("variant", "string"),
+            "title": PropSpec("ToolTip.text", "string"),  # descripción emergente, como en las cajas
+            "disabled": PropSpec("disabled", "bool"),  # lo contrario de enabled
         },
         events={"click": EventSpec("onClicked")},
         text_prop="text",

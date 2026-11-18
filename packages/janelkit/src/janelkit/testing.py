@@ -16,6 +16,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest  # noqa: E402
 
+from .inspect import _use_system_fonts  # noqa: E402
+
+_use_system_fonts()  # Windows: sin esto, `offscreen` no encuentra las fuentes del sistema
+
 __all__ = ["janel_app", "mount", "isolated_data", "reset_theme_and_locale", "visual_items", "click", "find", "find_all", "texts"]
 
 

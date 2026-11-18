@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from janelkit.compiler import compile_file
 from janelkit.inspect import InspectError, mount
 
 EXAMPLES = Path(__file__).resolve().parents[3] / "apps" / "examples"
@@ -208,3 +209,54 @@ def test_an_unknown_method_points_to_the_extensions(tmp_path):
             app.notifications()
         with pytest.raises(AttributeError, match=r"no tiene '_privado'$"):
             app._privado
+
+
+def test_a_tab_or_a_radio_option_found_by_its_text_can_be_clicked(tmp_path):
+    """Lo natural es buscar la pestaña por lo que pone y pulsarla, sin pasar por choose()."""
+    app_file = tmp_path / "App.janel"
+    app_file.write_text(
+        '<script>\nfrom janelkit import state\ntab = state("Detalle")\nsize = state("S")\n</script>\n'
+        '<column>\n  <tabs bind:value={tab} options={["Detalle", "Totales"]} />\n'
+        '  <radiogroup bind:value={size} options={["S", "M"]} />\n'
+        "  {#if tab == 'Totales'}<text>suma</text>{/if}\n</column>",
+        encoding="utf-8",
+    )
+    with mount(app_file) as app:
+        app.find(text="Totales").click()
+        assert app.get("tab") == "Totales" and "suma" in app.texts()
+        app.find(text="M").click()
+        assert app.get("size") == "M"
+
+
+def test_button_takes_title_and_disabled(tmp_path):
+    app_file = tmp_path / "App.janel"
+    app_file.write_text(
+        "<script>\nfrom janelkit import state\nbusy = state(True)\nn = state(0)\n</script>\n"
+        '<column><button title="Guarda el archivo" disabled={busy} on:click={n += 1}>Guardar</button></column>',
+        encoding="utf-8",
+    )
+    with mount(app_file) as app:
+        button = app.find("button", text="Guardar")
+        assert not button.enabled
+        qml = compile_file(app_file).qml
+        assert 'ToolTip.text: "Guarda el archivo"' in qml and "ToolTip.visible" in qml
+        with pytest.raises(InspectError):
+            button.click()
+        app.namespace["busy"].value = False
+        app.process()
+        button.click()
+        assert button.enabled and app.get("n") == 1
+
+
+def test_headless_tests_use_the_system_fonts_on_windows(monkeypatch, tmp_path):
+    from janelkit import inspect as jk_inspect
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.delenv("QT_QPA_FONTDIR", raising=False)
+    (tmp_path / "Fonts").mkdir()
+    monkeypatch.setenv("WINDIR", str(tmp_path))
+    jk_inspect._use_system_fonts()
+    assert Path(jk_inspect.os.environ["QT_QPA_FONTDIR"]) == tmp_path / "Fonts"
+    monkeypatch.setenv("QT_QPA_FONTDIR", "otra")  # lo que fije quien prueba se respeta
+    jk_inspect._use_system_fonts()
+    assert jk_inspect.os.environ["QT_QPA_FONTDIR"] == "otra"

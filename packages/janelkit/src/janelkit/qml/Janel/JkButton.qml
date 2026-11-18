@@ -19,6 +19,9 @@ Button {
     property color jkBorderColor: variant === "default" && !jkGhost ? jktheme.border : "transparent"
     property real jkBorderWidth: 1
     property real jkRadius: jktheme.radius
+    property bool disabled: false
+    enabled: !disabled
+    property bool jkTrackHover: false  // con title: hovered ya lo da el propio botón
     property int jkFlex: 0
     property string jkSelfAlign: ""
     property bool jkSelfStretch: false

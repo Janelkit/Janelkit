@@ -5,9 +5,7 @@
 [![CI](https://github.com/janelkit/janelkit/actions/workflows/ci.yml/badge.svg)](https://github.com/janelkit/janelkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/janelkit/janelkit/blob/main/LICENSE)
 
-**A new window for Python.** Desktop apps written in Python, one file per component, rendered with Qt Quick and tested without a screen.
-
-[Leer en español](https://github.com/janelkit/janelkit/blob/main/README.es.md)
+**Modern desktop apps in pure Python.** Tests click every button without a screen, so you, your CI and your coding agent can see the app work.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/janelkit/janelkit/main/docs/img/kanban.png" alt="A Kanban board built with JanelKit: four columns of cards with colored tags, people and dates, a search field and filters" width="820">
@@ -21,6 +19,8 @@ janel new my-app
 cd my-app
 python main.py
 ```
+
+**Next:** the [tutorial](https://github.com/janelkit/janelkit/blob/main/docs/tutorial.md) builds a complete app, step by step.
 
 ## One file per component
 
@@ -66,7 +66,7 @@ def add():
 
 Lowercase tags come with JanelKit (`<text>`, `<button>`, `<column>`). Capitalized tags are components you import like any Python module (`from components.TodoItem import TodoItem`).
 
-## Every app can be tested the way it is used
+## Tested the way it is used
 
 `janelkit.inspect` mounts the app without a window and drives it like a user. This is the test for the component above:
 
@@ -80,7 +80,7 @@ def test_add_a_task():
         assert "1 pending" in app.texts()
 ```
 
-There is no display, browser or driver to set up: it runs wherever `pytest` runs. A large app is tested the same way. These lines are from the [tests of the Kanban board](https://github.com/janelkit/janelkit/blob/main/apps/challenges/tests/test_challenge_kanban.py) above (its labels are in Spanish):
+There is no display, browser or driver to set up: it runs wherever `pytest` runs. A large app is tested the same way. These lines are from the [tests of the Kanban board](https://github.com/janelkit/janelkit/blob/main/apps/challenges/tests/test_challenge_kanban.py) (its labels are in Spanish):
 
 ```python
 app.find("Tarjeta", label="Beta").drag_to(app.find("Columna", label="Hecho"))  # press, move, release
@@ -91,23 +91,31 @@ assert app.find("Detalle").visible
 app.screenshot("board.png")
 ```
 
-- **It finds what a user sees.** `find` looks an element up by tag, text, label, placeholder or id, only among the visible ones, and fails unless exactly one matches. `app.texts()` returns the visible text in reading order.
-- **It acts through the real paths.** `click`, `type`, `check`, `choose`, `slide`, `drag_to` and `key` emit the same signals a user would, so they go through your handlers and your `bind:`. Acting on a disabled control fails, as it would for a user.
-- **It waits for async work.** `app.wait(until=...)` lets tasks and timers run until a condition holds.
-- **It reaches the whole app.** Windows opened with `open_window`, system dialogs, the state of the script (`app.get("todos")`) and screenshots of the app or of one element.
-- **It serves tools as well as tests.** `janel build` and `check_file` report every error without running the app. With `inspect`, a script or a coding agent can write a component, check it, use it and look at the result, all without a display.
+- **It finds what a user sees.** `find` looks an element up by tag, text, label, placeholder or id, only among the visible ones, and fails unless exactly one matches.
+- **It acts through the real paths.** `click`, `type`, `check`, `drag_to` and `key` emit the same signals a user would, so they go through your handlers and your `bind:`. Acting on a disabled control fails, as it would for a user.
+- **It reaches the whole app.** Async tasks and timers (`app.wait(until=...)`), other windows, system dialogs, the script's state (`app.get("todos")`) and screenshots.
 
 JanelKit's own suite, more than 650 tests, runs this way on Windows, macOS and Linux. [Reference](https://github.com/janelkit/janelkit/blob/main/docs/api.md#janelkitinspect-pruebas-y-herramientas)
 
+## Built for coding agents too
+
+An agent can't look at a window, but it can run a command. With JanelKit it can close the whole loop on its own:
+
+1. **Write** a component.
+2. **Check** it: `janel build` reports every error with the `.janel` file, line and column, without running anything.
+3. **Use** it: `mount` the app, click, type and drag through it.
+4. **Look** at it: `app.texts()` returns the visible text in reading order, and `app.screenshot()` the image.
+
+No display, no browser, no extra tools: the same API your tests use.
+
 ## Why JanelKit
 
-- **Tests without a screen.** Every app can be mounted headless and driven like a user, from the first component to a full board with drag and drop. [See above](#every-app-can-be-tested-the-way-it-is-used).
-- **One language for your app.** Logic, template expressions and tests are Python, and the compiler generates the QML. The door stays open: a `.qml` file of your own is imported like any other component when you want something from Qt Quick that JanelKit doesn't have. [Your own QML elements](https://github.com/janelkit/janelkit/blob/main/docs/lenguaje.md#elementos-propios-en-qml)
-- **Errors that point at your code.** `janel build` checks every component before anything runs. Errors, including those raised by Qt or at run time, come back with the `.janel` file, line and column, and a suggestion when there is one.
-- **Save and see it.** `janel dev` reloads the window when you save a `.janel` and restarts the app when you save a `.py`. Either way, every component whose script didn't change keeps its state.
-- **Errors as you type.** The VS Code extension underlines the compiler's errors in the `.janel` you are editing. `janel lsp` gives the same to any editor that speaks the Language Server Protocol.
+- **Python all the way.** Logic, template expressions and tests are Python, and the compiler generates the QML. When you need something from Qt Quick that JanelKit doesn't have, a `.qml` file of your own is imported like any other component. [Your own QML elements](https://github.com/janelkit/janelkit/blob/main/docs/lenguaje.md#elementos-propios-en-qml)
 - **Your libraries in the same process.** A NumPy array, a pandas table or a model's result goes straight to the interface, with no server in between and nothing to serialize.
-- **A small core.** Navigation, shared data, native dialogs and translations are separate packages that you add when you need them.
+- **Native rendering.** Qt Quick draws the interface on the GPU. There is no browser or webview inside your app.
+- **Errors that point at your code.** Errors from the compiler, from Qt or at run time come back with the `.janel` file, line and column, and a suggestion when there is one.
+
+And the day-to-day: `janel dev` reloads the window when you save and keeps the state of every component you didn't touch, and the [VS Code extension](https://github.com/janelkit/janelkit/tree/main/packages/janelkit-vscode) (or `janel lsp` in any editor) underlines errors as you type.
 
 ## Is it for you?
 
@@ -115,14 +123,13 @@ JanelKit's own suite, more than 650 tests, runs this way on Windows, macOS and L
 
 **Not covered today:**
 
-- Web and mobile apps: JanelKit is for the desktop.
+- Web and mobile: JanelKit is for the desktop.
 - Installers and code signing: there is a [PyInstaller recipe](https://github.com/janelkit/janelkit/blob/main/docs/desarrollo.md#distribuir-un-ejecutable-con-pyinstaller); MSI, DMG and AppImage are up to you.
-- Computer vision and video beyond the basics: `<video>` shows frames pushed from any thread, and anything more specialized will be a separate package. It is not being worked on for now. [Figures and limits](https://github.com/janelkit/janelkit/blob/main/docs/patrones.md#qué-latencia-esperar-y-para-qué-no-sirve)
 - English documentation: the guides and the compiler messages are in Spanish for now.
 
 ## Learn
 
-The guides are in Spanish:
+The guides are in [`docs/`](https://github.com/janelkit/janelkit/tree/main/docs) (Spanish):
 
 | Guide | What's in it |
 |---|---|
@@ -133,7 +140,7 @@ The guides are in Spanish:
 | [Development](https://github.com/janelkit/janelkit/blob/main/docs/desarrollo.md) | `janel dev`, `janel build`, errors, tests, executables |
 | [Public API](https://github.com/janelkit/janelkit/blob/main/docs/api.md) · [Changes](https://github.com/janelkit/janelkit/blob/main/docs/cambios.md) | What is public, the versioning policy and how to migrate |
 
-[Examples](https://github.com/janelkit/janelkit/tree/main/apps/examples): small apps, one topic each. [Challenges](https://github.com/janelkit/janelkit/tree/main/apps/challenges): large apps that put the framework to the test, including a chat client, a project manager, the Kanban board above, a 10 000 × 26 spreadsheet and a live system monitor.
+[`apps/examples`](https://github.com/janelkit/janelkit/tree/main/apps/examples) has small apps, one topic each. [`apps/challenges`](https://github.com/janelkit/janelkit/tree/main/apps/challenges) has large apps that put the framework to the test: a chat client, a project manager, the Kanban board above, a 10 000 × 26 spreadsheet and a live system monitor.
 
 ## Packages
 
@@ -157,19 +164,11 @@ The guides are in Spanish:
 
 **Alpha (0.2).** The public API is documented in [api.md](https://github.com/janelkit/janelkit/blob/main/docs/api.md) and protected by tests. Each series (0.1, 0.2…) may break it, always with migration notes in [cambios.md](https://github.com/janelkit/janelkit/blob/main/docs/cambios.md) and `janel migrate`.
 
-**What is there:**
+Next up: completion and type checking for the Python inside a `.janel`.
 
-- The `.janel` language and its compiler, with errors located in your file.
-- Reactive state (`state`, `computed`, `effect`), components with props, events and slots, async tasks and timers.
-- Twenty-one built-in elements, flex layout, scoped CSS, light and dark themes, several windows.
-- `janel dev`, which keeps the state when a `.janel` is reloaded and when a change in a `.py` restarts the app.
-- `janelkit.inspect` for tests, and the compiler's errors in the editor through `janel lsp` and the VS Code extension.
-- Four packages built on the public API: router, store, desktop and i18n.
+## Try it and tell us
 
-**What comes first:**
-
-1. **Python tooling inside a `.janel`.** The editor shows the compiler's errors, but not yet what Python tooling gives you in any other file: completion and type checking for the Python in `<script>` and in template expressions.
-2. **State that lives in your `.py` files across a restart.** `janel dev` restores the state of components. A `state` kept in a service, or a store without `persist=`, still starts over when a `.py` changes. [What is kept](https://github.com/janelkit/janelkit/blob/main/docs/desarrollo.md#janel-dev)
+Build something small and [open an issue](https://github.com/janelkit/janelkit/issues) with your `.janel` and what you expected to see: that is the fastest way to get something fixed. [CONTRIBUTING.md](https://github.com/janelkit/janelkit/blob/main/CONTRIBUTING.md) explains how to run the suite and how the repository is organized.
 
 ## License
 

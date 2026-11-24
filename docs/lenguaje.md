@@ -596,7 +596,7 @@ def pct(valor, eje):               # de píxeles de la imagen a % de la capa (ej
 <list class="lista">
   {#each tareas as tarea (tarea["id"])}
     <row class="fila">
-      <checkbox bind:checked={...}>{tarea["titulo"]}</checkbox>
+      <checkbox checked={tarea["hecha"]} on:change={tarea.update(hecha=event)}>{tarea["titulo"]}</checkbox>
     </row>
   {/each}
 </list>

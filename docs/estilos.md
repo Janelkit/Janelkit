@@ -185,7 +185,7 @@ Toda la disposición sigue las reglas de `<flex>`, un subconjunto del flexbox de
 **Rejilla** con `flex-wrap` (se recoloca al cambiar el ancho, sin Python):
 
 ```html
-<flex class="rejilla">{#each fichas as f}<Ficha class="celda" … />{/each}</flex>
+<flex class="rejilla">{#each fichas as f}<Ficha class="celda" ficha={f} />{/each}</flex>
 <style>
 .rejilla { flex-wrap: wrap; gap: 12px; align-items: start; }
 .celda { flex: 1 1 200px; }   /* parte de 200 px, crece; las que no caben saltan de línea */

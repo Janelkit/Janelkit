@@ -94,7 +94,7 @@ def test_búsqueda_asíncrona():
 ```
 
 - Una pestaña de `<tabs>` o una opción de `<radiogroup>` se pulsa por su texto (`app.find(text="Totales").click()`) o se elige desde el control (`app.find("tabs").choose("Totales")`).
-- `find` exige que haya **exactamente un** elemento que cumpla los criterios (etiqueta, `text`, `id`, `placeholder`); `find_all` devuelve todos. Solo se consideran los visibles.
+- `find` exige que haya **exactamente un** elemento que cumpla los criterios (etiqueta, `text`, `id`, `placeholder`); `find_all` devuelve todos. Solo se consideran los visibles. Si el mismo texto o `label` aparece en varios sitios, busca dentro de un elemento: `app.find(label="Pestañas").find(text="Muestra 1")`.
 - Las acciones (`click`, `type`, `check`, `choose`, `slide`, `submit`) emiten las mismas señales que el usuario: pasan por los manejadores y los `bind:` reales. Sobre un control desactivado fallan, como fallaría el usuario.
 - `app.texts()` devuelve los textos visibles en orden de lectura.
 - `app.wait(segundos)` o `app.wait(until=condición)` deja correr las tareas asíncronas y los temporizadores.

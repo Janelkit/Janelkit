@@ -6,6 +6,10 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 
 ## 0.2.1.0 (sin publicar)
 
+### Nuevo
+
+- **Buscar dentro de un elemento en `janelkit.inspect`:** `elemento.find(...)` y `elemento.find_all(...)` aceptan los mismos criterios que los de la aplicación, pero solo miran dentro de ese elemento. Si el mismo texto o `label` aparece en varios sitios (una pestaña y un botón «Muestra 1»), se distinguen sin cambiar el nombre accesible: `app.find(label="Acciones").find(text="Muestra 1")`.
+
 ### Corregido
 
 - **Quitar un `<video>` que ya había dibujado un fotograma dejaba inservible la ventana desde Python:** al desaparecer con un `{#if}` o un `{#key}`, `janelkit.ext.app().main_window()` pasaba a `None`, los diálogos de `janelkit-desktop` se quedaban sin ventana padre y `janelkit.inspect` fallaba con «Internal C++ object (QQuickWindow) already deleted». La ventana seguía viva: lo que se perdía era su objeto de Python. Si tu aplicación sustituía `JkVideoSurface.window` para evitarlo, ya puedes quitar ese parche.

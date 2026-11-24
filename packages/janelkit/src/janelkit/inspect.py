@@ -143,6 +143,19 @@ class Element:
         label = self.text or self.id
         return f"<{self.tag}{f' {label!r}' if label else ''}>"
 
+    # -- búsqueda dentro ----------------------------------------------------
+    def find_all(self, tag: str | None = None, **criteria: Any) -> list["Element"]:
+        """Como `MountedApp.find_all`, pero solo entre lo que hay dentro de este elemento
+        (sin contarlo a él): `app.find("Tarjeta", label="Beta").find_all("button")`."""
+        return self._app._search(self.item, tag, within=self, **criteria)
+
+    def find(self, tag: str | None = None, **criteria: Any) -> "Element":
+        """El único elemento dentro de este que cumple los criterios. Error si hay cero o varios.
+
+        Sirve cuando el mismo texto o `label` aparece en varios sitios (una pestaña y un botón
+        «Muestra 1»): `app.find(label="Pestañas").find(text="Muestra 1")`."""
+        return self._app._one(self.find_all(tag, **criteria), tag, criteria, within=self)
+
     # -- lectura ------------------------------------------------------------
     @property
     def tag(self) -> str:
@@ -526,6 +539,9 @@ class MountedApp:
     def elements(self) -> list[Element]:
         """Elementos de la plantilla (integrados y QML propios), sin las piezas internas de cada control."""
         root = self.window.contentItem() if hasattr(self.window, "contentItem") else self.window
+        return self._elements(root)
+
+    def _elements(self, root: Any) -> list[Element]:
         return [
             Element(self, i) for i in self._walk(root)
             if _tag(i) in _TAGS.values()
@@ -547,17 +563,35 @@ class MountedApp:
         `tag` acepta el nombre de un componente o el elemento integrado que es su raíz:
         la raíz `<text>` de `Otra.janel` aparece con `find("Otra")` y con `find("text")`.
         Los nombres de 0.1 (`find("Text")`) aún valen, con un `DeprecationWarning`.
+        Para buscar solo dentro de un elemento: `elemento.find_all(...)`.
         """
+        root = self.window.contentItem() if hasattr(self.window, "contentItem") else self.window
+        return self._search(root, tag, text=text, id=id, placeholder=placeholder, label=label, visible_only=visible_only)
+
+    def _search(
+        self,
+        root: Any,
+        tag: str | None = None,
+        *,
+        text: str | None = None,
+        id: str | None = None,
+        placeholder: str | None = None,
+        label: str | None = None,
+        visible_only: bool = True,
+        within: Element | None = None,
+    ) -> list[Element]:
         tags = (tag,)
         if tag in LEGACY_TAGS:
             warnings.warn(
                 f'find("{tag}"): los elementos del núcleo se escriben en minúscula desde 0.2: find("{LEGACY_TAGS[tag]}")',
                 DeprecationWarning,
-                stacklevel=3 if sys._getframe(1).f_code.co_name == "find" else 2,
+                stacklevel=4 if sys._getframe(2).f_code.co_name == "find" else 3,
             )
             tags = (tag, LEGACY_TAGS[tag])
         out = []
-        for el in self.elements():
+        for el in self._elements(root):
+            if within is not None and el.item is root:
+                continue  # dentro de un elemento: sin contarlo a él
             if visible_only and not el.visible:
                 continue
             if tag is not None and el.tag not in tags and el._kind not in tags:
@@ -575,10 +609,14 @@ class MountedApp:
 
     def find(self, tag: str | None = None, **criteria: Any) -> Element:
         """El único elemento que cumple los criterios. Error si hay cero o varios."""
-        found = self.find_all(tag, **criteria)
+        return self._one(self.find_all(tag, **criteria), tag, criteria)
+
+    @staticmethod
+    def _one(found: list[Element], tag: str | None, criteria: dict[str, Any], within: Element | None = None) -> Element:
         if len(found) != 1:
             what = ", ".join([*([f"tag={tag!r}"] if tag else []), *(f"{k}={v!r}" for k, v in criteria.items())])
-            raise InspectError(f"se esperaba un elemento con {what}; hay {len(found)}: {found[:5]}")
+            where = f" dentro de {within!r}" if within is not None else ""
+            raise InspectError(f"se esperaba un elemento con {what}{where}; hay {len(found)}: {found[:5]}")
         return found[0]
 
     def texts(self) -> list[str]:

@@ -288,3 +288,37 @@ def test_real_pointer_and_key_events_start_async_handlers_inside_the_loop(tmp_pa
         app.key("Ctrl+N")
         app.wait(until=lambda: len(app.get("log")) >= 4, timeout=2)
         assert sorted(app.get("log")) == ["click", "contextmenu", "dblclick", "key"]
+
+
+def test_find_inside_an_element_tells_apart_the_same_text_or_label(tmp_path):
+    """Una pestaña y un botón «Muestra 1», o un texto y un select con el mismo label: buscar
+    dentro de un elemento los distingue sin cambiar el nombre accesible."""
+    app_file = tmp_path / "App.janel"
+    app_file.write_text(
+        "<script>\nfrom janelkit import state\ntab = state(\"Muestra 1\")\nn = state(0)\nref = state(\"A\")\n</script>\n"
+        "<column>\n"
+        '  <flex label="Pestañas"><tabs bind:value={tab} options={["Muestra 1", "Muestra 2"]} /></flex>\n'
+        '  <row label="Acciones"><button on:click={n += 1}>Muestra 1</button></row>\n'
+        '  <column label="Ajustes">\n'
+        '    <text label="Referencia principal">Referencia principal</text>\n'
+        '    <select label="Referencia principal" bind:value={ref} options={["A", "B"]} />\n'
+        '    <text visible={False}>oculto</text>\n'
+        "  </column>\n"
+        "</column>",
+        encoding="utf-8",
+    )
+    with mount(app_file) as app:
+        with pytest.raises(InspectError, match="hay 2"):
+            app.find(text="Muestra 1")
+        app.find(label="Acciones").find(text="Muestra 1").click()
+        assert app.get("n") == 1
+        app.find(label="Pestañas").find(text="Muestra 2").click()
+        assert app.get("tab") == "Muestra 2"
+        ajustes = app.find(label="Ajustes")
+        ajustes.find("select", label="Referencia principal").choose("B")
+        assert app.get("ref") == "B"
+        assert [e.tag for e in ajustes.find_all(label="Referencia principal")] == ["text", "select"]
+        assert ajustes.find_all(label="Ajustes") == []  # sin contarlo a él
+        assert ajustes.find_all(text="oculto") == [] and len(ajustes.find_all(text="oculto", visible_only=False)) == 1
+        with pytest.raises(InspectError, match=r"label='Nada' dentro de <column>; hay 0"):
+            ajustes.find(label="Nada")

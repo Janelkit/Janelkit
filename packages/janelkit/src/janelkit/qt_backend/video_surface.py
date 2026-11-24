@@ -12,10 +12,27 @@ JkVideo.qml coloca la superficie en el rectángulo que ocupa la imagen según `f
 from __future__ import annotations
 
 from PySide6.QtCore import Property, QRectF, Signal, Slot
-from PySide6.QtGui import QImage
+from PySide6.QtGui import QGuiApplication, QImage
 from PySide6.QtQuick import QQuickItem, QQuickWindow, QSGSimpleTextureNode, QSGTexture
 
 _OPAQUE = QQuickWindow.CreateTextureOption.TextureIsOpaque
+
+
+def _window_of(item: QQuickItem) -> QQuickWindow | None:
+    """La ventana de `item`, buscada entre las de la aplicación.
+
+    No con `item.window()`: en un item cuya clase está definida en Python, PySide ata el
+    envoltorio de la ventana que devuelve al del item, y al destruirse el item (un `{#if}` que
+    pasa a falso) invalida también el de la ventana, aunque la ventana siga viva. Desde ahí,
+    `app().main_window()` da `None` y todo lo que usa la ventana desde Python falla con
+    «Internal C++ object (QQuickWindow) already deleted».
+    """
+    for window in QGuiApplication.topLevelWindows():
+        if isinstance(window, QQuickWindow):
+            content = window.contentItem()
+            if content is not None and (content is item or content.isAncestorOf(item)):
+                return window
+    return None
 
 
 class JkVideoSurface(QQuickItem):
@@ -23,7 +40,7 @@ class JkVideoSurface(QQuickItem):
 
     def __init__(self, parent: QQuickItem | None = None):
         super().__init__(parent)
-        self.setFlag(QQuickItem.Flag.ItemHasContents, True)
+        # Sin ItemHasContents hasta el primer fotograma (ver setImage).
         self._image = QImage()
         self._opaque = True
         self._dirty = False
@@ -34,6 +51,12 @@ class JkVideoSurface(QQuickItem):
         """Muestra `image` (un `QImage` nulo deja la superficie vacía). En el hilo de la interfaz.
 
         `opaque`: la imagen no tiene transparencias (se dibuja sin mezclar con lo de detrás)."""
+        if not image.isNull():
+            # Solo desde aquí pide Qt Quick dibujarla. Con el dibujo en otro hilo (Direct3D,
+            # OpenGL), una ventana que se hace visible espera a que ese hilo pinte, y si lo hace
+            # dentro de una llamada desde Python (montarla con component.create) no suelta el
+            # GIL: updatePaintNode, que es Python, se quedaba esperándolo y la ventana colgada.
+            self.setFlag(QQuickItem.Flag.ItemHasContents, True)
         resized = image.size() != self._image.size()
         self._image = image
         self._opaque = opaque
@@ -58,9 +81,13 @@ class JkVideoSurface(QQuickItem):
     def updatePaintNode(self, node: QSGSimpleTextureNode | None, _data: object) -> QSGSimpleTextureNode | None:
         # Hilo de dibujo, con el de la interfaz parado: se puede leer self._image.
         image = self._image
+        if node is None and image.isNull():
+            return None
+        if node is None or self._dirty:
+            window = _window_of(self)  # no self.window(): ver _window_of
+            if window is None:
+                return node
         if node is None:
-            if image.isNull():
-                return None
             node = QSGSimpleTextureNode()
             node.setOwnsTexture(True)  # borra la textura anterior al cambiarla y al destruirse
             node.setFiltering(QSGTexture.Filtering.Linear)
@@ -73,6 +100,6 @@ class JkVideoSurface(QQuickItem):
                 image.fill(0)
                 opaque = False
             options = _OPAQUE if opaque else QQuickWindow.CreateTextureOption(0)
-            node.setTexture(self.window().createTextureFromImage(image, options))
+            node.setTexture(window.createTextureFromImage(image, options))
         node.setRect(QRectF() if self._image.isNull() else self.boundingRect())
         return node

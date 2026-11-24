@@ -393,6 +393,62 @@ ver = state(True)
     assert not frames._hub._sinks[0].image().isNull()  # muestra el último al engancharse
 
 
+def test_removing_a_drawn_video_keeps_the_window_usable(app_from):
+    # Si la superficie pedía self.window() al dibujar, PySide invalidaba el envoltorio de la
+    # ventana al destruirla: main_window() pasaba a None y las capturas y los diálogos fallaban.
+    from shiboken6 import Shiboken
+
+    from janelkit import ext
+
+    app = app_from("""<script>
+from janelkit import Frames, state
+frames = Frames()
+ver = state(True)
+clip = state(0)
+</script>
+<column>
+  {#if ver}<video source={frames} />{/if}
+  {#key clip}<video source={frames} />{/key}
+  <button>Sigue</button>
+</column>""")
+    frames, ver, clip = (app.namespace[k] for k in ("frames", "ver", "clip"))
+    for round in range(3):
+        frames.push(image(8, 8, b"\x10\x20\x30"))
+        app.screenshot()  # dibuja: la superficie crea su textura
+        ver.value = False
+        clip.value += 1  # {#key} destruye su <video> y crea otro
+        app.wait(0.05)
+        assert Shiboken.isValid(app.window), f"ronda {round}"
+        assert ext.app().main_window() is app.window
+        assert app.find("button").text == "Sigue"
+        ver.value = True
+        app.wait(0.05)
+    assert not app.screenshot().isNull()
+
+
+def test_the_surface_asks_to_be_drawn_only_once_it_has_a_frame(app_from):
+    # Con el dibujo en otro hilo (una ventana real con Direct3D u OpenGL), montar una ventana
+    # con un <video> que pedía dibujarse se quedaba colgado: el hilo de dibujo esperaba el GIL
+    # para llamar a updatePaintNode y la ventana esperaba al hilo de dibujo. Sin fotograma, no
+    # hay nada que dibujar y la superficie no lo pide; offscreen no reproduce el cuelgue.
+    from PySide6.QtQuick import QQuickItem
+
+    app = app_from("""<script>
+from janelkit import Frames
+frames = Frames()
+</script>
+<video source={frames} />""")
+    surface = surfaces(app)[0]
+    assert not surface.flags() & QQuickItem.Flag.ItemHasContents
+    app.namespace["frames"].push(image(4, 4))
+    app.wait(0.05)
+    assert surface.flags() & QQuickItem.Flag.ItemHasContents
+    app.namespace["frames"].clear()
+    app.wait(0.05)
+    assert surface.flags() & QQuickItem.Flag.ItemHasContents  # no se quita: clear() deja un nodo vacío
+    assert shown(app).isNull()
+
+
 def test_the_documented_example_runs(app_from):
     app = app_from("""<script>
 from janelkit import Frames, state

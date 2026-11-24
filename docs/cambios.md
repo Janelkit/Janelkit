@@ -4,6 +4,13 @@ Cada versión lista lo nuevo y, aparte, lo que **rompe** código existente con c
 
 Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`janelkit-i18n`, `janelkit-desktop`) llevan sus cambios en la sección «Cambios» de su README.
 
+## 0.2.1.0 (sin publicar)
+
+### Corregido
+
+- **Quitar un `<video>` que ya había dibujado un fotograma dejaba inservible la ventana desde Python:** al desaparecer con un `{#if}` o un `{#key}`, `janelkit.ext.app().main_window()` pasaba a `None`, los diálogos de `janelkit-desktop` se quedaban sin ventana padre y `janelkit.inspect` fallaba con «Internal C++ object (QQuickWindow) already deleted». La ventana seguía viva: lo que se perdía era su objeto de Python. Si tu aplicación sustituía `JkVideoSurface.window` para evitarlo, ya puedes quitar ese parche.
+- **Una ventana real con un `<video>` podía quedarse colgada al abrirse** (en blanco, con el cursor de espera) cuando se dibuja con la GPU en otro hilo (Direct3D u OpenGL, lo normal en Windows): pasaba con `janelkit.inspect.mount(..., headless=False)` y con `apps/examples/video/bench.py --ventana`. Ahora un `<video>` solo pide dibujarse a partir de su primer fotograma.
+
 ## 0.2.0.0 (2026-11-05)
 
 ### Nuevo

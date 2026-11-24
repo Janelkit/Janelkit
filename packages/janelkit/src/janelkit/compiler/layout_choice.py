@@ -16,7 +16,9 @@ Lo que obliga a usar el motor de <flex>:
   qué es) y componentes con atributos en su etiqueta dentro de un {#each} (al reordenar
   filas, Qt no mueve su raíz);
 - más de un hijo con flex (Qt no reparte en proporción como `flex: N 1 0`), salvo que
-  todos sean <spacer>; en <flex>, cualquier hijo con flex (encoge distinto).
+  todos sean <spacer>; en <flex>, cualquier hijo con flex (encoge distinto);
+- un hijo con flex y tamaño fijo en el eje principal (`flex: 1; width: 0` en una fila):
+  Qt lo deja fijo, y en CSS crece.
 """
 from __future__ import annotations
 
@@ -45,6 +47,8 @@ _GROW_BY_DEFAULT = ("JkScroll", "JkSpacer", "JkList")
 _NOT_ITEMS = ("JkContext", "JkTransition", "Binding", "HoverHandler", "TapHandler", "Timer")
 
 FLEX, SPACER, COMPLEX = "flex", "spacer", "complex"
+# flex explícito y tamaño fijo en ese eje: Layout.fill* a false (width/height) anula el flex.
+FLEX_FIXED_W, FLEX_FIXED_H = "flex-fixed-width", "flex-fixed-height"
 
 # Rasgos de la raíz de un componente hijo (ruta -> rasgos o None si no se sabe).
 RootLookup = Callable[[str], "frozenset[str] | None"]
@@ -72,6 +76,10 @@ def features_of_props(qml_type: str, keys: dict[str, list[str]]) -> frozenset[st
     if flex is not None:
         if any(v.strip() != "0" for v in flex):
             out.add(FLEX)
+            if "false" in (v.strip() for v in keys.get("Layout.fillWidth", ())):
+                out.add(FLEX_FIXED_W)
+            if "false" in (v.strip() for v in keys.get("Layout.fillHeight", ())):
+                out.add(FLEX_FIXED_H)
     elif qml_type in _GROW_BY_DEFAULT:
         out.add(FLEX)
         if qml_type == "JkSpacer":
@@ -136,6 +144,8 @@ def why_flex(box: IRElement, roots: RootLookup) -> str | None:
             return "un hijo que no se conoce al compilar (<slot />, componente)"
         if COMPLEX in feats:
             return "un hijo con order, margin: auto, %, position, flex-shrink/basis o :first-child"
+        if (FLEX_FIXED_W if box.qml_type == "JkRow" else FLEX_FIXED_H) in feats:
+            return "un hijo con flex y tamaño fijo en el eje principal"
         n = 2 if isinstance(child, IRRepeater) and child.many else 1
         if FLEX in feats:
             flex += n

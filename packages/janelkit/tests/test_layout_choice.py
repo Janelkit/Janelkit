@@ -59,6 +59,29 @@ def test_one_growing_child_or_only_spacers_keep_qt_layout():
     assert boxes('<row><spacer /><text class="h">a</text></row>', ".h { flex: 1; }") == ["JkFlexRow"]
 
 
+def test_a_growing_child_with_a_fixed_size_on_the_main_axis_uses_the_engine():
+    # En Qt, width/height ponen Layout.fill* a false y el hijo no crecía: `flex: 1; width: 0`
+    # dejaba el texto con ancho 0. En CSS crece desde 0, como `flex: 1 1 0; width: 0`.
+    t = '<column><row><text class="h">a</text><text>b</text></row></column>'
+    assert boxes(t, ".h { flex: 1; width: 0; }") == ["JkColumn", "JkFlexRow"]
+    assert boxes('<column><column><text class="h">a</text></column></column>', ".h { flex: 1; height: 0; }")[1] == "JkFlexColumn"
+    # En el eje cruzado no cambia nada: Qt lo hace igual
+    assert boxes(t, ".h { flex: 1; height: 20px; }") == ["JkColumn", "JkRow"]
+    assert boxes('<row><text class="h" style="width: 40px">a</text></row>', "") == ["JkRow"]
+
+
+def test_flex_1_and_width_0_in_a_row_fill_it_like_flex_1_1_0(mount):
+    m = mount("""<window width={376} height={200}><column>
+  <row id="a"><flex class="dot" /><text id="ta" style="flex: 1; width: 0">1. camara_1_frontal_larga.avi</text><text>25 fps</text><button text="X" /></row>
+  <row id="b"><flex class="dot" /><text id="tb" style="flex: 1 1 0; width: 0">1. camara_1_frontal_larga.avi</text><text>25 fps</text><button text="X" /></row>
+</column></window>
+<style>.dot { width: 10px; height: 10px; }</style>""")
+    QCoreApplication.processEvents()
+    ta, tb = find(m, "ta"), find(m, "tb")
+    assert ta.width() > 100
+    assert (ta.x(), ta.width()) == (tb.x(), tb.width())
+
+
 def test_repeated_or_implicit_children():
     script = "<script>\nitems = [1, 2]\nshow = True\n</script>\n"
     each = compile_source(script + '<row>{#each items as i}<text class="h">{i}</text>{/each}</row>\n<style>.h { flex: 1; }</style>').qml

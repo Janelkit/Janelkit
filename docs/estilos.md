@@ -38,59 +38,59 @@ Los estilos son **locales al componente**: afectan a los elementos escritos en s
 
 ## Propiedades
 
-La tabla dice qué hace cada propiedad; la de [Por elemento](#por-elemento) dice qué admite cada elemento, y sale del propio compilador.
+Qué hace cada propiedad y qué valores acepta. Qué elementos admite cada una lo dice la tabla [Por elemento](#por-elemento), que sale del propio compilador: una propiedad en un elemento que no la admite produce una advertencia al compilar.
 
-| CSS | Aplica a | Notas |
-|---|---|---|
-| `color` | text, button, textfield, textarea, checkbox, switch, select, radiogroup, tabs; flex, column, row (lo heredan sus `<text>`) | color del texto |
-| `background`, `background-color` | window, flex, column, row, scroll, list, text, button, textfield, textarea, select | en `text`, con `padding` y `border-radius`, sirve para etiquetas y contadores |
-| `border` | los mismos que `background` (salvo window) | `1px solid #ccc`, `1px solid var(--border)`, `none` |
-| `border-color`, `border-width` | ídem | |
-| `border-top`, `-right`, `-bottom`, `-left` (y `-width`, `-color`) | flex, column, row | bordes por lado (separadores). Con radio, los lados son rectos en las esquinas |
-| `border-radius` | ídem | 1 valor; de 2 a 4 (radio por esquina, como en CSS) solo en flex, column y row |
-| `overflow` | flex, column, row | `visible`, `hidden` (recorta, sin redondear las esquinas), `auto`/`scroll` (zona de desplazamiento). Con `flex-wrap: wrap`, como en CSS, las líneas se cortan al tamaño de la caja y se desplaza en el otro eje (una rejilla de fichas que baja) |
-| `padding` | contenedores y controles con texto | 1 a 4 valores, como en CSS |
-| `padding-top`, `-right`, `-bottom`, `-left` | ídem | |
-| `gap` | flex, column, row, scroll, list | separación entre hijos |
-| `row-gap`, `column-gap` | flex, column, row | separación entre filas / entre columnas |
-| `flex-direction` (o `direction`) | flex | `row` (por defecto), `column`, `row-reverse`, `column-reverse` |
-| `flex-wrap` | flex, column, row | `nowrap`, `wrap` (salto de línea: rejillas) |
-| `font-size` | window y controles con texto | en window se hereda en toda la ventana |
-| `font-weight` | ídem | `100`–`1000`, `normal`, `bold`, `lighter`, `bolder` |
-| `font-family` | ídem | `"Inter"` o un token |
-| `font-style` | ídem | `italic`, `normal` |
-| `letter-spacing` | controles con texto | px |
-| `text-transform` | controles con texto | `uppercase`, `lowercase`, `capitalize`, `none` |
-| `text-align` | text, textfield, textarea, flex, column, row | `left`, `center`, `right`, `justify` |
-| `line-height` | text, flex, column, row | factor sin unidades (`1.4`) |
-| `white-space` | text, flex, column, row | `normal`, `nowrap` (una sola línea) |
-| `text-overflow` | text, flex, column, row | `ellipsis` (puntos suspensivos al cortar), `clip` |
-| `user-select` | text | `text` (se puede seleccionar y copiar, como `selectable`), `auto`, `none` |
-| `--nombre` | flex, column, row | variable propia: `--acento: var(--primary)`; se lee con `var(--acento)` (ver abajo) |
-| `align-items` | flex, column, row, scroll | `start`, `center`, `end`, `stretch`; `baseline` en flex, column y row |
-| `justify-content` | flex, column, row, scroll | `start`, `center`, `end`, `space-between`, `space-around`, `space-evenly` |
-| `align-content` | flex, column, row | como `justify-content` y `stretch`: reparto entre líneas con `flex-wrap` |
-| `flex` | todos salvo window | `1` (= `1 1 0`), `1 0 200px` (crecer, encoger, base), `auto`, `none` |
-| `flex-grow`, `flex-shrink`, `flex-basis` | todos salvo window | como en CSS; `flex-grow` solo deja la base en `auto` |
-| `order` | todos salvo window | entero: orden dentro del contenedor |
-| `margin`, `margin-top`, `-right`, `-bottom`, `-left` | todos salvo window | px o `auto` (empuja: `margin-left: auto`). Sin colapso de márgenes |
-| `align-self` | todos salvo window | `start`, `center`, `end`, `stretch` |
-| `width`, `height` | todos | px, `%` del contenedor, `auto`; `100%` ocupa el espacio disponible |
-| `min-width`, `max-width`, `min-height`, `max-height` | todos | px |
-| `opacity` | todos | `0`–`1` |
-| `transform` | todos salvo window | `scale(n)`, `rotate(Ndeg)`, `translate(x, y)`, `translateX()`, `translateY()`, `none`. Desde el centro y sin afectar a la disposición, como en CSS |
-| `cursor` | todos salvo window | `default`, `pointer`, `text`, `move`, `grab`, `grabbing`, `not-allowed`, `wait`, `crosshair`, `ew-resize`, `ns-resize`… |
-| `box-shadow` | flex, column, row | `0 2px 8px rgba(0, 0, 0, .15)` (x, y, desenfoque, extensión, color). Una sombra (si hay varias, avisa y usa la primera); sin `inset`. Con `overflow: hidden`, la caja recorta su sombra |
-| `outline`, `outline-width`, `outline-color`, `outline-offset` | flex, column, row | anillo que no ocupa sitio (`2px solid var(--primary)`); con `outline-offset` negativo, por dentro |
-| `pointer-events` | flex, column, row | `none`: la caja no recibe el ratón (ni `:hover`, ni clic, ni cursor); sus hijos sí |
-| `visibility` | flex, column, row | `hidden`: ocupa su sitio sin verse (ni recibir eventos); `visible` |
-| `transition` | todos salvo window | `background 200ms, opacity .3s` o `all 150ms`: anima los cambios de `color`, `background`, `border-color`, `opacity`, `width`, `height`, `border-radius` y `transform`, y en las cajas `box-shadow` y `outline` (también los que provocan los estados y las clases condicionales o dinámicas). |
+| CSS | Qué hace y valores |
+|---|---|
+| `color` | color del texto; en flex, column y row lo heredan los `<text>` de dentro |
+| `background`, `background-color` | color de fondo; en `text`, con `padding` y `border-radius`, sirve para etiquetas y contadores |
+| `border` | `1px solid #ccc`, `1px solid var(--border)`, `none` |
+| `border-color`, `border-width` | color y grosor del borde |
+| `border-top`, `-right`, `-bottom`, `-left` (y `-width`, `-color`) | bordes por lado (separadores). Con radio, los lados son rectos en las esquinas |
+| `border-radius` | 1 valor; de 2 a 4 (radio por esquina, como en CSS) solo en flex, column y row |
+| `overflow` | `visible`, `hidden` (recorta, sin redondear las esquinas), `auto`/`scroll` (zona de desplazamiento). Con `flex-wrap: wrap`, como en CSS, las líneas se cortan al tamaño de la caja y se desplaza en el otro eje (una rejilla de fichas que baja) |
+| `padding` | 1 a 4 valores, como en CSS |
+| `padding-top`, `-right`, `-bottom`, `-left` | un solo lado |
+| `gap` | separación entre hijos |
+| `row-gap`, `column-gap` | separación entre filas / entre columnas |
+| `flex-direction` (o `direction`) | `row` (por defecto), `column`, `row-reverse`, `column-reverse` |
+| `flex-wrap` | `nowrap`, `wrap` (salto de línea: rejillas) |
+| `font-size` | en window se hereda en toda la ventana; en flex, column y row, en los `<text>` de dentro |
+| `font-weight` | `100`–`1000`, `normal`, `bold`, `lighter`, `bolder` |
+| `font-family` | `"Inter"` o un token |
+| `font-style` | `italic`, `normal` |
+| `letter-spacing` | px |
+| `text-transform` | `uppercase`, `lowercase`, `capitalize`, `none` |
+| `text-align` | `left`, `center`, `right`, `justify` |
+| `line-height` | factor sin unidades (`1.4`) |
+| `white-space` | `normal`, `nowrap` (una sola línea) |
+| `text-overflow` | `ellipsis` (puntos suspensivos al cortar), `clip` |
+| `user-select` | `text` (se puede seleccionar y copiar, como `selectable`), `auto`, `none` |
+| `--nombre` | variable propia: `--acento: var(--primary)`; se lee con `var(--acento)` (ver abajo) |
+| `align-items` | `start`, `center`, `end`, `stretch`; `baseline` en flex, column y row |
+| `justify-content` | `start`, `center`, `end`, `space-between`, `space-around`, `space-evenly` |
+| `align-content` | como `justify-content` y `stretch`: reparto entre líneas con `flex-wrap` |
+| `flex` | `1` (= `1 1 0`), `1 0 200px` (crecer, encoger, base), `auto`, `none` |
+| `flex-grow`, `flex-shrink`, `flex-basis` | como en CSS; `flex-grow` solo deja la base en `auto` |
+| `order` | entero: orden dentro del contenedor |
+| `margin`, `margin-top`, `-right`, `-bottom`, `-left` | px o `auto` (empuja: `margin-left: auto`). Sin colapso de márgenes |
+| `align-self` | `start`, `center`, `end`, `stretch` |
+| `width`, `height` | px, `%` del contenedor, `auto`; `100%` ocupa el espacio disponible |
+| `min-width`, `max-width`, `min-height`, `max-height` | px |
+| `opacity` | `0`–`1` |
+| `transform` | `scale(n)`, `rotate(Ndeg)`, `translate(x, y)`, `translateX()`, `translateY()`, `none`. Desde el centro y sin afectar a la disposición, como en CSS |
+| `cursor` | `default`, `pointer`, `text`, `move`, `grab`, `grabbing`, `not-allowed`, `wait`, `crosshair`, `ew-resize`, `ns-resize`… |
+| `box-shadow` | `0 2px 8px rgba(0, 0, 0, .15)` (x, y, desenfoque, extensión, color). Una sombra (si hay varias, avisa y usa la primera); sin `inset`. Con `overflow: hidden`, la caja recorta su sombra |
+| `outline`, `outline-width`, `outline-color`, `outline-offset` | anillo que no ocupa sitio (`2px solid var(--primary)`); con `outline-offset` negativo, por dentro |
+| `pointer-events` | `none`: la caja no recibe el ratón (ni `:hover`, ni clic, ni cursor); sus hijos sí |
+| `visibility` | `hidden`: ocupa su sitio sin verse (ni recibir eventos); `visible` |
+| `transition` | `background 200ms, opacity .3s` o `all 150ms` (lo animable que tenga el elemento): anima los cambios de `color`, `background`, `border-color`, `opacity`, `width`, `height`, `border-radius` y `transform`, y en las cajas `box-shadow` y `outline` (también los que provocan los estados y las clases condicionales o dinámicas). |
 
 No soportado (advertencia): `position: sticky`, `em`/`rem`, `display: grid`, `aspect-ratio`, animaciones con `@keyframes`.
 
 ### Por elemento
 
-Lo que admite cada elemento. Una propiedad que el elemento no admite produce una advertencia al compilar y no tiene efecto.
+Lo que admite cada elemento, tal como lo comprueba el compilador.
 
 <!-- css-por-elemento: generado por tools/css_table.py, no editar a mano -->
 

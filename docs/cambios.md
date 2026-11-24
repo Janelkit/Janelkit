@@ -33,6 +33,7 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
     - `font-size`, `font-weight`, `font-family` y `font-style` en `<radiogroup>`. Ahora cambian la fuente de sus opciones, que sigue heredando la de la ventana.
     - Cualquier estilo en `<shortcut>`, que no se dibuja. Ahora avisa de que no tiene efecto.
 - **`janelkit.inspect` sin pantalla: lo que estaba en la esquina superior izquierda empezaba con `:hover`**, porque el puntero empezaba dentro de la ventana. Se notaba en las capturas (el primer botón de una barra salía resaltado) y en `style()`. Ahora `mount` saca el puntero de la ventana al montar; con `headless=False` no lo mueve, porque es el ratón del usuario.
+- **Lo de dentro de un `{#if}` podía evaluarse una vez más con el valor que acababa de hacer falsa la condición** (un `TypeError` con `None`, o una expresión con el valor viejo) antes de desmontarse. Pasaba cuando la condición había dejado de leer ese estado durante un tiempo, por ejemplo con un `or` que cortaba antes (`{#if fijo or clip is not None}`), y luego lo volvía a leer. Ahora los efectos pendientes se ejecutan en el orden en que se crearon: el bloque va antes que lo que contiene y lo desmonta sin recalcularlo. Las guardas que se añadieron para evitarlo ya no hacen falta.
 
 ## 0.2.0.0 (2026-11-05)
 

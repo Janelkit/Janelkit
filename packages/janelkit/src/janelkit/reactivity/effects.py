@@ -17,6 +17,7 @@ Modelo:
 """
 from __future__ import annotations
 
+import heapq
 import itertools
 import threading
 from contextlib import contextmanager
@@ -31,7 +32,11 @@ _observer_stack: list["Observer"] = []
 _current_scope: ContextVar["Scope | None"] = ContextVar("janelkit_scope", default=None)
 _batch_depth = 0
 _flushing = False
-_pending: dict["Effect", None] = {}  # conjunto ordenado
+_pending: dict["Effect", None] = {}  # efectos que esperan ejecutarse
+# Los mismos, por orden de creación (montículo; las entradas de efectos que ya no esperan se saltan).
+# Un efecto que crea otros (la región de un {#if}) se creó antes que ellos: se ejecuta antes y
+# libera lo que ya no se ve sin que llegue a recalcularse con valores que ya no le tocan.
+_queue: list[tuple[int, "Effect"]] = []
 _settled: list[Callable[[], Any]] = []  # se ejecutan cuando ya no queda ningún efecto pendiente
 _MAX_FLUSH_ITERATIONS = 10_000
 _created = itertools.count()  # orden de creación de los efectos (ver Gate.open)
@@ -198,7 +203,9 @@ class Effect(Observer):
             self._must_run = True
         if self._held():
             return
-        _pending[self] = None
+        if self not in _pending:
+            _pending[self] = None
+            heapq.heappush(_queue, (self._order, self))
         if _batch_depth == 0:
             _flush()
 
@@ -338,12 +345,15 @@ def _flush() -> None:
             iterations += 1
             if iterations > _MAX_FLUSH_ITERATIONS:
                 _pending.clear()
+                _queue.clear()
                 _settled.clear()
                 raise ReactiveCycleError("ciclo reactivo: los efectos se reactivan entre sí sin estabilizarse")
             if not _pending:
                 _settled.pop(0)()
                 continue
-            effect = next(iter(_pending))
+            effect = heapq.heappop(_queue)[1]
+            if effect not in _pending:  # se liberó mientras esperaba
+                continue
             del _pending[effect]
             if effect.gate is not None and effect._held():  # se ocultó mientras esperaba
                 continue
@@ -351,6 +361,8 @@ def _flush() -> None:
                 effect.run()
     finally:
         _flushing = False
+        if not _pending:
+            _queue.clear()  # entradas de efectos liberados mientras esperaban
 
 
 def when_settled(fn: Callable[[], Any]) -> None:

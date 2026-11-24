@@ -200,3 +200,26 @@ def test_a_failing_computed_lets_the_effect_report_the_error():
     Effect(lambda: inv.value, on_error=errors.append)
     a.value = 0
     assert len(errors) == 1 and isinstance(errors[0], ZeroDivisionError)
+
+
+def test_an_effect_runs_before_the_effects_it_created():
+    """Los efectos pendientes se ejecutan en el orden en que se crearon: el que creó otros (la
+    región de un {#if}) va antes y libera los que ya no tocan, que no llegan a recalcularse.
+    Antes se ejecutaban por orden de aviso, y el creador podía quedar detrás de lo que creó si
+    había dejado de leer una fuente y la volvía a leer (una condición con `or` que corta antes)."""
+    shortcut, sel = state(False), state("a")
+    seen, child = [], {}
+
+    def region():
+        if shortcut.value or sel.value is not None:   # con shortcut=True no lee sel
+            if "effect" not in child:
+                child["effect"] = Effect(lambda: seen.append(sel.value))
+        elif "effect" in child:
+            child.pop("effect").dispose()
+
+    Effect(region)
+    shortcut.value = True
+    shortcut.value = False  # vuelve a leer sel: avisado después del hijo
+    seen.clear()
+    sel.value = None
+    assert seen == []  # el hijo se liberó sin evaluarse con None

@@ -604,3 +604,20 @@ def test_split_format_rules():
     assert split_format("d['a:b']") == ("d['a:b']", "", None)
     assert split_format("f(x)[1:2]") == ("f(x)[1:2]", "", None)
     assert split_format("(lambda: 1)()") == ("(lambda: 1)()", "", None)
+
+
+def test_inside_an_if_nothing_is_evaluated_with_values_the_condition_already_rejects(mount, caplog):
+    """3.9 del feedback de video-split: lo de dentro de un {#if} se evaluaba una vez más con el
+    valor que hacía falsa la condición (TypeError con None) antes de desmontarse."""
+    m = mount(
+        "<script>\nfrom janelkit import state\nfijo = state(False)\nsel = state({'nombre': 'a'})\nvistos = []\n\n"
+        "def nombre(c):\n    vistos.append(c)\n    return c['nombre']\n</script>\n"
+        "<column>{#if fijo or sel is not None}<text>{nombre(sel)}</text>{/if}</column>"
+    )
+    ns = m.instance.namespace
+    ns["fijo"].value = True
+    ns["fijo"].value = False
+    ns["vistos"].clear()
+    ns["sel"].value = None
+    assert ns["vistos"] == [] and texts(m) == []
+    assert "error" not in caplog.text.lower()

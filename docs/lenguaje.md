@@ -297,6 +297,8 @@ En una prueba, `app.find(text="Ver detalles").click()` llega a la caja, como un 
 
 Solo existe la rama activa: al cambiar de rama, los elementos de la anterior se **destruyen** y sus bindings dejan de escuchar el estado. Lo que se muestra de nuevo se crea desde cero (con estado local nuevo).
 
+Lo de dentro de una rama no se evalúa con valores que ya la descartan: en `{#if clip is not None}<text>{clip["nombre"]}</text>{/if}`, poner `clip` a `None` quita el texto sin volver a calcular `clip["nombre"]`. No hacen falta guardas dentro de la rama (`clip["nombre"] if clip else ""`), tampoco en los componentes hijos que reciben `clip` como prop. Esto vale para cada cambio por separado. Un manejador agrupa sus asignaciones en un solo cambio, pero tras un `await` cada asignación es un cambio propio, y entre dos de ellas la vista puede ver el estado a medias: ver [patrones.md](patrones.md#el-estado-a-medias-tras-un-await).
+
 ### `{#each}`
 
 ```html

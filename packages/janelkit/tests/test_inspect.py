@@ -322,3 +322,45 @@ def test_find_inside_an_element_tells_apart_the_same_text_or_label(tmp_path):
         assert ajustes.find_all(text="oculto") == [] and len(ajustes.find_all(text="oculto", visible_only=False)) == 1
         with pytest.raises(InspectError, match=r"label='Nada' dentro de <column>; hay 0"):
             ajustes.find(label="Nada")
+
+
+def test_window_size_and_scrolling_an_element_into_view(tmp_path):
+    """Para mirar o capturar una vista más alta que la ventana: darle tamaño (size=, resize)
+    o desplazar hasta un elemento (<scroll> y <list>)."""
+    from PySide6.QtCore import QRectF
+
+    def seen(app, el):
+        box = el.item.mapRectToScene(QRectF(0, 0, el.item.width(), el.item.height()))
+        return QRectF(0, 0, app.window.width(), app.window.height()).contains(box)
+
+    scroll = tmp_path / "Scroll.janel"
+    scroll.write_text(
+        '<window width={300} height={200}><scroll>\n'
+        '  {#each list(range(40)) as i (i)}<text label={"fila " + str(i)}>fila {i}</text>{/each}\n'
+        "</scroll></window>",
+        encoding="utf-8",
+    )
+    with mount(scroll) as app:
+        for name in ("fila 30", "fila 39", "fila 0"):
+            row = app.find(label=name)
+            if name != "fila 0":
+                assert not seen(app, row)
+            assert row.scroll_into_view() is row and seen(app, row)
+        app.resize(300, 1000)
+        assert app.screenshot().size().toTuple() == (300, 1000) and seen(app, app.find(label="fila 39"))
+
+    lista = tmp_path / "Lista.janel"
+    lista.write_text(
+        '<window width={300} height={200}><list>\n'
+        '  {#each list(range(30)) as i (i)}<text label={"l " + str(i)}>l {i}</text>{/each}\n'
+        "</list></window>",
+        encoding="utf-8",
+    )
+    with mount(lista) as app:
+        made = [e for e in app.find_all("text") if not seen(app, e)]  # creadas, pero fuera de la vista
+        assert made
+        made[-1].scroll_into_view()
+        assert seen(app, made[-1])
+
+    with mount(scroll, size=(500, 900)) as app:
+        assert (app.window.width(), app.window.height()) == (500, 900)

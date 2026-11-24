@@ -387,6 +387,21 @@ class Element:
             QTest.mouseRelease(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
+    def scroll_into_view(self) -> "Element":
+        """Desplaza los `<scroll>` y `<list>` que lo contienen lo justo para que se vea entero
+        (si no cabe, su borde de arriba). Para mirarlo o capturarlo con `screenshot()`."""
+        from PySide6.QtCore import Q_ARG
+
+        target = self.item
+        parent = target.parentItem()
+        while parent is not None:
+            if parent.inherits("QQuickScrollView") and parent.metaObject().indexOfMethod("scrollTo(QVariant)") >= 0:
+                _invoke(parent, "scrollTo", Q_ARG("QVariant", target))  # el de <scroll>, como ref.scroll_to(ref)
+            elif parent.inherits("QQuickListView"):
+                _show_in_flickable(parent, target)
+            parent = parent.parentItem()
+        return self._settle()
+
     def drag_to(self, target: "Element", *, x: float | None = None, y: float | None = None,
                 cancel: bool = False) -> "Element":
         """Arrastra el elemento (un `<flex draggable>`) y lo suelta sobre `target`: en su
@@ -457,6 +472,16 @@ def _options(options: Any) -> list[tuple[str, Any]]:
         else:
             out.append((str(o), o))
     return out
+
+
+def _show_in_flickable(view: Any, target: Any) -> None:
+    """Mueve `contentY` de una vista desplazable (una <list>) lo justo para que se vea `target`."""
+    top = target.mapToItem(view.property("contentItem"), 0, 0).y()
+    y, height = view.property("contentY"), view.height()
+    if top < y:
+        view.setProperty("contentY", top)
+    elif top + target.height() > y + height:
+        view.setProperty("contentY", min(top, top + target.height() - height))
 
 
 def press(item: Any) -> None:
@@ -627,6 +652,14 @@ class MountedApp:
         labels.sort(key=lambda i: (round(i.mapToScene(QPointF(0, 0)).y()), i.mapToScene(QPointF(0, 0)).x()))
         return [i.property("text") for i in labels]
 
+    def resize(self, width: int, height: int) -> None:
+        """Cambia el tamaño de la ventana (en píxeles lógicos), como si el usuario la arrastrara.
+
+        Sin pantalla no hay límite: sirve para capturar entera una vista más alta que la
+        ventana. Una ventana real no puede ser mayor que la pantalla."""
+        self.window.resize(int(width), int(height))
+        self.process()
+
     def key(self, keys: str) -> None:
         """Pulsa una combinación de teclas en la ventana, sobre lo que tenga el foco
         (atajos de <shortcut>: "Ctrl+Z", "Ctrl+Shift+Z", "F5")."""
@@ -699,8 +732,12 @@ class MountedApp:
 
 
 @contextmanager
-def mount(entry: str | os.PathLike[str], headless: bool = True) -> Iterator[MountedApp]:
+def mount(
+    entry: str | os.PathLike[str], headless: bool = True, size: tuple[int, int] | None = None
+) -> Iterator[MountedApp]:
     """Compila y monta `entry` (p. ej. "src/App.janel"); lo desmonta al salir del bloque.
+
+    `size=(ancho, alto)` cambia el tamaño de la ventana al montarla (`MountedApp.resize`).
 
     Con `headless=True` (por defecto) y si aún no existe la aplicación Qt, usa
     la plataforma `offscreen`: no se muestra ninguna ventana. Al salir se olvidan los
@@ -730,6 +767,8 @@ def mount(entry: str | os.PathLike[str], headless: bool = True) -> Iterator[Moun
         mounted = application.mount(compile_file(path))
         app = MountedApp(application, mounted)
         app.process()
+        if size is not None:
+            app.resize(*size)
         try:
             yield app
         finally:

@@ -99,7 +99,7 @@ def test_búsqueda_asíncrona():
 - `app.texts()` devuelve los textos visibles en orden de lectura.
 - `app.wait(segundos)` o `app.wait(until=condición)` deja correr las tareas asíncronas y los temporizadores.
 - Diálogos de `janelkit-desktop`: `app.dialogs()`, `app.answer_dialog(...)` (ver su [README](../packages/janelkit-desktop/README.md#en-pruebas)).
-- Capturas: `app.screenshot("pantalla.png")` o `elemento.screenshot(...)` devuelven un `QImage` (y lo guardan si se da una ruta). Con `headless=True` (por defecto) la captura no tiene vídeo, y los emojis de color pueden salir como recuadros; para revisarla a ojo, `mount(..., headless=False)`. En Windows, `mount` y las fixtures de `janelkit.testing` usan las fuentes del sistema (fijan `QT_QPA_FONTDIR` si no lo está).
+- Capturas: `app.screenshot("pantalla.png")` o `elemento.screenshot(...)` devuelven un `QImage` (y lo guardan si se da una ruta). Con `headless=True` (por defecto) la captura no tiene vídeo, y los emojis de color pueden salir como recuadros; para revisarla a ojo, `mount(..., headless=False)`. En Windows, `mount` y las fixtures de `janelkit.testing` usan las fuentes del sistema (fijan `QT_QPA_FONTDIR` si no lo está). Para capturar una vista más alta que la ventana, dale tamaño (`mount(..., size=(1280, 2000))` o `app.resize(1280, 2000)`) o lleva a la vista lo que quieres ver con `elemento.scroll_into_view()`.
 
 Ver la referencia en [api.md](api.md#janelkitinspect-pruebas-y-herramientas).
 

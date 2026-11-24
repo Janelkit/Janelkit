@@ -238,7 +238,7 @@ Un bloque `{#if}` o `{#each}` con varios elementos se agrupa en una caja que cop
 </style>
 ```
 
-**Botón que no cambia de ancho al cambiar su texto** («Grabar» / «Detener»): un `min-width` mayor que el texto más largo. Si un texto lo supera (otra fuente, otro idioma), el botón crece en vez de cortarlo; para comprobarlo en una prueba, mide el botón con cada texto.
+**Botón que no cambia de ancho al cambiar su texto** («Grabar» / «Detener»): un `min-width` mayor que el texto más largo. Si un texto lo supera (otra fuente, otro idioma), el botón crece en vez de cortarlo; para comprobarlo en una prueba, mide el botón con cada texto. Con un `width` fijo, en cambio, el texto que no cabe se corta con «…», y `app.truncated()` de `janelkit.inspect` lo detecta.
 
 ```html
 <button class="accion" on:click={grabando = not grabando}>{"Detener" if grabando else "Grabar"}</button>

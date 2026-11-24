@@ -18,6 +18,8 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 
 - **`call_in_ui(fn, *args, **kwargs)`:** desde cualquier hilo, ejecuta `fn` en el hilo de la interfaz, donde puede cambiar el estado. Sirve para el progreso de un trabajo de `background()`; devuelve un `concurrent.futures.Future` con el resultado. [lenguaje.md](lenguaje.md#trabajo-asíncrono) tiene una receta de progreso y cancelación con `threading.Event`.
 
+- **Textos cortados en `janelkit.inspect`:** `app.truncated()` devuelve los elementos visibles cuyo texto se ve cortado con «…», y `elemento.truncated` lo dice de uno. Sin pantalla nadie ve los puntos suspensivos; `assert app.truncated() == []` comprueba que todo el texto cabe.
+
 ### Corregido
 
 - **Quitar un `<video>` que ya había dibujado un fotograma dejaba inservible la ventana desde Python:** al desaparecer con un `{#if}` o un `{#key}`, `janelkit.ext.app().main_window()` pasaba a `None`, los diálogos de `janelkit-desktop` se quedaban sin ventana padre y `janelkit.inspect` fallaba con «Internal C++ object (QQuickWindow) already deleted». La ventana seguía viva: lo que se perdía era su objeto de Python. Si tu aplicación sustituía `JkVideoSurface.window` para evitarlo, ya puedes quitar ese parche.

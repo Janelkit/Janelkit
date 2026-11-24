@@ -119,6 +119,10 @@ def _tag(item: Any) -> str:
     return name.split(".janel")[0]
 
 
+# Elementos que cortan su texto con «…» (las casillas, opciones y pestañas lo muestran entero).
+_TEXT_CONTROLS = {"text", "button", "select"}
+
+
 def _kind(item: Any) -> str:
     """El elemento integrado que es `item`, aunque sea la raíz de un componente
     (un `Otra.janel` cuya raíz es `<text>` es un <text>); si no lo es, su `_tag`."""
@@ -178,6 +182,16 @@ class Element:
             return None
         value = self.item.property("text")
         return value if isinstance(value, str) else None
+
+    @property
+    def truncated(self) -> bool:
+        """Si el texto que muestra el elemento se ve cortado: con «…» (`text-overflow: ellipsis`, un
+        botón o un `<select>` estrechos) o con menos líneas de las que tiene. Un texto que no
+        cabe pero baja de línea no está cortado. Las cajas no cuentan los textos de sus hijos."""
+        if self._kind not in _TEXT_CONTROLS:
+            return False
+        items = [self.item] if self.item.inherits("QQuickText") else MountedApp._walk(self.item)[1:]
+        return any(i.inherits("QQuickText") and i.isVisible() and bool(i.property("truncated")) for i in items)
 
     @property
     def label(self) -> str | None:
@@ -689,6 +703,12 @@ class MountedApp:
         labels = [el.item for el in self.find_all("text")]
         labels.sort(key=lambda i: (round(i.mapToScene(QPointF(0, 0)).y()), i.mapToScene(QPointF(0, 0)).x()))
         return [i.property("text") for i in labels]
+
+    def truncated(self) -> list[Element]:
+        """Elementos visibles cuyo texto se ve cortado con «…» (ver `Element.truncated`), en orden
+        de la plantilla. Sin pantalla nadie ve los puntos suspensivos: `assert app.truncated() == []`
+        comprueba que todo el texto cabe, también con otra fuente, otro idioma u otro tamaño."""
+        return [el for el in self.find_all() if el.truncated]
 
     def resize(self, width: int, height: int) -> None:
         """Cambia el tamaño de la ventana (en píxeles lógicos), como si el usuario la arrastrara.

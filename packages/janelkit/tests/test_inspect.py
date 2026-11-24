@@ -454,3 +454,30 @@ def test_nothing_starts_under_the_pointer(tmp_path):
         assert text.style("color") != "#ff0000"
         text.hover()
         assert text.style("color") == "#ff0000"
+
+
+TRUNCATED_APP = """<column>
+  <row><text class="nombre">toma_larguisima_de_la_camara_principal_del_estudio.mp4</text><text>12:04</text></row>
+  <text>Un texto largo que no se corta: baja de línea cuando no cabe en el ancho de la ventana</text>
+  <button style="width: 80px">Exportar todas las tomas</button>
+  <button>Corto</button>
+  <select options={["Una cámara con un nombre demasiado largo para su sitio"]} value="Una cámara con un nombre demasiado largo para su sitio" style="width: 120px" />
+</column>
+<style>.nombre { flex: 1; width: 0; white-space: nowrap; text-overflow: ellipsis; }</style>"""
+
+
+def test_truncated_lists_the_texts_cut_with_an_ellipsis(tmp_path):
+    """Sin pantalla nadie ve los «…»: truncated() dice qué textos se cortan, para una persona o un agente."""
+    app_file = tmp_path / "App.janel"
+    app_file.write_text(TRUNCATED_APP, encoding="utf-8")
+    with mount(app_file, size=(200, 300)) as app:
+        cut = app.truncated()
+        assert [(e.tag, e.text) for e in cut if e.tag != "select"] == [
+            ("text", "toma_larguisima_de_la_camara_principal_del_estudio.mp4"),
+            ("button", "Exportar todas las tomas"),
+        ]
+        assert [e.tag for e in cut if e.tag == "select"] == ["select"]
+        assert app.find(text="12:04").truncated is False
+        assert app.find("row").truncated is False  # una caja no cuenta los textos de sus hijos
+        app.resize(1000, 300)
+        assert [e.tag for e in app.truncated()] == ["button", "select"]  # el nombre ya cabe

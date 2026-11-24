@@ -12,6 +12,8 @@ Grid {
     property bool horizontal: false
     property var jkCurrent: undefined
     property color jkColor: jktheme.text
+    // Un Grid no hereda la fuente como los controles: la toma de la ventana, y el CSS (font-*) la cambia.
+    property font font: ApplicationWindow.window !== null ? ApplicationWindow.window.font : Qt.application.font
     property bool jkTrackHover: false
     readonly property bool hovered: jkHoverHandler.hovered  // para title (ToolTip)
     HoverHandler { id: jkHoverHandler }
@@ -53,6 +55,7 @@ Grid {
             autoExclusive: false
             enabled: group.enabled
             hoverEnabled: true
+            font: group.font
             spacing: 8
             onClicked: {
                 group.jkCurrent = modelData.value

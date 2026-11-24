@@ -24,6 +24,10 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 - **Una ventana real con un `<video>` podía quedarse colgada al abrirse** (en blanco, con el cursor de espera) cuando se dibuja con la GPU en otro hilo (Direct3D u OpenGL, lo normal en Windows): pasaba con `janelkit.inspect.mount(..., headless=False)` y con `apps/examples/video/bench.py --ventana`. Ahora un `<video>` solo pide dibujarse a partir de su primer fotograma.
 - **`janelkit.inspect`: los eventos reales de ratón y teclado no podían lanzar un manejador `async` que usara el bucle de asyncio:** con `click(x=…, y=…)`, `double_click`, `right_click`, `press`/`release`, `drag_to`, `hover` o `key`, un manejador que llamaba a `asyncio.get_running_loop()` (para crear un `Future`, esperar una pregunta dentro de la ventana o un diálogo) fallaba con «no running event loop», y la acción no ocurría. `click()` sin coordenadas sí funcionaba.
 - **`flex: 1` con `width` (o `height` en una columna) no crecía:** en una `<row>` con un solo hijo con `flex`, `flex: 1; width: 0` dejaba ese hijo con ancho 0, cuando en CSS crece desde 0 como `flex: 1 1 0; width: 0`. Pasaba con la vía rápida (layout de Qt), donde `width` fija el tamaño; ahora esa caja usa el motor de `<flex>`.
+- **Estilos que hacían que Qt rechazara la aplicación:**
+    - `transition: all` en un elemento sin alguna de las propiedades animables (`<checkbox>`, `<switch>`, `<slider>`, `<tabs>`, `<radiogroup>`, `<scroll>`, `<list>`, `<image>`, `<video>`, `<progressbar>`, `<spacer>`). Ahora anima solo lo que el elemento tiene, y `transition: border-radius 1s` en uno que no lo tiene avisa en vez de fallar.
+    - `font-size`, `font-weight`, `font-family` y `font-style` en `<radiogroup>`. Ahora cambian la fuente de sus opciones, que sigue heredando la de la ventana.
+    - Cualquier estilo en `<shortcut>`, que no se dibuja. Ahora avisa de que no tiene efecto.
 
 ## 0.2.0.0 (2026-11-05)
 

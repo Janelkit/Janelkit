@@ -21,8 +21,9 @@ FLEXES = {"flex", "column", "row"}  # cajas con el motor de <flex> (JkFlex)
 BOXES = FLEXES | {"scroll", "list"}
 TEXTUAL = {"text", "button", "textfield", "textarea", "checkbox", "switch", "select", "radiogroup", "tabs"}
 FIELDS = {"button", "textfield", "textarea", "select"}
-ITEMS = set(CONTROLS) - {"window"}
-ALL = set(CONTROLS)
+# <shortcut> no se dibuja ni ocupa sitio: ningún estilo le afecta.
+ITEMS = set(CONTROLS) - {"window", "shortcut"}
+ALL = set(CONTROLS) - {"shortcut"}
 
 _NUM_RE = re.compile(r"^(-?\d+(?:\.\d+)?)(px)?$")
 _VAR_RE = re.compile(r"^var\(\s*--([A-Za-z][\w-]*)\s*(?:,\s*(.+))?\)$")
@@ -149,9 +150,8 @@ def _transition(value: str, ctx: _Context) -> dict[str, str]:
         if not m:
             raise StyleValueError(f"duración no válida en transition: {duration!r} (usa 200ms o 0.2s)")
         ms = float(m.group(1)) * (1000 if m.group(2) == "s" else 1)
-        flex = ctx.tag in FLEXES
-        if prop == "all":
-            props = [n for n in _ANIMATABLE if flex or n not in _FLEX_ONLY_ANIM]
+        if prop == "all":  # lo animable que el elemento tiene
+            props = [n for n in _ANIMATABLE if _applies(n, ctx.tag)]
         else:
             props = [prop]
         for name in props:
@@ -159,11 +159,17 @@ def _transition(value: str, ctx: _Context) -> dict[str, str]:
                 raise StyleValueError(
                     f"transition no puede animar {name!r}; se admiten: {', '.join(_ANIMATABLE)} y all"
                 )
-            if name in _FLEX_ONLY_ANIM and not flex:
-                raise StyleValueError(f"{name} solo existe en <flex>, <column> y <row>")
+            if not _applies(name, ctx.tag):
+                raise StyleValueError(f"transition: '{name}' no tiene efecto en <{ctx.tag}>")
             for qml_prop, animation in _ANIMATABLE[name]:
                 out[BEHAVIOR + qml_prop] = f"{animation} {{ duration: {ms:.0f}; easing.type: Easing.OutCubic }}"
     return out
+
+
+def _applies(css_name: str, tag: str) -> bool:
+    """Si la propiedad CSS existe en ese elemento (en un elemento propio, las de disposición)."""
+    tags = SUPPORTED[css_name][0]
+    return tag in tags if tag in CONTROLS else ITEMS <= tags
 
 
 def _single(qml_prop: str, kind: str) -> Converter:

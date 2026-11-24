@@ -260,3 +260,31 @@ def test_headless_tests_use_the_system_fonts_on_windows(monkeypatch, tmp_path):
     monkeypatch.setenv("QT_QPA_FONTDIR", "otra")  # lo que fije quien prueba se respeta
     jk_inspect._use_system_fonts()
     assert jk_inspect.os.environ["QT_QPA_FONTDIR"] == "otra"
+
+
+def test_real_pointer_and_key_events_start_async_handlers_inside_the_loop(tmp_path):
+    """click(x, y), double_click, right_click y key usan eventos reales (QTest). El primer paso
+    de un manejador async arranca mientras se procesa el evento: debe ver el bucle activo
+    (asyncio.get_running_loop(), un Future, un diálogo que se espera), como con click()."""
+    app_file = tmp_path / "App.janel"
+    app_file.write_text(
+        "<script>\nimport asyncio\nfrom janelkit import state\nlog = state([])\n\n"
+        "async def pedir(que):\n"
+        "    loop = asyncio.get_running_loop()  # fallaba: no running event loop\n"
+        "    hecho = loop.create_future()\n"
+        "    loop.call_soon(hecho.set_result, que)\n"
+        "    log.value = log.value + [await hecho]\n</script>\n"
+        "<column>\n"
+        '  <button on:click={pedir("click")}>Nuevo</button>\n'
+        '  <flex label="caja" on:dblclick={pedir("dblclick")} on:contextmenu={pedir("contextmenu")}><text>caja</text></flex>\n'
+        '  <shortcut keys="Ctrl+N" on:activate={pedir("key")} />\n'
+        "</column>",
+        encoding="utf-8",
+    )
+    with mount(app_file) as app:
+        app.find("button", text="Nuevo").click(x=5, y=5)
+        app.find(label="caja").double_click()
+        app.find(label="caja").right_click()
+        app.key("Ctrl+N")
+        app.wait(until=lambda: len(app.get("log")) >= 4, timeout=2)
+        assert sorted(app.get("log")) == ["click", "contextmenu", "dblclick", "key"]

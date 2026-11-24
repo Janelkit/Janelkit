@@ -50,10 +50,25 @@ _INTERNAL = (
 )
 
 
+@contextmanager
+def _as_user() -> Iterator[None]:
+    """Para un evento real de ratón o teclado (`QTest`): un manejador `async` que lance arranca
+    mientras se procesa el evento, y necesita ver el bucle de asyncio activo, como en `exec()`."""
+    from .qt_backend.application import Application
+
+    app = Application.current
+    if app is None:
+        yield
+        return
+    with app.loop_running():
+        yield
+
+
 def _move_pointer(window: Any, pos: Any) -> None:
     from PySide6.QtTest import QTest
 
-    QTest.mouseMove(window, pos)
+    with _as_user():
+        QTest.mouseMove(window, pos)
 
 
 # Nombres de KeyEvent.key (como en la web) que Qt escribe de otra forma.
@@ -75,7 +90,8 @@ def _send_keys(window: Any, keys: str) -> None:
     if seq.count() != 1 or seq[0].key() == Qt.Key.Key_unknown:
         raise InspectError(f"no entiendo la combinación de teclas {keys!r} (p. ej. 'Ctrl+D', 'Alt+Right', 'Delete')")
     combo = seq[0]
-    QTest.keyClick(window, combo.key(), combo.keyboardModifiers())
+    with _as_user():
+        QTest.keyClick(window, combo.key(), combo.keyboardModifiers())
 
 
 def _use_system_fonts() -> None:
@@ -203,7 +219,8 @@ class Element:
             from PySide6.QtCore import Qt
             from PySide6.QtTest import QTest
 
-            QTest.mouseClick(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
+            with _as_user():
+                QTest.mouseClick(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
             return self._settle()
         if tag in ("checkbox", "switch"):
             return self.check(not self.item.property("checked"))
@@ -305,7 +322,8 @@ class Element:
         from PySide6.QtTest import QTest
 
         self._require_enabled("double_click")
-        QTest.mouseDClick(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
+        with _as_user():
+            QTest.mouseDClick(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
     def right_click(self, x: float | None = None, y: float | None = None) -> "Element":
@@ -314,7 +332,8 @@ class Element:
         from PySide6.QtTest import QTest
 
         self._require_enabled("right_click")
-        QTest.mouseClick(self._app.window, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
+        with _as_user():
+            QTest.mouseClick(self._app.window, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
     def hover(self, x: float | None = None, y: float | None = None) -> "Element":
@@ -342,7 +361,8 @@ class Element:
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
 
-        QTest.mousePress(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
+        with _as_user():
+            QTest.mousePress(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
     def release(self, x: float | None = None, y: float | None = None) -> "Element":
@@ -350,7 +370,8 @@ class Element:
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
 
-        QTest.mouseRelease(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
+        with _as_user():
+            QTest.mouseRelease(self._app.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._point(x, y))
         return self._settle()
 
     def drag_to(self, target: "Element", *, x: float | None = None, y: float | None = None,
@@ -367,15 +388,16 @@ class Element:
             return target.item.mapToScene(local).toPoint()
 
         start = self._point()
-        QTest.mousePress(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
-        self._settle()
-        for i in range(1, 6):  # varios pasos: pasa la distancia de arrastre y recorre el camino
-            to = end()
-            QTest.mouseMove(window, start + QPoint((to.x() - start.x()) * i // 5, (to.y() - start.y()) * i // 5))
+        with _as_user():
+            QTest.mousePress(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
             self._settle()
-        if cancel:
-            QTest.keyClick(window, Qt.Key.Key_Escape)
-        QTest.mouseRelease(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, end())
+            for i in range(1, 6):  # varios pasos: pasa la distancia de arrastre y recorre el camino
+                to = end()
+                QTest.mouseMove(window, start + QPoint((to.x() - start.x()) * i // 5, (to.y() - start.y()) * i // 5))
+                self._settle()
+            if cancel:
+                QTest.keyClick(window, Qt.Key.Key_Escape)
+            QTest.mouseRelease(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, end())
         return self._settle()
 
     def _point(self, x: float | None = None, y: float | None = None) -> Any:

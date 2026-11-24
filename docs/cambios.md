@@ -10,6 +10,7 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 
 - **Quitar un `<video>` que ya había dibujado un fotograma dejaba inservible la ventana desde Python:** al desaparecer con un `{#if}` o un `{#key}`, `janelkit.ext.app().main_window()` pasaba a `None`, los diálogos de `janelkit-desktop` se quedaban sin ventana padre y `janelkit.inspect` fallaba con «Internal C++ object (QQuickWindow) already deleted». La ventana seguía viva: lo que se perdía era su objeto de Python. Si tu aplicación sustituía `JkVideoSurface.window` para evitarlo, ya puedes quitar ese parche.
 - **Una ventana real con un `<video>` podía quedarse colgada al abrirse** (en blanco, con el cursor de espera) cuando se dibuja con la GPU en otro hilo (Direct3D u OpenGL, lo normal en Windows): pasaba con `janelkit.inspect.mount(..., headless=False)` y con `apps/examples/video/bench.py --ventana`. Ahora un `<video>` solo pide dibujarse a partir de su primer fotograma.
+- **`janelkit.inspect`: los eventos reales de ratón y teclado no podían lanzar un manejador `async` que usara el bucle de asyncio:** con `click(x=…, y=…)`, `double_click`, `right_click`, `press`/`release`, `drag_to`, `hover` o `key`, un manejador que llamaba a `asyncio.get_running_loop()` (para crear un `Future`, esperar una pregunta dentro de la ventana o un diálogo) fallaba con «no running event loop», y la acción no ocurría. `click()` sin coordenadas sí funcionaba.
 
 ## 0.2.0.0 (2026-11-05)
 

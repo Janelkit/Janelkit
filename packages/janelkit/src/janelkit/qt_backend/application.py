@@ -11,9 +11,10 @@ import sys
 import time
 import traceback
 import warnings
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import qasync
 from PySide6.QtCore import QCoreApplication, QEvent, QFileSystemWatcher, QObject, QTimer, QUrl
@@ -329,12 +330,23 @@ class Application:
         Así los pasos de corrutinas que Qt ejecute ven `asyncio.get_running_loop()`,
         como dentro de `exec()`. No debe llamarse desde dentro de una corrutina.
         """
-        if asyncio._get_running_loop() is not None:
+        with self.loop_running():
             self.qt_app.processEvents()
+
+    @contextmanager
+    def loop_running(self) -> Iterator[None]:
+        """Marca el bucle de asyncio como activo mientras Qt procesa eventos fuera de `exec()`.
+
+        qasync ejecuta los pasos de las corrutinas desde temporizadores de Qt: si se disparan
+        al procesar eventos desde Python (`processEvents`, un clic de `QTest`), sin esto
+        `asyncio.get_running_loop()` falla dentro de ellas. Si ya está activo, no hace nada.
+        """
+        if asyncio._get_running_loop() is not None:
+            yield
             return
         asyncio.events._set_running_loop(self.loop)
         try:
-            self.qt_app.processEvents()
+            yield
         finally:
             asyncio.events._set_running_loop(None)
 

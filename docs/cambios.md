@@ -20,6 +20,8 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 
 - **Textos cortados en `janelkit.inspect`:** `app.truncated()` devuelve los elementos visibles cuyo texto se ve cortado con «…», y `elemento.truncated` lo dice de uno. Sin pantalla nadie ve los puntos suspensivos; `assert app.truncated() == []` comprueba que todo el texto cabe.
 
+- **`janel build --pyinstaller`:** escribe las opciones que PyInstaller no puede deducir, una por línea: un `--hidden-import=...` por cada módulo que solo importan los `.janel` (también dentro de funciones, y bibliotecas como `janelkit_desktop`) y un `--add-data=...` por cada recurso fijo de `<image src>` o `<button icon>` que esté fuera de `src/`. La receta de [desarrollo.md](desarrollo.md#distribuir-un-ejecutable-con-pyinstaller) las pasa con `$(janel build --pyinstaller)`; ya no hay que mantener `hiddenimports` a mano.
+
 ### Corregido
 
 - **Quitar un `<video>` que ya había dibujado un fotograma dejaba inservible la ventana desde Python:** al desaparecer con un `{#if}` o un `{#key}`, `janelkit.ext.app().main_window()` pasaba a `None`, los diálogos de `janelkit-desktop` se quedaban sin ventana padre y `janelkit.inspect` fallaba con «Internal C++ object (QQuickWindow) already deleted». La ventana seguía viva: lo que se perdía era su objeto de Python. Si tu aplicación sustituía `JkVideoSurface.window` para evitarlo, ya puedes quitar ese parche.

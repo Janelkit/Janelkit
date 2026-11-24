@@ -7,10 +7,9 @@
 | `janel new <nombre> [--path DIR]` | Crea un proyecto con `main.py`, `src/App.janel`, un componente de ejemplo, `pyproject.toml`, README y `.gitignore`. No sobrescribe carpetas con contenido. |
 | `python main.py` | Forma canónica de ejecutar la aplicación. No depende de ningún otro comando. |
 | `janel dev [carpeta]` | Ejecuta `main.py` en modo desarrollo y recarga al guardar. |
-| `janel build [carpeta] [-o DIR]` | Compila **todos** los `.janel` del proyecto (también los que aún no se usan) y escribe el QML generado en `build/qml`. Termina con código 1 si hay errores. |
+| `janel build [carpeta] [-o DIR] [--pyinstaller]` | Compila **todos** los `.janel` del proyecto (también los que aún no se usan) y escribe el QML generado en `build/qml`. Termina con código 1 si hay errores. Con `--pyinstaller`, escribe además las opciones que PyInstaller necesita y no puede ver, una por línea (ver [Distribuir](#distribuir-un-ejecutable-con-pyinstaller)). |
 | `janel compile <archivo.janel> [-o salida.qml]` | Muestra el QML generado para un componente. |
 | `janel parse <archivo.janel>` | Muestra el AST o los errores con línea y columna. |
-| `janel lsp` | Servidor para editores (Language Server Protocol, por la entrada y la salida estándar): publica los errores y avisos de cada `.janel` abierto mientras se escribe. Lo lanza la extensión de VS Code; ver [El editor](#el-editor). |
 | `janel lsp` | Servidor para editores (Language Server Protocol, por la entrada y la salida estándar): publica los errores y avisos de cada `.janel` abierto mientras se escribe. Lo lanza la extensión de VS Code; ver [El editor](#el-editor). |
 | `janel migrate [carpeta] [--write] [--tests]` | Actualiza un proyecto a esta versión de JanelKit. Sin `--write` solo muestra los cambios (un diff); con `--write` los aplica. Con `--tests`, también las plantillas dentro de las pruebas `.py` y `find("Text")`. Lista aparte lo que hay que revisar a mano. En 0.2: los elementos del núcleo en minúscula (`<Text>` → `<text>`, también al cerrar y en los selectores de `<style>`), sin tocar las etiquetas de componentes importados; los imports de la navegación pasan a `janelkit_router` y los de `persisted`, a `janelkit_store` (y se añaden `Pages`/`Sections` si la plantilla los usa). |
 
@@ -119,12 +118,12 @@ Desde la carpeta del proyecto (la que tiene `main.py` y `src/`), con el entorno 
 ```bash
 pip install pyinstaller
 
-# Windows (separador ";" en --add-data)
-pyinstaller --noconfirm --windowed --name MiApp ^
-  --add-data "src;src" ^
-  --collect-data janelkit --collect-submodules janelkit ^
-  --paths src ^
-  --hidden-import services.storage ^
+# Windows, en PowerShell (separador ";" en --add-data)
+pyinstaller --noconfirm --windowed --name MiApp `
+  --add-data "src;src" `
+  --collect-data janelkit --collect-submodules janelkit `
+  --paths src `
+  $(janel build --pyinstaller) `
   main.py
 
 # Linux / macOS (separador ":")
@@ -132,7 +131,7 @@ pyinstaller --noconfirm --windowed --name MiApp \
   --add-data "src:src" \
   --collect-data janelkit --collect-submodules janelkit \
   --paths src \
-  --hidden-import services.storage \
+  $(janel build --pyinstaller) \
   main.py
 ```
 
@@ -145,7 +144,7 @@ El resultado queda en `dist/MiApp/`: distribuye la carpeta entera (el ejecutable
 | `--add-data "src;src"` | Copia los `.janel` (y los `.qml` propios) dentro del paquete. `main.py` los busca en `src/` junto a sí mismo, igual que en desarrollo. |
 | `--collect-data janelkit` | Incluye el módulo QML `Janel` y los demás recursos del paquete `janelkit`. |
 | `--collect-submodules janelkit` | JanelKit importa partes de sí mismo bajo demanda; PyInstaller no las ve al analizar `main.py`. |
-| `--paths src` + `--hidden-import services.x` | Los módulos que solo importan tus `.janel` (`from services.storage import ...`) no los ve el análisis de PyInstaller: nómbralos para que se incluyan con sus dependencias. Uno por módulo. |
+| `--paths src` + `$(janel build --pyinstaller)` | Los módulos que solo importan tus `.janel` (`from services.storage import ...`, también bibliotecas como `janelkit_desktop`) no los ve el análisis de PyInstaller. `janel build --pyinstaller` compila el proyecto y escribe un `--hidden-import=...` por cada uno, y un `--add-data=...` por cada recurso fijo (`<image src>`, `<button icon>`) que esté fuera de `src/`. Para un archivo `.spec`, copia esas líneas en `hiddenimports` y `datas`. |
 | `--windowed` | Sin ventana de consola (en Windows y macOS). Quítalo mientras pruebas el paquete para ver los errores. |
 
 ### Comprobar el paquete
@@ -167,6 +166,6 @@ La carpeta incluye los módulos de Qt instalados: con `apps/examples/files` y Py
 
 ### Límites
 
-- Hay que listar a mano (`--hidden-import`) los módulos Python que solo se importan desde los `.janel`.
+- `janel build --pyinstaller` solo ve lo escrito en los `.janel`: un módulo que se carga con `importlib` o una imagen cuya ruta se calcula en Python (`src={ruta}`) hay que añadirlos a mano.
 - Con `--onefile` (un único ejecutable) arranca más despacio: descomprime todo en cada inicio.
 - Firmar el ejecutable y crear instaladores (MSI, DMG, AppImage) queda fuera de esta receta.

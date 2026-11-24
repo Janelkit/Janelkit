@@ -118,3 +118,36 @@ def test_compile_error_exits_with_janel_location(tmp_path):
     proc = _run_main(root)
     assert proc.returncode == 1
     assert "App.janel:" in proc.stderr and "{#if}" in proc.stderr
+
+
+def test_build_lists_what_pyinstaller_cannot_see(tmp_path, capsys):
+    """Los módulos que solo importan los .janel y los recursos fuera de src/ no los ve el análisis
+    de PyInstaller: `janel build --pyinstaller` da las opciones, una por línea."""
+    project = tmp_path / "app"
+    (project / "src" / "services").mkdir(parents=True)
+    (project / "src" / "components").mkdir()
+    (project / "assets").mkdir()
+    (project / "assets" / "logo.svg").write_text("<svg/>", encoding="utf-8")
+    (project / "src" / "icono.svg").write_text("<svg/>", encoding="utf-8")
+    (project / "src" / "services" / "__init__.py").write_text("", encoding="utf-8")
+    (project / "src" / "services" / "samples.py").write_text("X = 1\n", encoding="utf-8")
+    (project / "src" / "services" / "export.py").write_text("Y = 1\n", encoding="utf-8")
+    (project / "src" / "components" / "Tarjeta.janel").write_text(
+        "<script>\nimport json\nfrom services import export\n</script>\n<text>t</text>", encoding="utf-8"
+    )
+    (project / "src" / "App.janel").write_text(
+        "<script>\nimport os\nfrom janelkit import state\nfrom services.samples import X\n"
+        "from components.Tarjeta import Tarjeta\n\n"
+        "def exportar():\n    import janelkit_store\n</script>\n"
+        '<column><image src="../assets/logo.svg" /><button icon="icono.svg">B</button><Tarjeta /></column>',
+        encoding="utf-8",
+    )
+    assert main(["build", str(project), "--pyinstaller"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out == [
+        "--hidden-import=janelkit_store",
+        "--hidden-import=services",
+        "--hidden-import=services.export",
+        "--hidden-import=services.samples",
+        f"--add-data=assets/logo.svg{os.pathsep}assets",
+    ]

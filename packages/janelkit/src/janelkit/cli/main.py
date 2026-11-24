@@ -87,8 +87,22 @@ def _cmd_build(args: argparse.Namespace) -> int:
         shown = result.out_dir.relative_to(Path.cwd())
     except ValueError:
         shown = result.out_dir
-    print(f"{len(result.written)} componente(s) compilado(s) sin errores; QML generado en {shown}")
-    print("Nota: janel build valida el proyecto; no crea un ejecutable.")
+    # Con --pyinstaller, la salida estándar lleva solo las opciones (para pasarlas a pyinstaller).
+    info = sys.stderr if args.pyinstaller else sys.stdout
+    print(f"{len(result.written)} componente(s) compilado(s) sin errores; QML generado en {shown}", file=info)
+    print("Nota: janel build valida el proyecto; no crea un ejecutable.", file=info)
+    if args.pyinstaller:
+        # Solo \n, también en Windows: con $(janel build --pyinstaller) en Git Bash, un \r
+        # se quedaría pegado a cada opción.
+        sys.stdout.flush()
+        out = getattr(sys.stdout, "buffer", None)
+        for option in result.pyinstaller_options():
+            if out is not None:
+                out.write(f"{option}\n".encode())
+            else:
+                print(option)
+        if out is not None:
+            out.flush()
     return 0
 
 
@@ -144,6 +158,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_build.add_argument("path", nargs="?", default=".", help="carpeta del proyecto (por defecto, la actual)")
     p_build.add_argument("-o", "--output", help="carpeta de salida (por defecto, build/qml)")
+    p_build.add_argument(
+        "--pyinstaller",
+        action="store_true",
+        help="escribe las opciones de PyInstaller que necesita el proyecto (--hidden-import de los módulos que "
+        "solo importan los .janel, --add-data de los recursos fuera de src/), una por línea",
+    )
     p_build.set_defaults(func=_cmd_build)
 
     p_migrate = sub.add_parser(

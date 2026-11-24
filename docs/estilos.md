@@ -205,6 +205,66 @@ Un bloque `{#if}` o `{#each}` con varios elementos se agrupa en una caja que cop
 </style>
 ```
 
+### Recetas
+
+**Barra de herramientas:** acciones a la izquierda y una a la derecha. `<spacer />` ocupa el espacio libre y empuja lo que viene después hacia el final (también sirve `margin-left: auto` en el primero de la derecha).
+
+```html
+<row class="barra">
+  <button icon="iconos/abrir.svg">Abrir</button>
+  <button>Guardar</button>
+  <spacer />
+  <button variant="primary">Exportar</button>
+</row>
+<style>
+.barra { gap: 8px; padding: 8px; border-bottom: 1px solid var(--border); }
+</style>
+```
+
+**Fila de lista con un nombre que se corta con «…»:** el nombre ocupa lo que dejan los demás (`flex: 1`) y parte de ancho 0 (`width: 0`), así que nunca empuja a la duración ni al botón fuera de la fila. Sin `width: 0`, un nombre largo pediría su ancho completo.
+
+```html
+{#each tomas as t (t["id"])}
+  <row class="toma">
+    <text class="nombre">{t["nombre"]}</text>
+    <text class="duracion">{t["duracion"]}</text>
+    <button variant="ghost" on:click={quitar(t)}>Quitar</button>
+  </row>
+{/each}
+<style>
+.toma { gap: 8px; padding: 4px 8px; }
+.nombre { flex: 1; width: 0; white-space: nowrap; text-overflow: ellipsis; }
+.duracion { color: var(--text-muted); }
+</style>
+```
+
+**Botón que no cambia de ancho al cambiar su texto** («Grabar» / «Detener»): un `min-width` mayor que el texto más largo. Si un texto lo supera (otra fuente, otro idioma), el botón crece en vez de cortarlo; para comprobarlo en una prueba, mide el botón con cada texto.
+
+```html
+<button class="accion" on:click={grabando = not grabando}>{"Detener" if grabando else "Grabar"}</button>
+<style>
+.accion { min-width: 110px; }
+</style>
+```
+
+**Rejilla de vídeos:** como la rejilla de arriba, con celdas de alto fijo; el vídeo ocupa lo que deja la etiqueta y `fit="contain"` lo encaja sin deformarlo. Con 600 px de ancho caben dos por fila; con 900, tres.
+
+```html
+<flex class="videos">
+  {#each camaras as c}
+    <column class="celda">
+      <video source={c.frames} fit="contain" />
+      <text>{c.nombre}</text>
+    </column>
+  {/each}
+</flex>
+<style>
+.videos { flex-wrap: wrap; gap: 8px; }
+.celda { flex: 1 1 240px; height: 160px; }
+.celda video { flex: 1; }
+</style>
+```
+
 ## Temas
 
 Los controles usan los tokens del tema: el mismo código se ve igual en Windows, macOS y Linux, y cambia de aspecto al cambiar de tema.

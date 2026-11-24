@@ -1,4 +1,5 @@
 // Botón de JanelKit. variant: "default" | "primary" | "danger" | "ghost".
+// jkIcon: imagen a la izquierda del texto (ruta relativa al .janel, absoluta o URL), a escala de la fuente.
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
@@ -19,6 +20,8 @@ Button {
     property color jkBorderColor: variant === "default" && !jkGhost ? jktheme.border : "transparent"
     property real jkBorderWidth: 1
     property real jkRadius: jktheme.radius
+    property string jkIcon: ""  // `icon` ya es el grupo icon.* de Button
+    property url jkBase: ""  // carpeta del .janel (la fija el compilador)
     property bool disabled: false
     enabled: !disabled
     property bool jkTrackHover: false  // con title: hovered ya lo da el propio botón
@@ -47,14 +50,42 @@ Button {
     rightPadding: 14
     hoverEnabled: true
 
-    contentItem: Text {
-        text: control.text
-        font: control.font
-        color: control.jkColor
-        opacity: control.enabled ? 1 : 0.55
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        elide: Text.ElideRight
+    contentItem: Item {
+        id: jkContent
+        readonly property real iconSize: Math.round(jkLabel.fontInfo.pixelSize * 1.25)
+        readonly property real iconSpace: jkIconImage.visible ? iconSize + (jkLabel.visible ? 6 : 0) : 0
+        implicitWidth: iconSpace + (jkLabel.visible ? jkLabel.implicitWidth : 0)
+        implicitHeight: Math.max(jkLabel.implicitHeight, jkIconImage.visible ? iconSize : 0)
+
+        Row {
+            anchors.centerIn: parent
+            spacing: 6
+            Image {
+                id: jkIconImage
+                visible: control.jkIcon !== ""
+                anchors.verticalCenter: parent.verticalCenter
+                source: Jk.resolveUrl(control.jkBase, control.jkIcon)
+                width: jkContent.iconSize
+                height: jkContent.iconSize
+                sourceSize: Qt.size(jkContent.iconSize, jkContent.iconSize)
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                opacity: control.enabled ? 1 : 0.55
+            }
+            Text {
+                id: jkLabel
+                visible: text !== "" || !jkIconImage.visible
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, Math.max(0, jkContent.width - jkContent.iconSpace))
+                text: control.text
+                font: control.font
+                color: control.jkColor
+                opacity: control.enabled ? 1 : 0.55
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+        }
     }
 
     background: Rectangle {

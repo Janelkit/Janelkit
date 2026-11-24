@@ -2,7 +2,7 @@
 Shortcut y on:input en TextArea (los diálogos nativos están en janelkit-desktop)."""
 
 from janelkit.testing import find, texts, visual_items
-from PySide6.QtCore import QMetaObject, QUrl, Q_ARG
+from PySide6.QtCore import QCoreApplication, QMetaObject, QUrl, Q_ARG
 
 
 FORM = """<script>
@@ -154,3 +154,61 @@ def test_image_url_forms(mount):
     m.instance.namespace["src"].value = "https://example.com/a.png"
     assert img.property("source").toString() == "https://example.com/a.png"
     assert img.property("clip") is True  # fit="cover" recorta
+
+
+ICON_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">'
+    '<rect width="16" height="16" fill="#ff0000"/></svg>'
+)
+
+
+def _icon_of(button):
+    from PySide6.QtQuick import QQuickItem
+
+    images = [i for i in button.findChildren(QQuickItem) if i.inherits("QQuickImage")]
+    return images[0] if images else None
+
+
+def test_button_with_an_icon_draws_it_beside_the_text(mount, tmp_path, caplog):
+    from janelkit.compiler import compile_file
+
+    (tmp_path / "iconos").mkdir()
+    (tmp_path / "iconos" / "borrar.svg").write_text(ICON_SVG, encoding="utf-8")
+    app = tmp_path / "App.janel"
+    app.write_text(
+        "<script>\nfrom janelkit import state\nruta = state('iconos/borrar.svg')\n</script>\n"
+        '<row><button id="texto">Borrar</button>'
+        '<button id="ambos" icon="iconos/borrar.svg">Borrar</button>'
+        '<button id="solo" icon={ruta} title="Borrar la toma" variant="ghost" /></row>',
+        encoding="utf-8",
+    )
+    assert compile_file(app).warnings == []
+    m = mount(app)
+    texto, ambos, solo = (find(m, id) for id in ("texto", "ambos", "solo"))
+    assert caplog.text == ""
+
+    icon = _icon_of(ambos)
+    assert icon is not None and icon.isVisible()
+    assert icon.property("progress") == 1.0 and icon.property("paintedWidth") > 0  # la ruta es relativa al .janel
+    assert icon.width() > 0 and ambos.width() > texto.width() + icon.width()  # el icono va además del texto
+    assert _icon_of(texto) is None or not _icon_of(texto).isVisible()
+
+    only = _icon_of(solo)
+    assert only.isVisible() and solo.width() < texto.width()  # solo el icono: un botón estrecho
+    from PySide6.QtGui import QAccessible
+    iface = QAccessible.queryAccessibleInterface(solo)
+    assert iface.text(QAccessible.Text.Name) == "Borrar la toma"  # sin texto ni label, el title lo nombra
+
+    ns(m)["ruta"].value = ""  # sin icono vuelve a ser un botón normal
+    QCoreApplication.processEvents()
+    assert not only.isVisible()
+
+
+def test_an_icon_only_button_without_a_name_warns(tmp_path):
+    from janelkit.compiler import compile_source
+
+    c = compile_source('<column><button icon="x.svg" /></column>', str(tmp_path / "App.janel"))
+    assert len(c.warnings) == 1 and "un lector de pantalla no sabría qué es" in c.warnings[0].message
+    for named in ('<button icon="x.svg" label="Cerrar" />', '<button icon="x.svg" title="Cerrar" />',
+                  '<button icon="x.svg">Cerrar</button>'):
+        assert compile_source(f"<column>{named}</column>", str(tmp_path / "App.janel")).warnings == []

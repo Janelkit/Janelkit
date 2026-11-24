@@ -188,9 +188,11 @@ CONTROLS: dict[str, ControlSpec] = {
             "variant": PropSpec("variant", "string"),
             **_TITLE,
             "disabled": PropSpec("disabled", "bool"),  # lo contrario de enabled
+            "icon": PropSpec("jkIcon", "string"),  # imagen junto al texto; ruta como la de <image src>
         },
         events={"click": EventSpec("onClicked")},
         text_prop="text",
+        fixed={"jkBase": 'Qt.resolvedUrl(".")'},
     ),
     "textfield": ControlSpec(
         "JkTextField",

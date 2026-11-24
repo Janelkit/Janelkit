@@ -820,7 +820,7 @@ Propiedades comunes a todos salvo `window`: `width`, `height`, `flex`, `visible`
 | `scroll` | `ScrollView` + columna | `gap`, `padding`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
 | `list` | `ListView` | `gap`, `padding`, `animate`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
 | `text` | `Label` | `text`, `color`, `format` (`plain`, `markdown`, `html`), `selectable` | `on:link(url)` | — |
-| `button` | `Button` | `text`, `variant` (`default`, `primary`, `danger`, `ghost`), `flat`, `title` (descripción emergente), `disabled` (lo contrario de `enabled`) | `on:click` | — |
+| `button` | `Button` | `text`, `variant` (`default`, `primary`, `danger`, `ghost`), `flat`, `icon`, `title` (descripción emergente), `disabled` (lo contrario de `enabled`) | `on:click` | — |
 | `textfield` | `TextField` | `value`, `placeholder`, `readonly`, `title` | `on:input(texto)`, `on:submit(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
 | `textarea` | `TextArea` | `value`, `placeholder`, `readonly`, `title` | `on:input(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
 | `checkbox` | `CheckBox` | `checked`, `text`, `title` | `on:change(marcado)` | `bind:checked` |
@@ -835,6 +835,7 @@ Propiedades comunes a todos salvo `window`: `width`, `height`, `flex`, `visible`
 | `shortcut` | `Shortcut` | `keys` | `on:activate` | — |
 | `spacer` | `Item` | — | — | — |
 
+- **`button icon="..."`** dibuja una imagen a la izquierda del texto, a escala de la fuente. La ruta se resuelve como la de `<image src>`: relativa al `.janel`, absoluta o una URL. El SVG se dibuja con sus propios colores. Sin texto es un botón solo de icono (`<button icon="iconos/borrar.svg" title="Borrar" variant="ghost" />`): su `title` hace de nombre para los lectores de pantalla, y sin `title` ni `label` el compilador avisa. JanelKit no trae un juego de iconos.
 - **`list`** es una lista virtualizada para colecciones grandes; ver [Listas grandes](#listas-grandes-list) y [Desplazamiento](#desplazamiento).
 - **`window`**: `on:activate` y `on:deactivate` avisan cuando la ventana pasa a primer plano o deja de estarlo (para marcar como leído, o pausar lo que solo importa mientras se mira).
 - **`window` en otra pantalla:** `screen={i}` la abre en la pantalla `i` de `screens` (o `screen={"nombre"}`, por su nombre), centrada; `fullscreen={bool}` la pone a pantalla completa o la saca. Los dos son reactivos: cambiar `screen` estando a pantalla completa mueve la ventana a la otra pantalla y la deja a pantalla completa allí. Si la pantalla no existe (un proyector desconectado), la ventana se queda donde está y vuelve a colocarse cuando se conecta. `screens` es la lista reactiva de pantallas (`Screen`: `index`, `name`, `width`, `height`, `x`, `y`, `primary`, `scale`):

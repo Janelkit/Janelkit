@@ -418,7 +418,24 @@ class _Lowerer:
         ir.conditional[:] = [c for c in ir.conditional if c[0] not in values or c[2] == "true"]
 
     def check_role(self, el: Element, ir: IRElement) -> None:
-        """`<flex as="button">` sin texto ni label: el lector de pantalla no tendría qué leer."""
+        """`<flex as="button">` o un botón solo con icono, sin texto ni label: el lector de pantalla
+        no tendría qué leer. Al botón solo con icono lo nombra su title, si lo tiene."""
+        if el.tag == "button" and "jkIcon" in ir.props:
+            if "Accessible.name" in ir.props or "text" in ir.props or _has_text(el.children):
+                return
+            if "ToolTip.text" in ir.props:
+                ir.props["Accessible.name"] = Literal("ToolTip.text")
+                return
+            self.warnings.append(
+                Diagnostic(
+                    '<button icon="..."> no tiene texto ni label: un lector de pantalla no sabría qué es',
+                    el.loc,
+                    'añade label="..." o title="..." (p. ej. title="Borrar")',
+                    severity="warning",
+                    source=self.sfc.source,
+                )
+            )
+            return
         role = ir.props.get("jkRole")
         if role is not None and not isinstance(role, Literal):
             return  # as={...}: el papel se sabe al ejecutar

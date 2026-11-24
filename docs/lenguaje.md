@@ -2,6 +2,30 @@
 
 Esta especificación describe **lo que el compilador acepta hoy**. Los cambios entre versiones y cómo migrar están en [cambios.md](cambios.md); la política de versiones del formato (`FORMAT_VERSION`), en [api.md](api.md).
 
+## ¿Cómo hago…?
+
+| Quiero… | Con | Dónde |
+|---|---|---|
+| reiniciar un componente (su estado local) cuando cambia un valor | `{#key valor}` | [`{#key}`](#key) |
+| ocultar una vista sin perder su estado | `{#hidden}` | [`{#hidden}`](#hidden) |
+| hacer algo que bloquea (disco, CPU, una biblioteca síncrona) sin congelar la ventana | `await background(fn, ...)` | [Trabajo asíncrono](#trabajo-asíncrono) |
+| mostrar el progreso de ese trabajo o cancelarlo | `call_in_ui(fn, ...)` y un `threading.Event` | [Trabajo asíncrono](#trabajo-asíncrono) |
+| una operación con «cargando» y «error» para la plantilla | `@task` | [Trabajo asíncrono](#trabajo-asíncrono) |
+| repetir algo cada cierto tiempo, o hacerlo más tarde | `interval`, `timeout` | [Temporizadores](#temporizadores) |
+| que un texto se pueda pulsar | envolverlo en `<flex on:click>` | [Texto que se pulsa](#texto-que-se-pulsa) |
+| una descripción al dejar el ratón encima | `title="..."` | [Elementos disponibles](#elementos-disponibles) |
+| un botón con icono | `<button icon="ruta.svg">` | [Elementos disponibles](#elementos-disponibles) |
+| mostrar miles de filas | `<list>` | [Listas grandes](#listas-grandes-list) |
+| seguir el final de un chat o un registro | `<list follow>` | [Desplazamiento](#desplazamiento) |
+| mostrar vídeo o fotogramas de una cámara | `<video>` y `Frames` | [Vídeo](#vídeo-video-y-frames) |
+| recordar datos al cerrar la aplicación | `persisted` (`janelkit-store`) | [Datos compartidos](#datos-compartidos-y-estado-que-se-recuerda) |
+| preguntar antes de salir de una vista | `before_leave` | [Preguntar antes de salir](#preguntar-antes-de-salir) |
+| abrir otra ventana | `open_window` | [Varias ventanas](#varias-ventanas) |
+| saber qué CSS admite un elemento | — | [estilos.md: por elemento](estilos.md#por-elemento) |
+| maquetar una barra de herramientas, una lista o una rejilla | — | [estilos.md: recetas](estilos.md#recetas) |
+| probar la aplicación sin abrir ventanas | `janelkit.inspect` | [desarrollo.md](desarrollo.md#pruebas-automáticas-de-una-aplicación) |
+| distribuir un ejecutable | PyInstaller | [desarrollo.md](desarrollo.md#distribuir-un-ejecutable-con-pyinstaller) |
+
 ## Secciones
 
 Un archivo `.janel` tiene hasta tres partes, en cualquier orden:
@@ -240,6 +264,22 @@ Por defecto, un `<text>` no se puede seleccionar, como una etiqueta de escritori
 Para copiar desde el código, `clipboard` de [`janelkit-desktop`](../packages/janelkit-desktop/README.md).
 
 Límites de `selectable`: con `text-overflow: ellipsis` corta el texto en el borde, sin puntos suspensivos, y no tiene menú contextual. Además, crear un texto seleccionable cuesta unas 2,8 veces lo que uno normal (unos 0,35 ms frente a 0,12 ms), así que en listas de miles de filas conviene usarlo solo donde haga falta. Un texto sin `selectable` no paga nada.
+
+### Texto que se pulsa
+
+`<text>` no tiene `on:click`. Para que un texto se pulse, se envuelve en una caja, que ya trae lo que necesita un control: el clic, el teclado (Tab y, con `as="link"`, Intro), el anillo de foco, `:hover`, `title` y el papel para los lectores de pantalla.
+
+```html
+<flex class="enlace" as="link" title="Abre la ficha de la toma" on:click={abrir(toma)}>
+  <text>Ver detalles</text>
+</flex>
+<style>
+.enlace { cursor: pointer; align-self: start; }   /* align-self: la zona que se pulsa es la del texto */
+.enlace:hover { color: var(--primary); }          /* el color de la caja lo heredan sus <text> */
+</style>
+```
+
+En una prueba, `app.find(text="Ver detalles").click()` llega a la caja, como un clic real. Para enlaces dentro de un párrafo, `format="markdown"` y `on:link` (ver [Texto](#texto)).
 
 ## Bloques
 

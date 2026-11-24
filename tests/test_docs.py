@@ -93,3 +93,39 @@ def test_a_broken_example_is_caught():
     assert problems_of_example('<row><text class="t">{nombre}</text></row>\n<style>.t { gap: 4px }</style>')
     assert problems_of_example("<row><button on:click={guardar}>Guardar</row>")
     assert problems_of_example("{#each items as i}<Tarjeta dato={i} />{/each}") == []
+
+
+# -- los enlaces entre documentos llevan a un encabezado que existe -----------------------------
+
+_LINK = re.compile(r"\]\(([^)\s]*?)#([^)\s]+)\)")
+_FENCE = re.compile(r"^ *```.*?^ *```", re.S | re.M)
+
+
+def _anchors(path: Path) -> set[str]:
+    """Los anclajes que GitHub da a los encabezados: minúsculas, sin puntuación, espacios a guiones."""
+    seen: dict[str, int] = {}
+    out = set()
+    for line in _FENCE.sub("", path.read_text(encoding="utf-8")).splitlines():
+        m = re.match(r"#{1,6} (.+)", line)
+        if not m:
+            continue
+        slug = re.sub(r"[^\w\- ]", "", m.group(1).strip().lower()).replace(" ", "-")
+        n = seen.get(slug, 0)
+        seen[slug] = n + 1
+        out.add(slug if n == 0 else f"{slug}-{n}")
+    return out
+
+
+def test_links_between_docs_point_to_existing_headings():
+    broken = []
+    for path in DOCS:
+        text = _FENCE.sub("", path.read_text(encoding="utf-8"))
+        for target, anchor in _LINK.findall(text):
+            if target.startswith("http"):
+                continue
+            dest = (path.parent / target).resolve() if target else path
+            if dest.suffix != ".md":
+                continue
+            if not dest.exists() or anchor not in _anchors(dest):
+                broken.append(f"{path.relative_to(REPO).as_posix()}: {target}#{anchor}")
+    assert broken == []

@@ -266,6 +266,7 @@ effect(autosave)
 - **¿Por qué `loaded`?** El efecto se ejecuta en cuanto se crea, antes de que termine la carga. Sin esa espera, guardaría la lista vacía encima de la que había en disco.
 - `on_mount` se ejecuta cuando la ventana ya existe.
 - El código de `background` no debe tocar el estado: devuelve un valor y se asigna tras el `await`. Por eso `autosave` prepara una copia simple de los datos en el hilo de la interfaz.
+- Si el trabajo es largo y quieres mostrar su progreso o poder cancelarlo, el hilo avisa con `call_in_ui` y mira un `threading.Event`: hay una receta en [Trabajo asíncrono](lenguaje.md#trabajo-asíncrono).
 
 ## 8. Probar la aplicación
 
@@ -330,6 +331,7 @@ El tutorial solo usa el núcleo (`janelkit`). Cuando la aplicación crezca:
 
 Y para profundizar:
 
+- [¿Cómo hago…?](lenguaje.md#cómo-hago): una tabla de tareas habituales (reiniciar un componente, trabajo en otro hilo, texto que se pulsa…) con la herramienta y dónde está explicada.
 - [lenguaje.md](lenguaje.md): todo el formato `.janel`, los elementos disponibles, `<list>` para listas grandes, accesibilidad y elementos propios en QML.
 - [estilos.md](estilos.md): propiedades de estilo, `flex` y temas.
 - [desarrollo.md](desarrollo.md): `janel dev`, errores y pruebas.

@@ -396,3 +396,45 @@ def test_style_reads_an_applied_style_by_its_css_name(tmp_path):
         assert caja.style("background") == "#00aa00"  # lo aplicado ahora: clases, estados
         with pytest.raises(InspectError, match="se pueden leer: background"):
             caja.style("margin")
+
+
+TITLED_CONTROLS = {
+    "textfield": '<textfield title="Nombre del archivo" bind:value={texto} />',
+    "textarea": '<textarea title="Nombre del archivo" bind:value={texto} />',
+    "checkbox": '<checkbox title="Nombre del archivo">Casilla</checkbox>',
+    "switch": '<switch title="Nombre del archivo">Interruptor</switch>',
+    "slider": '<slider title="Nombre del archivo" />',
+    "select": '<select title="Nombre del archivo" options={["a", "b"]} />',
+    "radiogroup": '<radiogroup title="Nombre del archivo" options={["x", "y"]} />',
+    "tabs": '<tabs title="Nombre del archivo" options={["Uno", "Dos"]} />',
+}
+
+
+def _tooltip(app):
+    """El texto de la descripción emergente que se ve, o None (Qt comparte una por ventana)."""
+    from PySide6.QtCore import QObject
+    from PySide6.QtQml import qmlEngine
+
+    engine = qmlEngine(app.window.contentItem())
+    shown = [o for o in engine.findChildren(QObject) if o.inherits("QQuickToolTip") and o.property("visible")]
+    return shown[0].property("text") if shown else None
+
+
+@pytest.mark.parametrize("tag", list(TITLED_CONTROLS))
+def test_interactive_controls_show_their_title_on_hover(tmp_path, tag):
+    """title (descripción emergente) en los controles interactivos, como en <button>: aparece al
+    dejar el ratón encima y también lo leen los lectores de pantalla."""
+    app_file = tmp_path / "App.janel"
+    app_file.write_text(
+        "<script>\nfrom janelkit import state\ntexto = state('')\n</script>\n"
+        f"<column><button>Otro</button>{TITLED_CONTROLS[tag]}</column>",
+        encoding="utf-8",
+    )
+    with mount(app_file) as app:
+        control = app.find(tag)
+        assert "Accessible.description: ToolTip.text" in compile_file(app_file).qml
+        assert _tooltip(app) is None
+        control.hover()
+        app.wait(until=lambda: _tooltip(app) == "Nombre del archivo", timeout=3)
+        control.unhover()
+        app.wait(until=lambda: _tooltip(app) is None, timeout=3)

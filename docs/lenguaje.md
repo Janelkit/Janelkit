@@ -810,6 +810,8 @@ Una caja con `draggable` se arrastra al pulsarla y mover el puntero más que la 
 
 Propiedades comunes a todos salvo `window`: `width`, `height`, `flex`, `visible`, `enabled`, `opacity` y `label` (nombre para lectores de pantalla; ver [Accesibilidad](#accesibilidad)).
 
+`title` (descripción emergente al dejar el ratón encima, también para los lectores de pantalla) está en `button`, `textfield`, `textarea`, `checkbox`, `switch`, `slider`, `select`, `radiogroup` y `tabs`, además de en las cajas. En `text` no: para explicar un texto, envuélvelo en un `<flex title="...">`.
+
 | Elemento | Qt Quick | Propiedades | Eventos | `bind:` |
 |---|---|---|---|---|
 | `window` | `ApplicationWindow` | `title`, `width`, `height`, `minWidth`, `minHeight`, `background`, `screen`, `fullscreen` | `on:activate`, `on:deactivate` | — |
@@ -819,14 +821,14 @@ Propiedades comunes a todos salvo `window`: `width`, `height`, `flex`, `visible`
 | `list` | `ListView` | `gap`, `padding`, `animate`, `follow` | `on:top`, `on:bottom`, `on:scroll(info)` | — |
 | `text` | `Label` | `text`, `color`, `format` (`plain`, `markdown`, `html`), `selectable` | `on:link(url)` | — |
 | `button` | `Button` | `text`, `variant` (`default`, `primary`, `danger`, `ghost`), `flat`, `title` (descripción emergente), `disabled` (lo contrario de `enabled`) | `on:click` | — |
-| `textfield` | `TextField` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:submit(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
-| `textarea` | `TextArea` | `value`, `placeholder`, `readonly` | `on:input(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
-| `checkbox` | `CheckBox` | `checked`, `text` | `on:change(marcado)` | `bind:checked` |
-| `switch` | `Switch` | `checked`, `text` | `on:change(activado)` | `bind:checked` |
-| `slider` | `Slider` | `value`, `min` (0), `max` (100), `step` | `on:change(valor)` | `bind:value` |
-| `select` | `ComboBox` | `options`, `value`, `placeholder` | `on:change(valor)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
-| `radiogroup` | `RadioButton`s | `options`, `value`, `horizontal` | `on:change(valor)` | `bind:value` |
-| `tabs` | `TabBar` | `options`, `value` | `on:change(valor)` | `bind:value` |
+| `textfield` | `TextField` | `value`, `placeholder`, `readonly`, `title` | `on:input(texto)`, `on:submit(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
+| `textarea` | `TextArea` | `value`, `placeholder`, `readonly`, `title` | `on:input(texto)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
+| `checkbox` | `CheckBox` | `checked`, `text`, `title` | `on:change(marcado)` | `bind:checked` |
+| `switch` | `Switch` | `checked`, `text`, `title` | `on:change(activado)` | `bind:checked` |
+| `slider` | `Slider` | `value`, `min` (0), `max` (100), `step`, `title` | `on:change(valor)` | `bind:value` |
+| `select` | `ComboBox` | `options`, `value`, `placeholder`, `title` | `on:change(valor)`, `on:keydown`, `on:keyup`, `on:focus`, `on:blur` | `bind:value` |
+| `radiogroup` | `RadioButton`s | `options`, `value`, `horizontal`, `title` | `on:change(valor)` | `bind:value` |
+| `tabs` | `TabBar` | `options`, `value`, `title` | `on:change(valor)` | `bind:value` |
 | `progressbar` | `ProgressBar` | `value`, `max` (1), `indeterminate` | — | — |
 | `image` | `Image` | `src`, `fit` (`contain`, `cover`, `fill`, `none`), `alt` | — | — |
 | `video` | `JkVideoSurface` (una textura de Qt Quick) | `source` (un `Frames`), `fit` (`contain`, `cover`, `fill`) | `on:click`, `on:dblclick`, `on:contextmenu`, `on:pointerdown`, `on:pointerup`, `on:pointermove`, `on:pointerenter`, `on:pointerleave` (con `image_x`, `image_y`) | — |

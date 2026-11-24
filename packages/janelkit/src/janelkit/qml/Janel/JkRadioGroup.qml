@@ -12,6 +12,9 @@ Grid {
     property bool horizontal: false
     property var jkCurrent: undefined
     property color jkColor: jktheme.text
+    property bool jkTrackHover: false
+    readonly property bool hovered: jkHoverHandler.hovered  // para title (ToolTip)
+    HoverHandler { id: jkHoverHandler }
     property int jkFlex: 0
     property string jkSelfAlign: ""
     property bool jkSelfStretch: false

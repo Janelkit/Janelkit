@@ -11,6 +11,7 @@ TextField {
     property color jkBorderColor: jktheme.border
     property real jkBorderWidth: 1
     property real jkRadius: jktheme.radius
+    property bool jkTrackHover: false  // con title: hovered ya lo da el propio control
     property int jkFlex: 0
     property string jkSelfAlign: ""
     property bool jkSelfStretch: false

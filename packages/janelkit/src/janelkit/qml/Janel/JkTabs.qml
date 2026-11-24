@@ -10,6 +10,8 @@ TabBar {
     property var options: []
     property var value: undefined
     property color jkColor: jktheme.text
+    property bool jkTrackHover: false  // con title: hovered ya lo da el propio control
+    hoverEnabled: true  // hovered también sobre las pestañas (para title)
     property int jkFlex: 0
     property string jkSelfAlign: ""
     property bool jkSelfStretch: false

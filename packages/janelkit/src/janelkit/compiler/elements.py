@@ -50,6 +50,9 @@ class ControlSpec:
     deck: bool = False
 
 
+# title: descripción emergente al dejar el ratón encima (lowering.py la muestra con ToolTip).
+_TITLE = {"title": PropSpec("ToolTip.text", "string")}
+
 # Propiedades de disposición comunes a todos los elementos salvo <window>.
 COMMON_PROPS: dict[str, PropSpec] = {
     "width": PropSpec("Layout.preferredWidth", "number"),
@@ -183,7 +186,7 @@ CONTROLS: dict[str, ControlSpec] = {
             "text": PropSpec("text", "string"),
             "flat": PropSpec("flat", "bool"),
             "variant": PropSpec("variant", "string"),
-            "title": PropSpec("ToolTip.text", "string"),  # descripción emergente, como en las cajas
+            **_TITLE,
             "disabled": PropSpec("disabled", "bool"),  # lo contrario de enabled
         },
         events={"click": EventSpec("onClicked")},
@@ -192,6 +195,7 @@ CONTROLS: dict[str, ControlSpec] = {
     "textfield": ControlSpec(
         "JkTextField",
         props={
+            **_TITLE,
             "value": PropSpec("text", "string"),
             "placeholder": PropSpec("placeholderText", "string"),
             "readonly": PropSpec("readOnly", "bool"),
@@ -206,6 +210,7 @@ CONTROLS: dict[str, ControlSpec] = {
     "textarea": ControlSpec(
         "JkTextArea",
         props={
+            **_TITLE,
             "value": PropSpec("jkValue", "string"),
             "placeholder": PropSpec("placeholderText", "string"),
             "readonly": PropSpec("readOnly", "bool"),
@@ -216,14 +221,14 @@ CONTROLS: dict[str, ControlSpec] = {
     ),
     "checkbox": ControlSpec(
         "JkCheckBox",
-        props={"checked": PropSpec("checked", "bool"), "text": PropSpec("text", "string")},
+        props={"checked": PropSpec("checked", "bool"), "text": PropSpec("text", "string"), **_TITLE},
         events={"change": EventSpec("onToggled", ("checked",))},
         two_way={"checked": TwoWaySpec("checked", "onToggled")},
         text_prop="text",
     ),
     "switch": ControlSpec(
         "JkSwitch",
-        props={"checked": PropSpec("checked", "bool"), "text": PropSpec("text", "string")},
+        props={"checked": PropSpec("checked", "bool"), "text": PropSpec("text", "string"), **_TITLE},
         events={"change": EventSpec("onToggled", ("checked",))},
         two_way={"checked": TwoWaySpec("checked", "onToggled")},
         text_prop="text",
@@ -231,6 +236,7 @@ CONTROLS: dict[str, ControlSpec] = {
     "slider": ControlSpec(
         "JkSlider",
         props={
+            **_TITLE,
             "value": PropSpec("value", "number"),
             "min": PropSpec("from", "number"),
             "max": PropSpec("to", "number"),
@@ -242,6 +248,7 @@ CONTROLS: dict[str, ControlSpec] = {
     "select": ControlSpec(
         "JkSelect",
         props={
+            **_TITLE,
             "options": PropSpec("options"),
             "value": PropSpec("value"),
             "placeholder": PropSpec("placeholder", "string"),
@@ -252,6 +259,7 @@ CONTROLS: dict[str, ControlSpec] = {
     "radiogroup": ControlSpec(
         "JkRadioGroup",
         props={
+            **_TITLE,
             "options": PropSpec("options"),
             "value": PropSpec("value"),
             "horizontal": PropSpec("horizontal", "bool"),
@@ -261,7 +269,7 @@ CONTROLS: dict[str, ControlSpec] = {
     ),
     "tabs": ControlSpec(
         "JkTabs",
-        props={"options": PropSpec("options"), "value": PropSpec("value")},
+        props={"options": PropSpec("options"), "value": PropSpec("value"), **_TITLE},
         events={"change": EventSpec("onPicked", ("choice",), params=("choice",))},
         two_way={"value": TwoWaySpec("value", "onPicked", "choice", params=("choice",))},
     ),

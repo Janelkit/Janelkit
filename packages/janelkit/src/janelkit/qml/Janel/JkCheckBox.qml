@@ -7,6 +7,7 @@ import "jk.js" as Jk
 CheckBox {
     id: control
     property color jkColor: jktheme.text
+    property bool jkTrackHover: false  // con title: hovered ya lo da el propio control
     property int jkFlex: 0
     property string jkSelfAlign: ""
     property bool jkSelfStretch: false

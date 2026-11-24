@@ -6,6 +6,7 @@ import "jk.js" as Jk
 
 Slider {
     id: control
+    property bool jkTrackHover: false  // con title: hovered ya lo da el propio control
     property int jkFlex: 0
     property string jkSelfAlign: ""
     property bool jkSelfStretch: false

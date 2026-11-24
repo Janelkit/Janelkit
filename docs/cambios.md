@@ -12,6 +12,8 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 - **Tamaño de la ventana y desplazamiento en `janelkit.inspect`:** `mount(..., size=(ancho, alto))` y `app.resize(ancho, alto)` cambian el tamaño de la ventana, y `elemento.scroll_into_view()` desplaza los `<scroll>` y `<list>` que lo contienen hasta que se ve. Sirven para mirar o capturar una vista más alta que la ventana.
 - **Leer un estilo en `janelkit.inspect`:** `elemento.style("background")` da el valor ya aplicado por su nombre CSS (`background`, `color`, `border-*`, `opacity`, `font-size`, `font-weight`, `width`, `height`), con los colores como `"#rrggbb"` o `"rgba(...)"`. Antes había que conocer la propiedad QML que lo guarda (`item.property("color")`).
 
+- **`title` en los controles interactivos:** la descripción emergente que ya tenía `<button>` se admite también en `<textfield>`, `<textarea>`, `<checkbox>`, `<switch>`, `<slider>`, `<select>`, `<radiogroup>` y `<tabs>`, y la leen los lectores de pantalla.
+
 ### Corregido
 
 - **Quitar un `<video>` que ya había dibujado un fotograma dejaba inservible la ventana desde Python:** al desaparecer con un `{#if}` o un `{#key}`, `janelkit.ext.app().main_window()` pasaba a `None`, los diálogos de `janelkit-desktop` se quedaban sin ventana padre y `janelkit.inspect` fallaba con «Internal C++ object (QQuickWindow) already deleted». La ventana seguía viva: lo que se perdía era su objeto de Python. Si tu aplicación sustituía `JkVideoSurface.window` para evitarlo, ya puedes quitar ese parche.

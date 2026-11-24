@@ -438,3 +438,19 @@ def test_interactive_controls_show_their_title_on_hover(tmp_path, tag):
         app.wait(until=lambda: _tooltip(app) == "Nombre del archivo", timeout=3)
         control.unhover()
         app.wait(until=lambda: _tooltip(app) is None, timeout=3)
+
+
+def test_nothing_starts_under_the_pointer(tmp_path):
+    """Sin pantalla, el puntero empezaba dentro de la ventana, en su esquina: lo que hubiera allí
+    salía con :hover (en las capturas y en style()) sin que la prueba moviera el ratón."""
+    app_file = tmp_path / "App.janel"
+    app_file.write_text(
+        '<column><flex class="enlace" on:click={print(1)}><text>Ver</text></flex></column>\n'
+        "<style>.enlace:hover { color: #ff0000; }</style>",
+        encoding="utf-8",
+    )
+    with mount(app_file) as app:
+        text = app.find(text="Ver")
+        assert text.style("color") != "#ff0000"
+        text.hover()
+        assert text.style("color") == "#ff0000"

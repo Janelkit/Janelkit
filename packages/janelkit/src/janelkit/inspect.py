@@ -782,6 +782,7 @@ def mount(
     módulos de la carpeta de la app: otra app con un `services/` o `components/` del
     mismo nombre se puede montar después en el mismo proceso.
     """
+    from PySide6.QtCore import QPoint
     from PySide6.QtGui import QGuiApplication
 
     if headless and QGuiApplication.instance() is None:
@@ -805,6 +806,12 @@ def mount(
         mounted = application.mount(compile_file(path))
         app = MountedApp(application, mounted)
         app.process()
+        if headless:
+            # Sin pantalla, el puntero empieza dentro de la ventana, en su esquina, y lo que hubiera
+            # allí saldría con :hover. Con una ventana real no se toca: es el ratón del usuario.
+            _move_pointer(app.window, QPoint(-50, -50))
+            _move_pointer(app.window, QPoint(-60, -60))
+            app.process()
         if size is not None:
             app.resize(*size)
         try:

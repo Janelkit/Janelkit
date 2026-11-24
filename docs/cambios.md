@@ -28,6 +28,7 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
     - `transition: all` en un elemento sin alguna de las propiedades animables (`<checkbox>`, `<switch>`, `<slider>`, `<tabs>`, `<radiogroup>`, `<scroll>`, `<list>`, `<image>`, `<video>`, `<progressbar>`, `<spacer>`). Ahora anima solo lo que el elemento tiene, y `transition: border-radius 1s` en uno que no lo tiene avisa en vez de fallar.
     - `font-size`, `font-weight`, `font-family` y `font-style` en `<radiogroup>`. Ahora cambian la fuente de sus opciones, que sigue heredando la de la ventana.
     - Cualquier estilo en `<shortcut>`, que no se dibuja. Ahora avisa de que no tiene efecto.
+- **`janelkit.inspect` sin pantalla: lo que estaba en la esquina superior izquierda empezaba con `:hover`**, porque el puntero empezaba dentro de la ventana. Se notaba en las capturas (el primer botón de una barra salía resaltado) y en `style()`. Ahora `mount` saca el puntero de la ventana al montar; con `headless=False` no lo mueve, porque es el ratón del usuario.
 
 ## 0.2.0.0 (2026-11-05)
 

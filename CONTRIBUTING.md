@@ -17,6 +17,7 @@ git config core.hooksPath .githooks             # una vez: comprueba el prefijo 
 python -m pytest                 # toda la suite (Qt en modo offscreen); o un paquete: python -m pytest packages/janelkit
 python tools/check_wheel.py      # construye wheel/sdist, instala en un venv limpio y prueba janel new + python main.py
 python tools/versioning.py plan  # qué versión tocaría publicar y por qué
+python tools/css_table.py        # regenera en docs/estilos.md la tabla de CSS por elemento (tras tocar compiler/css.py)
 ```
 
 ## Organización del repositorio

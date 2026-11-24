@@ -38,9 +38,11 @@ Los estilos son **locales al componente**: afectan a los elementos escritos en s
 
 ## Propiedades
 
+La tabla dice qué hace cada propiedad; la de [Por elemento](#por-elemento) dice qué admite cada elemento, y sale del propio compilador.
+
 | CSS | Aplica a | Notas |
 |---|---|---|
-| `color` | text, button, textfield, textarea, checkbox; flex, column, row (lo heredan sus `<text>`) | color del texto |
+| `color` | text, button, textfield, textarea, checkbox, switch, select, radiogroup, tabs; flex, column, row (lo heredan sus `<text>`) | color del texto |
 | `background`, `background-color` | window, flex, column, row, scroll, list, text, button, textfield, textarea, select | en `text`, con `padding` y `border-radius`, sirve para etiquetas y contadores |
 | `border` | los mismos que `background` (salvo window) | `1px solid #ccc`, `1px solid var(--border)`, `none` |
 | `border-color`, `border-width` | ídem | |
@@ -49,7 +51,7 @@ Los estilos son **locales al componente**: afectan a los elementos escritos en s
 | `overflow` | flex, column, row | `visible`, `hidden` (recorta, sin redondear las esquinas), `auto`/`scroll` (zona de desplazamiento). Con `flex-wrap: wrap`, como en CSS, las líneas se cortan al tamaño de la caja y se desplaza en el otro eje (una rejilla de fichas que baja) |
 | `padding` | contenedores y controles con texto | 1 a 4 valores, como en CSS |
 | `padding-top`, `-right`, `-bottom`, `-left` | ídem | |
-| `gap` | flex, column, row, scroll | separación entre hijos |
+| `gap` | flex, column, row, scroll, list | separación entre hijos |
 | `row-gap`, `column-gap` | flex, column, row | separación entre filas / entre columnas |
 | `flex-direction` (o `direction`) | flex | `row` (por defecto), `column`, `row-reverse`, `column-reverse` |
 | `flex-wrap` | flex, column, row | `nowrap`, `wrap` (salto de línea: rejillas) |
@@ -59,7 +61,7 @@ Los estilos son **locales al componente**: afectan a los elementos escritos en s
 | `font-style` | ídem | `italic`, `normal` |
 | `letter-spacing` | controles con texto | px |
 | `text-transform` | controles con texto | `uppercase`, `lowercase`, `capitalize`, `none` |
-| `text-align` | text, textfield, textarea | `left`, `center`, `right`, `justify` |
+| `text-align` | text, textfield, textarea, flex, column, row | `left`, `center`, `right`, `justify` |
 | `line-height` | text, flex, column, row | factor sin unidades (`1.4`) |
 | `white-space` | text, flex, column, row | `normal`, `nowrap` (una sola línea) |
 | `text-overflow` | text, flex, column, row | `ellipsis` (puntos suspensivos al cortar), `clip` |
@@ -79,12 +81,47 @@ Los estilos son **locales al componente**: afectan a los elementos escritos en s
 | `transform` | todos salvo window | `scale(n)`, `rotate(Ndeg)`, `translate(x, y)`, `translateX()`, `translateY()`, `none`. Desde el centro y sin afectar a la disposición, como en CSS |
 | `cursor` | todos salvo window | `default`, `pointer`, `text`, `move`, `grab`, `grabbing`, `not-allowed`, `wait`, `crosshair`, `ew-resize`, `ns-resize`… |
 | `box-shadow` | flex, column, row | `0 2px 8px rgba(0, 0, 0, .15)` (x, y, desenfoque, extensión, color). Una sombra (si hay varias, avisa y usa la primera); sin `inset`. Con `overflow: hidden`, la caja recorta su sombra |
-| `outline`, `outline-width`, `-color`, `-offset` | flex, column, row | anillo que no ocupa sitio (`2px solid var(--primary)`); con `outline-offset` negativo, por dentro |
+| `outline`, `outline-width`, `outline-color`, `outline-offset` | flex, column, row | anillo que no ocupa sitio (`2px solid var(--primary)`); con `outline-offset` negativo, por dentro |
 | `pointer-events` | flex, column, row | `none`: la caja no recibe el ratón (ni `:hover`, ni clic, ni cursor); sus hijos sí |
 | `visibility` | flex, column, row | `hidden`: ocupa su sitio sin verse (ni recibir eventos); `visible` |
 | `transition` | todos salvo window | `background 200ms, opacity .3s` o `all 150ms`: anima los cambios de `color`, `background`, `border-color`, `opacity`, `width`, `height`, `border-radius` y `transform`, y en las cajas `box-shadow` y `outline` (también los que provocan los estados y las clases condicionales o dinámicas). |
 
 No soportado (advertencia): `position: sticky`, `em`/`rem`, `display: grid`, `aspect-ratio`, animaciones con `@keyframes`.
+
+### Por elemento
+
+Lo que admite cada elemento. Una propiedad que el elemento no admite produce una advertencia al compilar y no tiene efecto.
+
+<!-- css-por-elemento: generado por tools/css_table.py, no editar a mano -->
+
+- **Todos los elementos** (salvo `shortcut`, que no se dibuja): `height`, `max-height`, `max-width`, `min-height`, `min-width`, `opacity`, `width`.
+- **Todos salvo `window`:** `align-self`, `bottom`, `cursor`, `flex`, `flex-basis`, `flex-grow`, `flex-shrink`, `inset`, `left`, `margin`, `margin-*`, `order`, `position`, `right`, `top`, `transform`, `transition`, `z-index`. También los elementos propios (QML del proyecto).
+
+| Elemento | Además admite |
+|---|---|
+| `window` | `background`, `background-color`, `font-family`, `font-size`, `font-style`, `font-weight` |
+| `flex` | `align-content`, `align-items`, `background`, `background-color`, `border`, `border-*`, `border-*-color`, `border-color`, `border-radius`, `border-*-width`, `border-width`, `box-shadow`, `color`, `column-gap`, `direction`, `flex-direction`, `flex-wrap`, `font-family`, `font-size`, `font-style`, `font-weight`, `gap`, `justify-content`, `letter-spacing`, `line-height`, `outline`, `outline-color`, `outline-offset`, `outline-width`, `overflow`, `padding`, `padding-*`, `pointer-events`, `row-gap`, `text-align`, `text-overflow`, `text-transform`, `visibility`, `white-space` |
+| `column` | `align-content`, `align-items`, `background`, `background-color`, `border`, `border-*`, `border-*-color`, `border-color`, `border-radius`, `border-*-width`, `border-width`, `box-shadow`, `color`, `column-gap`, `flex-wrap`, `font-family`, `font-size`, `font-style`, `font-weight`, `gap`, `justify-content`, `letter-spacing`, `line-height`, `outline`, `outline-color`, `outline-offset`, `outline-width`, `overflow`, `padding`, `padding-*`, `pointer-events`, `row-gap`, `text-align`, `text-overflow`, `text-transform`, `visibility`, `white-space` |
+| `row` | `align-content`, `align-items`, `background`, `background-color`, `border`, `border-*`, `border-*-color`, `border-color`, `border-radius`, `border-*-width`, `border-width`, `box-shadow`, `color`, `column-gap`, `flex-wrap`, `font-family`, `font-size`, `font-style`, `font-weight`, `gap`, `justify-content`, `letter-spacing`, `line-height`, `outline`, `outline-color`, `outline-offset`, `outline-width`, `overflow`, `padding`, `padding-*`, `pointer-events`, `row-gap`, `text-align`, `text-overflow`, `text-transform`, `visibility`, `white-space` |
+| `scroll` | `align-items`, `background`, `background-color`, `border`, `border-color`, `border-radius`, `border-width`, `gap`, `justify-content`, `padding`, `padding-*` |
+| `list` | `background`, `background-color`, `border`, `border-color`, `border-radius`, `border-width`, `gap`, `padding`, `padding-*` |
+| `text` | `background`, `background-color`, `border`, `border-color`, `border-radius`, `border-width`, `color`, `font-family`, `font-size`, `font-style`, `font-weight`, `letter-spacing`, `line-height`, `padding`, `padding-*`, `text-align`, `text-overflow`, `text-transform`, `user-select`, `white-space` |
+| `button` | `background`, `background-color`, `border`, `border-color`, `border-radius`, `border-width`, `color`, `font-family`, `font-size`, `font-style`, `font-weight`, `letter-spacing`, `padding`, `padding-*`, `text-transform` |
+| `textfield` | `background`, `background-color`, `border`, `border-color`, `border-radius`, `border-width`, `color`, `font-family`, `font-size`, `font-style`, `font-weight`, `letter-spacing`, `padding`, `padding-*`, `text-align`, `text-transform` |
+| `textarea` | `background`, `background-color`, `border`, `border-color`, `border-radius`, `border-width`, `color`, `font-family`, `font-size`, `font-style`, `font-weight`, `letter-spacing`, `padding`, `padding-*`, `text-align`, `text-transform` |
+| `checkbox` | `color`, `font-family`, `font-size`, `font-style`, `font-weight`, `letter-spacing`, `padding`, `padding-*`, `text-transform` |
+| `switch` | `color`, `font-family`, `font-size`, `font-style`, `font-weight`, `letter-spacing`, `padding`, `padding-*`, `text-transform` |
+| `slider` | — |
+| `select` | `background`, `background-color`, `border`, `border-color`, `border-radius`, `border-width`, `color`, `font-family`, `font-size`, `font-style`, `font-weight`, `letter-spacing`, `padding`, `padding-*`, `text-transform` |
+| `radiogroup` | `color`, `font-family`, `font-size`, `font-style`, `font-weight`, `letter-spacing`, `padding`, `padding-*`, `text-transform` |
+| `tabs` | `color`, `font-family`, `font-size`, `font-style`, `font-weight`, `letter-spacing`, `padding`, `padding-*`, `text-transform` |
+| `image` | — |
+| `video` | — |
+| `progressbar` | — |
+| `shortcut` | ninguna: no se dibuja |
+| `spacer` | — |
+
+<!-- fin css-por-elemento -->
 
 ## Posición
 

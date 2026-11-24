@@ -364,3 +364,35 @@ def test_window_size_and_scrolling_an_element_into_view(tmp_path):
 
     with mount(scroll, size=(500, 900)) as app:
         assert (app.window.width(), app.window.height()) == (500, 900)
+
+
+def test_style_reads_an_applied_style_by_its_css_name(tmp_path):
+    app_file = tmp_path / "App.janel"
+    app_file.write_text(
+        "<script>\nfrom janelkit import state\non = state(False)\n</script>\n"
+        '<window width={300} height={200}><column>\n'
+        '  <flex label="caja" class="caja" class:on={on}><text label="t" class="t">hola</text></flex>\n'
+        '  <button label="b" class="b">X</button>\n'
+        "</column></window>\n"
+        "<style>\n"
+        ".caja { background: #ff0000; border: 2px solid rgba(0, 0, 255, 0.5); border-radius: 6px; opacity: 0.8; }\n"
+        ".caja.on { background: #00aa00; }\n"
+        ".t { color: #00ff00; font-size: 18px; font-weight: 700; }\n"
+        ".b { background: #123456; color: #ffffff; }\n"
+        "</style>",
+        encoding="utf-8",
+    )
+    with mount(app_file) as app:
+        caja, t, b = app.find(label="caja"), app.find(label="t"), app.find(label="b")
+        assert caja.style("background") == caja.style("background-color") == "#ff0000"
+        assert caja.style("border-color") == "rgba(0, 0, 255, 0.5)"
+        assert (caja.style("border-width"), caja.style("border-radius"), caja.style("opacity")) == (2, 6, 0.8)
+        assert caja.style("font-size") is None  # una caja no tiene fuente propia
+        assert (t.style("color"), t.style("font-size"), t.style("font-weight")) == ("#00ff00", 18, 700)
+        assert (b.style("background"), b.style("color")) == ("#123456", "#ffffff")
+        assert caja.style("width") == 300 and t.style("height") > 0
+        app.namespace["on"].value = True
+        app.process()
+        assert caja.style("background") == "#00aa00"  # lo aplicado ahora: clases, estados
+        with pytest.raises(InspectError, match="se pueden leer: background"):
+            caja.style("margin")

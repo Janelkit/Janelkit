@@ -10,6 +10,7 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 
 - **Buscar dentro de un elemento en `janelkit.inspect`:** `elemento.find(...)` y `elemento.find_all(...)` aceptan los mismos criterios que los de la aplicación, pero solo miran dentro de ese elemento. Si el mismo texto o `label` aparece en varios sitios (una pestaña y un botón «Muestra 1»), se distinguen sin cambiar el nombre accesible: `app.find(label="Acciones").find(text="Muestra 1")`.
 - **Tamaño de la ventana y desplazamiento en `janelkit.inspect`:** `mount(..., size=(ancho, alto))` y `app.resize(ancho, alto)` cambian el tamaño de la ventana, y `elemento.scroll_into_view()` desplaza los `<scroll>` y `<list>` que lo contienen hasta que se ve. Sirven para mirar o capturar una vista más alta que la ventana.
+- **Leer un estilo en `janelkit.inspect`:** `elemento.style("background")` da el valor ya aplicado por su nombre CSS (`background`, `color`, `border-*`, `opacity`, `font-size`, `font-weight`, `width`, `height`), con los colores como `"#rrggbb"` o `"rgba(...)"`. Antes había que conocer la propiedad QML que lo guarda (`item.property("color")`).
 
 ### Corregido
 

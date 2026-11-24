@@ -218,6 +218,30 @@ class Element:
         """Lee una propiedad Qt del elemento (último recurso)."""
         return self.item.property(name)
 
+    def style(self, name: str) -> Any:
+        """El valor de un estilo tal como quedó aplicado (de `<style>`, `class`, `style=`, estados…),
+        por su nombre CSS: `elemento.style("background")`.
+
+        Los colores salen como `"#rrggbb"`, o `"rgba(r, g, b, a)"` si son transparentes; los
+        tamaños, en píxeles; `font-weight`, como número (400, 700). `width` y `height` son el
+        tamaño que tiene el elemento. `None` si el elemento no tiene ese estilo."""
+        if name in ("width", "height"):
+            return float(self.item.width() if name == "width" else self.item.height())
+        if name not in _STYLES:
+            raise InspectError(f"style({name!r}): no se puede leer; se pueden leer: {', '.join(sorted([*_STYLES, 'width', 'height']))}")
+        qml = _STYLES[name]
+        if qml == "jkBackground" and self.item.isWindowType():
+            qml = "color"  # <window> guarda su fondo en color
+        if qml.startswith("font."):
+            if self.item.metaObject().indexOfProperty("font") < 0:
+                return None
+            font = self.item.property("font")
+            return float(font.pixelSize()) if qml == "font.pixelSize" else int(font.weight().value)
+        if self.item.metaObject().indexOfProperty(qml) < 0:
+            return None
+        value = self.item.property(qml)
+        return _css_color(value) if hasattr(value, "alphaF") else float(value)
+
     # -- acciones -----------------------------------------------------------
     def click(self, x: float | None = None, y: float | None = None) -> "Element":
         """Pulsa un botón, una casilla/interruptor (la alterna), una pestaña, una opción de <radiogroup>
@@ -472,6 +496,20 @@ def _options(options: Any) -> list[tuple[str, Any]]:
         else:
             out.append((str(o), o))
     return out
+
+
+# Nombre CSS -> propiedad QML que lo guarda en los elementos del núcleo (ver compiler/css.py).
+_STYLES = {
+    "background": "jkBackground", "background-color": "jkBackground", "color": "jkColor",
+    "border-color": "jkBorderColor", "border-width": "jkBorderWidth", "border-radius": "jkRadius",
+    "opacity": "opacity", "font-size": "font.pixelSize", "font-weight": "font.weight",
+}  # fmt: skip
+
+
+def _css_color(color: Any) -> str:
+    if color.alpha() == 255:
+        return color.name()  # "#rrggbb"
+    return f"rgba({color.red()}, {color.green()}, {color.blue()}, {round(color.alphaF(), 3):g})"
 
 
 def _show_in_flickable(view: Any, target: Any) -> None:

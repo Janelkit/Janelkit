@@ -16,6 +16,8 @@ Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`j
 
 - **Botones con icono:** `<button icon="iconos/borrar.svg">Borrar</button>` dibuja la imagen a la izquierda del texto; la ruta se resuelve como la de `<image src>`. Sin texto es un botón solo de icono, al que nombra su `title`; sin `title` ni `label`, el compilador avisa.
 
+- **`call_in_ui(fn, *args, **kwargs)`:** desde cualquier hilo, ejecuta `fn` en el hilo de la interfaz, donde puede cambiar el estado. Sirve para el progreso de un trabajo de `background()`; devuelve un `concurrent.futures.Future` con el resultado. [lenguaje.md](lenguaje.md#trabajo-asíncrono) tiene una receta de progreso y cancelación con `threading.Event`.
+
 ### Corregido
 
 - **Quitar un `<video>` que ya había dibujado un fotograma dejaba inservible la ventana desde Python:** al desaparecer con un `{#if}` o un `{#key}`, `janelkit.ext.app().main_window()` pasaba a `None`, los diálogos de `janelkit-desktop` se quedaban sin ventana padre y `janelkit.inspect` fallaba con «Internal C++ object (QQuickWindow) already deleted». La ventana seguía viva: lo que se perdía era su objeto de Python. Si tu aplicación sustituía `JkVideoSurface.window` para evitarlo, ya puedes quitar ese parche.

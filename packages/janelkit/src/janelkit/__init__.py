@@ -23,7 +23,7 @@ from .locale import locale
 from .events import DragEvent, FocusEvent, KeyEvent, PointerEvent, ResizeEvent, WheelEvent
 from .lifecycle import Ref, before_leave, inject, is_visible, on_destroy, on_mount, provide, ref
 from .themes import theme
-from .tasks import Task, background, spawn, task
+from .tasks import Task, background, call_in_ui, spawn, task
 from .timers import Timer, interval, timeout
 from .windows import open_window
 from .displays import Screen, screens
@@ -54,6 +54,7 @@ __all__ = [
     "background",
     "batch",
     "before_leave",
+    "call_in_ui",
     "computed",
     "effect",
     "event",

@@ -202,3 +202,101 @@ def test_background_threads_do_not_track_and_cannot_write(janel_app):
     total, error = janel_app.run_until(work())
     assert total == 1 and "hilo de la interfaz" in error
     assert runs == [1] and len(items.value) == 1
+
+
+def settle_until(janel_app, condition, timeout: float = 5.0):
+    """Deja correr el bucle hasta que `condition()` sea cierto."""
+
+    async def wait():
+        while not condition():
+            await asyncio.sleep(0.01)
+
+    janel_app.run_until(asyncio.wait_for(wait(), timeout))
+
+
+PROGRESS_APP = """<script>
+import threading
+from janelkit import state, background, call_in_ui
+
+progress = state(0)
+result = state("")
+cancel = threading.Event()
+step = threading.Event()
+on_ui = []
+
+def show(i):
+    on_ui.append(threading.current_thread() is threading.main_thread())
+    progress.value = i
+
+def work(n):
+    for i in range(1, n + 1):
+        if cancel.is_set():
+            return "cancelado"
+        call_in_ui(show, i).result()  # espera a que la interfaz lo haya aplicado
+        step.wait()
+    return "hecho"
+
+async def start(n):
+    cancel.clear()
+    result.value = await background(work, n)
+</script>
+<column>
+  <button id="start" on:click={start(3)}>Empezar</button>
+  <button id="cancel" on:click={cancel.set()}>Cancelar</button>
+  <progressbar value={progress} max={3} />
+</column>
+"""
+
+
+def test_call_in_ui_applies_progress_from_a_background_thread(mount, janel_app):
+    m = mount(PROGRESS_APP)
+    ns = m.instance.namespace
+    click(find(m, "start"))
+    settle_until(janel_app, lambda: ns["progress"].value == 1)
+    ns["step"].set()
+    settle_until(janel_app, lambda: ns["result"].value == "hecho")
+    assert ns["progress"].value == 3 and ns["on_ui"] == [True, True, True]
+
+
+def test_a_threading_event_cancels_background_work(mount, janel_app):
+    m = mount(PROGRESS_APP)
+    ns = m.instance.namespace
+    click(find(m, "start"))
+    settle_until(janel_app, lambda: ns["progress"].value == 1)
+    click(find(m, "cancel"))
+    ns["step"].set()
+    settle_until(janel_app, lambda: ns["result"].value == "cancelado")
+    assert ns["progress"].value == 1
+
+
+def test_call_in_ui_returns_a_future_and_logs_errors(janel_app, caplog):
+    from janelkit import call_in_ui
+
+    out = {}
+
+    def worker():
+        out["ok"] = call_in_ui(lambda a, b=0: (a + b, threading.current_thread() is threading.main_thread()), 2, b=3)
+        out["bad"] = call_in_ui(lambda: 1 / 0)
+
+    thread = threading.Thread(target=worker)
+    thread.start()
+    thread.join()
+    settle_until(janel_app, lambda: out["ok"].done() and out["bad"].done())
+    assert out["ok"].result() == (5, True)
+    assert isinstance(out["bad"].exception(), ZeroDivisionError)
+    assert "ZeroDivisionError" in caplog.text
+
+    from_ui = call_in_ui(lambda: "también desde la interfaz")  # se programa, no se ejecuta ya
+    assert not from_ui.done()
+    settle_until(janel_app, from_ui.done)
+    assert from_ui.result() == "también desde la interfaz"
+
+
+def test_call_in_ui_needs_a_running_application(monkeypatch):
+    from janelkit import call_in_ui, tasks
+
+    monkeypatch.setattr(tasks, "_ui_loop", None)
+    import pytest
+
+    with pytest.raises(RuntimeError, match="aplicación"):
+        call_in_ui(print)

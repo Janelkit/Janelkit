@@ -94,6 +94,7 @@ def enviar():
 | Manejador `async def` | `on:click={guardar}` o `on:click={guardar(item)}`: la corrutina se lanza sola. |
 | `@task` | Una operación con estado para la plantilla: `{#if resultados.loading}`, `{resultados.error}`, `{resultados.value}`. `.run(*args)` la reinicia y `.cancel()` la detiene. |
 | `background(fn, *args)` | Código que bloquea (disco, CPU, bibliotecas síncronas como `urllib` o `requests`): `await background(fn, ...)` lo ejecuta en otro hilo y devuelve el resultado. `fn` no debe tocar estado ni interfaz. |
+| `call_in_ui(fn, *args)` | Desde otro hilo (la función de `background`, un hilo propio, el aviso de una biblioteca): ejecuta `fn` en el hilo de la interfaz, donde sí puede cambiar el estado. Para el progreso de un trabajo largo; ver la receta de abajo. |
 | `spawn(corrutina)` | Lanzar una corrutina sin esperarla, por ejemplo desde `on_mount`. |
 | `interval(ms, fn)`, `timeout(ms, fn)` | Repetir algo cada cierto tiempo, o hacerlo una vez más tarde. Ver [Temporizadores](#temporizadores). |
 
@@ -108,7 +109,39 @@ def enviar():
   ```
 - Tras un `await` los cambios ya no van en el `batch` del manejador: cada asignación avisa por separado. Para aplicar varios a la vez, usa `with batch():` o asigna un único valor (p. ej. un `NamedTuple`). Ver [patrones.md](patrones.md#el-estado-a-medias-tras-un-await).
 - Los errores de un manejador asíncrono se registran con archivo y línea, como los síncronos. Los de una `@task` quedan en `.error` para mostrarlos.
-- El trabajo de `background` en curso no se puede interrumpir (es un hilo), pero su resultado se descarta si la tarea se canceló.
+- El trabajo de `background` en curso no se puede interrumpir desde fuera (es un hilo), pero su resultado se descarta si la tarea se canceló. Para detenerlo antes, el propio trabajo comprueba un `threading.Event` (receta de abajo).
+
+**Receta: progreso y cancelación de un trabajo largo.** La función que va al otro hilo informa con `call_in_ui` y mira un `threading.Event` entre paso y paso:
+
+```python
+import threading
+from janelkit import state, background, call_in_ui
+
+hechos = state(0)
+resultado = state("")
+cancelar = threading.Event()
+
+def exportar(tomas):                       # en otro hilo: no toca el estado directamente
+    for i, toma in enumerate(tomas, 1):
+        if cancelar.is_set():
+            return "cancelado"
+        escribir(toma)
+        call_in_ui(hechos.set, i)          # el estado cambia en el hilo de la interfaz
+    return "listo"
+
+async def empezar():                       # on:click={empezar}
+    cancelar.clear()
+    hechos.value = 0
+    resultado.value = await background(exportar, tomas.value)
+```
+
+```html
+<progressbar value={hechos} max={len(tomas)} />
+<button on:click={cancelar.set()}>Cancelar</button>
+```
+
+- `call_in_ui` no espera: el hilo sigue. Si debe esperar a que la interfaz lo haya aplicado, `call_in_ui(...).result()`. Nunca desde el hilo de la interfaz, que se bloquearía.
+- Si llegan muchos avisos (miles por segundo), agrúpalos en el hilo y llama a `call_in_ui` unas pocas veces por segundo: cada llamada es un cambio en la interfaz.
 
 Ejemplo completo: `apps/examples/books` (busca en la API de Open Library).
 

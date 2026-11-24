@@ -83,6 +83,7 @@ Las corrutinas corren en el hilo de la interfaz, sobre el bucle de Qt (con `qasy
 |---|---|
 | `spawn` | `spawn(corrutina, on_error=None)` la lanza sin esperarla. Devuelve una `asyncio.Task`. |
 | `background` | `await background(fn, *args, **kwargs)` ejecuta `fn` en otro hilo y devuelve su resultado. `fn` no debe tocar estado ni interfaz. |
+| `call_in_ui` | `call_in_ui(fn, *args, **kwargs)`, desde cualquier hilo: ejecuta `fn` poco después en el hilo de la interfaz (dentro de un `batch()`), donde sí puede cambiar el estado. Devuelve un `concurrent.futures.Future` con el resultado; los errores quedan en él y se registran en el logger `janelkit`. |
 | `task` | Decorador: `@task async def cargar(...)` crea una `Task`. |
 | `Task` | Operación con estado reactivo: `.loading`, `.error`, `.value`, `.run(*args)` (cancela la anterior), `.cancel()`. |
 

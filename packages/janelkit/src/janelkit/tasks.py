@@ -21,12 +21,20 @@ en ese mismo hilo y pueden modificar el estado directamente tras cada `await`:
     async def abrir(ruta):
         texto.value = await background(leer, ruta)   # se ejecuta en otro hilo
 
+    def copiar(rutas, cancelar):                     # con progreso: call_in_ui desde el hilo
+        for i, ruta in enumerate(rutas, 1):
+            if cancelar.is_set():                    # un threading.Event
+                return "cancelado"
+            ...
+            call_in_ui(mostrar_progreso, i)
+
 Las tareas lanzadas desde un componente (manejadores, `spawn`, `task`) se
 cancelan al desmontarlo, de modo que nunca actualizan una vista que ya no existe.
 """
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import functools
 import inspect
 import logging
@@ -59,6 +67,49 @@ def background(fn: Callable[..., T], *args: Any, **kwargs: Any) -> "asyncio.Futu
     if _executor is None:
         _executor = ThreadPoolExecutor(thread_name_prefix="janelkit-background")
     return _loop().run_in_executor(_executor, functools.partial(fn, *args, **kwargs))
+
+
+_ui_loop: asyncio.AbstractEventLoop | None = None
+
+
+def _set_ui_loop(loop: asyncio.AbstractEventLoop) -> None:
+    """La aplicación registra su bucle al crearse: `call_in_ui` lo usa desde otros hilos."""
+    global _ui_loop
+    _ui_loop = loop
+
+
+def call_in_ui(fn: Callable[..., T], *args: Any, **kwargs: Any) -> "concurrent.futures.Future[T]":
+    """Ejecuta `fn(*args, **kwargs)` en el hilo de la interfaz. Se puede llamar desde cualquier hilo.
+
+    Es la forma de que un hilo (la función de `background()`, un hilo propio, el aviso de
+    una biblioteca) cambie el estado: el progreso de un trabajo largo, una línea de registro.
+    `fn` se ejecuta poco después, dentro de un `batch()`, y nunca en el momento, aunque se
+    llame desde el propio hilo de la interfaz.
+
+    Devuelve un `concurrent.futures.Future` con el resultado. El hilo puede seguir sin
+    esperarlo, o esperarlo con `.result()`; desde el hilo de la interfaz eso no debe hacerse,
+    porque lo bloquearía. Un error de `fn` queda en el Future y se registra en el logger
+    `janelkit`.
+    """
+    loop = _ui_loop
+    if loop is None or loop.is_closed():
+        raise RuntimeError("call_in_ui necesita una aplicación de JanelKit en marcha")
+    done: "concurrent.futures.Future[T]" = concurrent.futures.Future()
+
+    def run() -> None:
+        if not done.set_running_or_notify_cancel():
+            return
+        try:
+            with batch():
+                result = fn(*args, **kwargs)
+        except Exception as exc:  # noqa: BLE001 - un error del usuario no debe cerrar la app
+            log.error("error en call_in_ui: %s: %s", type(exc).__name__, exc, exc_info=exc)
+            done.set_exception(exc)
+        else:
+            done.set_result(result)
+
+    loop.call_soon_threadsafe(run)
+    return done
 
 
 class _Cancel:

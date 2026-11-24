@@ -107,6 +107,9 @@ class Application:
         # asyncio sobre el bucle de Qt: las corrutinas corren en el hilo de la interfaz.
         self.loop = qasync.QEventLoop(self.qt_app)
         asyncio.set_event_loop(self.loop)
+        from .. import tasks
+
+        tasks._set_ui_loop(self.loop)  # call_in_ui, desde otros hilos
         from .. import displays
 
         displays.connect(self.qt_app)  # `screens`, la lista reactiva de pantallas

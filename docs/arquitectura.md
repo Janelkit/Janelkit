@@ -94,7 +94,7 @@ App.janel ──► sfc_parser ──► template_parser / script_analysis ─�
 - Lo que lee un `Effect` o un `Computed` queda registrado; al cambiar, el efecto se vuelve a ejecutar al terminar el `batch` en curso. Si solo lo avisaron `Computed`, primero se recalculan y solo se ejecuta si alguno cambió de valor.
 - Cada instancia de componente tiene un `Scope`: lo que se crea mientras su script, un manejador o un tic se ejecutan (efectos, `computed`, temporizadores, tareas) queda en él y se libera al desmontar. El ámbito activo es una variable de contexto (`contextvars`), así que una corrutina lo conserva tras cada `await`.
 - Una `Gate` (compuerta de visibilidad) aplaza los efectos de la plantilla de lo que no se ve (`{#hidden}`, otra sección, la página de debajo, una fila de `<list>` fuera de la vista). Lo del script sigue funcionando; `is_visible()` expone la compuerta como `computed`.
-- El estado reactivo solo se modifica desde el hilo de la interfaz. `background()` ejecuta en otro hilo y devuelve el valor por `await`.
+- El estado reactivo solo se modifica desde el hilo de la interfaz. `background()` ejecuta en otro hilo y devuelve el valor por `await`; durante el trabajo, el hilo pasa los cambios con `call_in_ui()`.
 
 ### Disposición: motor de `<flex>` y layouts de Qt
 

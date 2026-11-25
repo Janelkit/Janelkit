@@ -198,9 +198,15 @@ Leer y escribir archivos bloquea; la interfaz no debe esperar. Crea `src/service
 
 ```python
 """Guarda la lista en un archivo JSON. Funciones normales (bloqueantes)."""
+import itertools
 import json
 import os
+import threading
 from pathlib import Path
+
+_lock = threading.Lock()
+_numbers = itertools.count(1)
+_written = 0  # número del último guardado escrito
 
 
 def data_file() -> Path:
@@ -215,8 +221,20 @@ def load() -> list[dict]:
     return json.loads(file.read_text(encoding="utf-8"))
 
 
-def save(items: list[dict]) -> None:
-    data_file().write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
+def next_number() -> int:
+    """Número de orden para save(). Se pide en el hilo de la interfaz, en el orden de los cambios."""
+    return next(_numbers)
+
+
+def save(items: list[dict], number: int) -> None:
+    # Un guardado cancelado sigue escribiendo en su hilo: el candado evita que dos escriban
+    # a la vez y el número, que uno anterior pise al último.
+    global _written
+    with _lock:
+        if number < _written:
+            return
+        _written = number
+        data_file().write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
 ```
 
 En el script de `App.janel`:
@@ -236,7 +254,7 @@ async def load():
 
 @task
 async def save(data):
-    await background(storage.save, data)
+    await background(storage.save, data, storage.next_number())
 
 
 @on_mount
@@ -262,7 +280,7 @@ effect(autosave)
   {/if}
   ```
 
-- `effect(autosave)` se ejecuta ahora y cada vez que cambia algo de lo que leyó: añadir, marcar o quitar guarda la lista. `save.run` cancela un guardado anterior que siguiera en curso.
+- `effect(autosave)` se ejecuta ahora y cada vez que cambia algo de lo que leyó: añadir, marcar o quitar guarda la lista. `save.run` cancela el guardado anterior, pero su hilo no se detiene: puede seguir escribiendo mientras empieza el siguiente. Por eso `storage.save` escribe de uno en uno (el candado) y no escribe si ya se escribió un guardado posterior (el número, que se pide en el hilo de la interfaz, en el orden de los cambios).
 - **¿Por qué `loaded`?** El efecto se ejecuta en cuanto se crea, antes de que termine la carga. Sin esa espera, guardaría la lista vacía encima de la que había en disco.
 - `on_mount` se ejecuta cuando la ventana ya existe.
 - El código de `background` no debe tocar el estado: devuelve un valor y se asigna tras el `await`. Por eso `autosave` prepara una copia simple de los datos en el hilo de la interfaz.

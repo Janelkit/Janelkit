@@ -124,6 +124,34 @@ def test_tutorial_app(tmp_path, monkeypatch):
         assert app.find("checkbox", text="Pan").value is True
 
 
+def test_tutorial_app_a_cancelled_save_does_not_overwrite_a_later_one(tmp_path, monkeypatch):
+    """Cancelar un guardado no detiene su hilo: aunque los guardados de «Leche» tarden en escribir,
+    el archivo acaba con lo último que se pidió guardar, entero."""
+    import json
+    import threading
+    import time
+
+    file = tmp_path / "lista.json"
+    monkeypatch.setenv("COMPRA_FILE", str(file))
+    write_text = Path.write_text
+
+    def slow_write_text(self, data, *args, **kwargs):
+        if "Leche" in data and threading.current_thread() is not threading.main_thread():
+            time.sleep(0.3)
+        return write_text(self, data, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", slow_write_text)
+    with mount(EXAMPLES / "compra" / "src" / "App.janel") as app:
+        app.wait(until=lambda: app.get("loaded"))
+        app.find(placeholder="¿Qué falta?").type("Pan").submit()
+        app.find(placeholder="¿Qué falta?").type("Leche").submit()
+        app.find("checkbox", text="Pan").check()
+        app.find_all("button", text="Quitar")[1].click()
+        app.wait(until=lambda: not app.get("save").loading)
+        time.sleep(0.8)  # lo que tardarían en terminar los hilos de los guardados cancelados
+        assert json.loads(file.read_text(encoding="utf-8")) == [{"id": 1, "name": "Pan", "done": True}]
+
+
 def test_apps_with_modules_of_the_same_name_do_not_mix(tmp_path):
     for name in ("una", "otra"):
         (tmp_path / name / "services").mkdir(parents=True)

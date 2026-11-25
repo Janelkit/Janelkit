@@ -30,7 +30,7 @@ async def load():
 
 @task
 async def save(data):
-    await background(storage.save, data)
+    await background(storage.save, data, storage.next_number())
 
 
 @on_mount

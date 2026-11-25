@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "janelkit"
-version = "0.2.0.0"
+version = "0.2.1.0"
 description = "Desktop apps written in Python, one file per component, rendered with Qt Quick and tested without a screen"
 readme = "README.md"
 requires-python = ">=3.10"

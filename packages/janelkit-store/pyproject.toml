@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "janelkit-store"
-version = "0.2.0.0"
+version = "0.2.1.0"
 description = "Stores para JanelKit: datos compartidos con escritura controlada, seguimiento de cambios y persistencia"
 readme = "README.md"
 requires-python = ">=3.10"

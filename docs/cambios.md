@@ -4,7 +4,7 @@ Cada versión lista lo nuevo y, aparte, lo que **rompe** código existente con c
 
 Esta página es la del núcleo (`janelkit`). Las extensiones del repositorio (`janelkit-i18n`, `janelkit-desktop`) llevan sus cambios en la sección «Cambios» de su README.
 
-## 0.2.1.0 (sin publicar)
+## 0.2.1.0 (2026-11-25)
 
 ### Nuevo
 
